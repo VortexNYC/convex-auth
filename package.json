@@ -23,6 +23,7 @@
     "typecheck": "vp run -r typecheck",
     "test": "vp run -r test",
     "lint": "vp lint",
+    "lint:convex": "vp lint packages/*/src/convex-runtime packages/*/src/component examples/*/convex",
     "lint:fix": "vp lint --fix",
     "format": "vp fmt",
     "format:check": "vp fmt --check",
