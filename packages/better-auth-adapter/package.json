@@ -1,6 +1,6 @@
 {
   "name": "convex-better-auth-adapter",
-  "version": "0.13.2",
+  "version": "0.13.3",
   "description": "A Better Auth database adapter for Convex — a migration bridge for existing Better Auth projects. New apps should use convex-auth directly.",
   "homepage": "https://github.com/shlomokabareti/convex-better-auth-2.0/tree/main/packages/better-auth-adapter#readme",
   "bugs": {

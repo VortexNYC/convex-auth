@@ -1,6 +1,6 @@
 {
   "name": "convex-auth",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Convex-native auth server, component, and integration.",
   "license": "Apache-2.0",
   "repository": {
