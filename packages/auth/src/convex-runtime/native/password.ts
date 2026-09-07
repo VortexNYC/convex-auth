@@ -3,6 +3,7 @@ import { argon2idAsync } from "@noble/hashes/argon2.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { scryptAsync } from "@noble/hashes/scrypt.js";
 import { sha256 } from "@noble/hashes/sha2.js";
+import { hexToBytes } from "@noble/hashes/utils.js";
 
 const PBKDF2_PREFIX = "$pbkdf2$";
 const SCRYPT_PREFIX = "$scrypt$";
@@ -15,6 +16,13 @@ const DEFAULT_ARGON2_T = 2;
 const DEFAULT_ARGON2_M = 19456;
 const DEFAULT_ARGON2_P = 1;
 const DEFAULT_ARGON2_VERSION = 0x13;
+// Better Auth's default scrypt config, used before migration to convex-auth.
+// It stores hashes as lowercase hex "salt:derivedKey" (salt = 16 bytes, dkLen = 64).
+const BETTER_AUTH_SCRYPT_N = 16384;
+const BETTER_AUTH_SCRYPT_R = 16;
+const BETTER_AUTH_SCRYPT_P = 1;
+const BETTER_AUTH_SCRYPT_DKLEN = 64;
+const BETTER_AUTH_SCRYPT_SALT_HEX_LENGTH = 32;
 
 export function bytesToBase64url(bytes: Uint8Array): string {
   return base64url.encode(bytes);
@@ -61,6 +69,9 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   }
   if (hash.startsWith(PBKDF2_PREFIX)) {
     return verifyPbkdf2(password, hash);
+  }
+  if (isBetterAuthScryptHash(hash)) {
+    return verifyBetterAuthScrypt(password, hash);
   }
   return false;
 }
@@ -177,6 +188,58 @@ async function verifyScrypt(password: string, hash: string): Promise<boolean> {
       r,
       p,
       dkLen: expected.length,
+    });
+    return timingSafeEqual(actual, expected);
+  } catch {
+    return false;
+  }
+}
+
+// Better Auth's default password hasher uses scrypt with fixed parameters and
+// stores the result as lowercase hex "salt:derivedKey".
+function isBetterAuthScryptHash(hash: string): boolean {
+  const [salt, derived] = hash.split(":");
+  if (!salt || !derived) {
+    return false;
+  }
+  if (salt.length !== BETTER_AUTH_SCRYPT_SALT_HEX_LENGTH) {
+    return false;
+  }
+  const derivedByteLength = derived.length / 2;
+  if (derivedByteLength !== BETTER_AUTH_SCRYPT_DKLEN) {
+    return false;
+  }
+  return /^[0-9a-f]+$/i.test(salt) && /^[0-9a-f]+$/i.test(derived);
+}
+
+function parseBetterAuthScryptHash(hash: string): {
+  salt: Uint8Array;
+  expected: Uint8Array;
+} | null {
+  if (!isBetterAuthScryptHash(hash)) {
+    return null;
+  }
+  try {
+    const [saltHex, derivedHex] = hash.split(":") as [string, string];
+    return { salt: hexToBytes(saltHex), expected: hexToBytes(derivedHex) };
+  } catch {
+    return null;
+  }
+}
+
+async function verifyBetterAuthScrypt(password: string, hash: string): Promise<boolean> {
+  const parsed = parseBetterAuthScryptHash(hash);
+  if (!parsed) {
+    return false;
+  }
+  const { salt, expected } = parsed;
+  try {
+    const actual = await scryptAsync(password, salt, {
+      N: BETTER_AUTH_SCRYPT_N,
+      r: BETTER_AUTH_SCRYPT_R,
+      p: BETTER_AUTH_SCRYPT_P,
+      dkLen: expected.length,
+      maxmem: 128 * BETTER_AUTH_SCRYPT_R * (BETTER_AUTH_SCRYPT_N + BETTER_AUTH_SCRYPT_P + 1),
     });
     return timingSafeEqual(actual, expected);
   } catch {

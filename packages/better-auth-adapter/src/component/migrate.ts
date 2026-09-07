@@ -144,6 +144,7 @@ export const setMigrationTargets = internalMutation({
     migrateAccountHandle: v.string(),
     migrateSessionHandle: v.string(),
   },
+  returns: v.object({ success: v.boolean() }),
   handler: async (ctx, args) => {
     const existing = await ctx.db.query("migrationConfig").unique();
     if (existing) {
@@ -151,6 +152,7 @@ export const setMigrationTargets = internalMutation({
     } else {
       await ctx.db.insert("migrationConfig", args);
     }
+    return { success: true };
   },
 });
 
@@ -163,6 +165,14 @@ export const migrateUsers = migrations.define({
       MigrateUserArgs,
       MigrateUserReturn
     >;
+
+    const existing = await ctx.db
+      .query("migrationUserIdMap")
+      .withIndex("by_legacy_user_id", (q) => q.eq("legacyUserId", doc._id))
+      .take(1);
+    if (existing.length > 0) {
+      return;
+    }
 
     const result = await ctx.runMutation(migrateUserHandle, {
       legacyUser: userFromDoc(doc),
@@ -181,10 +191,11 @@ export const migrateAccounts = migrations.define({
   table: "account",
   migrateOne: async (ctx, doc) => {
     const config = await getMigrationConfig(ctx);
-    const mapping = await ctx.db
+    const mappings = await ctx.db
       .query("migrationUserIdMap")
       .withIndex("by_legacy_user_id", (q) => q.eq("legacyUserId", doc.userId))
-      .unique();
+      .take(1);
+    const mapping = mappings[0];
     if (!mapping) {
       throw new Error(
         `No migrated user found for legacy user ${doc.userId} (account ${doc._id}). Run migrateUsers first.`,
@@ -210,10 +221,11 @@ export const migrateSessions = migrations.define({
   table: "session",
   migrateOne: async (ctx, doc) => {
     const config = await getMigrationConfig(ctx);
-    const mapping = await ctx.db
+    const mappings = await ctx.db
       .query("migrationUserIdMap")
       .withIndex("by_legacy_user_id", (q) => q.eq("legacyUserId", doc.userId))
-      .unique();
+      .take(1);
+    const mapping = mappings[0];
     if (!mapping) {
       throw new Error(
         `No migrated user found for legacy user ${doc.userId} (session ${doc._id}). Run migrateUsers first.`,
@@ -339,18 +351,10 @@ async function countTable(
   ctx: GenericQueryCtx<DataModel>,
   table: keyof DataModel & string,
 ): Promise<number> {
-  let count = 0;
-  let cursor: string | null = null;
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const { page, continueCursor, isDone } = await ctx.db
-      .query(table)
-      .paginate({ cursor, numItems: 1000 });
-    count += page.length;
-    if (isDone || continueCursor === cursor) break;
-    cursor = continueCursor;
-  }
-  return count;
+  // Components do not support .paginate on queries, so dry-run counts are
+  // capped at 1000 per table. This is enough for a quick sanity check.
+  const docs = await ctx.db.query(table).take(1000);
+  return docs.length;
 }
 
 export const getLegacyCounts = internalQuery({
