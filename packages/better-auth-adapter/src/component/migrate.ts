@@ -3,7 +3,7 @@ import { Migrations } from "@convex-dev/migrations";
 import type { MigrationFunctionReference } from "@convex-dev/migrations";
 import type { ComponentApi } from "@convex-dev/migrations/_generated/component.js";
 import { makeFunctionReference } from "convex/server";
-import type { FunctionHandle, GenericMutationCtx } from "convex/server";
+import type { FunctionHandle, GenericMutationCtx, GenericQueryCtx } from "convex/server";
 import type { GenericId } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server.js";
 import { components } from "./_generated/api.js";
@@ -326,5 +326,42 @@ export const getLegacySessions = internalQuery({
   handler: async (ctx) => {
     const docs = await ctx.db.query("session").take(1000);
     return docs.map(sessionFromDoc);
+  },
+});
+
+const countsValidator = v.object({
+  users: v.number(),
+  accounts: v.number(),
+  sessions: v.number(),
+});
+
+async function countTable(
+  ctx: GenericQueryCtx<DataModel>,
+  table: keyof DataModel & string,
+): Promise<number> {
+  let count = 0;
+  let cursor: string | null = null;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const { page, continueCursor, isDone } = await ctx.db
+      .query(table)
+      .paginate({ cursor, numItems: 1000 });
+    count += page.length;
+    if (isDone || continueCursor === cursor) break;
+    cursor = continueCursor;
+  }
+  return count;
+}
+
+export const getLegacyCounts = internalQuery({
+  args: {},
+  returns: countsValidator,
+  handler: async (ctx) => {
+    const [users, accounts, sessions] = await Promise.all([
+      countTable(ctx, "user"),
+      countTable(ctx, "account"),
+      countTable(ctx, "session"),
+    ]);
+    return { users, accounts, sessions };
   },
 });

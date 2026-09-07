@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server.js";
+import { createFunctionHandle, makeFunctionReference } from "convex/server";
+import { internalMutation, internalQuery } from "./_generated/server.js";
 
 const legacyUserValidator = v.object({
   _id: v.optional(v.string()),
@@ -183,5 +184,28 @@ export const migrateSession = internalMutation({
     });
 
     return { sessionId };
+  },
+});
+
+const migrationHandlesValidator = v.object({
+  migrateUser: v.string(),
+  migrateAccount: v.string(),
+  migrateSession: v.string(),
+});
+
+/**
+ * Return function handles for the migration writer mutations so an external
+ * CLI can wire the vendored adapter's migrateAll runner to convex-auth.
+ */
+export const getMigrationFunctionHandles = internalQuery({
+  args: {},
+  returns: migrationHandlesValidator,
+  handler: async () => {
+    const [migrateUser, migrateAccount, migrateSession] = await Promise.all([
+      createFunctionHandle(makeFunctionReference<"mutation">("migrate:migrateUser")),
+      createFunctionHandle(makeFunctionReference<"mutation">("migrate:migrateAccount")),
+      createFunctionHandle(makeFunctionReference<"mutation">("migrate:migrateSession")),
+    ]);
+    return { migrateUser, migrateAccount, migrateSession };
   },
 });
