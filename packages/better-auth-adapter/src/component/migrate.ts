@@ -5,7 +5,7 @@ import type { ComponentApi } from "@convex-dev/migrations/_generated/component.j
 import { makeFunctionReference } from "convex/server";
 import type { FunctionHandle, GenericMutationCtx } from "convex/server";
 import type { GenericId } from "convex/values";
-import { internalMutation } from "./_generated/server.js";
+import { internalMutation, internalQuery } from "./_generated/server.js";
 import { components } from "./_generated/api.js";
 import type { DataModel, Doc } from "./_generated/dataModel.js";
 
@@ -256,3 +256,75 @@ export const migrateAll = migrations.runner([
   migrateAccountsRef,
   migrateSessionsRef,
 ]);
+
+const legacyUserValidator = v.object({
+  _id: v.optional(v.string()),
+  name: v.string(),
+  email: v.string(),
+  emailVerified: v.boolean(),
+  image: v.optional(v.union(v.null(), v.string())),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  twoFactorEnabled: v.optional(v.union(v.null(), v.boolean())),
+  isAnonymous: v.optional(v.union(v.null(), v.boolean())),
+  username: v.optional(v.union(v.null(), v.string())),
+  displayUsername: v.optional(v.union(v.null(), v.string())),
+  phoneNumber: v.optional(v.union(v.null(), v.string())),
+  phoneNumberVerified: v.optional(v.union(v.null(), v.boolean())),
+  userId: v.optional(v.union(v.null(), v.string())),
+});
+
+const legacyAccountValidator = v.object({
+  _id: v.optional(v.string()),
+  issuer: v.optional(v.union(v.null(), v.string())),
+  accountId: v.string(),
+  providerId: v.string(),
+  userId: v.string(),
+  accessToken: v.optional(v.union(v.null(), v.string())),
+  refreshToken: v.optional(v.union(v.null(), v.string())),
+  idToken: v.optional(v.union(v.null(), v.string())),
+  accessTokenExpiresAt: v.optional(v.union(v.null(), v.number())),
+  refreshTokenExpiresAt: v.optional(v.union(v.null(), v.number())),
+  scope: v.optional(v.union(v.null(), v.string())),
+  password: v.optional(v.union(v.null(), v.string())),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
+const legacySessionValidator = v.object({
+  _id: v.optional(v.string()),
+  expiresAt: v.number(),
+  token: v.string(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  ipAddress: v.optional(v.union(v.null(), v.string())),
+  userAgent: v.optional(v.union(v.null(), v.string())),
+  userId: v.string(),
+});
+
+export const getLegacyUsers = internalQuery({
+  args: {},
+  returns: v.array(legacyUserValidator),
+  handler: async (ctx) => {
+    const docs = await ctx.db.query("user").take(1000);
+    return docs.map(userFromDoc);
+  },
+});
+
+export const getLegacyAccounts = internalQuery({
+  args: {},
+  returns: v.array(legacyAccountValidator),
+  handler: async (ctx) => {
+    const docs = await ctx.db.query("account").take(1000);
+    return docs.map(accountFromDoc);
+  },
+});
+
+export const getLegacySessions = internalQuery({
+  args: {},
+  returns: v.array(legacySessionValidator),
+  handler: async (ctx) => {
+    const docs = await ctx.db.query("session").take(1000);
+    return docs.map(sessionFromDoc);
+  },
+});

@@ -44,6 +44,36 @@ function run(command: string, args: string[], options?: { cwd?: string }): Promi
   });
 }
 
+function runWithOutput(
+  command: string,
+  args: string[],
+  options?: { cwd?: string },
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+      cwd: options?.cwd,
+      env: process.env,
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout?.on("data", (data) => {
+      stdout += String(data);
+    });
+    child.stderr?.on("data", (data) => {
+      stderr += String(data);
+    });
+    child.on("exit", (code) => {
+      if (code !== 0) {
+        reject(new Error(`${command} ${args.join(" ")} exited ${code}: ${stderr || stdout}`));
+      } else {
+        resolve(stdout);
+      }
+    });
+    child.on("error", (err) => reject(err));
+  });
+}
+
 function detectPackageManager(cwd: string): string {
   if (existsSync(resolve(cwd, "pnpm-lock.yaml"))) return "pnpm";
   if (existsSync(resolve(cwd, "yarn.lock"))) return "yarn";
@@ -216,13 +246,7 @@ export async function main(argv: string[]): Promise<void> {
   log(`  legacy comp:   ${legacyComponent}`);
   log(`  auth comp:     ${authComponent}`);
   if (dryRun) log("  --dry-run: no files or deployments will change");
-  if (resume) log("  --resume: continue from the last saved cursor");
-
-  const targets = {
-    migrateUserHandle: `${authComponent}/migrate:migrateUser`,
-    migrateAccountHandle: `${authComponent}/migrate:migrateAccount`,
-    migrateSessionHandle: `${authComponent}/migrate:migrateSession`,
-  };
+  if (resume) warn("  --resume: resuming is not yet implemented; starting from the beginning");
 
   const needsSwap = packageJson.includes(LEGACY_PACKAGE);
   if (needsSwap) {
@@ -244,19 +268,84 @@ export async function main(argv: string[]): Promise<void> {
     }
   }
 
-  log("\nsetting migration targets...");
-  await runConvex(
-    ["run", "--component", legacyComponent, "migrate:setMigrationTargets", JSON.stringify(targets)],
-    dryRun,
-    cwd,
-  );
+  log("\nrunning direct migration...");
 
-  log("\nrunning migration...");
-  await runConvex(
-    ["run", "--component", legacyComponent, "migrate:migrateAll", JSON.stringify({ resume })],
-    dryRun,
-    cwd,
-  );
+  if (dryRun) {
+    log(`[dry-run] would fetch legacy users from ${legacyComponent}`);
+  } else {
+    const usersRaw = await runWithOutput(
+      "pnpm",
+      ["dlx", "convex", "run", "--component", legacyComponent, "migrate:getLegacyUsers", "{}"],
+      { cwd },
+    );
+    const users = JSON.parse(usersRaw);
+    const userMap = new Map<string, { userId: string; email: string; emailVerified: boolean }>();
+
+    for (const legacyUser of users) {
+      const key = legacyUser._id ?? legacyUser.userId ?? "";
+      const args = JSON.stringify({ legacyUser });
+      const result = await runWithOutput(
+        "pnpm",
+        ["dlx", "convex", "run", "--component", authComponent, "migrate:migrateUser", args],
+        { cwd },
+      );
+      const { userId } = JSON.parse(result) as { userId: string };
+      userMap.set(key, {
+        userId,
+        email: legacyUser.email,
+        emailVerified: legacyUser.emailVerified,
+      });
+    }
+
+    const accountsRaw = await runWithOutput(
+      "pnpm",
+      ["dlx", "convex", "run", "--component", legacyComponent, "migrate:getLegacyAccounts", "{}"],
+      { cwd },
+    );
+    const accounts = JSON.parse(accountsRaw);
+    let migratedAccounts = 0;
+    for (const legacyAccount of accounts) {
+      const info = userMap.get(legacyAccount.userId);
+      if (info) {
+        const args = JSON.stringify({
+          legacyAccount,
+          userId: info.userId,
+          email: info.email,
+          emailVerified: info.emailVerified,
+        });
+        await runWithOutput(
+          "pnpm",
+          ["dlx", "convex", "run", "--component", authComponent, "migrate:migrateAccount", args],
+          { cwd },
+        );
+        migratedAccounts++;
+      }
+    }
+
+    const sessionsRaw = await runWithOutput(
+      "pnpm",
+      ["dlx", "convex", "run", "--component", legacyComponent, "migrate:getLegacySessions", "{}"],
+      { cwd },
+    );
+    const sessions = JSON.parse(sessionsRaw);
+    let migratedSessions = 0;
+    for (const legacySession of sessions) {
+      const info = userMap.get(legacySession.userId);
+      if (info) {
+        const args = JSON.stringify({ legacySession, userId: info.userId });
+        await runWithOutput(
+          "pnpm",
+          ["dlx", "convex", "run", "--component", authComponent, "migrate:migrateSession", args],
+          { cwd },
+        );
+        migratedSessions++;
+      }
+    }
+
+    log(
+      `migrated ${users.length} users, ${migratedAccounts} accounts, ${migratedSessions} sessions`,
+    );
+  }
 
   if (cutover) {
     const httpTsPath = resolve(cwd, convexDir, "http.ts");

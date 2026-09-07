@@ -153,6 +153,23 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             | {
                 data: { count: number; key: string; lastRequest: number };
                 model: "rateLimit";
+              }
+            | {
+                data: {
+                  migrateAccountHandle: string;
+                  migrateSessionHandle: string;
+                  migrateUserHandle: string;
+                };
+                model: "migrationConfig";
+              }
+            | {
+                data: {
+                  email: string;
+                  emailVerified: boolean;
+                  legacyUserId: string;
+                  newUserId: string;
+                };
+                model: "migrationUserIdMap";
               };
           onCreateHandle?: string;
           select?: Array<string>;
@@ -498,6 +515,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                 where?: Array<{
                   connector?: "AND" | "OR";
                   field: "key" | "count" | "lastRequest" | "_id";
+                  mode?: "sensitive" | "insensitive";
+                  operator?:
+                    | "lt"
+                    | "lte"
+                    | "gt"
+                    | "gte"
+                    | "eq"
+                    | "in"
+                    | "not_in"
+                    | "ne"
+                    | "contains"
+                    | "starts_with"
+                    | "ends_with";
+                  value:
+                    | string
+                    | number
+                    | boolean
+                    | Array<string>
+                    | Array<number>
+                    | null;
+                }>;
+              }
+            | {
+                model: "migrationConfig";
+                where?: Array<{
+                  connector?: "AND" | "OR";
+                  field:
+                    | "migrateUserHandle"
+                    | "migrateAccountHandle"
+                    | "migrateSessionHandle"
+                    | "_id";
+                  mode?: "sensitive" | "insensitive";
+                  operator?:
+                    | "lt"
+                    | "lte"
+                    | "gt"
+                    | "gte"
+                    | "eq"
+                    | "in"
+                    | "not_in"
+                    | "ne"
+                    | "contains"
+                    | "starts_with"
+                    | "ends_with";
+                  value:
+                    | string
+                    | number
+                    | boolean
+                    | Array<string>
+                    | Array<number>
+                    | null;
+                }>;
+              }
+            | {
+                model: "migrationUserIdMap";
+                where?: Array<{
+                  connector?: "AND" | "OR";
+                  field:
+                    | "legacyUserId"
+                    | "newUserId"
+                    | "email"
+                    | "emailVerified"
+                    | "_id";
                   mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
@@ -892,6 +972,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | Array<number>
                     | null;
                 }>;
+              }
+            | {
+                model: "migrationConfig";
+                where?: Array<{
+                  connector?: "AND" | "OR";
+                  field:
+                    | "migrateUserHandle"
+                    | "migrateAccountHandle"
+                    | "migrateSessionHandle"
+                    | "_id";
+                  mode?: "sensitive" | "insensitive";
+                  operator?:
+                    | "lt"
+                    | "lte"
+                    | "gt"
+                    | "gte"
+                    | "eq"
+                    | "in"
+                    | "not_in"
+                    | "ne"
+                    | "contains"
+                    | "starts_with"
+                    | "ends_with";
+                  value:
+                    | string
+                    | number
+                    | boolean
+                    | Array<string>
+                    | Array<number>
+                    | null;
+                }>;
+              }
+            | {
+                model: "migrationUserIdMap";
+                where?: Array<{
+                  connector?: "AND" | "OR";
+                  field:
+                    | "legacyUserId"
+                    | "newUserId"
+                    | "email"
+                    | "emailVerified"
+                    | "_id";
+                  mode?: "sensitive" | "insensitive";
+                  operator?:
+                    | "lt"
+                    | "lte"
+                    | "gt"
+                    | "gte"
+                    | "eq"
+                    | "in"
+                    | "not_in"
+                    | "ne"
+                    | "contains"
+                    | "starts_with"
+                    | "ends_with";
+                  value:
+                    | string
+                    | number
+                    | boolean
+                    | Array<string>
+                    | Array<number>
+                    | null;
+                }>;
               };
           onDeleteHandle?: string;
         },
@@ -914,7 +1057,9 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             | "oauthAccessToken"
             | "oauthConsent"
             | "jwks"
-            | "rateLimit";
+            | "rateLimit"
+            | "migrationConfig"
+            | "migrationUserIdMap";
           offset?: number;
           paginationOpts: {
             cursor: string | null;
@@ -943,12 +1088,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "starts_with"
               | "ends_with";
             value:
-              | string
-              | number
-              | boolean
-              | Array<string>
-              | Array<number>
-              | null;
+              string | number | boolean | Array<string> | Array<number> | null;
           }>;
         },
         any,
@@ -969,7 +1109,9 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             | "oauthAccessToken"
             | "oauthConsent"
             | "jwks"
-            | "rateLimit";
+            | "rateLimit"
+            | "migrationConfig"
+            | "migrationUserIdMap";
           select?: Array<string>;
           where?: Array<{
             connector?: "AND" | "OR";
@@ -988,12 +1130,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "starts_with"
               | "ends_with";
             value:
-              | string
-              | number
-              | boolean
-              | Array<string>
-              | Array<number>
-              | null;
+              string | number | boolean | Array<string> | Array<number> | null;
           }>;
         },
         any,
@@ -1463,6 +1600,82 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | Array<number>
                     | null;
                 }>;
+              }
+            | {
+                increment: Record<string, number>;
+                model: "migrationConfig";
+                set?: {
+                  migrateAccountHandle?: string;
+                  migrateSessionHandle?: string;
+                  migrateUserHandle?: string;
+                };
+                where: Array<{
+                  connector?: "AND" | "OR";
+                  field:
+                    | "migrateUserHandle"
+                    | "migrateAccountHandle"
+                    | "migrateSessionHandle"
+                    | "_id";
+                  mode?: "sensitive" | "insensitive";
+                  operator?:
+                    | "lt"
+                    | "lte"
+                    | "gt"
+                    | "gte"
+                    | "eq"
+                    | "in"
+                    | "not_in"
+                    | "ne"
+                    | "contains"
+                    | "starts_with"
+                    | "ends_with";
+                  value:
+                    | string
+                    | number
+                    | boolean
+                    | Array<string>
+                    | Array<number>
+                    | null;
+                }>;
+              }
+            | {
+                increment: Record<string, number>;
+                model: "migrationUserIdMap";
+                set?: {
+                  email?: string;
+                  emailVerified?: boolean;
+                  legacyUserId?: string;
+                  newUserId?: string;
+                };
+                where: Array<{
+                  connector?: "AND" | "OR";
+                  field:
+                    | "legacyUserId"
+                    | "newUserId"
+                    | "email"
+                    | "emailVerified"
+                    | "_id";
+                  mode?: "sensitive" | "insensitive";
+                  operator?:
+                    | "lt"
+                    | "lte"
+                    | "gt"
+                    | "gte"
+                    | "eq"
+                    | "in"
+                    | "not_in"
+                    | "ne"
+                    | "contains"
+                    | "starts_with"
+                    | "ends_with";
+                  value:
+                    | string
+                    | number
+                    | boolean
+                    | Array<string>
+                    | Array<number>
+                    | null;
+                }>;
               };
           onUpdateHandle?: string;
         },
@@ -1902,6 +2115,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                 where?: Array<{
                   connector?: "AND" | "OR";
                   field: "key" | "count" | "lastRequest" | "_id";
+                  mode?: "sensitive" | "insensitive";
+                  operator?:
+                    | "lt"
+                    | "lte"
+                    | "gt"
+                    | "gte"
+                    | "eq"
+                    | "in"
+                    | "not_in"
+                    | "ne"
+                    | "contains"
+                    | "starts_with"
+                    | "ends_with";
+                  value:
+                    | string
+                    | number
+                    | boolean
+                    | Array<string>
+                    | Array<number>
+                    | null;
+                }>;
+              }
+            | {
+                model: "migrationConfig";
+                update: {
+                  migrateAccountHandle?: string;
+                  migrateSessionHandle?: string;
+                  migrateUserHandle?: string;
+                };
+                where?: Array<{
+                  connector?: "AND" | "OR";
+                  field:
+                    | "migrateUserHandle"
+                    | "migrateAccountHandle"
+                    | "migrateSessionHandle"
+                    | "_id";
+                  mode?: "sensitive" | "insensitive";
+                  operator?:
+                    | "lt"
+                    | "lte"
+                    | "gt"
+                    | "gte"
+                    | "eq"
+                    | "in"
+                    | "not_in"
+                    | "ne"
+                    | "contains"
+                    | "starts_with"
+                    | "ends_with";
+                  value:
+                    | string
+                    | number
+                    | boolean
+                    | Array<string>
+                    | Array<number>
+                    | null;
+                }>;
+              }
+            | {
+                model: "migrationUserIdMap";
+                update: {
+                  email?: string;
+                  emailVerified?: boolean;
+                  legacyUserId?: string;
+                  newUserId?: string;
+                };
+                where?: Array<{
+                  connector?: "AND" | "OR";
+                  field:
+                    | "legacyUserId"
+                    | "newUserId"
+                    | "email"
+                    | "emailVerified"
+                    | "_id";
                   mode?: "sensitive" | "insensitive";
                   operator?:
                     | "lt"
@@ -2391,6 +2678,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                     | Array<number>
                     | null;
                 }>;
+              }
+            | {
+                model: "migrationConfig";
+                update: {
+                  migrateAccountHandle?: string;
+                  migrateSessionHandle?: string;
+                  migrateUserHandle?: string;
+                };
+                where?: Array<{
+                  connector?: "AND" | "OR";
+                  field:
+                    | "migrateUserHandle"
+                    | "migrateAccountHandle"
+                    | "migrateSessionHandle"
+                    | "_id";
+                  mode?: "sensitive" | "insensitive";
+                  operator?:
+                    | "lt"
+                    | "lte"
+                    | "gt"
+                    | "gte"
+                    | "eq"
+                    | "in"
+                    | "not_in"
+                    | "ne"
+                    | "contains"
+                    | "starts_with"
+                    | "ends_with";
+                  value:
+                    | string
+                    | number
+                    | boolean
+                    | Array<string>
+                    | Array<number>
+                    | null;
+                }>;
+              }
+            | {
+                model: "migrationUserIdMap";
+                update: {
+                  email?: string;
+                  emailVerified?: boolean;
+                  legacyUserId?: string;
+                  newUserId?: string;
+                };
+                where?: Array<{
+                  connector?: "AND" | "OR";
+                  field:
+                    | "legacyUserId"
+                    | "newUserId"
+                    | "email"
+                    | "emailVerified"
+                    | "_id";
+                  mode?: "sensitive" | "insensitive";
+                  operator?:
+                    | "lt"
+                    | "lte"
+                    | "gt"
+                    | "gte"
+                    | "eq"
+                    | "in"
+                    | "not_in"
+                    | "ne"
+                    | "contains"
+                    | "starts_with"
+                    | "ends_with";
+                  value:
+                    | string
+                    | number
+                    | boolean
+                    | Array<string>
+                    | Array<number>
+                    | null;
+                }>;
               };
           onUpdateHandle?: string;
         },
@@ -2633,6 +2994,23 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | {
                   data: { count: number; key: string; lastRequest: number };
                   model: "rateLimit";
+                }
+              | {
+                  data: {
+                    migrateAccountHandle: string;
+                    migrateSessionHandle: string;
+                    migrateUserHandle: string;
+                  };
+                  model: "migrationConfig";
+                }
+              | {
+                  data: {
+                    email: string;
+                    emailVerified: boolean;
+                    legacyUserId: string;
+                    newUserId: string;
+                  };
+                  model: "migrationUserIdMap";
                 };
             onCreateHandle?: string;
             select?: Array<string>;
@@ -2983,6 +3361,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where?: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -3382,6 +3823,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                       | Array<number>
                       | null;
                   }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
                 };
             onDeleteHandle?: string;
           },
@@ -3404,7 +3908,9 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "oauthAccessToken"
               | "oauthConsent"
               | "jwks"
-              | "rateLimit";
+              | "rateLimit"
+              | "migrationConfig"
+              | "migrationUserIdMap";
             offset?: number;
             paginationOpts: {
               cursor: string | null;
@@ -3459,7 +3965,9 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "oauthAccessToken"
               | "oauthConsent"
               | "jwks"
-              | "rateLimit";
+              | "rateLimit"
+              | "migrationConfig"
+              | "migrationUserIdMap";
             select?: Array<string>;
             where?: Array<{
               connector?: "AND" | "OR";
@@ -3963,6 +4471,82 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                       | Array<number>
                       | null;
                   }>;
+                }
+              | {
+                  increment: Record<string, number>;
+                  model: "migrationConfig";
+                  set?: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  increment: Record<string, number>;
+                  model: "migrationUserIdMap";
+                  set?: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
                 };
             onUpdateHandle?: string;
           },
@@ -4416,6 +5000,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where?: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  update: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  update: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -4919,6 +5577,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                       | Array<number>
                       | null;
                   }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  update: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  update: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
                 };
             onUpdateHandle?: string;
           },
@@ -5062,6 +5794,23 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | {
                   data: { count: number; key: string; lastRequest: number };
                   model: "rateLimit";
+                }
+              | {
+                  data: {
+                    migrateAccountHandle: string;
+                    migrateSessionHandle: string;
+                    migrateUserHandle: string;
+                  };
+                  model: "migrationConfig";
+                }
+              | {
+                  data: {
+                    email: string;
+                    emailVerified: boolean;
+                    legacyUserId: string;
+                    newUserId: string;
+                  };
+                  model: "migrationUserIdMap";
                 }
               | {
                   data: {
@@ -5534,6 +6283,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where?: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -6287,6 +7099,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   }>;
                 }
               | {
+                  model: "migrationConfig";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
                   model: "user_custom";
                   where?: Array<{
                     connector?: "AND" | "OR";
@@ -6659,6 +7534,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "oauthConsent"
               | "jwks"
               | "rateLimit"
+              | "migrationConfig"
+              | "migrationUserIdMap"
               | "user_custom"
               | "user_table"
               | "oneToOneTable"
@@ -6724,6 +7601,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "oauthConsent"
               | "jwks"
               | "rateLimit"
+              | "migrationConfig"
+              | "migrationUserIdMap"
               | "user_custom"
               | "user_table"
               | "oneToOneTable"
@@ -7218,6 +8097,82 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  increment: Record<string, number>;
+                  model: "migrationConfig";
+                  set?: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  increment: Record<string, number>;
+                  model: "migrationUserIdMap";
+                  set?: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -8172,6 +9127,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   }>;
                 }
               | {
+                  model: "migrationConfig";
+                  update: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  update: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
                   model: "user_custom";
                   update: {
                     cbDefaultValueField?: null | string;
@@ -9078,6 +10107,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where?: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  update: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  update: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -9690,6 +10793,23 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                 }
               | {
                   data: {
+                    migrateAccountHandle: string;
+                    migrateSessionHandle: string;
+                    migrateUserHandle: string;
+                  };
+                  model: "migrationConfig";
+                }
+              | {
+                  data: {
+                    email: string;
+                    emailVerified: boolean;
+                    legacyUserId: string;
+                    newUserId: string;
+                  };
+                  model: "migrationUserIdMap";
+                }
+              | {
+                  data: {
                     cbDefaultValueField?: null | string;
                     createdAt: number;
                     customField?: null | string;
@@ -10159,6 +11279,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where?: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -10912,6 +12095,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   }>;
                 }
               | {
+                  model: "migrationConfig";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
                   model: "user_custom";
                   where?: Array<{
                     connector?: "AND" | "OR";
@@ -11284,6 +12530,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "oauthConsent"
               | "jwks"
               | "rateLimit"
+              | "migrationConfig"
+              | "migrationUserIdMap"
               | "user_custom"
               | "user_table"
               | "oneToOneTable"
@@ -11349,6 +12597,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "oauthConsent"
               | "jwks"
               | "rateLimit"
+              | "migrationConfig"
+              | "migrationUserIdMap"
               | "user_custom"
               | "user_table"
               | "oneToOneTable"
@@ -11843,6 +13093,82 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  increment: Record<string, number>;
+                  model: "migrationConfig";
+                  set?: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  increment: Record<string, number>;
+                  model: "migrationUserIdMap";
+                  set?: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -12797,6 +14123,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   }>;
                 }
               | {
+                  model: "migrationConfig";
+                  update: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  update: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
                   model: "user_custom";
                   update: {
                     cbDefaultValueField?: null | string;
@@ -13703,6 +15103,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where?: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  update: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  update: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -14315,6 +15789,23 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                 }
               | {
                   data: {
+                    migrateAccountHandle: string;
+                    migrateSessionHandle: string;
+                    migrateUserHandle: string;
+                  };
+                  model: "migrationConfig";
+                }
+              | {
+                  data: {
+                    email: string;
+                    emailVerified: boolean;
+                    legacyUserId: string;
+                    newUserId: string;
+                  };
+                  model: "migrationUserIdMap";
+                }
+              | {
+                  data: {
                     cbDefaultValueField?: null | string;
                     createdAt: number;
                     customField?: null | string;
@@ -14784,6 +16275,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where?: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -15537,6 +17091,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   }>;
                 }
               | {
+                  model: "migrationConfig";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
                   model: "user_custom";
                   where?: Array<{
                     connector?: "AND" | "OR";
@@ -15909,6 +17526,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "oauthConsent"
               | "jwks"
               | "rateLimit"
+              | "migrationConfig"
+              | "migrationUserIdMap"
               | "user_custom"
               | "user_table"
               | "oneToOneTable"
@@ -15974,6 +17593,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "oauthConsent"
               | "jwks"
               | "rateLimit"
+              | "migrationConfig"
+              | "migrationUserIdMap"
               | "user_custom"
               | "user_table"
               | "oneToOneTable"
@@ -16468,6 +18089,82 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  increment: Record<string, number>;
+                  model: "migrationConfig";
+                  set?: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  increment: Record<string, number>;
+                  model: "migrationUserIdMap";
+                  set?: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -17422,6 +19119,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   }>;
                 }
               | {
+                  model: "migrationConfig";
+                  update: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  update: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
                   model: "user_custom";
                   update: {
                     cbDefaultValueField?: null | string;
@@ -18328,6 +20099,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where?: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  update: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  update: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -18940,6 +20785,23 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                 }
               | {
                   data: {
+                    migrateAccountHandle: string;
+                    migrateSessionHandle: string;
+                    migrateUserHandle: string;
+                  };
+                  model: "migrationConfig";
+                }
+              | {
+                  data: {
+                    email: string;
+                    emailVerified: boolean;
+                    legacyUserId: string;
+                    newUserId: string;
+                  };
+                  model: "migrationUserIdMap";
+                }
+              | {
+                  data: {
                     cbDefaultValueField?: null | string;
                     createdAt: number;
                     customField?: null | string;
@@ -19409,6 +21271,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where?: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -20162,6 +22087,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   }>;
                 }
               | {
+                  model: "migrationConfig";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
                   model: "user_custom";
                   where?: Array<{
                     connector?: "AND" | "OR";
@@ -20534,6 +22522,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "oauthConsent"
               | "jwks"
               | "rateLimit"
+              | "migrationConfig"
+              | "migrationUserIdMap"
               | "user_custom"
               | "user_table"
               | "oneToOneTable"
@@ -20599,6 +22589,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "oauthConsent"
               | "jwks"
               | "rateLimit"
+              | "migrationConfig"
+              | "migrationUserIdMap"
               | "user_custom"
               | "user_table"
               | "oneToOneTable"
@@ -21093,6 +23085,82 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  increment: Record<string, number>;
+                  model: "migrationConfig";
+                  set?: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  increment: Record<string, number>;
+                  model: "migrationUserIdMap";
+                  set?: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -22047,6 +24115,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   }>;
                 }
               | {
+                  model: "migrationConfig";
+                  update: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  update: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
                   model: "user_custom";
                   update: {
                     cbDefaultValueField?: null | string;
@@ -22953,6 +25095,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where?: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  update: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  update: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -23565,6 +25781,23 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                 }
               | {
                   data: {
+                    migrateAccountHandle: string;
+                    migrateSessionHandle: string;
+                    migrateUserHandle: string;
+                  };
+                  model: "migrationConfig";
+                }
+              | {
+                  data: {
+                    email: string;
+                    emailVerified: boolean;
+                    legacyUserId: string;
+                    newUserId: string;
+                  };
+                  model: "migrationUserIdMap";
+                }
+              | {
+                  data: {
                     cbDefaultValueField?: null | string;
                     createdAt: number;
                     customField?: null | string;
@@ -24034,6 +26267,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where?: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -24787,6 +27083,69 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   }>;
                 }
               | {
+                  model: "migrationConfig";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
                   model: "user_custom";
                   where?: Array<{
                     connector?: "AND" | "OR";
@@ -25159,6 +27518,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "oauthConsent"
               | "jwks"
               | "rateLimit"
+              | "migrationConfig"
+              | "migrationUserIdMap"
               | "user_custom"
               | "user_table"
               | "oneToOneTable"
@@ -25224,6 +27585,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "oauthConsent"
               | "jwks"
               | "rateLimit"
+              | "migrationConfig"
+              | "migrationUserIdMap"
               | "user_custom"
               | "user_table"
               | "oneToOneTable"
@@ -25718,6 +28081,82 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  increment: Record<string, number>;
+                  model: "migrationConfig";
+                  set?: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  increment: Record<string, number>;
+                  model: "migrationUserIdMap";
+                  set?: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
@@ -26672,6 +29111,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   }>;
                 }
               | {
+                  model: "migrationConfig";
+                  update: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  update: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
                   model: "user_custom";
                   update: {
                     cbDefaultValueField?: null | string;
@@ -27578,6 +30091,80 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
                   where?: Array<{
                     connector?: "AND" | "OR";
                     field: "key" | "count" | "lastRequest" | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationConfig";
+                  update: {
+                    migrateAccountHandle?: string;
+                    migrateSessionHandle?: string;
+                    migrateUserHandle?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "migrateUserHandle"
+                      | "migrateAccountHandle"
+                      | "migrateSessionHandle"
+                      | "_id";
+                    mode?: "sensitive" | "insensitive";
+                    operator?:
+                      | "lt"
+                      | "lte"
+                      | "gt"
+                      | "gte"
+                      | "eq"
+                      | "in"
+                      | "not_in"
+                      | "ne"
+                      | "contains"
+                      | "starts_with"
+                      | "ends_with";
+                    value:
+                      | string
+                      | number
+                      | boolean
+                      | Array<string>
+                      | Array<number>
+                      | null;
+                  }>;
+                }
+              | {
+                  model: "migrationUserIdMap";
+                  update: {
+                    email?: string;
+                    emailVerified?: boolean;
+                    legacyUserId?: string;
+                    newUserId?: string;
+                  };
+                  where?: Array<{
+                    connector?: "AND" | "OR";
+                    field:
+                      | "legacyUserId"
+                      | "newUserId"
+                      | "email"
+                      | "emailVerified"
+                      | "_id";
                     mode?: "sensitive" | "insensitive";
                     operator?:
                       | "lt"
