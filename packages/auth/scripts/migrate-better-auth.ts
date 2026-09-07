@@ -20,6 +20,8 @@ type MigrateArgs = {
   dryRun: boolean;
   cutover: boolean;
   resume: boolean;
+  batchSize: number;
+  help: boolean;
 };
 
 function log(message: string): void {
@@ -151,6 +153,27 @@ export default http;
 `;
 }
 
+export function rewriteAuthToNative(content: string): string | null {
+  if (content.includes("convex-auth/convex") && content.includes("convexAuth(")) {
+    return content;
+  }
+  if (
+    !content.includes("createBetterAuth") &&
+    !content.includes("@convex-dev/better-auth/convex") &&
+    !content.includes("convex-better-auth/convex") &&
+    !content.includes("convex-better-auth-adapter/convex")
+  ) {
+    return null;
+  }
+  return `import { convexAuth } from "convex-auth/convex";
+import { components } from "./_generated/api.js";
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+});
+`;
+}
+
 export function presentLegacyPackages(packageJson: string): string[] {
   const present: string[] = [];
   for (const pkg of LEGACY_PACKAGES) {
@@ -169,6 +192,8 @@ export function parseArgs(argv: string[]): MigrateArgs {
   let dryRun = false;
   let cutover = false;
   let resume = false;
+  let batchSize = 100;
+  let help = false;
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
       case "--convex-dir":
@@ -189,9 +214,36 @@ export function parseArgs(argv: string[]): MigrateArgs {
       case "--resume":
         resume = true;
         break;
+      case "--batch-size":
+        batchSize = Number.parseInt(args[++i] ?? "100", 10);
+        if (Number.isNaN(batchSize) || batchSize <= 0) {
+          throw new Error("--batch-size must be a positive integer");
+        }
+        break;
+      case "--help":
+      case "-h":
+        help = true;
+        break;
     }
   }
-  return { convexDir, legacyComponent, authComponent, dryRun, cutover, resume };
+  return { convexDir, legacyComponent, authComponent, dryRun, cutover, resume, batchSize, help };
+}
+
+function printMigrateHelp(): void {
+  log(
+    "migrate better-auth — one-time migration from Better Auth to convex-auth\n\n" +
+      "Usage:\n" +
+      "  pnpm dlx convex-auth migrate better-auth [options]\n\n" +
+      "Options:\n" +
+      "  --dry-run              Print the plan and legacy table counts without changing anything\n" +
+      "  --cutover              After migration, rewrite files and remove legacy packages\n" +
+      "  --resume               Continue a previously started migration\n" +
+      "  --from-component <n>   Legacy component mount name (default: betterAuth)\n" +
+      "  --auth-component <n>   convex-auth component mount name (default: convexAuth)\n" +
+      "  --batch-size <n>       Migration batch size (default: 100)\n" +
+      "  --convex-dir <path>    Path to convex directory (default: ./convex)\n" +
+      "  --help, -h             Print this help\n",
+  );
 }
 
 function rewriteFile(
@@ -224,9 +276,24 @@ async function runConvex(args: string[], dryRun: boolean, cwd: string): Promise<
   return run("pnpm", ["dlx", "convex", ...args], { cwd });
 }
 
+async function runConvexJson<T>(args: string[], cwd: string): Promise<T> {
+  const out = await runWithOutput("pnpm", ["dlx", "convex", ...args], { cwd });
+  return JSON.parse(out.trim()) as T;
+}
+
+function hasConvexAuth(convexConfig: string): boolean {
+  return /convex-auth\/convex\.config(?:\.js)?/.test(convexConfig);
+}
+
 export async function main(argv: string[]): Promise<void> {
   const cwd = process.cwd();
-  const { convexDir, legacyComponent, authComponent, dryRun, cutover, resume } = parseArgs(argv);
+  const { convexDir, legacyComponent, authComponent, dryRun, cutover, resume, batchSize, help } =
+    parseArgs(argv);
+
+  if (help) {
+    printMigrateHelp();
+    return;
+  }
 
   const packageJsonPath = resolve(cwd, "package.json");
   const convexConfigPath = resolve(cwd, convexDir, "convex.config.ts");
@@ -234,6 +301,13 @@ export async function main(argv: string[]): Promise<void> {
   if (!existsSync(packageJsonPath)) throw new Error(`package.json not found at ${packageJsonPath}`);
   if (!existsSync(convexConfigPath))
     throw new Error(`convex.config.ts not found at ${convexConfigPath}`);
+
+  const convexConfig = readFileSync(convexConfigPath, "utf8");
+  if (!hasConvexAuth(convexConfig)) {
+    throw new Error(
+      `convex-auth component is not mounted in ${convexConfigPath}; mount it before migrating`,
+    );
+  }
 
   const packageJson = readFileSync(packageJsonPath, "utf8");
   if (!packageJson.includes(LEGACY_PACKAGE) && !packageJson.includes(VENDORED_PACKAGE)) {
@@ -246,106 +320,99 @@ export async function main(argv: string[]): Promise<void> {
   log(`  legacy comp:   ${legacyComponent}`);
   log(`  auth comp:     ${authComponent}`);
   if (dryRun) log("  --dry-run: no files or deployments will change");
-  if (resume) warn("  --resume: resuming is not yet implemented; starting from the beginning");
+  if (resume) log("  --resume: migration will continue from the stored cursor");
+  log(`  batch size:    ${batchSize}`);
 
   const needsSwap = packageJson.includes(LEGACY_PACKAGE);
+  if (dryRun) {
+    log("\n[dry-run] planned steps:");
+    if (needsSwap) {
+      log(`  1. rewrite package.json: ${LEGACY_PACKAGE} -> ${VENDORED_PACKAGE}`);
+      log(`  2. rewrite ${convexDir}/convex.config.ts to import ${VENDORED_PACKAGE}`);
+      log(`  3. ${detectPackageManager(cwd)} install and pnpm dlx convex dev --once`);
+    } else {
+      log(`  1. use existing ${VENDORED_PACKAGE}`);
+    }
+    log(`  2. fetch migration function handles from ${authComponent}`);
+    log(`  3. run ${legacyComponent}/migrate:setMigrationTargets`);
+    log(`  4. run ${legacyComponent}/migrate:migrateAll (batch size ${batchSize})`);
+    if (cutover) {
+      log(`  5. rewrite ${convexDir}/convex.config.ts, ${convexDir}/http.ts, and package.json`);
+      log(`  6. remove legacy packages and deploy native convex-auth`);
+    }
+
+    try {
+      const counts = await runConvexJson<{
+        users: number;
+        accounts: number;
+        sessions: number;
+      }>(["run", "--component", legacyComponent, "migrate:getLegacyCounts", "{}"], cwd);
+      log(`\nlegacy table counts in ${legacyComponent}:`);
+      log(`  users:    ${counts.users}`);
+      log(`  accounts: ${counts.accounts}`);
+      log(`  sessions: ${counts.sessions}`);
+    } catch {
+      warn(
+        "could not fetch legacy table counts; the legacy component may not expose migrate:getLegacyCounts",
+      );
+    }
+    log("\n[dry-run] no changes made");
+    return;
+  }
+
   if (needsSwap) {
     log(`\nswapping ${LEGACY_PACKAGE} → ${VENDORED_PACKAGE}...`);
-    rewriteFile(packageJsonPath, swapPackageInPackageJson, dryRun);
-    rewriteFile(convexConfigPath, swapPackageInConvexConfig, dryRun);
-    if (!dryRun) {
-      const pkg = detectPackageManager(cwd);
-      log(`running ${pkg} install...`);
-      await run(pkg, ["install"], { cwd });
-      log("deploying vendored adapter...");
-      await runConvex(["dev", "--once"], dryRun, cwd);
-    }
+    rewriteFile(packageJsonPath, swapPackageInPackageJson, false);
+    rewriteFile(convexConfigPath, swapPackageInConvexConfig, false);
+    const pkg = detectPackageManager(cwd);
+    log(`running ${pkg} install...`);
+    await run(pkg, ["install"], { cwd });
+    log("deploying vendored adapter...");
+    await runConvex(["dev", "--once"], false, cwd);
   } else {
     log(`\nusing existing ${VENDORED_PACKAGE}...`);
-    if (!dryRun) {
-      log("deploying...");
-      await runConvex(["dev", "--once"], dryRun, cwd);
-    }
+    log("deploying...");
+    await runConvex(["dev", "--once"], false, cwd);
   }
 
-  log("\nrunning direct migration...");
+  log("\nfetching migration function handles...");
+  const handles = await runConvexJson<{
+    migrateUser: string;
+    migrateAccount: string;
+    migrateSession: string;
+  }>(["run", "--component", authComponent, "migrate:getMigrationFunctionHandles", "{}"], cwd);
 
-  if (dryRun) {
-    log(`[dry-run] would fetch legacy users from ${legacyComponent}`);
-  } else {
-    const usersRaw = await runWithOutput(
-      "pnpm",
-      ["dlx", "convex", "run", "--component", legacyComponent, "migrate:getLegacyUsers", "{}"],
-      { cwd },
-    );
-    const users = JSON.parse(usersRaw);
-    const userMap = new Map<string, { userId: string; email: string; emailVerified: boolean }>();
+  log("setting migration targets on legacy component...");
+  await runConvexJson<Record<string, never>>(
+    [
+      "run",
+      "--component",
+      legacyComponent,
+      "migrate:setMigrationTargets",
+      JSON.stringify({
+        migrateUserHandle: handles.migrateUser,
+        migrateAccountHandle: handles.migrateAccount,
+        migrateSessionHandle: handles.migrateSession,
+      }),
+    ],
+    cwd,
+  );
 
-    for (const legacyUser of users) {
-      const key = legacyUser._id ?? legacyUser.userId ?? "";
-      const args = JSON.stringify({ legacyUser });
-      const result = await runWithOutput(
-        "pnpm",
-        ["dlx", "convex", "run", "--component", authComponent, "migrate:migrateUser", args],
-        { cwd },
-      );
-      const { userId } = JSON.parse(result) as { userId: string };
-      userMap.set(key, {
-        userId,
-        email: legacyUser.email,
-        emailVerified: legacyUser.emailVerified,
-      });
-    }
-
-    const accountsRaw = await runWithOutput(
-      "pnpm",
-      ["dlx", "convex", "run", "--component", legacyComponent, "migrate:getLegacyAccounts", "{}"],
-      { cwd },
-    );
-    const accounts = JSON.parse(accountsRaw);
-    let migratedAccounts = 0;
-    for (const legacyAccount of accounts) {
-      const info = userMap.get(legacyAccount.userId);
-      if (info) {
-        const args = JSON.stringify({
-          legacyAccount,
-          userId: info.userId,
-          email: info.email,
-          emailVerified: info.emailVerified,
-        });
-        await runWithOutput(
-          "pnpm",
-          ["dlx", "convex", "run", "--component", authComponent, "migrate:migrateAccount", args],
-          { cwd },
-        );
-        migratedAccounts++;
-      }
-    }
-
-    const sessionsRaw = await runWithOutput(
-      "pnpm",
-      ["dlx", "convex", "run", "--component", legacyComponent, "migrate:getLegacySessions", "{}"],
-      { cwd },
-    );
-    const sessions = JSON.parse(sessionsRaw);
-    let migratedSessions = 0;
-    for (const legacySession of sessions) {
-      const info = userMap.get(legacySession.userId);
-      if (info) {
-        const args = JSON.stringify({ legacySession, userId: info.userId });
-        await runWithOutput(
-          "pnpm",
-          ["dlx", "convex", "run", "--component", authComponent, "migrate:migrateSession", args],
-          { cwd },
-        );
-        migratedSessions++;
-      }
-    }
-
-    log(
-      `migrated ${users.length} users, ${migratedAccounts} accounts, ${migratedSessions} sessions`,
-    );
+  log("running migration...");
+  const migrateArgs: { batchSize: number; reset?: boolean } = { batchSize };
+  if (!resume) {
+    migrateArgs.reset = true;
   }
+  const status = await runConvexJson<{
+    name?: string;
+    isDone?: boolean;
+    processed?: number;
+    continueCursor?: string | null;
+  }>(
+    ["run", "--component", legacyComponent, "migrate:migrateAll", JSON.stringify(migrateArgs)],
+    cwd,
+  );
+  log(`migration status: ${JSON.stringify(status)}`);
 
   if (cutover) {
     const httpTsPath = resolve(cwd, convexDir, "http.ts");
@@ -353,32 +420,18 @@ export async function main(argv: string[]): Promise<void> {
     const rootDir = resolve(cwd, convexDir, "..");
 
     log("\ncutover: removing legacy component and packages...");
-    rewriteFile(convexConfigPath, removeLegacyFromConvexConfig, dryRun);
-    rewriteFile(httpTsPath, rewriteHttpToNative, dryRun);
+    rewriteFile(convexConfigPath, removeLegacyFromConvexConfig, false);
+    rewriteFile(httpTsPath, rewriteHttpToNative, false);
+    rewriteFile(authTsPath, rewriteAuthToNative, false);
 
-    if (!dryRun) {
-      const pkg = detectPackageManager(cwd);
-      const toRemove = presentLegacyPackages(readFileSync(packageJsonPath, "utf8"));
-      if (toRemove.length > 0) {
-        log(`removing packages: ${toRemove.join(", ")}`);
-        await run(pkg, ["remove", ...toRemove], { cwd });
-      }
-      log("deploying native convex-auth...");
-      await runConvex(["dev", "--once"], dryRun, cwd);
+    const pkg = detectPackageManager(cwd);
+    const toRemove = presentLegacyPackages(readFileSync(packageJsonPath, "utf8"));
+    if (toRemove.length > 0) {
+      log(`removing packages: ${toRemove.join(", ")}`);
+      await run(pkg, ["remove", ...toRemove], { cwd });
     }
-
-    if (existsSync(authTsPath)) {
-      const authTs = readFileSync(authTsPath, "utf8");
-      if (
-        authTs.includes(LEGACY_PACKAGE) ||
-        authTs.includes(VENDORED_PACKAGE) ||
-        authTs.includes("createBetterAuth")
-      ) {
-        warn(
-          `${authTsPath} still references Better Auth; review and rewrite to convex-auth/convex manually`,
-        );
-      }
-    }
+    log("deploying native convex-auth...");
+    await runConvex(["dev", "--once"], false, cwd);
 
     const reactFiles = ["src/main.tsx", "src/App.tsx", "src/main.jsx", "src/App.jsx"];
     for (const file of reactFiles) {

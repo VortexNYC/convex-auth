@@ -3,6 +3,7 @@ import {
   parseArgs,
   presentLegacyPackages,
   removeLegacyFromConvexConfig,
+  rewriteAuthToNative,
   rewriteHttpToNative,
   swapPackageInConvexConfig,
   swapPackageInPackageJson,
@@ -17,6 +18,8 @@ describe("parseArgs", () => {
       dryRun: false,
       cutover: false,
       resume: false,
+      batchSize: 100,
+      help: false,
     });
   });
 
@@ -36,6 +39,8 @@ describe("parseArgs", () => {
         "--dry-run",
         "--cutover",
         "--resume",
+        "--batch-size",
+        "50",
       ]),
     ).toEqual({
       convexDir: "./apps/backend/convex",
@@ -44,6 +49,8 @@ describe("parseArgs", () => {
       dryRun: true,
       cutover: true,
       resume: true,
+      batchSize: 50,
+      help: false,
     });
   });
 });
@@ -156,6 +163,38 @@ http.route("/", ...);
 export default http;
 `;
     expect(rewriteHttpToNative(input)).toBeNull();
+  });
+});
+
+describe("rewriteAuthToNative", () => {
+  it("replaces a Better Auth bridge auth.ts with convex-auth", () => {
+    const input = `import { createClient } from "convex-better-auth-adapter";
+import { createBetterAuthConvexRuntime } from "convex-better-auth/convex";
+
+export const { auth } = createBetterAuthConvexRuntime({ ... });
+`;
+    expect(rewriteAuthToNative(input)).toBe(`import { convexAuth } from "convex-auth/convex";
+import { components } from "./_generated/api.js";
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+});
+`);
+  });
+
+  it("leaves an already-native auth.ts alone", () => {
+    const input = `import { convexAuth } from "convex-auth/convex";
+import { components } from "./_generated/api.js";
+
+export const auth = convexAuth({ component: components.convexAuth });
+`;
+    expect(rewriteAuthToNative(input)).toBe(input);
+  });
+
+  it("returns null when no bridge pattern is detected", () => {
+    const input = `export const auth = {};
+`;
+    expect(rewriteAuthToNative(input)).toBeNull();
   });
 });
 
