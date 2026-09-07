@@ -65,8 +65,8 @@ describe("mcp oauth signing runtime helpers", () => {
       claims: {
         clientId: "client_1",
         subjectId: "external-user-1",
-        resourceId: "crm:mcp",
-        scopes: ["crm:organization:read"],
+        resourceId: "app:mcp",
+        scopes: ["app:organization:read"],
         organizationId: "org_1",
         organizationSlug: "acme",
       },

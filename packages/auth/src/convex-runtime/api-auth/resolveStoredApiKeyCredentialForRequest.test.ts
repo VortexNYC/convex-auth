@@ -10,7 +10,7 @@ describe("resolveStoredApiKeyCredentialForRequest", () => {
   it("validates stored key credentials and enforces IP allowlists", async () => {
     const keyHash = await hashApiKeySecret("secret");
     const result = await resolveStoredApiKeyCredentialForRequest({
-      token: "crm_live_123.secret",
+      token: "app_live_123.secret",
       headers: new Headers({ "x-forwarded-for": "203.0.113.10" }),
       findByKeyPrefix: async (keyPrefix) => ({
         keyPrefix,
@@ -20,8 +20,8 @@ describe("resolveStoredApiKeyCredentialForRequest", () => {
       }),
     });
 
-    assert.equal(result.apiKey.keyPrefix, "crm_live_123");
-    assert.equal(result.keyPrefix, "crm_live_123");
+    assert.equal(result.apiKey.keyPrefix, "app_live_123");
+    assert.equal(result.keyPrefix, "app_live_123");
     assert.equal(result.requestIp, "203.0.113.10");
   });
 
@@ -29,7 +29,7 @@ describe("resolveStoredApiKeyCredentialForRequest", () => {
     await assert.rejects(
       () =>
         resolveStoredApiKeyCredentialForRequest({
-          token: "crm_live_123.secret",
+          token: "app_live_123.secret",
           findByKeyPrefix: async () => null,
         }),
       (error: unknown) => error instanceof ApiAuthError && error.code === "API_KEY_INVALID",
@@ -42,7 +42,7 @@ describe("resolveStoredApiKeyCredentialForRequest", () => {
     await assert.rejects(
       () =>
         resolveStoredApiKeyCredentialForRequest({
-          token: "crm_live_123.secret",
+          token: "app_live_123.secret",
           findByKeyPrefix: async (keyPrefix) => ({
             keyPrefix,
             keyHash,
@@ -56,7 +56,7 @@ describe("resolveStoredApiKeyCredentialForRequest", () => {
     await assert.rejects(
       () =>
         resolveStoredApiKeyCredentialForRequest({
-          token: "crm_live_123.secret",
+          token: "app_live_123.secret",
           requestIp: "198.51.100.10",
           findByKeyPrefix: async (keyPrefix) => ({
             keyPrefix,

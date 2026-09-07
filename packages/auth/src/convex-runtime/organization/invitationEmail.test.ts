@@ -158,10 +158,10 @@ describe("organization invitation email helpers", () => {
   it("resolves invite email sender from primary or fallback env values", () => {
     assert.equal(
       resolveInvitationEmailFromAddress({
-        primary: " CRM <crm@example.com> ",
+        primary: " Example <app@example.com> ",
         fallback: "Fallback <fallback@example.com>",
       }),
-      "CRM <crm@example.com>",
+      "Example <app@example.com>",
     );
     assert.equal(
       resolveInvitationEmailFromAddress({
@@ -191,7 +191,7 @@ describe("organization invitation email helpers", () => {
         expiresAt: Date.UTC(2026, 0, 1),
       },
       from: "Convex <auth@example.com>",
-      appOrigin: "https://crm.example.com",
+      appOrigin: "https://app.example.com",
       renderEmailDraft: async (draft) => {
         events.push(`render:${draft.acceptUrl}`);
         return {
@@ -222,7 +222,7 @@ describe("organization invitation email helpers", () => {
 
     assert.deepStrictEqual(result, { status: "queued", emailId: "email_123" });
     assert.deepStrictEqual(events, [
-      "render:https://crm.example.com/accept-invite?token=invite-token",
+      "render:https://app.example.com/accept-invite?token=invite-token",
       "send:invitee@example.com",
       "queued:email_123",
     ]);
@@ -239,7 +239,7 @@ describe("organization invitation email helpers", () => {
         expiresAt: Date.UTC(2026, 0, 1),
       },
       from: null,
-      appOrigin: "https://crm.example.com",
+      appOrigin: "https://app.example.com",
       sendEmail: async () => {
         throw new Error("send should not run");
       },

@@ -4,6 +4,8 @@
 
 A public, Convex-native auth platform for [Convex](https://convex.dev), with a [Better Auth](https://www.better-auth.com) compatibility bridge.
 
+> **Disclaimer:** This is an independent, community-driven project. It is not affiliated with or endorsed by Convex Inc.
+
 [![CI][ci-badge]][ci]
 [![Docs][docs-badge]][docs]
 [![License][license-badge]][license]
@@ -19,7 +21,7 @@ A public, Convex-native auth platform for [Convex](https://convex.dev), with a [
 
 ## Status
 
-Public — `convex-auth` is at `1.6.0` and the `convex-better-auth-adapter` is at `0.13.2`. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, and refresh tokens) is passing full conformance and is ready for alpha use. The Better Auth compatibility bridge remains pre-1.0 while the community validates it against Better Auth releases.
+Public — `convex-auth` is at `1.7.3` and the `convex-better-auth-adapter` is at `0.13.3`. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, and MCP auth) is passing full conformance. The Better Auth compatibility bridge (`convex-better-auth` 2.0.4) is stable for migration.
 
 ## Why this exists
 
@@ -61,11 +63,22 @@ pnpm add convex-auth convex-auth-react convex
 
 ### 2. Set environment variables
 
-Generate an RS256 keypair and set it in your Convex deployment:
+Generate an RS256 keypair and set it on your Convex deployment:
 
 ```bash
-convex env set JWT_PRIVATE_KEY '...' # JSON-encoded RSA private key JWK
-convex env set JWKS '...'            # JSON Web Key Set containing the public key
+node --input-type=module -e '
+import { generateKeyPair, exportJWK } from "jose";
+const { publicKey, privateKey } = await generateKeyPair("RS256", { extractable: true });
+const pub = await exportJWK(publicKey);
+const priv = await exportJWK(privateKey);
+console.log("JWT_PRIVATE_KEY=" + JSON.stringify(priv));
+console.log("JWKS=" + JSON.stringify({ keys: [pub] }));
+'
+```
+
+```bash
+convex env set JWT_PRIVATE_KEY '<private-key-json>'
+convex env set JWKS '<jwks-json>'
 ```
 
 For email and OAuth, also set:
@@ -81,7 +94,18 @@ convex env set DISCORD_CLIENT_ID '...'
 convex env set DISCORD_CLIENT_SECRET '...'
 ```
 
-### 3. Mount the component
+### 3. Create `convex/auth.config.ts`
+
+```ts
+// convex/auth.config.ts
+import { createConvexAuthProvider } from "convex-auth/convex";
+
+export default {
+  providers: [createConvexAuthProvider()],
+};
+```
+
+### 4. Mount the component
 
 ```ts
 // convex/convex.config.ts
@@ -106,7 +130,7 @@ app.use(auth, {
 export default app;
 ```
 
-### 4. Configure auth in `convex/auth.ts`
+### 5. Configure auth in `convex/auth.ts`
 
 ```ts
 // convex/auth.ts
@@ -166,7 +190,7 @@ export const {
 } = auth;
 ```
 
-### 5. Wire HTTP routes in `convex/http.ts`
+### 6. Wire HTTP routes in `convex/http.ts`
 
 ```ts
 // convex/http.ts
@@ -179,7 +203,7 @@ auth.addHttpRoutes(http);
 export default http;
 ```
 
-### 6. Wrap the React app
+### 7. Wrap the React app
 
 ```tsx
 // src/main.tsx
@@ -201,7 +225,7 @@ function Root() {
 }
 ```
 
-### 7. Use the actions in components
+### 8. Use the actions in components
 
 ```tsx
 // src/SignIn.tsx
@@ -235,7 +259,7 @@ export function SignIn() {
 }
 ```
 
-### 8. Validate your setup
+### 9. Validate your setup
 
 The `convex-auth` CLI ships with `check` (consumer contract) and `preflight` (live install verification):
 
@@ -259,12 +283,35 @@ If you are already using Better Auth and want to migrate to Convex tables and th
 Use the `convex-auth` component in your `convex/convex.config.ts`:
 
 ```ts
-import { defineComponents } from "convex/server";
-import auth from "convex-auth/component";
+// convex/auth.config.ts
+import { createConvexAuthProvider } from "convex-auth/convex";
 
-export default defineComponents({
-  auth,
+export default {
+  providers: [createConvexAuthProvider()],
+};
+```
+
+```ts
+// convex/convex.config.ts
+import { defineApp } from "convex/server";
+import { v } from "convex/values";
+import auth from "convex-auth/convex.config";
+
+const app = defineApp({
+  env: {
+    JWT_PRIVATE_KEY: v.string(),
+    JWKS: v.string(),
+  },
 });
+
+app.use(auth, {
+  env: {
+    JWT_PRIVATE_KEY: app.env.JWT_PRIVATE_KEY,
+    JWKS: app.env.JWKS,
+  },
+});
+
+export default app;
 ```
 
 For the full mapping, see [`docs/better-auth-to-convex.md`](docs/better-auth-to-convex.md).
@@ -328,14 +375,17 @@ A GitHub Actions workflow is defined in [`.github/workflows/ci.yml`](.github/wor
 
 ## Releasing
 
-Push a `v*` tag or trigger the workflow manually:
+This repo uses [Changesets](https://github.com/changesets/changesets). To publish a release:
+
+1. Add a changeset for the affected packages:
 
 ```bash
-git tag v0.2.0-alpha.0
-git push origin v0.2.0-alpha.0
+pnpm changeset
 ```
 
-The `Release` workflow in [`.github/workflows/release.yml`](.github/workflows/release.yml) builds and publishes every public package to npm. It needs an `NPM_TOKEN` repository secret.
+2. Merge the resulting release PR that Changesets opens against `main`.
+
+3. The [`release.yml`](.github/workflows/release.yml) workflow will version the packages, publish them to npm, and create GitHub releases. It needs an `NPM_TOKEN` repository secret.
 
 ## Attribution
 
@@ -353,7 +403,7 @@ Apache-2.0 — see `LICENSE`.
 [docs]: https://gregarious-perch-710.convex.site
 [license-badge]: https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=for-the-badge
 [license]: LICENSE
-[status-badge]: https://img.shields.io/badge/status-alpha-blueviolet.svg?style=for-the-badge
+[status-badge]: https://img.shields.io/badge/status-public-blueviolet.svg?style=for-the-badge
 [status]: #status
 [node-badge]: https://img.shields.io/badge/node->=20.12.0-brightgreen.svg?style=for-the-badge
 [node]: package.json

@@ -548,7 +548,7 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
   });
 
   it("self-heal swallows setActiveOrganization errors so QueryCtx reads don't blow up", async () => {
-    // Repro of the production regression CRM mcp-gate caught: glue's
+    // Repro of the production regression a consumer caught: glue's
     // self-heal path called setActiveOrganization in a QueryCtx, where
     // db.patch isn't available — the adapter threw, propagating up
     // through resolveViewer. The package-level swallow lets the request

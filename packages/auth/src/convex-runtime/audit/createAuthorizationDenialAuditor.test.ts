@@ -51,7 +51,7 @@ function deniedError(
       principalId: overrides.principalId ?? "user-1",
       organizationId: overrides.organizationId ?? "org-1",
       resourceType: overrides.resourceType ?? "convex.function",
-      resourceId: overrides.resourceId ?? "crm:reports.list",
+      resourceId: overrides.resourceId ?? "app:reports.list",
       authzCode: overrides.authzCode ?? "PERMISSION_REQUIRED",
       permission: overrides.permission ?? "reports:read",
       actorUserId: overrides.actorUserId ?? "user-1",

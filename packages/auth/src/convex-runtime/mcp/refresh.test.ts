@@ -42,9 +42,9 @@ describe("mcp oauth refresh helpers", () => {
       clientId: "client_123",
       subjectId: "user_123",
       organizationId: "org_123",
-      scopes: ["crm:organization:read", "crm:tasks:read", "crm:tasks:read"],
-      audience: "crm-mcp",
-      resourceId: "crm:mcp",
+      scopes: ["app:organization:read", "app:tasks:read", "app:tasks:read"],
+      audience: "example-mcp",
+      resourceId: "app:mcp",
       policy: {
         absoluteLifetimeMs: 86_400_000,
         inactivityLifetimeMs: 3_600_000,
@@ -63,9 +63,9 @@ describe("mcp oauth refresh helpers", () => {
         clientId: "client_123",
         subjectId: "user_123",
         organizationId: "org_123",
-        scopes: ["crm:organization:read", "crm:tasks:read"],
-        audience: "crm-mcp",
-        resourceId: "crm:mcp",
+        scopes: ["app:organization:read", "app:tasks:read"],
+        audience: "example-mcp",
+        resourceId: "app:mcp",
         issuedAt: 1_700_000_000_000,
         expiresAt: 1_700_086_400_000,
         inactivityExpiresAt: 1_700_003_600_000,
@@ -81,9 +81,9 @@ describe("mcp oauth refresh helpers", () => {
       clientId: "client_123",
       subjectId: "user_123",
       organizationId: "org_123",
-      scopes: ["crm:organization:read", "crm:tasks:read"],
-      audience: "crm-mcp",
-      resourceId: "crm:mcp",
+      scopes: ["app:organization:read", "app:tasks:read"],
+      audience: "example-mcp",
+      resourceId: "app:mcp",
       policy: {
         absoluteLifetimeMs: 86_400_000,
         inactivityLifetimeMs: 3_600_000,
@@ -113,9 +113,9 @@ describe("mcp oauth refresh helpers", () => {
         clientId: "client_123",
         subjectId: "user_123",
         organizationId: "org_123",
-        scopes: ["crm:organization:read", "crm:tasks:read"],
-        audience: "crm-mcp",
-        resourceId: "crm:mcp",
+        scopes: ["app:organization:read", "app:tasks:read"],
+        audience: "example-mcp",
+        resourceId: "app:mcp",
         issuedAt: 1_700_000_100_000,
         expiresAt: 1_700_086_500_000,
         inactivityExpiresAt: 1_700_003_700_000,
@@ -132,7 +132,7 @@ describe("mcp oauth refresh helpers", () => {
 
   it("validates refresh token grant request", async () => {
     const result = await validateMcpOAuthRefreshTokenGrantRequest({
-      request: new Request("https://crm.test/oauth/crm-mcp/token", {
+      request: new Request("https://example.com/oauth/example-mcp/token", {
         method: "POST",
         headers: {
           "content-type": "application/x-www-form-urlencoded",
@@ -141,14 +141,14 @@ describe("mcp oauth refresh helpers", () => {
           grant_type: "refresh_token",
           refresh_token: "refresh_123",
           client_id: "client_123",
-          scope: "crm:organization:read",
+          scope: "app:organization:read",
         }),
       }),
       resolveClient: () => ({
         clientId: "client_123",
         name: "Client 123",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read", "crm:tasks:read"],
+        allowedScopes: ["app:organization:read", "app:tasks:read"],
       }),
     });
 
@@ -158,16 +158,16 @@ describe("mcp oauth refresh helpers", () => {
         clientId: "client_123",
         name: "Client 123",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read", "crm:tasks:read"],
+        allowedScopes: ["app:organization:read", "app:tasks:read"],
       },
       refreshToken: "refresh_123",
-      requestedScopes: ["crm:organization:read"],
+      requestedScopes: ["app:organization:read"],
     });
   });
 
   it("rejects refresh token request with unsupported scope", async () => {
     const result = await validateMcpOAuthRefreshTokenGrantRequest({
-      request: new Request("https://crm.test/oauth/crm-mcp/token", {
+      request: new Request("https://example.com/oauth/example-mcp/token", {
         method: "POST",
         headers: {
           "content-type": "application/x-www-form-urlencoded",
@@ -176,14 +176,14 @@ describe("mcp oauth refresh helpers", () => {
           grant_type: "refresh_token",
           refresh_token: "refresh_123",
           client_id: "client_123",
-          scope: "crm:opportunities:write",
+          scope: "app:opportunities:write",
         }),
       }),
       resolveClient: () => ({
         clientId: "client_123",
         name: "Client 123",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read", "crm:tasks:read"],
+        allowedScopes: ["app:organization:read", "app:tasks:read"],
       }),
     });
 
@@ -192,7 +192,7 @@ describe("mcp oauth refresh helpers", () => {
       status: 400,
       body: {
         error: "invalid_scope",
-        error_description: "Unsupported scope: crm:opportunities:write",
+        error_description: "Unsupported scope: app:opportunities:write",
       },
     });
   });
@@ -203,17 +203,17 @@ describe("mcp oauth refresh helpers", () => {
         clientId: "client_123",
         name: "Client 123",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read", "crm:tasks:read"],
+        allowedScopes: ["app:organization:read", "app:tasks:read"],
       },
       refreshTokenRecord: {
-        scopes: ["crm:organization:read", "crm:tasks:read"],
+        scopes: ["app:organization:read", "app:tasks:read"],
       },
-      requestedScopes: ["crm:organization:read"],
+      requestedScopes: ["app:organization:read"],
     });
 
     assert.deepEqual(result, {
       ok: true,
-      scopes: ["crm:organization:read"],
+      scopes: ["app:organization:read"],
     });
   });
 
@@ -223,18 +223,18 @@ describe("mcp oauth refresh helpers", () => {
         clientId: "client_123",
         name: "Client 123",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read", "crm:tasks:read"],
+        allowedScopes: ["app:organization:read", "app:tasks:read"],
       },
       refreshTokenRecord: {
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
       },
-      requestedScopes: ["crm:tasks:read"],
+      requestedScopes: ["app:tasks:read"],
     });
 
     assert.deepEqual(result, {
       ok: false,
       error: "invalid_scope",
-      error_description: "Requested scope exceeds originally granted scope: crm:tasks:read",
+      error_description: "Requested scope exceeds originally granted scope: app:tasks:read",
     });
   });
 
@@ -243,9 +243,9 @@ describe("mcp oauth refresh helpers", () => {
       clientId: "client_123",
       subjectId: "user_123",
       organizationId: "org_123",
-      scopes: ["crm:organization:read", "crm:tasks:read"],
-      audience: "crm-mcp",
-      resourceId: "crm:mcp",
+      scopes: ["app:organization:read", "app:tasks:read"],
+      audience: "example-mcp",
+      resourceId: "app:mcp",
       policy: {
         absoluteLifetimeMs: 86_400_000,
         inactivityLifetimeMs: 3_600_000,
@@ -261,10 +261,10 @@ describe("mcp oauth refresh helpers", () => {
         clientId: "client_123",
         name: "Client 123",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read", "crm:tasks:read"],
+        allowedScopes: ["app:organization:read", "app:tasks:read"],
       },
       refreshToken: "refresh_123",
-      requestedScopes: ["crm:organization:read"],
+      requestedScopes: ["app:organization:read"],
       policy: {
         absoluteLifetimeMs: 86_400_000,
         inactivityLifetimeMs: 3_600_000,
@@ -297,7 +297,7 @@ describe("mcp oauth refresh helpers", () => {
     assert.deepEqual(result, {
       ok: true,
       record: current.record,
-      scopes: ["crm:organization:read"],
+      scopes: ["app:organization:read"],
       rotation: {
         refreshToken: "refresh_456",
         record: {
@@ -307,9 +307,9 @@ describe("mcp oauth refresh helpers", () => {
           clientId: "client_123",
           subjectId: "user_123",
           organizationId: "org_123",
-          scopes: ["crm:organization:read"],
-          audience: "crm-mcp",
-          resourceId: "crm:mcp",
+          scopes: ["app:organization:read"],
+          audience: "example-mcp",
+          resourceId: "app:mcp",
           issuedAt: 1_700_000_100_000,
           expiresAt: 1_700_086_500_000,
           inactivityExpiresAt: 1_700_003_700_000,
@@ -337,7 +337,7 @@ describe("mcp oauth refresh helpers", () => {
         clientId: "client_123",
         name: "Client 123",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read", "crm:tasks:read"],
+        allowedScopes: ["app:organization:read", "app:tasks:read"],
       },
       refreshToken: "refresh_123",
       policy: {
@@ -353,9 +353,9 @@ describe("mcp oauth refresh helpers", () => {
           clientId: "client_123",
           subjectId: "user_123",
           organizationId: "org_123",
-          scopes: ["crm:organization:read"],
-          audience: "crm-mcp",
-          resourceId: "crm:mcp",
+          scopes: ["app:organization:read"],
+          audience: "example-mcp",
+          resourceId: "app:mcp",
           issuedAt: 1_700_000_000_000,
           expiresAt: 1_700_086_400_000,
           inactivityExpiresAt: 1_700_003_600_000,
@@ -398,9 +398,9 @@ describe("mcp oauth refresh helpers", () => {
       clientId: "client_123",
       subjectId: "user_123",
       organizationId: "org_123",
-      scopes: ["crm:organization:read"],
-      audience: "crm-mcp",
-      resourceId: "crm:mcp",
+      scopes: ["app:organization:read"],
+      audience: "example-mcp",
+      resourceId: "app:mcp",
       policy: {
         absoluteLifetimeMs: 86_400_000,
         inactivityLifetimeMs: 3_600_000,
@@ -420,7 +420,7 @@ describe("mcp oauth refresh helpers", () => {
         clientId: "client_123",
         name: "Client 123",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read", "crm:tasks:read"],
+        allowedScopes: ["app:organization:read", "app:tasks:read"],
       },
       refreshToken: "refresh_123",
       policy: {

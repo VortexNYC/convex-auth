@@ -10,7 +10,7 @@ import {
 } from "./clientAssertion";
 import type { McpOAuthClientAssertionKey } from "./types";
 
-const TOKEN_ENDPOINT = "https://auth.example.com/oauth/crm-mcp/token";
+const TOKEN_ENDPOINT = "https://auth.example.com/oauth/example-mcp/token";
 const CLIENT_ID = "svc-hermes";
 
 async function keyPair(keyId = "k1") {

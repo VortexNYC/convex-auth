@@ -1,11 +1,11 @@
 // Explicit public surface. Previously `export *` re-exported 91+ internal
-// symbols for consumers that do not exist (CRM is the only external consumer;
+// symbols for consumers that do not exist (this package is intended for external consumers;
 // see docs/go-live-roadmap.md). This is the exact contract of the two real
 // consumers: external apps (`convex-auth/mcp`) and this package's own
 // Convex component (`component/mcp.ts`, via `../dist/mcp.js`). Add a symbol
 // here only when one of those actually needs it.
 export {
-  // CRM consumer
+  // external consumer
   buildAuthorizationServerMetadata,
   buildEmptyJwks,
   buildMcpOAuthIssuer,

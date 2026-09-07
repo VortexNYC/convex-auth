@@ -20,9 +20,9 @@ describe("invite sign-up helpers", () => {
     assert.equal(getAfterSignUpPath("?redirect_url=/app", "/post-sign-up"), "/app");
     assert.equal(
       getAfterSignUpPath(
-        "?redirect_url=https://crm.convex.test/post-sign-up?invitation_token=invite_123",
+        "?redirect_url=https://app.convex.test/post-sign-up?invitation_token=invite_123",
         "/post-sign-up",
-        "https://crm.convex.test",
+        "https://app.convex.test",
       ),
       "/post-sign-up?invitation_token=invite_123",
     );
@@ -30,7 +30,7 @@ describe("invite sign-up helpers", () => {
       getAfterSignUpPath(
         "?redirect_url=https://evil.com",
         "/post-sign-up",
-        "https://crm.convex.test",
+        "https://app.convex.test",
       ),
       "/post-sign-up",
     );
@@ -38,9 +38,9 @@ describe("invite sign-up helpers", () => {
 
   it("builds invite sign-up URL with token, email, and redirect", () => {
     const url = buildInviteSignUpUrl({
-      baseSignUpUrl: "https://crm.convex.test/sign-up",
+      baseSignUpUrl: "https://app.convex.test/sign-up",
       fallbackSignUpPath: "/sign-up",
-      currentOrigin: "https://crm.convex.test",
+      currentOrigin: "https://app.convex.test",
       currentSearch: "?token=invite_123&email=USER@Example.COM",
       afterSignUpPath: "/post-sign-up?invitation_token=invite_123",
       emailAddress: null,
@@ -53,15 +53,15 @@ describe("invite sign-up helpers", () => {
     assert.equal(parsed.searchParams.get("identifier"), "USER@Example.COM");
     assert.equal(
       parsed.searchParams.get("redirect_url"),
-      "https://crm.convex.test/post-sign-up?invitation_token=invite_123",
+      "https://app.convex.test/post-sign-up?invitation_token=invite_123",
     );
   });
 
   it("prepares invite accept redirect with resolved email and safe path", async () => {
     const result = await prepareInviteAcceptRedirect({
-      baseSignUpUrl: "https://crm.convex.test/sign-up",
+      baseSignUpUrl: "https://app.convex.test/sign-up",
       fallbackSignUpPath: "/sign-up",
-      currentOrigin: "https://crm.convex.test",
+      currentOrigin: "https://app.convex.test",
       currentSearch: "?token=invite_123",
       afterSignUpPath: "/post-sign-up?invitation_token=invite_123",
       getInvitationEmail: async (invitationToken) =>
@@ -80,14 +80,14 @@ describe("invite sign-up helpers", () => {
     assert.equal(parsed.searchParams.get("email_address"), "invited@example.com");
     assert.equal(
       parsed.searchParams.get("redirect_url"),
-      "https://crm.convex.test/post-sign-up?invitation_token=invite_123",
+      "https://app.convex.test/post-sign-up?invitation_token=invite_123",
     );
   });
 
   it("does not prepare invite accept redirect without a token", async () => {
     const result = await prepareInviteAcceptRedirect({
       fallbackSignUpPath: "/sign-up",
-      currentOrigin: "https://crm.convex.test",
+      currentOrigin: "https://app.convex.test",
       currentSearch: "?email=invited@example.com",
       afterSignUpPath: "/post-sign-up",
     });
@@ -102,7 +102,7 @@ describe("invite sign-up helpers", () => {
   it("does not prepare invite accept redirect when invite lookup fails", async () => {
     const result = await prepareInviteAcceptRedirect({
       fallbackSignUpPath: "/sign-up",
-      currentOrigin: "https://crm.convex.test",
+      currentOrigin: "https://app.convex.test",
       currentSearch: "?token=invite_123&email=invited@example.com",
       afterSignUpPath: "/post-sign-up",
       getInvitationEmail: async () => null,

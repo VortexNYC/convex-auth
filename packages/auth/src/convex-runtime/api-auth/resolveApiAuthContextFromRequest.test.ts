@@ -19,8 +19,8 @@ function createVerifier(): ApiTokenVerifier {
         subject: "user_123",
         tokenIdentifier: "https://auth.example.com|user_123",
         sessionId: "session_123",
-        scopes: ["crm:organization:read"],
-        audience: "crm-api",
+        scopes: ["app:organization:read"],
+        audience: "example-api",
         rawClaims: {},
       };
     },
@@ -57,17 +57,17 @@ describe("parseApiCredentialFromHeaders", () => {
     assert.deepEqual(
       parseApiCredentialFromHeaders({
         headers: new Headers({ Authorization: "Bearer session.jwt" }),
-        apiKeyTokenPrefixes: ["crm_live_"],
+        apiKeyTokenPrefixes: ["app_live_"],
       }),
       { credentialType: "userBearer", token: "session.jwt" },
     );
 
     assert.deepEqual(
       parseApiCredentialFromHeaders({
-        headers: new Headers({ "X-API-Key": "crm_live_123.secret" }),
-        apiKeyTokenPrefixes: ["crm_live_"],
+        headers: new Headers({ "X-API-Key": "app_live_123.secret" }),
+        apiKeyTokenPrefixes: ["app_live_"],
       }),
-      { credentialType: "apiKeyBearer", token: "crm_live_123.secret" },
+      { credentialType: "apiKeyBearer", token: "app_live_123.secret" },
     );
   });
 });
@@ -81,7 +81,7 @@ describe("resolveApiAuthContextFromRequest", () => {
           "x-forwarded-for": "203.0.113.10, 10.0.0.1",
         }),
       },
-      apiKeyTokenPrefixes: ["crm_live_"],
+      apiKeyTokenPrefixes: ["app_live_"],
       adapter: createAdapter(),
       resourceId: "GET /api/proof",
       resourceType: "http.route",
@@ -92,13 +92,13 @@ describe("resolveApiAuthContextFromRequest", () => {
     assert.equal(context.userId, "user_123");
     assert.equal(context.organizationId, "org_123");
     assert.deepEqual(context.permissions, ["organization:view", "people:view"]);
-    assert.deepEqual(context.scopes, ["crm:organization:read"]);
+    assert.deepEqual(context.scopes, ["app:organization:read"]);
     assert.deepEqual(context.execution, {
       organizationId: "org_123",
       resourceType: "http.route",
       resourceId: "GET /api/proof",
-      audience: "crm-api",
-      scopes: ["crm:organization:read"],
+      audience: "example-api",
+      scopes: ["app:organization:read"],
     });
   });
 });

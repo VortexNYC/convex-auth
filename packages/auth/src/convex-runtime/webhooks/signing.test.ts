@@ -76,13 +76,13 @@ describe("webhook signing helpers", () => {
         eventType: "organization.member.added",
         deliveryId: "evt_1",
         signature: "abc",
-        prefix: "crm",
+        prefix: "app",
       }),
       {
         "content-type": "application/json",
-        "x-crm-delivery": "evt_1",
-        "x-crm-event": "organization.member.added",
-        "x-crm-signature": "abc",
+        "x-app-delivery": "evt_1",
+        "x-app-event": "organization.member.added",
+        "x-app-signature": "abc",
       },
     );
   });

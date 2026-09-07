@@ -65,7 +65,7 @@ reviews:
         - No `@ts-ignore`, `eslint-disable`, or `biome-ignore`.
         - No new dependencies unless necessary.
         - No comments unless asked.
-        - Vortex Auth only; Clerk is banned.
+        - convex-auth only; Clerk is banned.
 
   pre_merge_checks:
     docstrings:

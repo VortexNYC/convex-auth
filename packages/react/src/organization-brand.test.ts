@@ -49,7 +49,7 @@ describe("organization brand metadata (VOR-182)", () => {
   it("merges brand updates and preserves sibling metadata keys", () => {
     const next = mergeOrganizationBrandIntoMetadataJson(JSON.stringify({ keep: true }), {
       primaryColor: "#111111",
-      emailFromName: "Seal",
+      emailFromName: "Example",
     });
     assert.ok(next);
     const parsed: unknown = JSON.parse(next);
@@ -57,7 +57,7 @@ describe("organization brand metadata (VOR-182)", () => {
     assert.equal(parsed.keep, true);
     assert.deepEqual(parsed[ORGANIZATION_BRAND_METADATA_KEY], {
       primaryColor: "#111111",
-      emailFromName: "Seal",
+      emailFromName: "Example",
     });
   });
 

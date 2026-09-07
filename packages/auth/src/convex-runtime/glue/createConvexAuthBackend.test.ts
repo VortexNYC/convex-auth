@@ -121,7 +121,7 @@ describe("createConvexAuthBackendAdapters", () => {
   });
 
   it("NEVER re-resolves identity inside the user adapter", async () => {
-    // This is the contract violation shipped in convex-crm and convex-pos and in
+    // This is the contract violation shipped in some consumer projects and in
     // both convex-core canonical examples: they ignore the convexAuthUserId the
     // glue passes and re-run ctx.auth.getUserIdentity() plus a second
     // identity.getByIdentity round-trip. The adapter contract forbids it — the

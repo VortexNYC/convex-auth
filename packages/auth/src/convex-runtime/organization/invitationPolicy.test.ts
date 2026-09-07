@@ -136,7 +136,7 @@ describe("createOrganizationInvitation", () => {
       roleTemplate: "member",
       expiresInDays: 2,
       existingInvitations: [],
-      appOrigin: "https://crm.example.com",
+      appOrigin: "https://app.example.com",
       createToken: () => "plain-token",
       hashToken: async (token) => `hash:${token}`,
       now: 1000,
@@ -156,7 +156,7 @@ describe("createOrganizationInvitation", () => {
       ok: true,
       invitationId: "invite_1",
       token: "plain-token",
-      acceptUrl: "https://crm.example.com/accept-invite?token=plain-token",
+      acceptUrl: "https://app.example.com/accept-invite?token=plain-token",
     });
     assert.equal(inserted[0]?.email, "new@example.com");
     assert.equal(inserted[0]?.tokenHash, "hash:plain-token");

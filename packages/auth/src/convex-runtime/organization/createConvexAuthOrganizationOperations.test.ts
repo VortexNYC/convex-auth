@@ -702,7 +702,7 @@ describe("createConvexAuthOrganizationOperations — error policy", () => {
     );
   });
 
-  it("throws the CONSUMER's own error when createError is supplied (Catapult-clean, no catch/remap)", async () => {
+  it("throws the CONSUMER's own error when createError is supplied (consumer-clean, no catch/remap)", async () => {
     // A stand-in for a consumer's ConvexError({ code, message }).
     class FakeConvexError extends Error {
       readonly data: { code: string; message: string };

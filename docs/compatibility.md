@@ -1,18 +1,20 @@
 # Compatibility
 
-This page lists the runtime and dependency versions `convex-better-auth-2.0` is tested against. The APIs are now at a 1.0 / 2.0 baseline, but the matrix is still intentionally narrow while the community validates the Better Auth 1.7 migration.
+This page lists the runtime and dependency versions `convex-better-auth-2.0` is tested against.
+
+> **Disclaimer:** This is an independent, community-driven project. It is not affiliated with or endorsed by Convex Inc.
 
 ## Current matrix
 
-| Package                      | Version         | Better Auth      | Convex                      | React                  | React Native / Expo | Node        | pnpm      |
-| ---------------------------- | --------------- | ---------------- | --------------------------- | ---------------------- | ------------------- | ----------- | --------- |
-| `convex-better-auth-adapter` | `0.13.2`        | `>=1.7.1 <1.8.0` | `>=1.39.0` (`^1.25.0` peer) | `^18.3.1 \|\| ^19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
-| `convex-better-auth`         | `2.0.2`         | `>=1.7.1 <1.8.0` | `>=1.39.0`                  | —                      | —                   | `>=20.12.0` | `10.25.0` |
-| `convex-auth`                | `1.6.0`         | —                | `>=1.39.0`                  | `>=19.0.0`             | —                   | `>=20.12.0` | `10.25.0` |
-| `convex-auth-react`          | `1.4.0`         | —                | `>=1.39.0`                  | `>=19.0.0`             | —                   | `>=20.12.0` | `10.25.0` |
-| `convex-auth-react-native`   | `1.1.1`         | —                | `>=1.39.0`                  | `>=19.0.0`             | `expo-* (optional)` | `>=20.12.0` | `10.25.0` |
-| `convex-auth-core`           | `0.1.0-alpha.0` | —                | `>=1.39.0`                  | —                      | —                   | `>=20.12.0` | `10.25.0` |
-| `convex-auth-ui`             | `0.1.0-alpha.0` | —                | `>=1.39.0`                  | `>=19.0.0`             | —                   | `>=20.12.0` | `10.25.0` |
+| Package                      | Version  | Better Auth      | Convex                      | React                  | React Native / Expo | Node        | pnpm      |
+| ---------------------------- | -------- | ---------------- | --------------------------- | ---------------------- | ------------------- | ----------- | --------- |
+| `convex-better-auth-adapter` | `0.13.3` | `>=1.7.1 <1.8.0` | `>=1.39.0` (`^1.25.0` peer) | `^18.3.1 \|\| ^19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
+| `convex-better-auth`         | `2.0.4`  | `>=1.7.1 <1.8.0` | `>=1.39.0`                  | —                      | —                   | `>=20.12.0` | `10.25.0` |
+| `convex-auth`                | `1.7.3`  | —                | `>=1.39.0`                  | `>=19.0.0`             | —                   | `>=20.12.0` | `10.25.0` |
+| `convex-auth-react`          | `1.4.1`  | —                | `>=1.39.0`                  | `>=19.0.0`             | —                   | `>=20.12.0` | `10.25.0` |
+| `convex-auth-react-native`   | `1.1.2`  | —                | `>=1.39.0`                  | `>=19.0.0`             | `expo-* (optional)` | `>=20.12.0` | `10.25.0` |
+| `convex-auth-core`           | `0.1.0`  | —                | `>=1.39.0`                  | —                      | —                   | `>=20.12.0` | `10.25.0` |
+| `convex-auth-ui`             | `0.1.0`  | —                | `>=1.39.0`                  | `>=19.0.0`             | —                   | `>=20.12.0` | `10.25.0` |
 
 ## What the ranges mean
 

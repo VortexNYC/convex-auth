@@ -16,7 +16,7 @@ import {
 describe("mcp oauth signing helpers", () => {
   it("builds signing keys with aligned kid and alg", async () => {
     const key = await createMcpOAuthSigningKeyRecord({
-      keyId: "crm-mcp-key-1",
+      keyId: "example-mcp-key-1",
     });
 
     assert.equal(key.algorithm, "ES256");
@@ -26,32 +26,32 @@ describe("mcp oauth signing helpers", () => {
       typeof publicJwk === "object" && publicJwk !== null
         ? Reflect.get(publicJwk, "kid")
         : undefined,
-      "crm-mcp-key-1",
+      "example-mcp-key-1",
     );
     assert.equal(
       typeof privateJwk === "object" && privateJwk !== null
         ? Reflect.get(privateJwk, "kid")
         : undefined,
-      "crm-mcp-key-1",
+      "example-mcp-key-1",
     );
   });
 
   it("signs and verifies access tokens", async () => {
     const key = await createMcpOAuthSigningKeyRecord({
-      keyId: "crm-mcp-key-2",
+      keyId: "example-mcp-key-2",
     });
 
     const now = Math.floor(Date.now() / 1000);
     const signed = await signMcpOAuthAccessToken({
       signingKey: key,
-      issuer: "https://crm.test/oauth/crm-mcp",
-      audience: "crm-mcp",
+      issuer: "https://example.com/oauth/example-mcp",
+      audience: "example-mcp",
       subject: "user_123",
       claims: {
-        clientId: "crm-mcp-dev-client",
+        clientId: "example-mcp-dev-client",
         subjectId: "user_123",
-        resourceId: "crm:mcp",
-        scopes: ["crm:organization:read", "crm:tasks:read"],
+        resourceId: "app:mcp",
+        scopes: ["app:organization:read", "app:tasks:read"],
         organizationId: "org_123",
         organizationSlug: "acme",
       },
@@ -59,26 +59,26 @@ describe("mcp oauth signing helpers", () => {
       expiresInSeconds: 900,
     });
 
-    assert.equal(decodeProtectedHeader(signed.accessToken).kid, "crm-mcp-key-2");
+    assert.equal(decodeProtectedHeader(signed.accessToken).kid, "example-mcp-key-2");
     assert.equal(signed.tokenType, "Bearer");
-    assert.equal(signed.scope, "crm:organization:read crm:tasks:read");
+    assert.equal(signed.scope, "app:organization:read app:tasks:read");
     assert.equal(signed.expiresIn, 900);
 
     const verified = await verifyMcpOAuthAccessToken({
       accessToken: signed.accessToken,
       signingKeys: [key],
-      issuer: "https://crm.test/oauth/crm-mcp",
-      audience: "crm-mcp",
+      issuer: "https://example.com/oauth/example-mcp",
+      audience: "example-mcp",
     });
 
-    assert.equal(verified.keyId, "crm-mcp-key-2");
+    assert.equal(verified.keyId, "example-mcp-key-2");
     assert.equal(verified.subject, "user_123");
-    assert.equal(verified.clientId, "crm-mcp-dev-client");
+    assert.equal(verified.clientId, "example-mcp-dev-client");
     assert.equal(verified.subjectId, "user_123");
     assert.equal(verified.organizationId, "org_123");
     assert.equal(verified.organizationSlug, "acme");
-    assert.equal(verified.resourceId, "crm:mcp");
-    assert.equal(verified.scope, "crm:organization:read crm:tasks:read");
+    assert.equal(verified.resourceId, "app:mcp");
+    assert.equal(verified.scope, "app:organization:read app:tasks:read");
     assert.equal(verified.issuedAt, now);
     assert.equal(verified.expiresAt, now + 900);
   });
@@ -91,13 +91,13 @@ describe("mcp oauth signing helpers", () => {
     // also fails on key type; the test LOCKS the rejection so a future key-type
     // change can't silently widen the accepted algorithm set.)
     const key = await createMcpOAuthSigningKeyRecord({
-      keyId: "crm-mcp-key-3",
+      keyId: "example-mcp-key-3",
     });
     const now = Math.floor(Date.now() / 1000);
-    const forged = await new SignJWT({ scope: "crm:organization:read" })
-      .setProtectedHeader({ alg: "HS256", kid: "crm-mcp-key-3" })
-      .setIssuer("https://crm.test/oauth/crm-mcp")
-      .setAudience("crm-mcp")
+    const forged = await new SignJWT({ scope: "app:organization:read" })
+      .setProtectedHeader({ alg: "HS256", kid: "example-mcp-key-3" })
+      .setIssuer("https://example.com/oauth/example-mcp")
+      .setAudience("example-mcp")
       .setSubject("attacker")
       .setIssuedAt(now)
       .setExpirationTime(now + 900)
@@ -107,8 +107,8 @@ describe("mcp oauth signing helpers", () => {
       verifyMcpOAuthAccessToken({
         accessToken: forged,
         signingKeys: [key],
-        issuer: "https://crm.test/oauth/crm-mcp",
-        audience: "crm-mcp",
+        issuer: "https://example.com/oauth/example-mcp",
+        audience: "example-mcp",
       }),
     );
   });
@@ -171,7 +171,7 @@ describe("mcp oauth signing helpers", () => {
       buildMcpOAuthTokenResponse({
         accessToken: "access_123",
         expiresIn: 900,
-        scope: "crm:organization:read",
+        scope: "app:organization:read",
         refreshToken: "refresh_123",
       }),
       {
@@ -179,7 +179,7 @@ describe("mcp oauth signing helpers", () => {
         refresh_token: "refresh_123",
         token_type: "Bearer",
         expires_in: 900,
-        scope: "crm:organization:read",
+        scope: "app:organization:read",
       },
     );
   });

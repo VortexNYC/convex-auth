@@ -96,7 +96,7 @@ describe("auth.md signed transport", () => {
         accessToken,
         signingKeys: [signingKey],
         issuer: ISSUER,
-        resource: "https://crm.example.com/",
+        resource: "https://app.example.com/",
         now: (NOW + 1) * 1000,
       }),
     ).rejects.toThrow();

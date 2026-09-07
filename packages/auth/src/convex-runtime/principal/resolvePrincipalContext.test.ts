@@ -87,9 +87,9 @@ const baseOAuth: OAuthClientPrincipal = {
   subjectType: "user",
   subjectId: "u_1",
   organizationId: "org_oauth",
-  audience: "https://crm.test/api",
-  scopes: ["crm:read", "crm:write"],
-  permissions: ["crm:read"],
+  audience: "https://example.com/api",
+  scopes: ["app:read", "app:write"],
+  permissions: ["app:read"],
   isRestricted: false,
   restrictedReason: null,
 };
@@ -176,8 +176,8 @@ describe("resolveOAuthClientContext", () => {
 
   it("propagates audience + scopes from the principal", () => {
     const ctx = resolveOAuthClientContext(baseOAuth, baseInput);
-    assert.equal(ctx.execution.audience, "https://crm.test/api");
-    assert.deepEqual(ctx.execution.scopes, ["crm:read", "crm:write"]);
+    assert.equal(ctx.execution.audience, "https://example.com/api");
+    assert.deepEqual(ctx.execution.scopes, ["app:read", "app:write"]);
   });
 
   it("input.audience + input.scopes override the principal defaults", () => {

@@ -33,7 +33,7 @@ describe("restoreBetterAuthSession", () => {
     const result = restoreBetterAuthSession({
       identity: {
         subject: "u_1",
-        issuer: "https://crm.test",
+        issuer: "https://example.com",
         email: "shlomo@example.com",
         emailVerified: true,
       },
@@ -42,11 +42,11 @@ describe("restoreBetterAuthSession", () => {
     });
     assert.ok(result.identity !== null);
     assert.equal(result.identity.subject, "u_1");
-    assert.equal(result.identity.issuer, "https://crm.test");
+    assert.equal(result.identity.issuer, "https://example.com");
     assert.equal(result.identity.email, "shlomo@example.com");
     assert.equal(result.identity.emailVerified, true);
     // tokenIdentifier composes subject + issuer.
-    assert.match(result.identity.tokenIdentifier, /crm\.test/);
+    assert.match(result.identity.tokenIdentifier, /example\.com/);
     assert.match(result.identity.tokenIdentifier, /u_1/);
     // provider stamp is the canonical Better-Auth key.
     assert.equal(result.identity.provider, "better-auth");
@@ -56,7 +56,7 @@ describe("restoreBetterAuthSession", () => {
     const result = restoreBetterAuthSession({
       identity: {
         subject: "u_1",
-        issuer: "https://crm.test",
+        issuer: "https://example.com",
       },
       providerState: providerAuthed,
       convexAuthenticated: true,

@@ -89,12 +89,12 @@ describe("TOTP", () => {
 describe("TOTP URI", () => {
   it("builds an otpauth URI", () => {
     const secret = encodeBase32(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]));
-    const uri = buildTOTPURI(secret, { issuer: "Vortex", label: "user@example.com" });
+    const uri = buildTOTPURI(secret, { issuer: "Example", label: "user@example.com" });
     const parsed = new URL(uri);
     expect(parsed.protocol).toBe("otpauth:");
     expect(parsed.host).toBe("totp");
     expect(parsed.searchParams.get("secret")).toBe(secret);
-    expect(parsed.searchParams.get("issuer")).toBe("Vortex");
+    expect(parsed.searchParams.get("issuer")).toBe("Example");
     expect(parsed.searchParams.get("digits")).toBe("6");
     expect(parsed.searchParams.get("period")).toBe("30");
     expect(parsed.searchParams.get("algorithm")).toBe("SHA1");

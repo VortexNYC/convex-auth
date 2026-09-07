@@ -782,7 +782,7 @@ async function ensureAnchor<TUser extends GlueUserMinimum, TAnchor extends GlueA
   //
   // The bootstrap path triggered this risk on cold starts when the first
   // request after sign-in was a query (reactive list, dashboard, etc.).
-  // CRM and plasma both hit it once before this guard landed. See
+  // Some consumers both hit it once before this guard landed. See
   // `docs/migration/truth-migration-playbook.md` § Anchor-must-exist.
   const dbMaybe = Reflect.get(ctx, "db");
   if (
