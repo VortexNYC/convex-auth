@@ -10,6 +10,33 @@ Pick the starting point that matches your current app:
 - **A custom Better Auth + Convex adapter** — switch to `convex-better-auth-adapter` first, then continue below.
 - **`convex-better-auth` bridge already** — you can start migrating to `convex-auth` immediately.
 
+## One-shot data migration
+
+If both the legacy `convex-better-auth-adapter` component and the native `convex-auth` component are mounted in the same Convex app, you can migrate the legacy user, account, and session data in a single command:
+
+```bash
+pnpm dlx convex-auth migrate better-auth
+```
+
+The CLI reads legacy records from the adapter component and writes native records into the `convex-auth` component. It migrates users first, then only migrates accounts and sessions whose user was successfully migrated. On success it reports counts like `migrated 1 users, 1 accounts, 1 sessions`.
+
+Flags:
+
+- `--dry-run` — preview the file and deployment changes without writing anything.
+- `--cutover` — after migration, rewrite `convex/convex.config.ts` and `convex/http.ts` to remove the legacy adapter and drop `convex-better-auth` / `convex-better-auth-adapter` from `package.json`.
+- `--resume` — not yet implemented; migrations start from the beginning each run.
+
+After it finishes, verify the native tables in the mounted `convexAuth` component:
+
+```bash
+pnpm dlx convex data users --component convexAuth
+pnpm dlx convex data auth_identities --component convexAuth
+pnpm dlx convex data authAccounts --component convexAuth
+pnpm dlx convex data authSessions --component convexAuth
+```
+
+Once the data is verified you can proceed with the staged client/server migration below, or drop the bridge packages immediately if you are already using the native runtime everywhere.
+
 ## Migration stages
 
 ### Stage 1 — Use the `convex-auth` component on the backend
