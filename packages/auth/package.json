@@ -1,6 +1,6 @@
 {
   "name": "convex-auth",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "Convex-native auth server, component, and integration.",
   "license": "Apache-2.0",
   "repository": {
@@ -191,6 +191,7 @@
   "dependencies": {
     "@convex-dev/rate-limiter": "^0.3.2",
     "@noble/hashes": "^2.4.0",
+    "@types/node": "^26.4.0",
     "convex-auth-core": "workspace:*",
     "convex-helpers": "^0.1.80",
     "cookie": "^2.0.1",
@@ -200,7 +201,6 @@
     "set-cookie-parser": "^3.1.2"
   },
   "devDependencies": {
-    "@types/node": "^26.4.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "convex": "^1.45.0",

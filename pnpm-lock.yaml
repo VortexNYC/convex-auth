@@ -173,6 +173,9 @@ importers:
       '@noble/hashes':
         specifier: ^2.4.0
         version: 2.4.0
+      '@types/node':
+        specifier: ^26.4.0
+        version: 26.4.0
       convex-auth-core:
         specifier: workspace:*
         version: link:../core
@@ -201,9 +204,6 @@ importers:
         specifier: ^3.1.2
         version: 3.1.2
     devDependencies:
-      '@types/node':
-        specifier: ^26.4.0
-        version: 26.4.0
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.18

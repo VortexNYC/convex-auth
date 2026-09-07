@@ -1,3 +1,4 @@
+/// <reference types="node" />
 export { convexAuth } from "./convexAuth.js";
 export type { ConvexAuth, ConvexAuthConfig } from "./convexAuth.js";
 export { createConvexAuthProvider } from "./authProvider.js";
