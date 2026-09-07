@@ -2,6 +2,7 @@ import { type JWTPayload, type JSONWebKeySet, SignJWT, importJWK } from "jose";
 import { base64urlToBytes } from "./password.js";
 
 let cachedPrivateKey: CryptoKey | undefined;
+let cachedJwtKeyId: string | undefined;
 let cachedJwks: JSONWebKeySet | undefined;
 
 export async function getJwtPrivateKey(): Promise<CryptoKey> {
@@ -10,7 +11,8 @@ export async function getJwtPrivateKey(): Promise<CryptoKey> {
   if (!raw) {
     throw new Error("JWT_PRIVATE_KEY environment variable is not set");
   }
-  const jwk = JSON.parse(raw) as JsonWebKey;
+  const jwk = JSON.parse(raw) as JsonWebKey & { kid?: string };
+  cachedJwtKeyId = jwk.kid;
   const keyLike = await importJWK(jwk, "RS256");
   if (keyLike instanceof Uint8Array) {
     throw new Error("JWT_PRIVATE_KEY must be an asymmetric key, not a symmetric secret");
@@ -52,8 +54,12 @@ export async function mintToken(
   const exp = new Date(Date.now() + expiresInSeconds * 1000);
   const issuer = options.issuer ?? resolveIssuer();
   const audience = options.audience ?? DEFAULT_AUDIENCE;
+  const header: { alg: "RS256"; typ: "JWT"; kid?: string } = { alg: "RS256", typ: "JWT" };
+  if (cachedJwtKeyId) {
+    header.kid = cachedJwtKeyId;
+  }
   return await new SignJWT({ sessionId, ...extra })
-    .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+    .setProtectedHeader(header)
     .setIssuer(issuer)
     .setAudience(audience)
     .setSubject(sub)

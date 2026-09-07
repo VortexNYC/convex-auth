@@ -67,10 +67,14 @@ Generate an RS256 keypair and set it on your Convex deployment:
 
 ```bash
 node --input-type=module -e '
+import { randomUUID } from "node:crypto";
 import { generateKeyPair, exportJWK } from "jose";
 const { publicKey, privateKey } = await generateKeyPair("RS256", { extractable: true });
 const pub = await exportJWK(publicKey);
 const priv = await exportJWK(privateKey);
+const kid = randomUUID();
+pub.kid = kid;
+priv.kid = kid;
 console.log("JWT_PRIVATE_KEY=" + JSON.stringify(priv));
 console.log("JWKS=" + JSON.stringify({ keys: [pub] }));
 '
