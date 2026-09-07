@@ -1,6 +1,6 @@
 {
   "name": "convex-better-auth",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "A Better Auth -> Convex Auth 2.0 migration bridge. New projects should use convex-auth directly.",
   "license": "Apache-2.0",
   "repository": {
