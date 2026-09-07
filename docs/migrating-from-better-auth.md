@@ -64,7 +64,7 @@ Replace the Better Auth server setup with the native `convexAuth` API. You keep 
 import { components } from "./_generated/api";
 import { convexAuth, type EmailDraft } from "convex-auth/convex";
 
-const siteUrl = process.env.CONVEX_SITE_URL?.replace(/\/$, "");
+const siteUrl = process.env.CONVEX_SITE_URL?.replace(/\/$/, "");
 
 export const auth = convexAuth({
   component: components.convexAuth,
