@@ -70,7 +70,7 @@ async function importRsaSigningKey(privateJwk: JWK): Promise<CryptoKey> {
 
 async function createVerifierFixture() {
   const issuer = "https://auth.example.com";
-  const audience = "crm-api";
+  const audience = "example-api";
   const { publicJwk, privateJwk } = await createSigningKeyPair();
   const verifier = createBetterAuthApiTokenVerifier({
     issuer,
@@ -115,7 +115,7 @@ function tamperSignature(token: string): string {
 describe("createBetterAuthApiTokenVerifier", () => {
   it("verifies a Better Auth JWT and normalizes package token shape", async () => {
     const issuer = "https://auth.example.com";
-    const audience = "crm-api";
+    const audience = "example-api";
     const { publicJwk, privateJwk } = await createSigningKeyPair();
     const verifier = createBetterAuthApiTokenVerifier({
       issuer,
@@ -150,7 +150,7 @@ describe("createBetterAuthApiTokenVerifier", () => {
 
   it("uses sessionId claim when sid is absent", async () => {
     const issuer = "https://auth.example.com";
-    const audience = "crm-api";
+    const audience = "example-api";
     const { publicJwk, privateJwk } = await createSigningKeyPair();
     const verifier = createBetterAuthApiTokenVerifier({
       issuer,
@@ -191,7 +191,7 @@ describe("createBetterAuthApiTokenVerifier", () => {
 
   it("creates a verifier from inline Convex auth config JWKS", async () => {
     const issuer = "https://auth.example.com";
-    const audience = "crm-api";
+    const audience = "example-api";
     const { publicJwk, privateJwk } = await createSigningKeyPair();
     const jwks = {
       keys: [{ ...publicJwk, alg: "RS256", use: "sig" }],
@@ -209,13 +209,13 @@ describe("createBetterAuthApiTokenVerifier", () => {
       issuer,
       audience,
       subject: "user_from_config",
-      scope: "crm:organization:read",
+      scope: "app:organization:read",
     });
 
     const verifiedToken = await verifier.verifyUserBearerToken(token);
 
     assert.equal(verifiedToken.subject, "user_from_config");
-    assert.deepEqual(verifiedToken.scopes, ["crm:organization:read"]);
+    assert.deepEqual(verifiedToken.scopes, ["app:organization:read"]);
   });
 
   describe("JWT tampering rejection", () => {

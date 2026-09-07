@@ -25,7 +25,7 @@ function createResolvedAuthContext(): ApiResolvedAuthContext {
       organizationId: "org_123",
       resourceType: "http.route",
       resourceId: "GET /v1/me",
-      audience: "crm-api",
+      audience: "example-api",
       scopes: ["organization:read"],
     },
     userId: "user_123",

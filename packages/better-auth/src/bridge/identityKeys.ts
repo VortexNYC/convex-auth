@@ -27,7 +27,7 @@ export function getBetterAuthIdentityProvider(): typeof BETTER_AUTH_IDENTITY_PRO
  * 'First decision' helpers a consumer reaches for when wiring the
  * canonical glue. Codex audit (2026-05-28) caught that the example
  * imported `getBetterAuthIdentityIssuer` from the package but only
- * `resolveBetterAuthIdentityIssuer` was exported — CRM was working
+ * `resolveBetterAuthIdentityIssuer` was exported — a consumer was working
  * around the asymmetry with a local alias in lib/authIdentities.ts.
  *
  * Both names ship from the package going forward. New consumers should

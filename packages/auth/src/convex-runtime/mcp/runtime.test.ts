@@ -18,7 +18,7 @@ describe("mcp oauth runtime helpers", () => {
     const authorized = await authorizeMcpOAuthAccessRequest({
       userId: "user_123",
       requestedOrganizationId: "org_123",
-      requestedScopes: ["crm:organization:read"],
+      requestedScopes: ["app:organization:read"],
       getAccessibleOrganizations: () => ({ organizationIds: ["org_123"] }),
       getOrganizationAccess: () => ({
         organizationId: "org_123",
@@ -32,13 +32,13 @@ describe("mcp oauth runtime helpers", () => {
     assert.deepEqual(authorized, {
       ok: true,
       organizationId: "org_123",
-      scopes: ["crm:organization:read"],
+      scopes: ["app:organization:read"],
     });
 
     const requiresOrganization = await authorizeMcpOAuthAccessRequest({
       userId: "user_123",
       requestedOrganizationId: null,
-      requestedScopes: ["crm:organization:read"],
+      requestedScopes: ["app:organization:read"],
       getAccessibleOrganizations: () => ({
         organizationIds: ["org_123", "org_456"],
       }),
@@ -66,18 +66,18 @@ describe("mcp oauth runtime helpers", () => {
       subjectId: "ba_user_123",
       clientId: "mcp_client_123",
       organizationId: "org_123",
-      scopes: ["crm:organization:read"],
+      scopes: ["app:organization:read"],
       audience: "https://api.example.com",
       resolveIdentityForUser: async () => ({ userId: "user_123" }),
       authorize: async () => ({
         ok: true,
         organizationId: "org_123",
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
       }),
       signAccessToken: async () => ({
         accessToken: "access_123",
         expiresIn: 900,
-        scope: "crm:organization:read",
+        scope: "app:organization:read",
         tokenType: "Bearer",
       }),
     });
@@ -85,7 +85,7 @@ describe("mcp oauth runtime helpers", () => {
     assert.deepEqual(token, {
       accessToken: "access_123",
       expiresIn: 900,
-      scope: "crm:organization:read",
+      scope: "app:organization:read",
       tokenType: "Bearer",
     });
 
@@ -93,18 +93,18 @@ describe("mcp oauth runtime helpers", () => {
       subjectId: "ba_user_123",
       clientId: "mcp_client_123",
       organizationId: "org_123",
-      scopes: ["crm:organization:read"],
+      scopes: ["app:organization:read"],
       audience: "https://api.example.com",
       resolveIdentityForUser: async () => null,
       authorize: async () => ({
         ok: true,
         organizationId: "org_123",
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
       }),
       signAccessToken: async () => ({
         accessToken: "access_123",
         expiresIn: 900,
-        scope: "crm:organization:read",
+        scope: "app:organization:read",
         tokenType: "Bearer",
       }),
     });
@@ -134,7 +134,7 @@ describe("mcp oauth runtime helpers", () => {
       signAccessToken: async () => ({
         accessToken: "access_123",
         expiresIn: 900,
-        scope: "crm:organization:read",
+        scope: "app:organization:read",
         tokenType: "Bearer",
       }),
     });
@@ -151,12 +151,12 @@ describe("mcp oauth runtime helpers", () => {
         identity: { userId: "user_123" },
         subjectId: "ba_user_123",
         requestedOrganizationId: "org_123",
-        requestedScopes: ["crm:organization:read"],
+        requestedScopes: ["app:organization:read"],
       }),
       {
         ok: true,
         organizationId: "org_123",
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
       },
     );
 
@@ -165,20 +165,20 @@ describe("mcp oauth runtime helpers", () => {
         subjectId: "ba_user_123",
         clientId: "mcp_client_123",
         organizationId: "org_123",
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
         audience: "https://api.example.com",
       }),
       {
         accessToken: "access_123",
         expiresIn: 900,
-        scope: "crm:organization:read",
+        scope: "app:organization:read",
         tokenType: "Bearer",
       },
     );
   });
 
   it("reads session token from signed cookie payload", () => {
-    const request = new Request("https://crm.test/oauth/crm-mcp/authorize", {
+    const request = new Request("https://example.com/oauth/example-mcp/authorize", {
       headers: {
         cookie: "convex-auth.session_token=session_token_123.signature",
       },
@@ -191,15 +191,15 @@ describe("mcp oauth runtime helpers", () => {
     let createdCode = false;
     const response = await handleMcpOAuthAuthorizeRequest({
       request: new Request(
-        "https://crm.test/oauth/crm-mcp/authorize?response_type=code&client_id=management-client&redirect_uri=https%3A%2F%2Fmanagement.example.com%2Fcallback&scope=crm%3Agrowth%3Awrite&code_challenge=challenge&code_challenge_method=S256",
+        "https://example.com/oauth/example-mcp/authorize?response_type=code&client_id=management-client&redirect_uri=https%3A%2F%2Fmanagement.example.com%2Fcallback&scope=app%3Agrowth%3Awrite&code_challenge=challenge&code_challenge_method=S256",
       ),
       defaultAudience: "https://api.example.com",
-      defaultResourceId: "crm-mcp",
+      defaultResourceId: "example-mcp",
       resolveClient: async () => ({
         clientId: "management-client",
         name: "Convex Management",
         redirectUris: ["https://management.example.com/callback"],
-        allowedScopes: ["crm:organization:read"],
+        allowedScopes: ["app:organization:read"],
       }),
       requireAllowedRedirectUri: () => {},
       resolveRequestedScopes: (scope) => scope.split(" "),
@@ -220,7 +220,7 @@ describe("mcp oauth runtime helpers", () => {
     assert.equal(response.status, 400);
     assert.deepEqual(await response.json(), {
       error: "invalid_scope",
-      error_description: "Unsupported scope: crm:growth:write",
+      error_description: "Unsupported scope: app:growth:write",
     });
     assert.equal(createdCode, false);
   });
@@ -229,7 +229,7 @@ describe("mcp oauth runtime helpers", () => {
     let storedScopes: readonly string[] | null = null;
     const response = await handleMcpOAuthAuthorizeRequest({
       request: new Request(
-        "https://crm.test/oauth/crm-mcp/authorize?response_type=code&client_id=management-client&redirect_uri=https%3A%2F%2Fmanagement.example.com%2Fcallback&scope=crm%3Aorganization%3Aread&code_challenge=challenge&code_challenge_method=S256",
+        "https://example.com/oauth/example-mcp/authorize?response_type=code&client_id=management-client&redirect_uri=https%3A%2F%2Fmanagement.example.com%2Fcallback&scope=app%3Aorganization%3Aread&code_challenge=challenge&code_challenge_method=S256",
         {
           headers: {
             cookie: "convex-auth.session_token=session_123.signature",
@@ -237,12 +237,12 @@ describe("mcp oauth runtime helpers", () => {
         },
       ),
       defaultAudience: "https://api.example.com",
-      defaultResourceId: "crm-mcp",
+      defaultResourceId: "example-mcp",
       resolveClient: async () => ({
         clientId: "management-client",
         name: "Convex Management",
         redirectUris: ["https://management.example.com/callback"],
-        allowedScopes: ["crm:organization:read", "crm:opportunities:write"],
+        allowedScopes: ["app:organization:read", "app:opportunities:write"],
       }),
       requireAllowedRedirectUri: () => {},
       resolveRequestedScopes: (scope) => scope.split(" "),
@@ -262,7 +262,7 @@ describe("mcp oauth runtime helpers", () => {
     });
 
     assert.equal(response.status, 302);
-    assert.deepEqual(storedScopes, ["crm:organization:read"]);
+    assert.deepEqual(storedScopes, ["app:organization:read"]);
     assert.equal(
       new URL(response.headers.get("location") ?? "").searchParams.get("code"),
       "authorization-code-1",
@@ -273,7 +273,7 @@ describe("mcp oauth runtime helpers", () => {
     let createdCode = false;
     const response = await handleMcpOAuthAuthorizeRequest({
       request: new Request(
-        "https://crm.test/oauth/crm-mcp/authorize?response_type=code&client_id=management-client&redirect_uri=https%3A%2F%2Fmanagement.example.com%2Fcallback&scope=crm%3Aorganization%3Aread&code_challenge=challenge&code_challenge_method=S256",
+        "https://example.com/oauth/example-mcp/authorize?response_type=code&client_id=management-client&redirect_uri=https%3A%2F%2Fmanagement.example.com%2Fcallback&scope=app%3Aorganization%3Aread&code_challenge=challenge&code_challenge_method=S256",
         {
           headers: {
             cookie: "convex-auth.session_token=session_123.signature",
@@ -281,12 +281,12 @@ describe("mcp oauth runtime helpers", () => {
         },
       ),
       defaultAudience: "https://api.example.com",
-      defaultResourceId: "crm-mcp",
+      defaultResourceId: "example-mcp",
       resolveClient: async () => ({
         clientId: "management-client",
         name: "Convex Management",
         redirectUris: ["https://management.example.com/callback"],
-        allowedScopes: ["crm:organization:read", "crm:growth:write"],
+        allowedScopes: ["app:organization:read", "app:growth:write"],
       }),
       requireAllowedRedirectUri: () => {},
       resolveRequestedScopes: (scope) => scope.split(" "),
@@ -297,7 +297,7 @@ describe("mcp oauth runtime helpers", () => {
       authorize: async () => ({
         ok: true,
         organizationId: "organization-1",
-        scopes: ["crm:organization:read", "crm:growth:write"],
+        scopes: ["app:organization:read", "app:growth:write"],
       }),
       createAuthorizationCode: async () => {
         createdCode = true;
@@ -314,21 +314,21 @@ describe("mcp oauth runtime helpers", () => {
 
   it("handles dynamic client registration with package validation", async () => {
     const response = await handleMcpOAuthClientRegistrationRequest({
-      request: new Request("https://crm.test/oauth/crm-mcp/register", {
+      request: new Request("https://example.com/oauth/example-mcp/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          client_name: "CRM Desktop",
+          client_name: "Example Desktop",
           redirect_uris: ["https://app.example.com/oauth/callback"],
-          scope: "crm:organization:read",
+          scope: "app:organization:read",
         }),
       }),
-      supportedScopes: ["crm:organization:read"],
+      supportedScopes: ["app:organization:read"],
       createDynamicClient: async (input) => ({
         clientId: "mcp_client_123",
         name: input.clientName,
         redirectUris: [...input.redirectUris],
-        allowedScopes: ["crm:organization:read"],
+        allowedScopes: ["app:organization:read"],
         tokenEndpointAuthMethod: "none",
         grantTypes: ["authorization_code"],
         responseTypes: ["code"],
@@ -343,18 +343,18 @@ describe("mcp oauth runtime helpers", () => {
     assert.deepEqual(await response.json(), {
       client_id: "mcp_client_123",
       client_id_issued_at: 1_700_000_000,
-      client_name: "CRM Desktop",
+      client_name: "Example Desktop",
       redirect_uris: ["https://app.example.com/oauth/callback"],
       grant_types: ["authorization_code"],
       response_types: ["code"],
       token_endpoint_auth_method: "none",
-      scope: "crm:organization:read",
+      scope: "app:organization:read",
     });
   });
 
   it("returns refresh token grant errors directly", async () => {
     const response = await handleMcpOAuthTokenRequest({
-      request: new Request("https://crm.test/oauth/crm-mcp/token", {
+      request: new Request("https://example.com/oauth/example-mcp/token", {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
@@ -373,7 +373,7 @@ describe("mcp oauth runtime helpers", () => {
       signAccessToken: async () => ({
         accessToken: "access_123",
         expiresIn: 900,
-        scope: "crm:organization:read",
+        scope: "app:organization:read",
         tokenType: "Bearer",
       }),
       issueRefreshToken: async () => ({ refreshToken: "refresh_456" }),
@@ -388,7 +388,7 @@ describe("mcp oauth runtime helpers", () => {
 
   it("does not mint tokens from a legacy code with disallowed client scopes", async () => {
     const response = await handleMcpOAuthTokenRequest({
-      request: new Request("https://crm.test/oauth/crm-mcp/token", {
+      request: new Request("https://example.com/oauth/example-mcp/token", {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
@@ -403,17 +403,17 @@ describe("mcp oauth runtime helpers", () => {
         clientId: "management-client",
         name: "Convex Management",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read"],
+        allowedScopes: ["app:organization:read"],
       }),
       consumeAuthorizationCode: async () => ({
         clientId: "management-client",
         subjectId: "external-user-1",
         organizationId: "organization-1",
-        scopes: ["crm:growth:write"],
+        scopes: ["app:growth:write"],
         codeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
         codeChallengeMethod: "S256",
         audience: "https://api.example.com",
-        resourceId: "crm-mcp",
+        resourceId: "example-mcp",
         expiresAt: Date.now() + 60_000,
       }),
       redeemRefreshToken: async () => ({
@@ -441,7 +441,7 @@ describe("mcp oauth runtime helpers", () => {
       clientId: "mcp_client_123",
       name: "CLI Client",
       redirectUris: ["https://app.example.com/oauth/callback"],
-      allowedScopes: ["crm:organization:read"],
+      allowedScopes: ["app:organization:read"],
       tokenEndpointAuthMethod: "none" as const,
       pkceRequired: true,
       grantTypes: ["authorization_code", "refresh_token"],
@@ -449,7 +449,7 @@ describe("mcp oauth runtime helpers", () => {
     };
 
     const response = await handleMcpOAuthTokenRequest({
-      request: new Request("https://crm.test/oauth/crm-mcp/token", {
+      request: new Request("https://example.com/oauth/example-mcp/token", {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
@@ -465,8 +465,8 @@ describe("mcp oauth runtime helpers", () => {
         subjectId: "ba_user_123",
         organizationId: "org_123",
         audience: "https://api.example.com",
-        resourceId: "crm-mcp",
-        scopes: ["crm:organization:read"],
+        resourceId: "example-mcp",
+        scopes: ["app:organization:read"],
         refreshToken: "refresh_456",
       }),
       signAccessToken: async () => ({
@@ -490,7 +490,7 @@ describe("mcp oauth runtime helpers", () => {
     const handlers = createMcpOAuthHttpHandlers({
       authorize: {
         defaultAudience: "https://api.example.com",
-        defaultResourceId: "crm-mcp",
+        defaultResourceId: "example-mcp",
         resolveClient: async () => {
           throw new Error("authorize exploded");
         },
@@ -506,7 +506,7 @@ describe("mcp oauth runtime helpers", () => {
         createAuthorizationCode: async () => {},
       },
       clientRegistration: {
-        supportedScopes: ["crm:organization:read"],
+        supportedScopes: ["app:organization:read"],
         createDynamicClient: async () => {
           throw {
             error: "invalid_client_metadata",
@@ -527,7 +527,7 @@ describe("mcp oauth runtime helpers", () => {
         signAccessToken: async () => ({
           accessToken: "access_123",
           expiresIn: 900,
-          scope: "crm:organization:read",
+          scope: "app:organization:read",
           tokenType: "Bearer",
         }),
         issueRefreshToken: async () => ({ refreshToken: "refresh_123" }),
@@ -536,7 +536,7 @@ describe("mcp oauth runtime helpers", () => {
 
     const authorizeResponse = await handlers.handleAuthorizeRequest(
       new Request(
-        "https://crm.test/oauth/crm-mcp/authorize?response_type=code&client_id=test&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback&scope=crm%3Aorganization%3Aread&code_challenge=abc&code_challenge_method=S256",
+        "https://example.com/oauth/example-mcp/authorize?response_type=code&client_id=test&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback&scope=app%3Aorganization%3Aread&code_challenge=abc&code_challenge_method=S256",
       ),
     );
     assert.equal(authorizeResponse.status, 400);
@@ -546,11 +546,11 @@ describe("mcp oauth runtime helpers", () => {
     });
 
     const registrationResponse = await handlers.handleClientRegistrationRequest(
-      new Request("https://crm.test/oauth/crm-mcp/register", {
+      new Request("https://example.com/oauth/example-mcp/register", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          client_name: "CRM Desktop",
+          client_name: "Example Desktop",
           redirect_uris: ["https://app.example.com/oauth/callback"],
         }),
       }),
@@ -562,7 +562,7 @@ describe("mcp oauth runtime helpers", () => {
     });
 
     const tokenResponse = await handlers.handleTokenRequest(
-      new Request("https://crm.test/oauth/crm-mcp/token", {
+      new Request("https://example.com/oauth/example-mcp/token", {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({

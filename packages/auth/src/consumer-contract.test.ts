@@ -270,8 +270,8 @@ describe("checkConsumerContract", () => {
     assert.equal(result.ok, true, JSON.stringify(result.violations));
   });
 
-  it("flags plasma-style camelCase mirror with convexOrgId + convexAuthUserId (name-agnostic)", () => {
-    // Plasma's actual schema (renamed table, shorthand bridge column) used
+  it("flags consumer-style camelCase mirror with convexOrgId + convexAuthUserId (name-agnostic)", () => {
+    // A consumer's actual schema (renamed table, shorthand bridge column) used
     // to slip past the snake_case-name rule. The bridge-column rule must
     // catch it on structure alone.
     fixture.write(
@@ -445,7 +445,7 @@ describe("checkConsumerContract", () => {
   });
 
   it("legitAnchorTables override allows a deliberate per-member override table", () => {
-    // CRM has `crm_member_settings` keyed by convexAuthMemberId for per-member
+    // A consumer has `member_settings` keyed by convexAuthMemberId for per-member
     // permission overrides — that's a legitimate one-way cache, not a mirror.
     fixture.write(
       "schema.ts",
@@ -457,7 +457,7 @@ describe("checkConsumerContract", () => {
         "  organizations: defineTable({",
         "    convexAuthOrganizationId: v.string(),",
         "  }),",
-        "  crm_member_settings: defineTable({",
+        "  member_settings: defineTable({",
         "    convexAuthMemberId: v.string(),",
         "    permissions: v.optional(v.array(v.string())),",
         '  }).index("by_convex_auth_member", ["convexAuthMemberId"]),',
@@ -471,7 +471,7 @@ describe("checkConsumerContract", () => {
     // With explicit allow-list: clean.
     const overridden = checkConsumerContract({
       convexDir: fixture.dir,
-      legitAnchorTables: ["organizations", "users", "crm_member_settings"],
+      legitAnchorTables: ["organizations", "users", "member_settings"],
     });
     assert.equal(overridden.ok, true, JSON.stringify(overridden.violations));
   });

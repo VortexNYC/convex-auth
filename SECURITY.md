@@ -2,11 +2,11 @@
 
 ## Supported Versions
 
-This is a pre-release (alpha) public auth library. Security fixes land in the current development branch and the latest `main`.
+Security fixes land in the current development branch and the latest `main`.
 
 ## Reporting a Vulnerability
 
-Email security reports to **shlomo@plasmapos.com**.
+Please open a [GitHub Security Advisory](https://github.com/shlomokabareti/convex-better-auth-2.0/security/advisories/new) or email the maintainer directly if you cannot use GitHub.
 
 Please include:
 

@@ -15,10 +15,10 @@ describe("api key token utilities", () => {
   it("creates app-prefixed key prefixes", () => {
     assert.equal(
       createApiKeyPrefix({
-        tokenPrefix: "crm_live",
+        tokenPrefix: "app_live",
         randomUUID: () => "12345678-1234-1234-1234-123456789abc",
       }),
-      "crm_live_1234567812341234",
+      "app_live_1234567812341234",
     );
   });
 
@@ -33,13 +33,13 @@ describe("api key token utilities", () => {
 
   it("formats and parses tokens", () => {
     const token = formatApiKeyToken({
-      keyPrefix: "crm_live_123",
+      keyPrefix: "app_live_123",
       secret: "secret",
     });
-    assert.equal(token, "crm_live_123.secret");
+    assert.equal(token, "app_live_123.secret");
     assert.deepEqual(parseApiKeyToken(token), {
       ok: true,
-      keyPrefix: "crm_live_123",
+      keyPrefix: "app_live_123",
       secret: "secret",
     });
   });
@@ -62,7 +62,7 @@ describe("api key token utilities", () => {
   it("resolves active stored credentials", async () => {
     const keyHash = await hashApiKeySecret("secret");
     const result = await resolveStoredApiKeyCredential({
-      token: "crm_live_123.secret",
+      token: "app_live_123.secret",
       findByKeyPrefix: async (keyPrefix) => ({
         keyPrefix,
         keyHash,
@@ -72,7 +72,7 @@ describe("api key token utilities", () => {
 
     assert.equal(result.ok, true);
     if (result.ok) {
-      assert.equal(result.apiKey.keyPrefix, "crm_live_123");
+      assert.equal(result.apiKey.keyPrefix, "app_live_123");
     }
   });
 
@@ -81,7 +81,7 @@ describe("api key token utilities", () => {
 
     assert.deepEqual(
       await resolveStoredApiKeyCredential({
-        token: "crm_live_123.secret",
+        token: "app_live_123.secret",
         findByKeyPrefix: async (keyPrefix) => ({
           keyPrefix,
           keyHash,
@@ -93,7 +93,7 @@ describe("api key token utilities", () => {
 
     assert.deepEqual(
       await resolveStoredApiKeyCredential({
-        token: "crm_live_123.wrong",
+        token: "app_live_123.wrong",
         findByKeyPrefix: async (keyPrefix) => ({
           keyPrefix,
           keyHash,
@@ -105,7 +105,7 @@ describe("api key token utilities", () => {
 
     assert.deepEqual(
       await resolveStoredApiKeyCredential({
-        token: "crm_live_123.secret",
+        token: "app_live_123.secret",
         now: 100,
         findByKeyPrefix: async (keyPrefix) => ({
           keyPrefix,

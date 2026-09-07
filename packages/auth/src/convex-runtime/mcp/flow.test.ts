@@ -10,47 +10,47 @@ import {
   validateMcpOAuthAuthorizationCodeTokenExchange,
 } from "./flow";
 const policy = {
-  supportedScopes: ["crm:organization:read", "crm:tasks:read"],
+  supportedScopes: ["app:organization:read", "app:tasks:read"],
 } as const;
 
 describe("mcp oauth flow helpers", () => {
   it("parses authorize request with defaults", () => {
     const parsed = parseMcpOAuthAuthorizeRequest(
       new Request(
-        "https://crm.test/oauth/crm-mcp/authorize?response_type=code&client_id=client_123&redirect_uri=http://127.0.0.1:8788/callback&code_challenge=challenge_123&code_challenge_method=S256&scope=crm:organization:read&state=state_123",
+        "https://example.com/oauth/example-mcp/authorize?response_type=code&client_id=client_123&redirect_uri=http://127.0.0.1:8788/callback&code_challenge=challenge_123&code_challenge_method=S256&scope=app:organization:read&state=state_123",
       ),
       {
-        defaultAudience: "crm-mcp",
-        defaultResourceId: "crm:mcp",
+        defaultAudience: "example-mcp",
+        defaultResourceId: "app:mcp",
       },
     );
 
     assert.deepEqual(parsed, {
-      audience: "crm-mcp",
+      audience: "example-mcp",
       clientId: "client_123",
       codeChallenge: "challenge_123",
       expiresInMs: undefined,
       organizationId: null,
       redirectUri: "http://127.0.0.1:8788/callback",
-      resourceId: "crm:mcp",
-      scope: "crm:organization:read",
+      resourceId: "app:mcp",
+      scope: "app:organization:read",
       state: "state_123",
     });
   });
 
   it("parses dynamic client registration body", () => {
     const parsed = parseMcpOAuthDynamicClientRegistrationRequest({
-      client_name: "CRM Generated Client",
+      client_name: "Example Generated Client",
       redirect_uris: ["http://127.0.0.1:8788/callback"],
-      scope: "crm:organization:read crm:tasks:read",
+      scope: "app:organization:read app:tasks:read",
       grant_types: ["authorization_code"],
       response_types: ["code"],
     });
 
     assert.deepEqual(parsed, {
-      clientName: "CRM Generated Client",
+      clientName: "Example Generated Client",
       redirectUris: ["http://127.0.0.1:8788/callback"],
-      scope: "crm:organization:read crm:tasks:read",
+      scope: "app:organization:read app:tasks:read",
       tokenEndpointAuthMethod: undefined,
       grantTypes: ["authorization_code"],
       responseTypes: ["code"],
@@ -77,21 +77,21 @@ describe("mcp oauth flow helpers", () => {
   it("creates persisted dynamic client and response payload", async () => {
     const persisted = await createMcpOAuthDynamicClient({
       input: {
-        clientName: "CRM Generated Client",
+        clientName: "Example Generated Client",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        scope: "crm:organization:read crm:tasks:read",
+        scope: "app:organization:read app:tasks:read",
       },
       policy,
-      clientId: "crm-mcp-generated-client",
+      clientId: "example-mcp-generated-client",
       now: 1_700_000_000_000,
       persist: (record) => record,
     });
 
     assert.deepEqual(persisted.persisted, {
-      clientId: "crm-mcp-generated-client",
-      name: "CRM Generated Client",
+      clientId: "example-mcp-generated-client",
+      name: "Example Generated Client",
       redirectUris: ["http://127.0.0.1:8788/callback"],
-      allowedScopes: ["crm:organization:read", "crm:tasks:read"],
+      allowedScopes: ["app:organization:read", "app:tasks:read"],
       tokenEndpointAuthMethod: "none",
       pkceRequired: true,
       grantTypes: ["authorization_code", "refresh_token"],
@@ -105,14 +105,14 @@ describe("mcp oauth flow helpers", () => {
     assert.deepEqual(
       buildMcpOAuthDynamicClientRegistrationResponse(persisted.client, persisted.clientIdIssuedAt),
       {
-        client_id: "crm-mcp-generated-client",
+        client_id: "example-mcp-generated-client",
         client_id_issued_at: 1_700_000_000,
-        client_name: "CRM Generated Client",
+        client_name: "Example Generated Client",
         redirect_uris: ["http://127.0.0.1:8788/callback"],
         grant_types: ["authorization_code", "refresh_token"],
         response_types: ["code"],
         token_endpoint_auth_method: "none",
-        scope: "crm:organization:read crm:tasks:read",
+        scope: "app:organization:read app:tasks:read",
       },
     );
   });
@@ -120,10 +120,10 @@ describe("mcp oauth flow helpers", () => {
   it("preserves string software metadata in registration responses", () => {
     const response = buildMcpOAuthDynamicClientRegistrationResponse(
       {
-        clientId: "crm-mcp-versioned-client",
+        clientId: "example-mcp-versioned-client",
         name: "Versioned Client",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read"],
+        allowedScopes: ["app:organization:read"],
         tokenEndpointAuthMethod: "none",
         grantTypes: ["authorization_code"],
         responseTypes: ["code"],
@@ -140,7 +140,7 @@ describe("mcp oauth flow helpers", () => {
 
   it("validates authorization code token exchange", async () => {
     const result = await validateMcpOAuthAuthorizationCodeTokenExchange({
-      request: new Request("https://crm.test/oauth/crm-mcp/token", {
+      request: new Request("https://example.com/oauth/example-mcp/token", {
         method: "POST",
         headers: {
           "content-type": "application/x-www-form-urlencoded",
@@ -157,17 +157,17 @@ describe("mcp oauth flow helpers", () => {
         clientId: "client_123",
         name: "Client 123",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read"],
+        allowedScopes: ["app:organization:read"],
       }),
       consumeAuthorizationCode: () => ({
         clientId: "client_123",
         subjectId: "user_123",
         organizationId: "org_123",
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
         codeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
         codeChallengeMethod: "S256",
-        audience: "crm-mcp",
-        resourceId: "crm:mcp",
+        audience: "example-mcp",
+        resourceId: "app:mcp",
         expiresAt: 2_000,
       }),
       now: 1_000,
@@ -179,17 +179,17 @@ describe("mcp oauth flow helpers", () => {
         clientId: "client_123",
         name: "Client 123",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read"],
+        allowedScopes: ["app:organization:read"],
       },
       authorizationCode: {
         clientId: "client_123",
         subjectId: "user_123",
         organizationId: "org_123",
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
         codeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
         codeChallengeMethod: "S256",
-        audience: "crm-mcp",
-        resourceId: "crm:mcp",
+        audience: "example-mcp",
+        resourceId: "app:mcp",
         expiresAt: 2_000,
       },
     });
@@ -197,7 +197,7 @@ describe("mcp oauth flow helpers", () => {
 
   it("rejects a stored authorization code whose scope exceeds the client", async () => {
     const result = await validateMcpOAuthAuthorizationCodeTokenExchange({
-      request: new Request("https://crm.test/oauth/crm-mcp/token", {
+      request: new Request("https://example.com/oauth/example-mcp/token", {
         method: "POST",
         headers: {
           "content-type": "application/x-www-form-urlencoded",
@@ -214,17 +214,17 @@ describe("mcp oauth flow helpers", () => {
         clientId: "management-client",
         name: "Convex Management",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read"],
+        allowedScopes: ["app:organization:read"],
       }),
       consumeAuthorizationCode: () => ({
         clientId: "management-client",
         subjectId: "user_123",
         organizationId: "org_123",
-        scopes: ["crm:growth:write"],
+        scopes: ["app:growth:write"],
         codeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
         codeChallengeMethod: "S256",
-        audience: "crm-mcp",
-        resourceId: "crm:mcp",
+        audience: "example-mcp",
+        resourceId: "app:mcp",
         expiresAt: 2_000,
       }),
       now: 1_000,
@@ -242,7 +242,7 @@ describe("mcp oauth flow helpers", () => {
 
   it("rejects an expired authorization code during token exchange", async () => {
     const result = await validateMcpOAuthAuthorizationCodeTokenExchange({
-      request: new Request("https://crm.test/oauth/crm-mcp/token", {
+      request: new Request("https://example.com/oauth/example-mcp/token", {
         method: "POST",
         headers: {
           "content-type": "application/x-www-form-urlencoded",
@@ -259,7 +259,7 @@ describe("mcp oauth flow helpers", () => {
         clientId: "client_123",
         name: "Client 123",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read"],
+        allowedScopes: ["app:organization:read"],
       }),
       // Valid PKCE so the ONLY reason this fails is expiry — proving the expiry
       // gate runs and is not masked by the PKCE check.
@@ -267,11 +267,11 @@ describe("mcp oauth flow helpers", () => {
         clientId: "client_123",
         subjectId: "user_123",
         organizationId: "org_123",
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
         codeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
         codeChallengeMethod: "S256",
-        audience: "crm-mcp",
-        resourceId: "crm:mcp",
+        audience: "example-mcp",
+        resourceId: "app:mcp",
         expiresAt: 1_000,
       }),
       now: 1_000, // now === expiresAt → expired (boundary is inclusive)
@@ -293,7 +293,7 @@ describe("mcp oauth flow helpers", () => {
       undefined,
       [
         {
-          request: new Request("https://crm.test/oauth/crm-mcp/token", {
+          request: new Request("https://example.com/oauth/example-mcp/token", {
             method: "POST",
             headers: {
               "content-type": "application/x-www-form-urlencoded",
@@ -310,7 +310,7 @@ describe("mcp oauth flow helpers", () => {
             clientId: "client_123",
             name: "Client 123",
             redirectUris: ["http://127.0.0.1:8788/callback"],
-            allowedScopes: ["crm:organization:read"],
+            allowedScopes: ["app:organization:read"],
           }),
           // A misbehaving consumer that ignored the contract and dropped expiresAt.
           // The validator must reject rather than treat it as never-expiring.
@@ -318,11 +318,11 @@ describe("mcp oauth flow helpers", () => {
             clientId: "client_123",
             subjectId: "user_123",
             organizationId: "org_123",
-            scopes: ["crm:organization:read"],
+            scopes: ["app:organization:read"],
             codeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
             codeChallengeMethod: "S256",
-            audience: "crm-mcp",
-            resourceId: "crm:mcp",
+            audience: "example-mcp",
+            resourceId: "app:mcp",
           }),
           now: 1_000,
         },
@@ -341,7 +341,7 @@ describe("mcp oauth flow helpers", () => {
 
   it("rejects pkce mismatch during token exchange", async () => {
     const result = await validateMcpOAuthAuthorizationCodeTokenExchange({
-      request: new Request("https://crm.test/oauth/crm-mcp/token", {
+      request: new Request("https://example.com/oauth/example-mcp/token", {
         method: "POST",
         headers: {
           "content-type": "application/x-www-form-urlencoded",
@@ -358,17 +358,17 @@ describe("mcp oauth flow helpers", () => {
         clientId: "client_123",
         name: "Client 123",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read"],
+        allowedScopes: ["app:organization:read"],
       }),
       consumeAuthorizationCode: () => ({
         clientId: "client_123",
         subjectId: "user_123",
         organizationId: "org_123",
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
         codeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
         codeChallengeMethod: "S256",
-        audience: "crm-mcp",
-        resourceId: "crm:mcp",
+        audience: "example-mcp",
+        resourceId: "app:mcp",
         expiresAt: 2_000,
       }),
       now: 1_000,

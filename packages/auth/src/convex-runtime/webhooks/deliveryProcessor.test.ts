@@ -184,9 +184,9 @@ describe("processConvexWebhookDelivery", () => {
       delivery: delivery(),
       fetch: fetchFn,
       now: NOW,
-      headerPrefix: "crm",
+      headerPrefix: "app",
     });
 
-    assert.ok(capturedHeaders?.["x-crm-signature"] !== undefined);
+    assert.ok(capturedHeaders?.["x-app-signature"] !== undefined);
   });
 });

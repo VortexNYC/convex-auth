@@ -15,8 +15,8 @@ import { throwAuthError } from "../glue/throwAuthError";
  * The sibling of `createConvexAuthFunctions` for the action surface. Actions
  * cannot read the db, so they cannot run the glue's `resolveViewer` directly;
  * every consumer hand-rolls the gate at the top of each public action instead
- * (Seal's `stripe/connect_actions.ts` repeats an identity→membership→role check
- * across 7+ money-touching actions; Aqua's payment actions only check identity
+ * (some consumers' action code repeats an identity→membership→role check
+ * across 7+ money-touching actions; other consumers' payment actions only check identity
  * — UNDER-gated). That in-handler gate is exactly the skippable, drift-prone
  * surface the wrapper-factory closes for queries/mutations.
  *

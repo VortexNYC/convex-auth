@@ -35,7 +35,7 @@ export type CreateConvexAuthFunctionsOptions<
 };
 
 /**
- * Catapult-style ergonomic auth wrappers built on a B2B `createConvexAuthGlue`.
+ * Consumer-facing ergonomic auth wrappers built on a B2B `createConvexAuthGlue`.
  *
  * The security invariant: **the secure path is the ONLY path.** A consumer
  * using `permissionMutation("x:y")` cannot write a handler that skips the org +
@@ -46,7 +46,7 @@ export type CreateConvexAuthFunctionsOptions<
  *
  * Org access is ALWAYS permission-based RBAC. The builders gate on
  * `viewer.requirePermission("x:y")` (which checks `membership.permissions`),
- * NEVER on raw role strings — that's the plasma anti-pattern the survey forbids.
+ * NEVER on raw role strings — that's the role-only anti-pattern the survey forbids.
  *
  * This is a thin, typed layer ON TOP of the canonical glue — not a fork. The
  * glue's `B2BViewer` already does the RBAC decision; the only missing piece was

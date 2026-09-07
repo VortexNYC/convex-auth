@@ -14,26 +14,26 @@ describe("resolveMcpSessionAuthContext", () => {
       session: {
         clientId: "mcp_client_123",
         userId: "user_123",
-        scopes: "crm:organization:read crm:people:write",
+        scopes: "app:organization:read app:people:write",
       },
       organizationId: "org_123",
       permissions: ["organization:view", "people:write"],
       resourceType: "mcp.tool",
-      resourceId: "crm.people.search",
-      audience: "crm-mcp",
+      resourceId: "app.people.search",
+      audience: "example-mcp",
     });
 
     assert.equal(context.credentialType, "oauthToken");
     assert.equal(context.userId, "user_123");
     assert.equal(context.organizationId, "org_123");
-    assert.deepStrictEqual(context.scopes, ["crm:organization:read", "crm:people:write"]);
+    assert.deepStrictEqual(context.scopes, ["app:organization:read", "app:people:write"]);
     assert.deepStrictEqual(context.permissions, ["organization:view", "people:write"]);
     assert.deepStrictEqual(context.execution, {
       organizationId: "org_123",
       resourceType: "mcp.tool",
-      resourceId: "crm.people.search",
-      audience: "crm-mcp",
-      scopes: ["crm:organization:read", "crm:people:write"],
+      resourceId: "app.people.search",
+      audience: "example-mcp",
+      scopes: ["app:organization:read", "app:people:write"],
     });
     assert.equal(context.principal.kind, "oauthClient");
     assert.equal(context.principal.clientId, "mcp_client_123");
@@ -45,7 +45,7 @@ describe("resolveMcpSessionAuthContext", () => {
     const context = resolveMcpSessionAuthContext({
       session: {
         clientId: "mcp_client_only",
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
       },
       permissions: ["organization:view"],
     });

@@ -44,13 +44,35 @@ Once the data is verified you can proceed with the staged client/server migratio
 The Convex-native runtime and the Better Auth bridge can share the same `convex-auth` component. Install the component first; the auth flow you use can move to native later.
 
 ```ts
-// convex/convex.config.ts
-import { defineComponents } from "convex/server";
-import auth from "convex-auth/component";
+// convex/auth.config.ts
+import { createConvexAuthProvider } from "convex-auth/convex";
 
-export default defineComponents({
-  auth,
+export default {
+  providers: [createConvexAuthProvider()],
+};
+```
+
+```ts
+// convex/convex.config.ts
+import { defineApp } from "convex/server";
+import { v } from "convex/values";
+import auth from "convex-auth/convex.config";
+
+const app = defineApp({
+  env: {
+    JWT_PRIVATE_KEY: v.string(),
+    JWKS: v.string(),
+  },
 });
+
+app.use(auth, {
+  env: {
+    JWT_PRIVATE_KEY: app.env.JWT_PRIVATE_KEY,
+    JWKS: app.env.JWKS,
+  },
+});
+
+export default app;
 ```
 
 If you are already using the `convex-better-auth` bridge, this is the same component it already mounts.

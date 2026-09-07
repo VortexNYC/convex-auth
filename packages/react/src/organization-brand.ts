@@ -2,8 +2,8 @@
  * Suite tenant brand identity (VOR-182).
  *
  * Stored on the convex-auth organization as `metadataJson.brand` so every
- * consumer reads/writes the same shape. Product chrome (e.g. Seal
- * `hideSealBranding`, custom signing footer) stays in the consumer.
+ * consumer reads/writes the same shape. Product chrome (e.g. a consumer's
+ * `hideBranding`, custom signing footer) stays in the consumer.
  */
 
 export type ConvexOrganizationBrand = {

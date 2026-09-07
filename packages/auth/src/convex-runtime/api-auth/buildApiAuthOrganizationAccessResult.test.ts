@@ -21,7 +21,7 @@ describe("buildApiAuthOrganizationAccessResult", () => {
             organizationId: "org_1",
             roleTemplate: "owner",
             status: "active",
-            permissions: ["crm:read", "crm:write"],
+            permissions: ["app:read", "app:write"],
           },
           {
             _id: "membership_3",
@@ -36,13 +36,13 @@ describe("buildApiAuthOrganizationAccessResult", () => {
             status: "pending",
           },
         ],
-        expandPermissions: (role) => (role === "owner" ? ["*"] : ["crm:read"]),
+        expandPermissions: (role) => (role === "owner" ? ["*"] : ["app:read"]),
       }),
       {
         organizationId: "org_1",
         membershipIds: ["membership_1", "membership_2"],
         roleKeys: ["owner"],
-        permissions: ["*", "crm:read", "crm:write"],
+        permissions: ["*", "app:read", "app:write"],
       },
     );
   });

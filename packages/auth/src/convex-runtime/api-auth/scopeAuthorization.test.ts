@@ -13,7 +13,7 @@ describe("resolveApiScopeAuthorization", () => {
         scopes: [],
         role: "owner",
         permissions: ["*"],
-        requiredScope: "crm:organization:read",
+        requiredScope: "app:organization:read",
         canUserUseScope: () => true,
       }),
       { allowed: false, reason: "missing_api_key_scope" },
@@ -27,7 +27,7 @@ describe("resolveApiScopeAuthorization", () => {
         scopes: [],
         role: "owner",
         permissions: ["*"],
-        requiredScope: "crm:organization:read",
+        requiredScope: "app:organization:read",
         canUserUseScope: () => true,
       }),
       { allowed: false, reason: "missing_api_key_scope" },
@@ -36,10 +36,10 @@ describe("resolveApiScopeAuthorization", () => {
     assert.deepEqual(
       resolveApiScopeAuthorization({
         authType: "oauth",
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
         role: "owner",
         permissions: [],
-        requiredScope: "crm:organization:read",
+        requiredScope: "app:organization:read",
         canUserUseScope: () => false,
       }),
       { allowed: false, reason: "missing_user_permission" },
@@ -48,12 +48,12 @@ describe("resolveApiScopeAuthorization", () => {
     assert.deepEqual(
       resolveApiScopeAuthorization({
         authType: "oauth",
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
         role: "owner",
         permissions: ["organization:view"],
-        requiredScope: "crm:organization:read",
+        requiredScope: "app:organization:read",
         canUserUseScope: (permissions, scope) =>
-          scope === "crm:organization:read" && hasPermission(permissions, "organization:view"),
+          scope === "app:organization:read" && hasPermission(permissions, "organization:view"),
       }),
       { allowed: true },
     );
@@ -63,10 +63,10 @@ describe("resolveApiScopeAuthorization", () => {
     assert.deepEqual(
       resolveApiScopeAuthorization({
         authType: "api_key",
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
         role: "owner",
         permissions: [],
-        requiredScope: "crm:organization:read",
+        requiredScope: "app:organization:read",
         canUserUseScope: () => false,
       }),
       { allowed: false, reason: "missing_user_permission" },
@@ -75,12 +75,12 @@ describe("resolveApiScopeAuthorization", () => {
     assert.deepEqual(
       resolveApiScopeAuthorization({
         authType: "api_key",
-        scopes: ["crm:organization:read"],
+        scopes: ["app:organization:read"],
         role: "owner",
         permissions: ["organization:view"],
-        requiredScope: "crm:organization:read",
+        requiredScope: "app:organization:read",
         canUserUseScope: (permissions, scope) =>
-          scope === "crm:organization:read" && hasPermission(permissions, "organization:view"),
+          scope === "app:organization:read" && hasPermission(permissions, "organization:view"),
       }),
       { allowed: true },
     );
@@ -93,7 +93,7 @@ describe("resolveApiScopeAuthorization", () => {
         scopes: [],
         role: "admin",
         permissions: [],
-        requiredScope: "crm:organization:read",
+        requiredScope: "app:organization:read",
         canUserUseScope: () => false,
       }),
       { allowed: true },
@@ -107,9 +107,9 @@ describe("resolveApiScopeAuthorization", () => {
         scopes: [],
         role: "member",
         permissions: ["organization:view"],
-        requiredScope: "crm:organization:read",
+        requiredScope: "app:organization:read",
         canUserUseScope: (permissions, scope) =>
-          scope === "crm:organization:read" && hasPermission(permissions, "organization:view"),
+          scope === "app:organization:read" && hasPermission(permissions, "organization:view"),
       }),
       { allowed: true },
     );
@@ -120,7 +120,7 @@ describe("resolveApiScopeAuthorization", () => {
         scopes: [],
         role: "member",
         permissions: [],
-        requiredScope: "crm:organization:read",
+        requiredScope: "app:organization:read",
         canUserUseScope: () => false,
       }),
       { allowed: false, reason: "missing_user_permission" },

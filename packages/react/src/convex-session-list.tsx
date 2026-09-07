@@ -1,7 +1,7 @@
 /**
  * ConvexSessionList — drop-in active-sessions UI for consumers.
  *
- * Replaces the per-consumer provider-style sessions table that pile/CRM
+ * Replaces the per-consumer provider-style sessions table that some consumers
  * had to hand-write against `user.getSessions()` + `session.revoke()`.
  * Uses the package's session-management hooks (useConvexAuthSessionList +
  * useConvexAuthRevokeSession) so the component is purely presentational.

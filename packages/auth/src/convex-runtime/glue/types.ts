@@ -9,7 +9,7 @@
  * package never reaches into consumer tables by name.
  *
  * Two modes, type-discriminated:
- *  - `orgs: "enabled"` — B2B (plasma, CRM, Seal, Aqua, Veil). Full org
+ *  - `orgs: "enabled"` — B2B (e.g. multi-tenant SaaS consumers). Full org
  *    surface; anchor adapters required; viewer exposes `requireOrganization`.
  *  - `orgs: "disabled"` — consumer apps. No org context; viewer has no
  *    org methods. Anchor adapters not required.
@@ -155,14 +155,14 @@ export type B2BModeAdapters<
    *      checker flags as `local-bridge-mirror` (see
    *      docs/migration/truth-migration-playbook.md M3 "per-member
    *      metadata triage").
-   *   3. Was already removed from CRM (PR #23 dropped `crm_member_settings`
+   *   3. Was already removed from a consumer (PR #23 dropped `member_settings`
    *      entirely — feature had 0 rows in prod, was never actually used).
    *
    * Codex audit (2026-05-28): this adapter slot keeps the anti-pattern
    * alive as a first-class seam. Prefer one of:
    *   - Express the variance as a NEW role and assign it (component-truth)
    *   - Move the override into the component (add as a member field)
-   *   - Delete the feature (the CRM precedent)
+   *   - Delete the feature (the consumer precedent)
    *
    * The adapter remains in the API for transitional migrations only. It
    * will be removed in a future major (planned for v0.2.0). New consumers
@@ -193,7 +193,7 @@ export type B2BModeAdapters<
    * other domain-specific expansion plug their logic here.
    *
    * If omitted, the glue surfaces the raw component-stored permissions
-   * unchanged. The legacy CRM `buildPermissionContext` path uses
+   * unchanged. The legacy consumer `buildPermissionContext` path uses
    * `getExpandedPermissions(roleKey)` — Phase 2 back-ports wire that
    * same function through this callback.
    *

@@ -10,7 +10,7 @@ describe("resolveLinkedMcpSession", () => {
     const context = await resolveLinkedMcpSession({
       session: {
         accessToken: "token",
-        clientId: "crm-mcp-client",
+        clientId: "example-mcp-client",
         scopes: ["organization:read", "opportunities:read"],
         userId: "external-user-123",
       },
@@ -40,9 +40,9 @@ describe("resolveLinkedMcpSession", () => {
         },
       },
       requestedOrganizationId: "org_456",
-      audience: "crm-mcp",
+      audience: "example-mcp",
       resourceType: "mcp.tool",
-      resourceId: "crm:mcp",
+      resourceId: "app:mcp",
     });
 
     assert.equal(context.subjectId, "external-user-123");
@@ -58,7 +58,7 @@ describe("resolveLinkedMcpSession", () => {
         resolveLinkedMcpSession({
           session: {
             accessToken: "token",
-            clientId: "crm-mcp-client",
+            clientId: "example-mcp-client",
             scopes: ["organization:read"],
           },
           provider: "convex-auth",
@@ -88,7 +88,7 @@ describe("resolveLinkedMcpSession", () => {
         resolveLinkedMcpSession({
           session: {
             accessToken: "token",
-            clientId: "crm-mcp-client",
+            clientId: "example-mcp-client",
             scopes: ["organization:read"],
             userId: "external-user-123",
           },
@@ -128,7 +128,7 @@ describe("resolveLinkedMcpSession", () => {
         resolveLinkedMcpSession({
           session: {
             accessToken: "token",
-            clientId: "crm-mcp-client",
+            clientId: "example-mcp-client",
             scopes: ["organization:read"],
             userId: "external-user-123",
           },

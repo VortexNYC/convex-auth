@@ -123,7 +123,7 @@ describe("resolveActiveServiceOwnedApiKeyContext", () => {
       },
       input: {
         resourceType: "mcp.tool",
-        resourceId: "crm.contacts.search",
+        resourceId: "app.contacts.search",
         scopes: ["mcp:tools:execute"],
       },
     });
@@ -137,7 +137,7 @@ describe("resolveActiveServiceOwnedApiKeyContext", () => {
     assert.deepStrictEqual(context.execution, {
       organizationId: "org_123",
       resourceType: "mcp.tool",
-      resourceId: "crm.contacts.search",
+      resourceId: "app.contacts.search",
       audience: null,
       scopes: ["mcp:tools:execute"],
     });

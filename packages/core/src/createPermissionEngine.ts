@@ -2,8 +2,8 @@
  * Increment 5a — the wildcard permission engine.
  *
  * The authorization KERNEL, owned by the package. Every consumer otherwise
- * re-implements the identical 3-tier wildcard matcher + role expander (crm's
- * `src/domain/permissions.ts`, Catapult's `convex/auth/permissions.ts`, …). A
+ * re-implements the identical 3-tier wildcard matcher + role expander (one consumer's
+ * `src/domain/permissions.ts`, another consumer's `convex/auth/permissions.ts`, …). A
  * hand-rolled matcher is a security hole waiting to happen — a subtly wrong
  * `hasPermission` over-grants. This defines the semantics ONCE:
  *

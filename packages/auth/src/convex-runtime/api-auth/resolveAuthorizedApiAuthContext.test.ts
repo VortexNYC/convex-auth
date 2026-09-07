@@ -24,12 +24,12 @@ const baseAuth: ApiResolvedAuthContext = {
     resourceType: null,
     resourceId: null,
     audience: null,
-    scopes: ["crm:organization:read"],
+    scopes: ["app:organization:read"],
   },
   userId: "user_1",
   organizationId: "org_1",
   permissions: [],
-  scopes: ["crm:organization:read"],
+  scopes: ["app:organization:read"],
 };
 
 describe("resolveAuthorizedApiAuthContext", () => {
@@ -48,7 +48,7 @@ describe("resolveAuthorizedApiAuthContext", () => {
       auth: baseAuth,
       authType: "jwt",
       authSubject: "external-user-1",
-      scopes: ["crm:organization:read"],
+      scopes: ["app:organization:read"],
       userId: "user_1",
       organizationId: "org_1",
       role: "owner",

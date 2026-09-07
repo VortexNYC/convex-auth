@@ -2,7 +2,7 @@
  * Suite organization security policy (VOR-183).
  *
  * Stored on the convex-auth organization as `metadataJson.security` so every
- * consumer reads/writes the same shape. Seal-only API IP allowlist /
+ * consumer reads/writes the same shape. Consumer-only API IP allowlist /
  * allowApiAccess stay on the consumer org row.
  */
 

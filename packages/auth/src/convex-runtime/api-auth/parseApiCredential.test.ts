@@ -14,7 +14,7 @@ describe("parseApiCredential", () => {
     assert.deepStrictEqual(
       parseApiCredential({
         authorizationHeader: "Bearer jwt.token.value",
-        apiKeyTokenPrefixes: ["crm_live_"],
+        apiKeyTokenPrefixes: ["app_live_"],
       }),
       {
         credentialType: "userBearer",
@@ -26,12 +26,12 @@ describe("parseApiCredential", () => {
   it("resolves bearer tokens matching configured key prefixes as api keys", () => {
     assert.deepStrictEqual(
       parseApiCredential({
-        authorizationHeader: "Bearer crm_live_123.secret",
-        apiKeyTokenPrefixes: ["crm_live_"],
+        authorizationHeader: "Bearer app_live_123.secret",
+        apiKeyTokenPrefixes: ["app_live_"],
       }),
       {
         credentialType: "apiKeyBearer",
-        token: "crm_live_123.secret",
+        token: "app_live_123.secret",
       },
     );
   });
@@ -39,12 +39,12 @@ describe("parseApiCredential", () => {
   it("resolves x-api-key headers as api keys", () => {
     assert.deepStrictEqual(
       parseApiCredential({
-        apiKeyHeader: " crm_live_123.secret ",
-        apiKeyTokenPrefixes: ["crm_live_"],
+        apiKeyHeader: " app_live_123.secret ",
+        apiKeyTokenPrefixes: ["app_live_"],
       }),
       {
         credentialType: "apiKeyBearer",
-        token: "crm_live_123.secret",
+        token: "app_live_123.secret",
       },
     );
   });
@@ -54,8 +54,8 @@ describe("parseApiCredential", () => {
       () =>
         parseApiCredential({
           authorizationHeader: "Bearer jwt.token.value",
-          apiKeyHeader: "crm_live_123.secret",
-          apiKeyTokenPrefixes: ["crm_live_"],
+          apiKeyHeader: "app_live_123.secret",
+          apiKeyTokenPrefixes: ["app_live_"],
         }),
       (error: unknown) =>
         error instanceof ApiAuthError && error.code === "API_CREDENTIAL_AMBIGUOUS",
@@ -67,7 +67,7 @@ describe("parseApiCredential", () => {
       () =>
         parseApiCredential({
           apiKeyHeader: "other_live_123.secret",
-          apiKeyTokenPrefixes: ["crm_live_"],
+          apiKeyTokenPrefixes: ["app_live_"],
         }),
       (error: unknown) => error instanceof ApiAuthError && error.code === "API_KEY_HEADER_INVALID",
     );
@@ -75,7 +75,7 @@ describe("parseApiCredential", () => {
 
   it("requires either authorization or x-api-key", () => {
     assert.throws(
-      () => parseApiCredential({ apiKeyTokenPrefixes: ["crm_live_"] }),
+      () => parseApiCredential({ apiKeyTokenPrefixes: ["app_live_"] }),
       (error: unknown) =>
         error instanceof ApiAuthError && error.code === "AUTHORIZATION_HEADER_MISSING",
     );
@@ -86,15 +86,15 @@ describe("resolveCredentialTypeFromBearerToken", () => {
   it("classifies configured prefixes without treating JWT dots as api keys", () => {
     assert.equal(
       resolveCredentialTypeFromBearerToken({
-        token: "crm_live_123.secret",
-        apiKeyTokenPrefixes: ["crm_live_"],
+        token: "app_live_123.secret",
+        apiKeyTokenPrefixes: ["app_live_"],
       }),
       "apiKeyBearer",
     );
     assert.equal(
       resolveCredentialTypeFromBearerToken({
         token: "header.payload.signature",
-        apiKeyTokenPrefixes: ["crm_live_"],
+        apiKeyTokenPrefixes: ["app_live_"],
       }),
       "userBearer",
     );
@@ -104,9 +104,9 @@ describe("resolveCredentialTypeFromBearerToken", () => {
 describe("matchesApiKeyTokenPrefix", () => {
   it("trims and deduplicates prefixes before matching", () => {
     assert.equal(
-      matchesApiKeyTokenPrefix("crm_live_123.secret", [" crm_live_ ", "crm_live_"]),
+      matchesApiKeyTokenPrefix("app_live_123.secret", [" app_live_ ", "app_live_"]),
       true,
     );
-    assert.equal(matchesApiKeyTokenPrefix("other_live_123.secret", ["crm_live_"]), false);
+    assert.equal(matchesApiKeyTokenPrefix("other_live_123.secret", ["app_live_"]), false);
   });
 });

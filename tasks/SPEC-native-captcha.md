@@ -39,7 +39,7 @@ packages/auth/conformance/
 ## Code style
 
 - No `any`. Use validators for `args` and provider response parsing.
-- Use `parse` from `@vortexnyc/convex/helpers` for the provider JSON response shapes.
+- Use `parse` from `convex/values` for the provider JSON response shapes.
 - Siteverify URLs are constants; provider dispatch is a switch, not dynamic imports.
 - Keep the gate opt-in: if `captcha` is omitted, behavior is unchanged.
 

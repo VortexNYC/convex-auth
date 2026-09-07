@@ -11,7 +11,7 @@ describe("createConvexApiKeyTokenResult", () => {
 
     const result = createConvexApiKeyTokenResult({
       apiKeyId: "key_123",
-      keyPrefix: "crm_live_abc",
+      keyPrefix: "app_live_abc",
       secret: "secret",
       scopes,
       expiresAt: 123,
@@ -20,8 +20,8 @@ describe("createConvexApiKeyTokenResult", () => {
 
     assert.deepEqual(result, {
       apiKeyId: "key_123",
-      token: "crm_live_abc.secret",
-      keyPrefix: "crm_live_abc",
+      token: "app_live_abc.secret",
+      keyPrefix: "app_live_abc",
       scopes: ["organization:read", "people:read"],
       expiresAt: 123,
       allowedIpRanges: ["127.0.0.1/32"],
@@ -33,7 +33,7 @@ describe("createConvexApiKeyTokenResult", () => {
   it("defaults allowed IP ranges to an empty array", () => {
     const result = createConvexApiKeyTokenResult({
       apiKeyId: "key_123",
-      keyPrefix: "crm_live_abc",
+      keyPrefix: "app_live_abc",
       secret: "secret",
       scopes: ["organization:read"],
     });
@@ -47,7 +47,7 @@ describe("createConvexApiKeyTokenResult", () => {
       apiKey: {
         _id: "key_123",
         name: "Production",
-        keyPrefix: "crm_live_abc",
+        keyPrefix: "app_live_abc",
         scopes,
         status: "active",
         createdAt: 100,
@@ -62,7 +62,7 @@ describe("createConvexApiKeyTokenResult", () => {
     assert.deepEqual(result, {
       _id: "key_123",
       name: "Production",
-      keyPrefix: "crm_live_abc",
+      keyPrefix: "app_live_abc",
       scopes: ["organization:read"],
       status: "active",
       expiresAt: undefined,

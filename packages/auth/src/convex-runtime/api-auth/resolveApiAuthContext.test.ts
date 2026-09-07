@@ -16,7 +16,7 @@ function createVerifiedUserToken(): VerifiedUserToken {
     tokenIdentifier: "issuer|identity_123",
     sessionId: "session_123",
     scopes: ["profile:read"],
-    audience: "crm-api",
+    audience: "example-api",
     rawClaims: {},
   };
 }
@@ -78,7 +78,7 @@ describe("resolveApiAuthContext", () => {
       organizationId: "org_123",
       resourceType: "http.route",
       resourceId: "GET /v1/me",
-      audience: "crm-api",
+      audience: "example-api",
       scopes: ["profile:read"],
     });
   });

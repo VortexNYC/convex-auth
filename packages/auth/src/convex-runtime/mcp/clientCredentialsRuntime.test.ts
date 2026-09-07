@@ -12,13 +12,13 @@ const MACHINE_CLIENT: McpOAuthClient = {
   clientId: "svc-hermes",
   name: "Hermes",
   redirectUris: [],
-  allowedScopes: ["crm:growth:read"],
+  allowedScopes: ["app:growth:read"],
   grantTypes: ["client_credentials"],
   tokenEndpointAuthMethod: "client_secret_post",
 };
 
 function tokenRequest(body: Record<string, string>) {
-  return new Request("https://crm.example.com/oauth/crm-mcp/token", {
+  return new Request("https://app.example.com/oauth/example-mcp/token", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams(body).toString(),
@@ -56,12 +56,12 @@ function machineArgs(
       resolveGrantTarget: () => ({
         ok: true as const,
         organizationId: "org_1",
-        audience: "https://crm.example.com/mcp",
+        audience: "https://app.example.com/mcp",
       }),
       signMachineAccessToken: () => ({
         accessToken: "machine.jwt.token",
         expiresIn: 3600,
-        scope: "crm:growth:read",
+        scope: "app:growth:read",
         tokenType: "Bearer",
       }),
       ...overrides,
@@ -76,7 +76,7 @@ describe("handleMcpOAuthTokenRequest — client_credentials", () => {
         grant_type: "client_credentials",
         client_id: "svc-hermes",
         client_secret: "s3cret",
-        scope: "crm:growth:read",
+        scope: "app:growth:read",
       }),
       ...machineArgs(),
     });

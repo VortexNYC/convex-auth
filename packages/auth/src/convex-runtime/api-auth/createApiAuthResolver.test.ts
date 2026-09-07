@@ -176,7 +176,7 @@ describe("createApiAuthResolver — scope-ceiling proof matrix", () => {
     });
   }
 
-  it("owner-exceeds-scope: api_key owner CANNOT bypass the token scope set (the Seal bug)", async () => {
+  it("owner-exceeds-scope: api_key owner CANNOT bypass the token scope set (the owner-exceeds-scope bug)", async () => {
     // Owner role + the owner's role is in sessionFullAccessRoles, but it's an
     // api_key principal whose scope set lacks reports:write.
     const resolver = makeResolver({

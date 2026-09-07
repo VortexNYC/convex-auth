@@ -9,7 +9,7 @@ const MACHINE_CLIENT: McpOAuthClient = {
   clientId: "svc-hermes",
   name: "Hermes",
   redirectUris: [],
-  allowedScopes: ["crm:growth:read", "crm:growth:write"],
+  allowedScopes: ["app:growth:read", "app:growth:write"],
   grantTypes: ["client_credentials"],
   tokenEndpointAuthMethod: "client_secret_post",
 };
@@ -26,7 +26,7 @@ const ASSERTION_CLIENT: McpOAuthClient = {
 const acceptSecret = () => true;
 
 function tokenRequest(body: Record<string, string>, headers?: Record<string, string>) {
-  return new Request("https://auth.example.com/oauth/crm-mcp/token", {
+  return new Request("https://auth.example.com/oauth/example-mcp/token", {
     method: "POST",
     headers: {
       "content-type": "application/x-www-form-urlencoded",
@@ -53,7 +53,7 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
     if (!result.ok) return;
     // Omitted scope must mean the client's entitlement, never everything the
     // server offers.
-    assert.deepEqual(result.scopes, ["crm:growth:read", "crm:growth:write"]);
+    assert.deepEqual(result.scopes, ["app:growth:read", "app:growth:write"]);
   });
 
   it("narrows to the requested subset", async () => {
@@ -62,7 +62,7 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
         grant_type: "client_credentials",
         client_id: "svc-hermes",
         client_secret: "s3cret",
-        scope: "crm:growth:read",
+        scope: "app:growth:read",
       }),
       resolveClient: () => MACHINE_CLIENT,
       supportedMethods: CONFIDENTIAL,
@@ -71,7 +71,7 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
 
     assert.equal(result.ok, true);
     if (!result.ok) return;
-    assert.deepEqual(result.scopes, ["crm:growth:read"]);
+    assert.deepEqual(result.scopes, ["app:growth:read"]);
   });
 
   it("refuses to widen beyond the registered ceiling", async () => {
@@ -80,7 +80,7 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
         grant_type: "client_credentials",
         client_id: "svc-hermes",
         client_secret: "s3cret",
-        scope: "crm:growth:read crm:opportunities:write",
+        scope: "app:growth:read app:opportunities:write",
       }),
       resolveClient: () => MACHINE_CLIENT,
       supportedMethods: CONFIDENTIAL,
@@ -90,7 +90,7 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
     assert.equal(result.ok, false);
     if (result.ok) return;
     assert.equal(result.body.error, "invalid_scope");
-    assert.match(result.body.error_description ?? "", /crm:opportunities:write/u);
+    assert.match(result.body.error_description ?? "", /app:opportunities:write/u);
   });
 
   it("refuses a client that did not register for the grant", async () => {
@@ -197,7 +197,7 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
         client_id: "svc-hermes",
         client_assertion: "eyJhbGciOiJFUzI1NiJ9.e30.sig",
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-        scope: "crm:growth:read",
+        scope: "app:growth:read",
       }),
       resolveClient: () => ASSERTION_CLIENT,
       supportedMethods: ["private_key_jwt"],
@@ -212,7 +212,7 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
 
     assert.equal(result.ok, true);
     if (!result.ok) return;
-    assert.deepEqual(result.scopes, ["crm:growth:read"]);
+    assert.deepEqual(result.scopes, ["app:growth:read"]);
   });
 
   it("refuses a secret when the deployment cannot verify one", async () => {

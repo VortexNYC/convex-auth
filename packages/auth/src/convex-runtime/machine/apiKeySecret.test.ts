@@ -21,17 +21,17 @@ describe("api key secret utilities", () => {
   it("derives deterministic secrets from request material", async () => {
     const first = await deriveApiKeySecret({
       derivationSecret: "dev-secret",
-      purpose: "crm_api_key_secret:v1",
+      purpose: "app_api_key_secret:v1",
       parts: ["org1", "user1", "request1"],
     });
     const second = await deriveApiKeySecret({
       derivationSecret: "dev-secret",
-      purpose: "crm_api_key_secret:v1",
+      purpose: "app_api_key_secret:v1",
       parts: ["org1", "user1", "request1"],
     });
     const different = await deriveApiKeySecret({
       derivationSecret: "dev-secret",
-      purpose: "crm_api_key_secret:v1",
+      purpose: "app_api_key_secret:v1",
       parts: ["org1", "user1", "request2"],
     });
 

@@ -9,7 +9,7 @@ import {
 } from "./clientRegistration";
 
 const policy = {
-  supportedScopes: ["crm:organization:read", "crm:opportunities:write"],
+  supportedScopes: ["app:organization:read", "app:opportunities:write"],
 } as const;
 
 describe("mcp dynamic client registration", () => {
@@ -17,18 +17,18 @@ describe("mcp dynamic client registration", () => {
     assert.deepEqual(
       registerMcpOAuthClient(
         {
-          clientName: " CRM Desktop ",
+          clientName: " Example Desktop ",
           redirectUris: ["http://127.0.0.1:8788/callback", "http://127.0.0.1:8788/callback"],
-          scope: "crm:organization:read crm:opportunities:write",
+          scope: "app:organization:read app:opportunities:write",
         },
         policy,
         { clientId: "client_123" },
       ),
       {
         clientId: "client_123",
-        name: "CRM Desktop",
+        name: "Example Desktop",
         redirectUris: ["http://127.0.0.1:8788/callback"],
-        allowedScopes: ["crm:organization:read", "crm:opportunities:write"],
+        allowedScopes: ["app:organization:read", "app:opportunities:write"],
         tokenEndpointAuthMethod: "none",
         pkceRequired: true,
         grantTypes: ["authorization_code", "refresh_token"],
@@ -70,13 +70,13 @@ describe("mcp dynamic client registration", () => {
         {
           clientName: "Bad Scope",
           redirectUris: ["https://app.example.com/oauth/callback"],
-          scope: "crm:tasks:read",
+          scope: "app:tasks:read",
         },
         policy,
       ),
       {
         error: "invalid_client_metadata",
-        error_description: "Unsupported scope: crm:tasks:read",
+        error_description: "Unsupported scope: app:tasks:read",
       },
     );
   });

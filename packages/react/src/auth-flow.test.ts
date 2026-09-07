@@ -39,22 +39,25 @@ describe("auth flow helpers", () => {
   });
 
   it("accepts same-origin relative and absolute redirect paths only", () => {
-    assert.equal(toSafeConvexRedirectPath("/app?tab=1#x", "https://crm.test"), "/app?tab=1#x");
+    assert.equal(toSafeConvexRedirectPath("/app?tab=1#x", "https://example.com"), "/app?tab=1#x");
     assert.equal(
-      toSafeConvexRedirectPath("https://crm.test/path?q=1#hash", "https://crm.test"),
+      toSafeConvexRedirectPath("https://example.com/path?q=1#hash", "https://example.com"),
       "/path?q=1#hash",
     );
-    assert.equal(toSafeConvexRedirectPath("//evil.test/path", "https://crm.test"), undefined);
-    assert.equal(toSafeConvexRedirectPath("https://evil.test/path", "https://crm.test"), undefined);
-    assert.equal(toSafeConvexRedirectPath(undefined, "https://crm.test"), undefined);
+    assert.equal(toSafeConvexRedirectPath("//evil.test/path", "https://example.com"), undefined);
+    assert.equal(
+      toSafeConvexRedirectPath("https://evil.test/path", "https://example.com"),
+      undefined,
+    );
+    assert.equal(toSafeConvexRedirectPath(undefined, "https://example.com"), undefined);
   });
 
   it("stores and consumes pending auth flow state once", () => {
     const storage = createStorage();
     const authFlow = createConvexAuthFlowStorage({
       storage,
-      storageKeyPrefix: "crm.auth",
-      currentOrigin: "https://crm.test",
+      storageKeyPrefix: "app.auth",
+      currentOrigin: "https://example.com",
     });
 
     authFlow.markPendingAuthFlow("sign-in", { redirectPath: "/app" });
@@ -63,7 +66,7 @@ describe("auth flow helpers", () => {
       storage.getItem(
         getConvexPendingAuthFlowStorageKey({
           flow: "sign-in",
-          storageKeyPrefix: "crm.auth",
+          storageKeyPrefix: "app.auth",
         }),
       ),
       JSON.stringify({ redirectPath: "/app" }),
@@ -76,10 +79,10 @@ describe("auth flow helpers", () => {
 
   it("returns empty object when pending auth flow payload is malformed", () => {
     const storage = createStorage();
-    storage.setItem("crm.auth.pending.sign-up", "not-json");
+    storage.setItem("app.auth.pending.sign-up", "not-json");
     const authFlow = createConvexAuthFlowStorage({
       storage,
-      storageKeyPrefix: "crm.auth",
+      storageKeyPrefix: "app.auth",
     });
 
     assert.deepEqual(authFlow.consumePendingAuthFlow("sign-up"), {});
@@ -89,17 +92,17 @@ describe("auth flow helpers", () => {
     const storage = createStorage();
     const authFlow = createConvexAuthFlowStorage({
       storage,
-      storageKeyPrefix: "crm.auth",
+      storageKeyPrefix: "app.auth",
     });
 
     authFlow.markPendingPostSignUpSync();
-    assert.equal(storage.getItem(getConvexPendingPostSignUpStorageKey("crm.auth")), "true");
+    assert.equal(storage.getItem(getConvexPendingPostSignUpStorageKey("app.auth")), "true");
 
-    storage.setItem(getConvexPostSignUpFailureStorageKey("crm.auth"), "invite-email-mismatch");
+    storage.setItem(getConvexPostSignUpFailureStorageKey("app.auth"), "invite-email-mismatch");
     authFlow.clearPendingPostSignUpSync();
 
-    assert.equal(storage.getItem(getConvexPendingPostSignUpStorageKey("crm.auth")), null);
-    assert.equal(storage.getItem(getConvexPostSignUpFailureStorageKey("crm.auth")), null);
+    assert.equal(storage.getItem(getConvexPendingPostSignUpStorageKey("app.auth")), null);
+    assert.equal(storage.getItem(getConvexPostSignUpFailureStorageKey("app.auth")), null);
   });
 
   it("wraps app event capture", () => {

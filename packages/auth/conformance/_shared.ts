@@ -5,7 +5,7 @@
 import { parseSetCookie } from "set-cookie-parser";
 
 export const ORIGIN_WEB = "http://127.0.0.1:4173";
-export const ORIGIN_NATIVE = "crm://";
+export const ORIGIN_NATIVE = "myapp://";
 
 export const NATIVE_HEADERS = {
   "content-type": "application/json",

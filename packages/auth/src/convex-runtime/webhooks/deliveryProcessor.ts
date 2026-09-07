@@ -1,7 +1,7 @@
 /**
  * Turnkey webhook delivery processing.
  *
- * Packages the per-delivery firing logic the CRM consumer hand-wired
+ * Packages the per-delivery firing logic a consumer hand-wired
  * (`convex/webhookDeliveries.ts::processPendingDelivery`) into a single
  * reusable async function so a consumer's `internalAction` body shrinks to a
  * few lines. The package owns signing + classification + the result-update
