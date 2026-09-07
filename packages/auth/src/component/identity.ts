@@ -189,7 +189,7 @@ export const provisionFromIdentity = mutation({
         createdUser: false,
         linkedExistingIdentity: false,
         duplicate: true,
-        user: existingUserByEmail,
+        user: toUserReturn(existingUserByEmail),
       };
     }
 
