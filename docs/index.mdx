@@ -1,28 +1,67 @@
-# Convex Better Auth 2.0
+---
+title: Convex Auth
+description: Convex-native auth with a one-time Better Auth migration bridge.
+---
 
-Convex-native auth with a one-time Better Auth migration bridge.
+# Convex Auth
 
-If you are starting a new project, install `convex-auth` and follow the native path. If you are migrating from an existing Better Auth integration, use the migration guides.
+Convex-native auth for production apps. Users, sessions, identities, organizations, API keys, webhooks, and MCP auth live in your Convex database. No external auth service required.
 
-## Start here
+If you are new here, follow this order:
 
-- [How we got here](./how-we-got-here) — the journey from Better Auth to a native Convex auth runtime.
-- [Convex-native auth strategy](./convex-native-auth-strategy) — the recommended runtime and roadmap.
-- [Feature-gated components](./feature-gated-components) — how to mount and compose the `convexAuth` component.
-- [Motivation](./motivation) — why this project exists and how it relates to Convex Auth 2.0.
+<Steps>
+  <Step title="Read the motivation" href="./motivation">
+    Why `convex-auth` exists and how it relates to Better Auth and Convex Auth 2.0.
+  </Step>
+  <Step title="Understand the concepts" href="./concepts">
+    The five building blocks: component, config, actions, HTTP routes, and React client.
+  </Step>
+  <Step title="Install" href="./installation">
+    Add the packages, generate signing keys, and set environment variables.
+  </Step>
+  <Step title="Quickstart" href="./quickstart">
+    Wire `convex/auth.ts`, mount the component, set up the React client, and sign up a user.
+  </Step>
+</Steps>
 
-## Migration paths
+## Get started
 
-- [Migrating from Better Auth](./migrating-from-better-auth) — for existing Better Auth projects.
-- [Migrating from `@convex-dev/better-auth`](./migrating-from-convex-dev-better-auth) — for the old Convex adapter.
-- [Migrating from the full component](./migrating-from-full-component) — from the earlier monolithic `convexAuth` setup.
+<CardGroup cols={2}>
+  <Card title="Installation" href="./installation" icon="download">
+    Install packages and set the minimum environment variables.
+  </Card>
+  <Card title="Quickstart" href="./quickstart" icon="rocket">
+    End-to-end setup with email/password and OAuth.
+  </Card>
+  <Card title="Configuration" href="./configuration" icon="sliders">
+    Every option on `convexAuth`.
+  </Card>
+  <Card title="React client" href="./client" icon="monitor">
+    Hooks and the Better-Auth-shaped client.
+  </Card>
+</CardGroup>
 
-## Reference
+## Features
 
-- [Better Auth to Convex mapping](./better-auth-to-convex) — terminology and behavior mapping between Better Auth and the native runtime.
-- [Compatibility](./compatibility) — supported versions of Better Auth, Convex, React, React Native, Node, and pnpm.
-- [Examples](./examples) — runnable React, Hono, React Native, and OAuth consumers.
-- [OAuth](./oauth) — Google, GitHub, and Discord sign-in.
-- [React Native](./react-native) — Expo / React Native setup.
-- [Preflight](./preflight) — the `convex-auth preflight` CLI.
-- [Testing](./testing) — test helpers and the conformance consumer.
+<CardGroup cols={2}>
+  <Card title="Email and password" href="./email-password" icon="mail">
+    Sign-up, sign-in, email verification, and password reset.
+  </Card>
+  <Card title="OAuth" href="./oauth" icon="globe">
+    Google, GitHub, and Discord sign-in.
+  </Card>
+  <Card title="Two-factor" href="./two-factor" icon="shield">
+    TOTP and backup codes.
+  </Card>
+  <Card title="Better Auth alternatives" href="./better-auth-alternatives" icon="book-open">
+    Map Better Auth docs to `convex-auth` pages.
+  </Card>
+</CardGroup>
+
+## Migration
+
+If you already have a Better Auth integration:
+
+- [Migrating from Better Auth](./migrating-from-better-auth)
+- [Migrating from `@convex-dev/better-auth`](./migrating-from-convex-dev-better-auth)
+- [Migrating from the full component](./migrating-from-full-component)
