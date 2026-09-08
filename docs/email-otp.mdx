@@ -1,0 +1,95 @@
+---
+title: Email OTP
+description: One-time email passcodes for sign-in and verification with convex-auth.
+sidebar:
+  order: 12
+---
+
+# Email OTP
+
+`convex-auth` can sign users in, verify emails, reset passwords, or change emails with a one-time code delivered by email.
+
+## Enable
+
+```ts convex/auth.ts
+import { components } from "./_generated/api";
+import { convexAuth } from "convex-auth/convex";
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+  emailOtp: {
+    enabled: true,
+    sendVerificationOTP: async ({ email, otp, type }) => {
+      // production: call Resend/Postmark/SES
+      console.log("OTP", { email, otp, type });
+      return "email-id";
+    },
+    expiresInMs: 5 * 60 * 1000,
+  },
+});
+```
+
+`sendVerificationOTP` receives `email`, `otp`, and `type`. `type` is one of `sign-in`, `email-verification`, `forget-password`, or `change-email`.
+
+## Sign in with an OTP
+
+```tsx src/SignInWithOtp.tsx
+import { useAuthActions } from "convex-auth/react";
+
+export function SignInWithOtp() {
+  const { signInWithEmailOtp, verifyEmailOtp, isLoading } = useAuthActions();
+
+  const [step, setStep] = useState<"request" | "verify">("request");
+  const [email, setEmail] = useState("");
+
+  async function requestCode(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get("email") as string;
+    setEmail(email);
+    await signInWithEmailOtp({ email, type: "sign-in" });
+    setStep("verify");
+  }
+
+  async function confirmCode(otp: string) {
+    await verifyEmailOtp({ email, otp, type: "sign-in" });
+  }
+
+  // ...
+}
+```
+
+## Verify or change an email with an OTP
+
+```tsx
+import { useAuthActions } from "convex-auth/react";
+
+export function VerifyEmailWithOtp() {
+  const { sendVerificationOtp, verifyEmailOtp } = useAuthActions();
+
+  async function start(email: string) {
+    await sendVerificationOtp({ email, type: "email-verification" });
+  }
+
+  async function confirm(email: string, otp: string) {
+    await verifyEmailOtp({ email, otp, type: "email-verification" });
+  }
+
+  // ...
+}
+```
+
+`verifyEmailOtp` returns a session when `type` is `sign-in`, or a verify result for `email-verification`, `forget-password`, and `change-email`.
+
+## Options
+
+| Option                | Type       | Default  | Description                                                        |
+| --------------------- | ---------- | -------- | ------------------------------------------------------------------ |
+| `enabled`             | `boolean`  | `true`   | Enable email OTP.                                                  |
+| `sendVerificationOTP` | `function` | Required | Send the OTP email.                                                |
+| `expiresInMs`         | `number`   | 5 min    | OTP lifetime.                                                      |
+| `disableSignUp`       | `boolean`  | `false`  | Prevent OTP sign-in from creating new accounts.                    |
+| `sessionTtlMs`        | `number`   | 7 days   | Session lifetime after sign-in.                                    |
+| `refreshTokenTtlMs`   | `number`   | 30 days  | Refresh-token lifetime.                                            |
+| `minPasswordLength`   | `number`   | `8`      | When OTP creates a user, it must still set a password of this min. |
+| `maxPasswordLength`   | `number`   | `128`    | When OTP creates a user, it must still set a password of this max. |

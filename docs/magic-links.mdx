@@ -1,0 +1,109 @@
+---
+title: Magic links
+description: Password-less email sign-in with convex-auth.
+sidebar:
+  order: 11
+---
+
+# Magic links
+
+`convex-auth` can sign users in with a one-time link sent to their email. No password is needed.
+
+## Enable
+
+```ts convex/auth.ts
+import { components } from "./_generated/api";
+import { convexAuth } from "convex-auth/convex";
+
+const siteUrl = process.env.CONVEX_SITE_URL?.replace(/\/$/, "");
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+  magicLink: {
+    enabled: true,
+    appOrigin: siteUrl,
+    expiresInMs: 5 * 60 * 1000,
+    sendMagicLink: async ({ email, url, token, name, metadata }) => {
+      // production: call Resend/Postmark/SES
+      console.log("Magic link", { email, url, token, name, metadata });
+      return "email-id";
+    },
+  },
+});
+```
+
+`sendMagicLink` receives `email`, `url`, `token`, `name?`, and `metadata?`. It must return an id or any truthy string.
+
+## Request a link from React
+
+```tsx src/SignInWithMagicLink.tsx
+import { useAuthActions } from "convex-auth/react";
+
+export function SignInWithMagicLink() {
+  const { signInWithMagicLink, isLoading } = useAuthActions();
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    await signInWithMagicLink({
+      email: formData.get("email") as string,
+      name: formData.get("name") as string,
+      callbackURL: "/dashboard",
+      newUserCallbackURL: "/welcome",
+      errorCallbackURL: "/auth/error",
+      metadata: { source: "landing" },
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input name="email" type="email" required />
+      <input name="name" placeholder="Name (optional)" />
+      <button type="submit" disabled={isLoading}>
+        {isLoading ? "Sending..." : "Send me a link"}
+      </button>
+    </form>
+  );
+}
+```
+
+## How the link works
+
+The generated URL is `https://<CONVEX_SITE_URL>/api/auth/magic-link/verify?token=...&callbackURL=...`. When the user clicks it, `auth.addHttpRoutes(http)`:
+
+1. Verifies the token.
+2. Creates a user and identity if the email is new (or signs in an existing one).
+3. Issues a session token.
+4. Redirects the browser to `callbackURL` with `?token=...&sessionId=...`.
+
+Your callback page should read the token from the query string and call `updateSession`:
+
+```tsx src/MagicLinkCallback.tsx
+import { useEffect } from "react";
+import { useAuthActions } from "convex-auth/react";
+
+export function MagicLinkCallback() {
+  const { updateSession } = useAuthActions();
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("token");
+    if (token) {
+      void updateSession({ token });
+    }
+  }, [updateSession]);
+
+  return <p>Finishing sign-in...</p>;
+}
+```
+
+## Options
+
+| Option              | Type       | Default  | Description                                     |
+| ------------------- | ---------- | -------- | ----------------------------------------------- |
+| `enabled`           | `boolean`  | `true`   | Enable magic-link sign-in.                      |
+| `appOrigin`         | `string`   | —        | Origin used in the magic-link URL.              |
+| `sendMagicLink`     | `function` | Required | Send the magic link email.                      |
+| `expiresInMs`       | `number`   | 5 min    | Token lifetime.                                 |
+| `disableSignUp`     | `boolean`  | `false`  | Prevent magic links from creating new accounts. |
+| `sessionTtlMs`      | `number`   | 7 days   | Session lifetime after sign-in.                 |
+| `refreshTokenTtlMs` | `number`   | 30 days  | Refresh-token lifetime.                         |
