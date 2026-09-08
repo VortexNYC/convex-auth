@@ -1,0 +1,74 @@
+---
+title: Installation
+description: Install convex-auth, generate keys, and set your environment variables.
+sidebar:
+  order: 1
+---
+
+# Installation
+
+This guide installs the packages and sets the minimum environment variables. For the full end-to-end wiring, follow [`Quickstart`](./quickstart).
+
+## What you need
+
+- A Convex project. If you do not have one, run `pnpm dlx convex@latest`.
+- pnpm and Node `>=20.12.0`.
+- An email service for production (Resend, Postmark, SES, etc.). For local development you can log email drafts.
+
+## Steps
+
+<Steps>
+  <Step title="Install packages">
+    ```bash
+    pnpm add convex-auth convex-auth-react convex
+    ```
+  </Step>
+  <Step title="Generate signing keys">
+    `convex-auth` signs session JWTs with RS256. Run this once:
+
+    ```bash
+    node --input-type=module -e '
+    import { randomUUID } from "node:crypto";
+    import { generateKeyPair, exportJWK } from "jose";
+    const { publicKey, privateKey } = await generateKeyPair("RS256", { extractable: true });
+    const pub = await exportJWK(publicKey);
+    const priv = await exportJWK(privateKey);
+    const kid = randomUUID();
+    pub.kid = kid;
+    priv.kid = kid;
+    console.log("JWT_PRIVATE_KEY=" + JSON.stringify(priv));
+    console.log("JWKS=" + JSON.stringify({ keys: [pub] }));
+    '
+    ```
+
+  </Step>
+  <Step title="Set environment variables">
+    ```bash
+    pnpm dlx convex env set JWT_PRIVATE_KEY '<private-key-json>'
+    pnpm dlx convex env set JWKS '<jwks-json>'
+    pnpm dlx convex env set CONVEX_SITE_URL 'https://your-site.convex.site'
+    pnpm dlx convex env set EMAIL_FROM_ADDRESS 'auth@yourdomain.com'
+    ```
+
+    <Callout type="warning">
+      Keep `JWT_PRIVATE_KEY` secret. Never commit it. Use `convex env set` for both local and production deployments.
+    </Callout>
+
+  </Step>
+  <Step title="Continue to Quickstart">
+    The next page wires the component, `convex/auth.ts`, and the React client.
+  </Step>
+</Steps>
+
+## Optional: set OAuth credentials
+
+If you want Google, GitHub, or Discord sign-in, also set these and register the callback URL `https://<CONVEX_SITE_URL>/api/auth/callback/<provider>`:
+
+```bash
+pnpm dlx convex env set GITHUB_CLIENT_ID '...'
+pnpm dlx convex env set GITHUB_CLIENT_SECRET '...'
+pnpm dlx convex env set GOOGLE_CLIENT_ID '...'
+pnpm dlx convex env set GOOGLE_CLIENT_SECRET '...'
+pnpm dlx convex env set DISCORD_CLIENT_ID '...'
+pnpm dlx convex env set DISCORD_CLIENT_SECRET '...'
+```
