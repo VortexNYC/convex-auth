@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { scryptAsync } from "@noble/hashes/scrypt.js";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 import { bytesToBase64url, hashPassword, legacyPbkdf2Hash, verifyPassword } from "./password.js";
 
 describe("password", () => {
@@ -42,6 +43,20 @@ describe("password", () => {
     const legacyHash = await legacyPbkdf2Hash("hunter2");
     expect(legacyHash.startsWith("$pbkdf2$")).toBe(true);
     expect(await verifyPassword("hunter2", legacyHash)).toBe(true);
+    expect(await verifyPassword("wrong", legacyHash)).toBe(false);
+  });
+
+  it("verifies Better Auth legacy scrypt hashes", async () => {
+    const password = "LongPassword123!";
+    const saltHex = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
+    const derived = await scryptAsync(password, hexToBytes(saltHex), {
+      N: 16384,
+      r: 16,
+      p: 1,
+      dkLen: 64,
+    });
+    const legacyHash = `${saltHex}:${bytesToHex(derived)}`;
+    expect(await verifyPassword(password, legacyHash)).toBe(true);
     expect(await verifyPassword("wrong", legacyHash)).toBe(false);
   });
 });
