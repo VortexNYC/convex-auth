@@ -1,0 +1,162 @@
+---
+title: Configuration
+description: Every option on the convexAuth helper and the providers it accepts.
+---
+
+# Configuration
+
+`convexAuth` is configured in `convex/auth.ts`. The object it returns is re-exported so Convex can see the actions, queries, and HTTP routes.
+
+## Top-level shape
+
+```ts
+import { components } from "./_generated/api";
+import { convexAuth } from "convex-auth/convex";
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+  emailAndPassword: {
+    /* ... */
+  },
+  oauth: {
+    /* ... */
+  },
+  magicLink: {
+    /* ... */
+  },
+  emailOtp: {
+    /* ... */
+  },
+  captcha: {
+    /* ... */
+  },
+});
+
+export const { signUp, signIn, signOut, addHttpRoutes } = auth;
+```
+
+| Option             | Type                                  | Required | Description                                               |
+| ------------------ | ------------------------------------- | -------- | --------------------------------------------------------- |
+| `component`        | `ConvexAuthComponentHandle`           | Yes      | Component handle from `components.convexAuth`.            |
+| `components`       | `{ core: ConvexAuthComponentHandle }` | No       | Same as `component`; use one or the other.                |
+| `emailAndPassword` | `NativeEmailAndPasswordConfig`        | No       | Email/password sign-up, sign-in, verification, and reset. |
+| `oauth`            | `NativeOAuthConfig`                   | No       | Google, GitHub, and Discord OAuth.                        |
+| `magicLink`        | `NativeMagicLinkConfig`               | No       | Magic-link sign-in via email.                             |
+| `emailOtp`         | `NativeEmailOtpConfig`                | No       | Email-based one-time passcodes.                           |
+| `captcha`          | `CaptchaConfig`                       | No       | CAPTCHA gating for sign-up and password reset endpoints.  |
+
+## `emailAndPassword`
+
+| Option                          | Type                        | Default   | Description                                                             |
+| ------------------------------- | --------------------------- | --------- | ----------------------------------------------------------------------- |
+| `enabled`                       | `boolean`                   | `true`    | Enable email/password sign-up and sign-in.                              |
+| `disableSignUp`                 | `boolean`                   | `false`   | Disable new sign-ups. Existing users can still sign in.                 |
+| `autoSignIn`                    | `boolean`                   | `true`    | Automatically sign the user in after successful sign-up.                |
+| `requireVerifiedEmail`          | `boolean`                   | `false`   | Reject sign-in for users whose email is not verified.                   |
+| `minPasswordLength`             | `number`                    | `8`       | Minimum password length.                                                |
+| `maxPasswordLength`             | `number`                    | `256`     | Maximum password length.                                                |
+| `checkBreach`                   | `boolean`                   | `true`    | Check new passwords against Have I Been Pwned and reject breached ones. |
+| `sessionTtlMs`                  | `number`                    | `7 days`  | Access-token/session lifetime in milliseconds.                          |
+| `refreshTokenTtlMs`             | `number`                    | `30 days` | Refresh-token lifetime in milliseconds.                                 |
+| `verificationCodeTtlMs`         | `number`                    | `1 hour`  | Email-verification code lifetime.                                       |
+| `passwordResetCodeTtlMs`        | `number`                    | `1 hour`  | Password-reset code lifetime.                                           |
+| `trustedOrigins`                | `string[]`                  | `[]`      | Origins allowed for `callbackURL` in verify/reset routes.               |
+| `revokeSessionsOnPasswordReset` | `boolean`                   | `true`    | Revoke all sessions after a successful password reset.                  |
+| `rateLimit`                     | `{ windowMs, maxAttempts }` | —         | Rate limiting for sign-in attempts per email.                           |
+| `email`                         | `EmailConfig`               | Required  | Email sender and path configuration.                                    |
+| `onExistingUserSignUp`          | `(data) => Promise<void>`   | —         | Callback when an existing user tries to sign up.                        |
+| `onPasswordReset`               | `(data) => Promise<void>`   | —         | Callback after a successful password reset.                             |
+
+### `email`
+
+| Option         | Type                         | Required | Description                                                 |
+| -------------- | ---------------------------- | -------- | ----------------------------------------------------------- |
+| `from`         | `string`                     | Yes      | `From:` address for all auth emails.                        |
+| `appOrigin`    | `string`                     | No       | Origin used for email links. Defaults to `CONVEX_SITE_URL`. |
+| `verifyPath`   | `string`                     | No       | In-app path for the verify-email redirect.                  |
+| `resetPath`    | `string`                     | No       | In-app path for the reset-password redirect.                |
+| `sendEmail`    | `(draft) => Promise<string>` | Yes      | Send the email. Return a message/queue id.                  |
+| `sendOnSignUp` | `boolean`                    | No       | Send a verification email on sign-up.                       |
+| `sendOnSignIn` | `boolean`                    | No       | Send a verification email on sign-in for unverified users.  |
+
+## `oauth`
+
+| Option             | Type                    | Default | Description                                                           |
+| ------------------ | ----------------------- | ------- | --------------------------------------------------------------------- |
+| `github`           | `GitHubProviderConfig`  | No      | GitHub OAuth app credentials.                                         |
+| `google`           | `GoogleProviderConfig`  | No      | Google OAuth app credentials.                                         |
+| `discord`          | `DiscordProviderConfig` | No      | Discord OAuth app credentials.                                        |
+| `redirectURI`      | `string`                | No      | Full callback URL registered with the OAuth provider.                 |
+| `trustedOrigins`   | `string[]`              | No      | Origins allowed for `callbackURL`, `errorURL`, and `newUserURL`.      |
+| `sessionTtlMs`     | `number`                | 7 days  | OAuth session lifetime.                                               |
+| `trustedProviders` | `string[]`              | No      | Providers whose `emailVerified` claim is trusted for account linking. |
+| `accountLinking`   | `AccountLinkingConfig`  | No      | Policy for linking OAuth accounts to existing users.                  |
+
+### Provider configs
+
+Each OAuth provider takes:
+
+```ts
+{
+  clientId: string;
+  clientSecret: string;
+}
+```
+
+Set the corresponding `*_CLIENT_ID` and `*_CLIENT_SECRET` environment variables.
+
+### `accountLinking`
+
+| Option                      | Type      | Default | Description                                                          |
+| --------------------------- | --------- | ------- | -------------------------------------------------------------------- |
+| `enabled`                   | `boolean` | `true`  | Allow linking OAuth accounts to existing users.                      |
+| `disableImplicitLinking`    | `boolean` | `false` | Require explicit `linkSocial` to attach an OAuth account.            |
+| `requiresEmailVerification` | `boolean` | `false` | Require the provider to report the email as verified before linking. |
+
+## `magicLink`
+
+| Option              | Type                        | Default | Description                                     |
+| ------------------- | --------------------------- | ------- | ----------------------------------------------- |
+| `enabled`           | `boolean`                   | `true`  | Enable magic-link sign-in.                      |
+| `disableSignUp`     | `boolean`                   | `false` | Prevent magic links from creating new accounts. |
+| `appOrigin`         | `string`                    | No      | Origin used in the magic link.                  |
+| `expiresInMs`       | `number`                    | 5 min   | Token lifetime.                                 |
+| `sessionTtlMs`      | `number`                    | 7 days  | Session lifetime after sign-in.                 |
+| `refreshTokenTtlMs` | `number`                    | 30 days | Refresh-token lifetime.                         |
+| `sendMagicLink`     | `(data) => Promise<string>` | Yes     | Send the magic link email.                      |
+
+## `emailOtp`
+
+| Option                | Type                        | Default | Description                                      |
+| --------------------- | --------------------------- | ------- | ------------------------------------------------ |
+| `enabled`             | `boolean`                   | `true`  | Enable email OTP.                                |
+| `disableSignUp`       | `boolean`                   | `false` | Prevent OTP from creating new accounts.          |
+| `expiresInMs`         | `number`                    | 5 min   | OTP lifetime.                                    |
+| `sessionTtlMs`        | `number`                    | 7 days  | Session lifetime after verification.             |
+| `refreshTokenTtlMs`   | `number`                    | 30 days | Refresh-token lifetime.                          |
+| `minPasswordLength`   | `number`                    | `8`     | Minimum password length when OTP creates a user. |
+| `maxPasswordLength`   | `number`                    | `256`   | Maximum password length when OTP creates a user. |
+| `sendVerificationOTP` | `(data) => Promise<string>` | Yes     | Send the OTP email.                              |
+
+## `captcha`
+
+| Option      | Type                                                                         | Required | Description                                      |
+| ----------- | ---------------------------------------------------------------------------- | -------- | ------------------------------------------------ |
+| `provider`  | `"cloudflare-turnstile" \| "google-recaptcha" \| "hcaptcha" \| "captchafox"` | Yes      | CAPTCHA provider.                                |
+| `secretKey` | `string`                                                                     | Yes      | Server-side verification secret.                 |
+| `endpoints` | `string[]`                                                                   | No       | Paths to protect. Defaults to sign-up and reset. |
+
+## Environment variables
+
+| Variable                | Required | Purpose                                       |
+| ----------------------- | -------- | --------------------------------------------- |
+| `JWT_PRIVATE_KEY`       | Yes      | RS256 private key as exported JWK JSON.       |
+| `JWKS`                  | Yes      | JWKS JSON containing the matching public key. |
+| `CONVEX_SITE_URL`       | Yes      | Public `.convex.site` URL of your deployment. |
+| `EMAIL_FROM_ADDRESS`    | Yes      | Default `From:` address for auth emails.      |
+| `GITHUB_CLIENT_ID`      | No       | GitHub OAuth client ID.                       |
+| `GITHUB_CLIENT_SECRET`  | No       | GitHub OAuth client secret.                   |
+| `GOOGLE_CLIENT_ID`      | No       | Google OAuth client ID.                       |
+| `GOOGLE_CLIENT_SECRET`  | No       | Google OAuth client secret.                   |
+| `DISCORD_CLIENT_ID`     | No       | Discord OAuth client ID.                      |
+| `DISCORD_CLIENT_SECRET` | No       | Discord OAuth client secret.                  |

@@ -1,0 +1,24 @@
+---
+title: Better Auth alternatives
+description: Map Better Auth docs to the equivalent convex-auth pages.
+---
+
+# Better Auth alternatives
+
+Use this table to find the `convex-auth` equivalent for each Better Auth doc page. The implementation is different because auth state lives in Convex, but the feature surface is the same.
+
+| Better Auth page                                                               | Convex Auth 2.0 equivalent                                                | `convex-auth` alternative                   |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------- |
+| [Installation](https://www.better-auth.com/docs/installation)                  | [Setup](https://labs.convex.dev/auth/setup)                               | [`Quickstart`](./quickstart)                |
+| [Basic usage / email & password](https://www.better-auth.com/docs/basic-usage) | [Passwords](https://labs.convex.dev/auth/config/passwords)                | [`Email and password`](./email-password)    |
+| [Basic usage / social sign-on](https://www.better-auth.com/docs/basic-usage)   | [OAuth](https://labs.convex.dev/auth/config/oauth)                        | [`OAuth`](./oauth)                          |
+| [Basic usage / session](https://www.better-auth.com/docs/basic-usage)          | [React client](https://labs.convex.dev/auth/api_reference/react)          | [`React client`](./client)                  |
+| [Two-factor](https://www.better-auth.com/docs/plugins/two-factor)              | —                                                                         | [`Two-factor authentication`](./two-factor) |
+| [Organizations](https://www.better-auth.com/docs/plugins/organization)         | —                                                                         | `Organizations` (coming next)               |
+| [API keys](https://www.better-auth.com/docs/plugins/api-key)                   | —                                                                         | `API keys` (coming next)                    |
+| [Magic link](https://www.better-auth.com/docs/plugins/magic-link)              | [Magic links](https://labs.convex.dev/auth/config/email)                  | `Magic links` (coming next)                 |
+| [Email OTP](https://www.better-auth.com/docs/plugins/email-otp)                | [OTPs](https://labs.convex.dev/auth/config/otps)                          | `Email OTP` (coming next)                   |
+| [Webhooks](https://www.better-auth.com/docs/concepts/webhooks)                 | —                                                                         | `Webhooks` (coming next)                    |
+| [Configuration / options](https://www.better-auth.com/docs/reference/options)  | [Server API reference](https://labs.convex.dev/auth/api_reference/server) | [`Configuration`](./configuration)          |
+
+If a page is marked “coming next,” it has not been written yet. Open an issue or PR if you need it first.

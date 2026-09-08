@@ -1,0 +1,142 @@
+---
+title: React client
+description: React hooks and the client for convex-auth.
+---
+
+# React client
+
+`convex-auth-react` exposes a provider and hooks that wrap the Convex actions configured in `convex/auth.ts`.
+
+## Provider
+
+`ConvexAuthClientProvider` replaces the plain `ConvexProvider` and wires the `auth` action references from `api.auth`:
+
+```tsx
+// src/main.tsx
+import { ConvexReactClient, ConvexProvider } from "convex/react";
+import { ConvexAuthClientProvider } from "convex-auth/react";
+import { api } from "../convex/_generated/api";
+import App from "./App";
+
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
+
+function Root() {
+  return (
+    <ConvexProvider client={convex}>
+      <ConvexAuthClientProvider actions={api.auth}>
+        <App />
+      </ConvexAuthClientProvider>
+    </ConvexProvider>
+  );
+}
+```
+
+`actions` must be the `api.auth` object that re-exports the functions returned by `convexAuth`.
+
+## useAuthActions
+
+`useAuthActions` is the low-level hook for signing in, signing up, signing out, and managing 2FA.
+
+```tsx
+import { useAuthActions } from "convex-auth/react";
+
+export function SignIn() {
+  const { signIn, isLoading, isAuthenticated } = useAuthActions();
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    await signIn({
+      email: formData.get("email") as string,
+      password: formData.get("password") as string,
+    });
+  }
+
+  // ...
+}
+```
+
+### Returns
+
+| Property                | Type                      | Description                                            |
+| ----------------------- | ------------------------- | ------------------------------------------------------ |
+| `isLoading`             | `boolean`                 | Whether an auth action is in flight.                   |
+| `isAuthenticated`       | `boolean`                 | Whether the current session is authenticated.          |
+| `user`                  | `object \| null`          | Current user object.                                   |
+| `token`                 | `string \| null`          | Current session JWT.                                   |
+| `sessionId`             | `string \| null`          | Current session id.                                    |
+| `signUp`                | `async (args) => Session` | Email/password sign-up.                                |
+| `signIn`                | `async (args) => Session` | Email/password sign-in.                                |
+| `signInWithMagicLink`   | `async (args) => Result`  | Sign in via a magic link.                              |
+| `signInWithRedirect`    | `async (args) => Result`  | Start an OAuth redirect flow.                          |
+| `oauthCallback`         | `async (args) => Result`  | Complete the OAuth callback.                           |
+| `signOut`               | `async () => void`        | Invalidate the session.                                |
+| `sendEmailVerification` | `async (args) => Result`  | Send an email-verification email.                      |
+| `verifyEmail`           | `async (token) => Result` | Verify an email from a link.                           |
+| `sendPasswordReset`     | `async (args) => Result`  | Send a password-reset email.                           |
+| `resetPassword`         | `async (args) => Result`  | Reset the password with a token.                       |
+| `changeEmail`           | `async (args) => Result`  | Request an email change.                               |
+| `twoFactor.*`           | `object`                  | TOTP enable, verify, disable, and backup-code helpers. |
+
+`signIn` and `signUp` accept `{ email, password, rememberMe?, callbackURL?, name? }`.
+
+`signInWithRedirect` accepts `{ provider: "google" | "github" | "discord", callbackURL?, errorURL?, newUserURL? }`.
+
+## useConvexAuthClient
+
+`useConvexAuthClient` wraps `useAuthActions` in a Better-Auth-compatible client shape. Use this if you are porting existing Better Auth forms and hooks.
+
+```tsx
+import { useConvexAuthClient } from "convex-auth/react";
+
+export function BetterAuthSignIn() {
+  const client = useConvexAuthClient();
+
+  async function handleSubmit(email: string, password: string) {
+    const { data, error } = await client.signIn.email({ email, password });
+    if (error) {
+      console.error(error.message);
+    }
+  }
+
+  const session = client.useSession();
+  // session.data.user, session.data.session, session.isPending
+
+  return <button onClick={() => client.signOut()}>Sign out</button>;
+}
+```
+
+### Client methods
+
+| Method                          | Description                                                    |
+| ------------------------------- | -------------------------------------------------------------- |
+| `useSession`                    | React hook returning `{ data: { user, session }, isPending }`. |
+| `signIn.email`                  | Email/password sign-in.                                        |
+| `signIn.social`                 | OAuth sign-in with redirect.                                   |
+| `signUp.email`                  | Email/password sign-up.                                        |
+| `signOut`                       | Sign the user out.                                             |
+| `forgetPassword`                | Send a password-reset email.                                   |
+| `resetPassword`                 | Reset the password with a token.                               |
+| `sendVerificationEmail`         | Send an email-verification email.                              |
+| `verifyEmail`                   | Verify an email from a token.                                  |
+| `changeEmail`                   | Request an email change.                                       |
+| `twoFactor.enable`              | Start TOTP enrollment. Returns `totpURI` and `backupCodes`.    |
+| `twoFactor.verifyTotp`          | Confirm a TOTP code.                                           |
+| `twoFactor.verifyBackupCode`    | Confirm a backup code.                                         |
+| `twoFactor.disable`             | Disable 2FA.                                                   |
+| `twoFactor.generateBackupCodes` | Regenerate backup codes.                                       |
+
+## Other hooks
+
+`convex-auth-react` also ships form and UI components. The most commonly used ones:
+
+- `useConvexAuthUser(authClient)` — returns `{ user, isLoaded, isSignedIn }` in a Clerk-compatible shape.
+- `useConvexAuthSessionList(authClient)` — list and refetch active sessions.
+- `useConvexAuthRevokeSession(authClient)` — revoke a session or all other sessions.
+- `useConvexAuthForgotPassword(authClient)` — request a password reset.
+- `useConvexAuthResetPassword(authClient)` — complete a password reset.
+- `useConvexAuthVerifyEmail(authClient)` — verify an email from a token.
+- `useConvexAuthEnableTwoFactor(authClient)` — start TOTP enrollment.
+- `useConvexAuthVerifyTotp(authClient)` — confirm a TOTP code.
+
+Most of these take the auth client returned by `useConvexAuthClient()`.
