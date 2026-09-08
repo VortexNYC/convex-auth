@@ -2,6 +2,7 @@ export * from "./auth-client-boundaries";
 export * from "./auth-client-hooks";
 export * from "./auth-client-identity-provisioner";
 export * from "./auth-client-route-helpers";
+export * from "./auth-appearance";
 export * from "./auth-client-types";
 export * from "./auth-forms";
 export * from "./auth-flow";
