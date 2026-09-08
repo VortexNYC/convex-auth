@@ -212,8 +212,10 @@ function isBetterAuthScryptHash(hash: string): boolean {
   return /^[0-9a-f]+$/i.test(salt) && /^[0-9a-f]+$/i.test(derived);
 }
 
+// Better Auth passes the salt as a lowercase hex *string* (not the decoded
+// bytes) and NFKC-normalizes the password before scrypt.
 function parseBetterAuthScryptHash(hash: string): {
-  salt: Uint8Array;
+  salt: string;
   expected: Uint8Array;
 } | null {
   if (!isBetterAuthScryptHash(hash)) {
@@ -221,7 +223,7 @@ function parseBetterAuthScryptHash(hash: string): {
   }
   try {
     const [saltHex, derivedHex] = hash.split(":") as [string, string];
-    return { salt: hexToBytes(saltHex), expected: hexToBytes(derivedHex) };
+    return { salt: saltHex, expected: hexToBytes(derivedHex) };
   } catch {
     return null;
   }
@@ -234,12 +236,12 @@ async function verifyBetterAuthScrypt(password: string, hash: string): Promise<b
   }
   const { salt, expected } = parsed;
   try {
-    const actual = await scryptAsync(password, salt, {
+    const actual = await scryptAsync(password.normalize("NFKC"), salt, {
       N: BETTER_AUTH_SCRYPT_N,
       r: BETTER_AUTH_SCRYPT_R,
       p: BETTER_AUTH_SCRYPT_P,
       dkLen: expected.length,
-      maxmem: 128 * BETTER_AUTH_SCRYPT_R * (BETTER_AUTH_SCRYPT_N + BETTER_AUTH_SCRYPT_P + 1),
+      maxmem: 128 * BETTER_AUTH_SCRYPT_N * BETTER_AUTH_SCRYPT_R * 2,
     });
     return timingSafeEqual(actual, expected);
   } catch {

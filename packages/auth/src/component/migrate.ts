@@ -82,7 +82,8 @@ export const migrateUser = internalMutation({
       name: args.legacyUser.name,
       image: args.legacyUser.image ?? undefined,
       emailVerified: args.legacyUser.emailVerified,
-      twoFactorEnabled: args.legacyUser.twoFactorEnabled ?? undefined,
+      // Two-factor secrets are not migrated, so leave 2FA disabled.
+      // Users can re-enroll once they sign in with the native runtime.
       isActive: true,
       createdAt: args.legacyUser.createdAt,
       updatedAt: args.legacyUser.updatedAt,
