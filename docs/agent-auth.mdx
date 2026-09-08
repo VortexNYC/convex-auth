@@ -1,0 +1,79 @@
+---
+title: Agent auth
+description: Autonomous and delegated agent credentials with convex-auth.
+sidebar:
+  order: 20
+---
+
+# Agent auth
+
+`convex-auth` supports autonomous and delegated agents as first-class principals. An agent signs each request with a short-lived EdDSA JWT, and `convex-auth` resolves it to a permission-bearing `AgentPrincipal`.
+
+## When to use
+
+Use agent auth when a non-human actor needs to act inside your Convex app:
+
+- background automation
+- server-to-server tasks
+- tool-calling by an autonomous agent
+- delegated user actions on a headless worker
+
+## Agent credentials
+
+Each agent has a keypair. The agent keeps the private key; Convex Auth stores the public key thumbprint, agent id, host id, and organization id. Every request is a short-lived EdDSA JWT (max 90 seconds) with a unique `jti` (replay id).
+
+## Resolve an agent principal
+
+```ts convex/agents.ts
+import { resolveActiveAgentPrincipal } from "convex-auth/convex";
+import { api } from "./_generated/api";
+
+const adapter = {
+  async getVerificationMaterial({ thumbprint }) {
+    return await ctx.runQuery(api.auth.internal.getAgentVerificationMaterial, {
+      thumbprint,
+    });
+  },
+  async consumeCredential(input) {
+    return await ctx.runMutation(api.auth.internal.consumeAgentCredential, input);
+  },
+};
+
+export const resolveAgent = action({
+  args: { token: v.string(), audience: v.string() },
+  handler: async (ctx, args) => {
+    return resolveActiveAgentPrincipal(adapter, {
+      token: args.token,
+      audience: args.audience,
+    });
+  },
+});
+```
+
+`resolveActiveAgentPrincipal` verifies the JWT signature, validates the claim set, binds the request (if `requestBinding` is supplied), and consumes the replay id to prevent replay attacks.
+
+## Convex adapter
+
+For the Convex component, use `createConvexAgentCredentialAuthorityAdapter`:
+
+```ts
+import { createConvexAgentCredentialAuthorityAdapter } from "convex-auth/convex";
+
+const adapter = createConvexAgentCredentialAuthorityAdapter({
+  runQuery: ctx.runQuery,
+  runMutation: ctx.runMutation,
+  refs: {
+    getAgentVerificationMaterial: api.auth.internal.getAgentVerificationMaterial,
+    consumeAgentCredential: api.auth.internal.consumeAgentCredential,
+  },
+});
+```
+
+## Permission and capability grants
+
+The resolved `AgentPrincipal` carries `permissions` and `capabilityGrants`. A capability grant can include constraints (`eq`, `min`, `max`, `in`, `notIn`) that your tool code checks before executing an action.
+
+```ts
+const agent = await resolveActiveAgentPrincipal(adapter, { token, audience });
+requirePermission(context, "agent:deploy");
+```

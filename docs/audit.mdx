@@ -1,0 +1,77 @@
+---
+title: Audit
+description: Auth audit events and authorization denials with convex-auth.
+sidebar:
+  order: 21
+---
+
+# Audit
+
+`convex-auth` ships a small, structured audit layer for auth events. It records who (or what) did something, what was attempted, and why it was denied.
+
+## What is audited
+
+The audit helpers are intentionally low-level. They build event payloads with:
+
+- `principal` — `kind`, `id`, `organizationId`, and other identifying claims
+- `resource` — the target of the action (`resourceType`, `resourceId`)
+- `outcome` — `allowed` or `denied`, with a `denialReason` and `denialCode`
+- `timestamp` and `eventId`
+
+You write the resulting event to your own `auth_audit_events` table or external log sink.
+
+## Create an auth audit event
+
+```ts convex/audit.ts
+import { createAuthAuditEvent } from "convex-auth/convex";
+
+const event = createAuthAuditEvent({
+  principal: {
+    kind: "user",
+    userId: "user_123",
+    organizationId: "org_456",
+  },
+  resource: {
+    resourceType: "document",
+    resourceId: "doc_789",
+  },
+  action: "update",
+  allowed: true,
+});
+
+await ctx.runMutation(api.audit.insert, { event });
+```
+
+## Authorization denied events
+
+Use `rethrowWithAuthorizationDeniedAudit` to record a denial and throw the original error:
+
+```ts convex/documents.ts
+import { rethrowWithAuthorizationDeniedAudit } from "convex-auth/convex";
+
+export const updateDocument = internalMutation({
+  args: { documentId: v.id("documents"), userId: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      await requirePermission(ctx, { permission: "document:update" });
+      // ...
+    } catch (error) {
+      rethrowWithAuthorizationDeniedAudit(error, {
+        principal: { kind: "user", userId: args.userId },
+        resource: { resourceType: "document", resourceId: args.documentId },
+        action: "document:update",
+      });
+    }
+  },
+});
+```
+
+There are also `createPermissionDeniedAuditEvent` and `createRestrictionDeniedAuditEvent` for specific denial kinds.
+
+## Principal attribution
+
+The audit helpers support human users, service principals, OAuth clients, and agents. The `principal` object includes `kind`, `userId`, `organizationId`, `permissions`, and `isRestricted`.
+
+## Event catalog
+
+Your app is responsible for the event catalog. `convex-auth` provides the base shape; you define the `action` and `resourceType` values that matter for your domain.

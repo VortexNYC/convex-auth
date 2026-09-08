@@ -1,0 +1,66 @@
+---
+title: Identity
+description: Users, identities, providers, and the auth_identity table in convex-auth.
+sidebar:
+  order: 18
+---
+
+# Identity
+
+`convex-auth` separates a `user` from an `identity`. A user is a person or service; an identity is a proof that they are who they say they are.
+
+## Model
+
+- `auth_users` — the canonical user. One row per real person or service.
+- `auth_identities` — one row per `provider:issuer:subject` combination. The same user can have an `email` identity, a `google` identity, a `github` identity, etc.
+- `auth_accounts` — provider-specific account data (credential hash, TOTP state, etc.).
+- `auth_sessions` and `auth_refresh_tokens` — session state.
+
+When a user signs up or links a new provider, the runtime provisions an identity:
+
+```ts
+await ctx.runMutation(component.identity.provisionFromIdentity, {
+  identity: {
+    identityId: `email:native:shlomo@example.com`,
+    provider: "email",
+    issuer: "native",
+    subject: "shlomo@example.com",
+  },
+  user: { name: "Shlomo" },
+});
+```
+
+## Identity ID format
+
+The `identityId` is a deterministic string built from `provider`, `issuer`, and `subject`:
+
+```
+<provider>:<issuer>:<subject>
+```
+
+Examples:
+
+- `email:native:shlomo@example.com`
+- `google:oauth:1234567890`
+- `github:oauth:987654321`
+
+## Linking identities
+
+If a user signs in with Google while already having an email identity with the same verified email, the runtime can link the two identities to the same user. If the email is not verified, the runtime creates a separate user to avoid account pre-merging attacks.
+
+## React client
+
+```tsx
+import { useAuthState } from "convex-auth/react";
+
+export function Profile() {
+  const { user, isAuthenticated } = useAuthState();
+  return <pre>{JSON.stringify({ user, isAuthenticated }, null, 2)}</pre>;
+}
+```
+
+`user` is the native user object. The full identity list is available through `useSession` and the session surface.
+
+## Migration note
+
+When migrating from Better Auth, identities are imported from the Better Auth `accounts` table. The `subject` and `provider` are preserved, so token validation continues to work without re-linking.

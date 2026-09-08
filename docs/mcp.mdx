@@ -1,0 +1,88 @@
+---
+title: MCP
+description: Model Context Protocol sessions and identity linking in convex-auth.
+sidebar:
+  order: 19
+---
+
+# MCP
+
+`convex-auth` can authorize [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) clients as `oauthClient` principals. The client gets an MCP `access_token`, and your Convex action resolves it to a real user and organization.
+
+## What it does
+
+MCP clients are usually stateless services that call tools on behalf of a user. `convex-auth` treats the MCP access token as an OAuth-style bearer token and produces a resolved auth context with:
+
+- `clientId` — the MCP client identifier.
+- `userId` — the linked Convex user, if the token is user-bound.
+- `organizationId` — the active org, selected from a hint or the user's default.
+- `permissions` and `scopes` — the granted rights for the tool call.
+
+## Resolve a session
+
+```ts convex/mcp.ts
+import { resolveMcpSessionAuthContext } from "convex-auth/convex";
+import { components } from "./_generated/api";
+
+const component = components.convexAuth;
+
+export async function resolveMcpSession(session: McpSessionLike) {
+  return resolveMcpSessionAuthContext({
+    session,
+    clientId: session.clientId,
+    audience: "my-mcp-server",
+    resourceType: "mcp.tool",
+    resourceId: "app:mcp",
+    subjectType: session.userId ? "user" : "client",
+  });
+}
+```
+
+`McpSessionLike` is a minimal token object: `clientId`, `accessToken`, `accessTokenExpiresAt`, `scopes`, and optional `userId`.
+
+## Link to a Convex user
+
+For user-bound tokens, call `resolveLinkedMcpSession` with an adapter that can look up a user by identity and resolve org access:
+
+```ts convex/mcp.ts
+import { resolveLinkedMcpSession } from "convex-auth/convex";
+import { api } from "./_generated/api";
+
+export async function resolveLinkedSession(
+  session: McpSessionLike,
+  provider: string,
+  issuer: string,
+) {
+  return resolveLinkedMcpSession({
+    session,
+    provider,
+    issuer,
+    buildTokenIdentifier: (subject, iss) => `${provider}:${iss}:${subject}`,
+    adapter: {
+      getUserByIdentity: async (args) =>
+        await ctx.runQuery(api.auth.internal.getUserByIdentity, args),
+      getOrganizationAccess: async (args) =>
+        await ctx.runQuery(api.auth.internal.getOrganizationAccess, args),
+    },
+  });
+}
+```
+
+The linked session returns the `userId`, `organizationId`, `permissions`, and `scopes` for the tool call.
+
+## Authorization
+
+Use the resolved MCP context with the authorization helpers to enforce permissions inside an MCP tool:
+
+```ts convex/mcpTools.ts
+import { requirePermission } from "convex-auth/convex";
+
+export const runTool = action({
+  args: { session: v.any(), tool: v.string() },
+  handler: async (ctx, args) => {
+    const context = await resolveLinkedSession(args.session, "mcp", "my-mcp-issuer");
+    requirePermission(context, "mcp:use");
+    // ... execute the tool
+  },
+});
+```

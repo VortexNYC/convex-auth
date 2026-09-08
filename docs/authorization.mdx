@@ -1,0 +1,91 @@
+---
+title: Authorization
+description: Permission and RBAC helpers in convex-auth.
+sidebar:
+  order: 22
+---
+
+# Authorization
+
+`convex-auth` gives you decision helpers and throw-based `require` helpers. For Convex apps, `createConvexAuthFunctions` wraps your `query` and `mutation` builders so permission checks run before the handler body.
+
+## Decision helpers
+
+```ts
+import {
+  authorizeAuthenticated,
+  authorizeNotRestricted,
+  authorizeOrganization,
+  authorizePermission,
+} from "convex-auth/convex";
+```
+
+| Helper                   | Denial code               | Use case                               |
+| ------------------------ | ------------------------- | -------------------------------------- |
+| `authorizeAuthenticated` | `AUTHENTICATION_REQUIRED` | Any authenticated principal.           |
+| `authorizeNotRestricted` | `PRINCIPAL_RESTRICTED`    | Ensure the principal is not suspended. |
+| `authorizeOrganization`  | `ORGANIZATION_REQUIRED`   | Ensure an org is selected.             |
+| `authorizePermission`    | `PERMISSION_REQUIRED`     | Check a concrete permission.           |
+
+```ts
+const decision = authorizePermission(context, "document:update");
+if (!decision.allowed) {
+  throw new Error(decision.reason ?? "Forbidden");
+}
+```
+
+## Throw helpers
+
+For fail-fast code:
+
+```ts
+import {
+  requireAuthenticated,
+  requireNotRestricted,
+  requireOrganization,
+  requirePermission,
+} from "convex-auth/convex";
+
+requirePermission(context, "document:update");
+```
+
+## Convex function wrappers
+
+`createConvexAuthFunctions` builds `query` and `mutation` constructors that inject an authorized `viewer` before the handler runs. The handler cannot bypass the gate because the permission is a parameter of the builder.
+
+```ts convex/functions.ts
+import { createConvexAuthFunctions } from "convex-auth/convex";
+import { createConvexAuthGlue } from "convex-auth/b2b";
+import { query, mutation } from "./_generated/server";
+
+const glue = createConvexAuthGlue({
+  /* ... */
+});
+
+const { permissionQuery, permissionMutation, adminMutation } = createConvexAuthFunctions({
+  glue,
+  query,
+  mutation,
+});
+
+export const setRole = permissionMutation("members:write")({
+  args: { memberId: v.string(), role: v.string() },
+  handler: async (ctx, args) => {
+    const orgId = ctx.viewer.convexAuthOrganizationId;
+    // write is already authorized for members:write
+  },
+});
+```
+
+## Permission model
+
+The permission model is exact membership. Wildcards like `organization:*` must be expanded to concrete permissions before the check. The resolved context already contains the concrete permissions for the active org.
+
+## Available builders
+
+- `authedQuery` / `authedMutation` — any authenticated viewer.
+- `permissionQuery(perm)` / `permissionMutation(perm)` — one permission.
+- `permissionAnyQuery(perms)` / `permissionAnyMutation(perms)` — any of the listed permissions.
+- `permissionAllQuery(perms)` / `permissionAllMutation(perms)` — all of the listed permissions.
+- `roleQuery(...roles)` / `roleMutation(...roles)` — role-key membership.
+- `adminQuery` / `adminMutation` — `owner` or `admin`.
