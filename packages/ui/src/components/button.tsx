@@ -1,6 +1,6 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
-import { Slot } from "radix-ui";
+import { Slot } from "@radix-ui/react-slot";
 import * as React from "react";
 
 import { cn } from "../lib/cn";
@@ -58,7 +58,7 @@ export function Button({
       className={classes}
       render={
         asChild
-          ? (htmlProps) => <Slot.Root {...htmlProps} />
+          ? (htmlProps) => <Slot {...htmlProps} />
           : (htmlProps) => <button type="button" {...htmlProps} />
       }
     />

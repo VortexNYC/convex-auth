@@ -1,4 +1,4 @@
-import { Slot } from "radix-ui";
+import { Slot } from "@radix-ui/react-slot";
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import type * as React from "react";
 
@@ -28,7 +28,7 @@ function TooltipTrigger({
   return (
     <TooltipPrimitive.Trigger
       data-slot="tooltip-trigger"
-      render={asChild ? (htmlProps) => <Slot.Root {...htmlProps} /> : undefined}
+      render={asChild ? (htmlProps) => <Slot {...htmlProps} /> : undefined}
       {...props}
     />
   );
