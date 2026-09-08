@@ -17,6 +17,9 @@ export default defineConfig({
   content: {
     root: "../docs",
   },
+  ai: {
+    llmsTxt: true,
+  },
   deployment: {
     site: "https://gregarious-perch-710.convex.site",
   },
