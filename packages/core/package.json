@@ -1,6 +1,7 @@
 {
   "name": "convex-auth-core",
   "version": "0.1.0",
+  "private": true,
   "description": "Auth domain core: principals, permissions, identities, and scope registries.",
   "license": "Apache-2.0",
   "repository": {
