@@ -10,6 +10,8 @@ export default defineMeta({
     "advanced",
     "tooling",
     "reference",
+    "operations",
+    "from-better-auth",
     "architecture",
     "migration",
     "decisions",
