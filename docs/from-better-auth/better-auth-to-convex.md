@@ -33,12 +33,12 @@ This document maps Better Auth concepts to the native `convex-auth` runtime. It 
 | `webhooks`         | `convex-auth` webhooks component (`webhook_endpoints`, `webhook_deliveries`)                                                      | Supported     |
 | `email-otp`        | Native email OTP actions (`sendVerificationOtp`, `verifyEmailOtp`)                                                                | Supported     |
 | `magic-link`       | Native magic-link HTTP routes and actions                                                                                         | Supported     |
-| `anonymous`        | No direct replacement. Use `convexAuth` session actions + a guest-identity pattern.                                               | Not supported |
-| `generic-oauth`    | Built-in providers or custom OAuth metadata. No generic `oauth2` plugin.                                                          | Partial       |
+| `anonymous`        | [#205](https://github.com/shlomokabareti/convex-better-auth-2.0/issues/205) — guest / no-credential sign-in.                      | Not supported |
+| `generic-oauth`    | [#207](https://github.com/shlomokabareti/convex-better-auth-2.0/issues/207) — custom OAuth provider metadata.                     | Partial       |
 | `jwt`              | Convex native JWT sessions + JWKS endpoint                                                                                        | Equivalent    |
-| `one-tap`          | Not implemented.                                                                                                                  | Not supported |
-| `phone-number`     | Not implemented. Use `convex-auth` OTP with a custom `PhoneOtpSender` as a stopgap.                                               | Not supported |
-| `username`         | Not implemented.                                                                                                                  | Not supported |
+| `one-tap`          | [#206](https://github.com/shlomokabareti/convex-better-auth-2.0/issues/206) — Google One Tap sign-in.                             | Not supported |
+| `phone-number`     | [#204](https://github.com/shlomokabareti/convex-better-auth-2.0/issues/204) — SMS OTP sign-in.                                    | Not supported |
+| `username`         | [#203](https://github.com/shlomokabareti/convex-better-auth-2.0/issues/203) — username + password.                                | Not supported |
 | `sso`              | Not supported by `convex-auth`. SSO via OIDC/SAML is out of scope.                                                                | Not supported |
 
 ## Migration terminology
