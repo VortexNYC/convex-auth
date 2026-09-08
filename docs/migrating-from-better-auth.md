@@ -18,13 +18,13 @@ If both the legacy `convex-better-auth-adapter` component and the native `convex
 pnpm dlx convex-auth migrate better-auth
 ```
 
-The CLI reads legacy records from the adapter component and writes native records into the `convex-auth` component. It migrates users first, then only migrates accounts and sessions whose user was successfully migrated. On success it reports counts like `migrated 1 users, 1 accounts, 1 sessions`.
+The CLI reads legacy records from the adapter component and writes native records into the `convex-auth` component. It migrates users first, then accounts, then sessions. A successful run returns the `migrate:migrateUsers` batch status; accounts and sessions continue through the migration scheduler. Use `convex run --component betterAuth/migrations lib:getStatus` to watch the full set of migrations finish.
 
 Flags:
 
 - `--dry-run` — preview the file and deployment changes without writing anything.
 - `--cutover` — after migration, rewrite `convex/convex.config.ts` and `convex/http.ts` to remove the legacy adapter and drop `convex-better-auth` / `convex-better-auth-adapter` from `package.json`.
-- `--resume` — not yet implemented; migrations start from the beginning each run.
+- `--resume` — continue a previously started migration from the stored cursor. Without this flag, the migration resets and starts from the beginning.
 
 After it finishes, verify the native tables in the mounted `convexAuth` component:
 

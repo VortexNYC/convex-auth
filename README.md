@@ -21,7 +21,7 @@ A public, Convex-native auth platform for [Convex](https://convex.dev), with a [
 
 ## Status
 
-Public — `convex-auth` is at `1.7.3` and the `convex-better-auth-adapter` is at `0.13.3`. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, and MCP auth) is passing full conformance. The Better Auth compatibility bridge (`convex-better-auth` 2.0.4) is stable for migration.
+Public — `convex-auth` is at `1.7.5`, `convex-better-auth-adapter` is at `0.13.4`, and `convex-better-auth` is at `2.0.5`. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, and MCP auth) is passing full conformance. The Better Auth compatibility bridge is stable for one-time migration only.
 
 ## Why this exists
 
@@ -322,35 +322,17 @@ For the full mapping, see [`docs/better-auth-to-convex.md`](docs/better-auth-to-
 
 ### React client
 
-Create an auth client with the Convex plugin:
+The bridge does not add a new React provider. While you are running both Better Auth and `convex-auth` side by side, use Better Auth's own client. The low-level Convex helper is:
 
 ```ts
-import { createAuthClient } from "convex-auth-react";
-import { convexClient } from "convex-better-auth-adapter/client/plugins";
+import { createBetterAuthConvexClient } from "convex-better-auth";
 
-export const authClient = createAuthClient({
-  plugins: [convexClient()],
+export const authClient = createBetterAuthConvexClient({
+  baseURL: "https://your-site.convex.site/api/auth",
 });
 ```
 
-Wrap your app in the provider:
-
-```tsx
-import { ConvexProvider, ConvexReactClient } from "convex/react";
-import { BetterAuthConvexProvider } from "convex-auth-react";
-
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
-
-export function App() {
-  return (
-    <ConvexProvider client={convex}>
-      <BetterAuthConvexProvider client={convex} authClient={authClient}>
-        {/** your app */}
-      </BetterAuthConvexProvider>
-    </ConvexProvider>
-  );
-}
-```
+After the cutover to the native runtime, swap to the `convex-auth/react` client and `ConvexAuthClientProvider` shown in the [Convex-native auth section](#convex-native-auth-recommended).
 
 ## Compatibility and migration
 
