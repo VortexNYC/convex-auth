@@ -1,3 +1,8 @@
+---
+title: Compatibility
+description: "Supported runtime and dependency versions."
+---
+
 # Compatibility
 
 This page lists the runtime and dependency versions `convex-better-auth-2.0` is tested against.

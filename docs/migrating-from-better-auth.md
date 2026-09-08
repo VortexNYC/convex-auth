@@ -1,3 +1,8 @@
+---
+title: Migrating from Better Auth to `convex-auth`
+description: "One-time migration from Better Auth to the native runtime."
+---
+
 # Migrating from Better Auth to `convex-auth`
 
 This is a one-time cutover, not a long-term bridge. The `convex-better-auth-adapter` and `convex-better-auth` packages are only used during the migration. Once the data is moved and the client/runtime is cut over, you remove them.

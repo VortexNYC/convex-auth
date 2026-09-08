@@ -1,3 +1,8 @@
+---
+title: Convex-native auth strategy
+description: "The recommended native Convex auth runtime and roadmap."
+---
+
 # Convex-native auth strategy
 
 `convex-auth` is a Convex-native auth runtime. It stores users, sessions, identities, and the B2B control plane in your Convex database and runs in the default Convex isolate. Better Auth is no longer used at runtime; it is supported only as a one-time migration source.

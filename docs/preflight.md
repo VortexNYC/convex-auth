@@ -1,3 +1,8 @@
+---
+title: Preflight
+description: "Validate a convex-auth setup before deploying."
+---
+
 # Preflight
 
 `convex-auth preflight` checks that a consumer's Convex project is wired up correctly for the native runtime.

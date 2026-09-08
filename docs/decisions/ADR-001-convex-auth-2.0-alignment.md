@@ -1,3 +1,8 @@
+---
+title: "ADR-001: Native auth `convexAuth` API and schema alignment with Convex Auth 2.0"
+description: "Decision record for aligning the API and schema with Convex Auth 2.0."
+---
+
 # ADR-001: Native auth `convexAuth` API and schema alignment with Convex Auth 2.0
 
 ## Status

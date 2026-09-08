@@ -1,3 +1,8 @@
+---
+title: Migrating from the full `convexAuth` component
+description: "Optional migration to feature-gated convex-auth components."
+---
+
 # Migrating from the full `convexAuth` component
 
 The full `convex-auth/convex.config` component still works and is the safest starting point for existing consumers. Migration to feature-gated components is optional and driven by which auth features you actually use.

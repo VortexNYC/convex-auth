@@ -1,3 +1,8 @@
+---
+title: "ADR-002: One-time Better Auth migration instead of a runtime bridge"
+description: "Decision record for a one-time Better Auth migration path."
+---
+
 # ADR-002: One-time Better Auth migration instead of a runtime bridge
 
 ## Status

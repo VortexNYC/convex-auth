@@ -1,3 +1,8 @@
+---
+title: Migrating from `@convex-dev/better-auth`
+description: "Move from the Convex-dev adapter to this workspace."
+---
+
 # Migrating from `@convex-dev/better-auth`
 
 If you were using `@convex-dev/better-auth`, the move to this workspace is mostly a package-name change. The runtime semantics are the same; the adapter was vendored to keep it on the Better Auth 1.7 line and in the same repo as the higher-level Convex primitives.

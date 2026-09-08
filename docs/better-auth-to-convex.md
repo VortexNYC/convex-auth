@@ -1,3 +1,8 @@
+---
+title: Better Auth to `convex-auth` mapping
+description: "Map Better Auth concepts and behavior to convex-auth."
+---
+
 # Better Auth to `convex-auth` mapping
 
 This document maps Better Auth concepts to the native `convex-auth` runtime. It is useful if you are migrating from Better Auth or comparing the two systems.

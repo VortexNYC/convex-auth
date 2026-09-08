@@ -1,3 +1,8 @@
+---
+title: Testing
+description: "Test helpers for the convex-auth native runtime."
+---
+
 # Testing
 
 `convex-auth/testing` provides helpers for driving the native auth flow in Convex unit tests.

@@ -1,3 +1,8 @@
+---
+title: Why `convex-better-auth-2.0` exists
+description: "The purpose and value of the convex-auth workspace."
+---
+
 # Why `convex-better-auth-2.0` exists
 
 This workspace is a full-stack, open-source auth solution for [Convex](https://convex.dev). It gives Convex developers an out-of-the-box auth layer that covers the same surface area as Clerk or WorkOS, while keeping auth state in the same database as the rest of the app.

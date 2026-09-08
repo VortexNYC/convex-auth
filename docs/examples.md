@@ -1,3 +1,8 @@
+---
+title: Examples
+description: "Runnable example workspaces for convex-auth."
+---
+
 # Examples
 
 Each example is a runnable workspace under `examples/`. They share the same live `convex-auth` deployment and use `convex-auth` from the workspace.
