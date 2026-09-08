@@ -1,32 +1,122 @@
-# Migrating from Better Auth to Convex Auth 2.0
+# Migrating from Better Auth to `convex-auth`
 
-This repo is designed for a staged migration. You do not have to replace Better Auth in a single PR. The bridge packages (`convex-better-auth-adapter` and `convex-better-auth`) keep your existing auth working while you move the client, server, and data to the Convex-native runtime in `convex-auth`.
+This is a one-time cutover, not a long-term bridge. The `convex-better-auth-adapter` and `convex-better-auth` packages are only used during the migration. Once the data is moved and the client/runtime is cut over, you remove them.
 
-## Where you are starting from
+## What the cutover looks like
 
-Pick the starting point that matches your current app:
+1. Mount the legacy `convex-better-auth-adapter` (`betterAuth`) component and the native `convex-auth` (`convexAuth`) component in the same Convex app.
+2. Run the one-time data migration.
+3. Cut over `convex/convex.config.ts` and `convex/http.ts` to native `convex-auth`.
+4. Swap the React client to `convex-auth/react`.
+5. Remove `convex-better-auth` and `convex-better-auth-adapter` from `package.json`.
 
-- **`@convex-dev/better-auth`** — follow [`migrating-from-convex-dev-better-auth.md`](./migrating-from-convex-dev-better-auth.md) first to move onto the vendored `convex-better-auth-adapter` package and Better Auth 1.7.x.
-- **A custom Better Auth + Convex adapter** — switch to `convex-better-auth-adapter` first, then continue below.
-- **`convex-better-auth` bridge already** — you can start migrating to `convex-auth` immediately.
+## What is and is not migrated
 
-## One-shot data migration
+**Migrated:**
 
-If both the legacy `convex-better-auth-adapter` component and the native `convex-auth` component are mounted in the same Convex app, you can migrate the legacy user, account, and session data in a single command:
+- Users (email, name, image, email verified status)
+- Credential accounts (password hashes — Better Auth scrypt is supported)
+- OAuth accounts (provider/issuer/subject, so the same social sign-in keeps working)
+- Sessions are migrated as rows, but the old tokens are not usable. Users must sign in again.
+
+**Not migrated:**
+
+- TOTP 2FA secrets and backup codes. Migrated users have `twoFactorEnabled` set to `false` so they are not locked out. They must re-enroll in `convex-auth`.
+- Passkeys, organizations, members, and other advanced Better Auth tables. These are not part of the one-time migration today.
+
+## Prerequisites
+
+- `convex` CLI installed
+- pnpm and Node `>=20.12.0`
+- A Better Auth 1.7.x setup on the vendored `convex-better-auth-adapter` (`0.13.4`)
+- The native `convex-auth` component available (`1.7.5`)
+
+## Step 1 — Mount both components
+
+`convex/auth.config.ts`:
+
+```ts
+import { createConvexAuthProvider } from "convex-auth/convex";
+
+export default {
+  providers: [createConvexAuthProvider()],
+};
+```
+
+`convex/convex.config.ts`:
+
+```ts
+import { defineApp } from "convex/server";
+import { v } from "convex/values";
+import auth from "convex-auth/convex.config";
+import betterAuth from "convex-better-auth-adapter/convex.config";
+
+const app = defineApp({
+  env: {
+    JWT_PRIVATE_KEY: v.string(),
+    JWKS: v.string(),
+  },
+});
+
+app.use(auth, {
+  env: {
+    JWT_PRIVATE_KEY: app.env.JWT_PRIVATE_KEY,
+    JWKS: app.env.JWKS,
+  },
+});
+
+app.use(betterAuth, { name: "betterAuth" });
+
+export default app;
+```
+
+`convex/http.ts`:
+
+```ts
+import { httpRouter } from "convex/server";
+import { auth } from "./auth";
+import betterAuth from "convex-better-auth-adapter/http";
+
+const http = httpRouter();
+auth.addHttpRoutes(http);
+betterAuth(http);
+
+export default http;
+```
+
+Set the required environment variables on your Convex deployment:
+
+```bash
+convex env set JWT_PRIVATE_KEY '<private-key-json>'
+convex env set JWKS '<jwks-json>'
+convex env set BETTER_AUTH_SECRET '<better-auth-secret>'
+convex env set EMAIL_FROM_ADDRESS 'auth@yourdomain.com'
+```
+
+## Step 2 — Run the data migration
 
 ```bash
 pnpm dlx convex-auth migrate better-auth
 ```
 
-The CLI reads legacy records from the adapter component and writes native records into the `convex-auth` component. It migrates users first, then accounts, then sessions. A successful run returns the `migrate:migrateUsers` batch status; accounts and sessions continue through the migration scheduler. Use `convex run --component betterAuth/migrations lib:getStatus` to watch the full set of migrations finish.
+The CLI migrates users first, then accounts, then sessions. It is idempotent: re-running without `--resume` resets from the beginning. Use `--resume` to continue from the stored cursor.
 
 Flags:
 
-- `--dry-run` — preview the file and deployment changes without writing anything.
+- `--dry-run` — preview the plan and legacy table counts without writing anything.
+- `--resume` — continue a previously started migration from the stored cursor.
 - `--cutover` — after migration, rewrite `convex/convex.config.ts` and `convex/http.ts` to remove the legacy adapter and drop `convex-better-auth` / `convex-better-auth-adapter` from `package.json`.
-- `--resume` — continue a previously started migration from the stored cursor. Without this flag, the migration resets and starts from the beginning.
+- `--batch-size <n>` — number of records per migration batch (default: 100).
 
-After it finishes, verify the native tables in the mounted `convexAuth` component:
+After the CLI returns, the `migrate:migrateUsers` batch is done. Accounts and sessions continue in the background through the migration scheduler. Watch them with:
+
+```bash
+pnpm dlx convex run --component betterAuth/migrations lib:getStatus '{"names":["migrate:migrateUsers","migrate:migrateAccounts","migrate:migrateSessions"]}'
+```
+
+When all three are `success`, the data migration is complete.
+
+## Step 3 — Verify migrated data
 
 ```bash
 pnpm dlx convex data users --component convexAuth
@@ -35,25 +125,15 @@ pnpm dlx convex data authAccounts --component convexAuth
 pnpm dlx convex data authSessions --component convexAuth
 ```
 
-Once the data is verified you can proceed with the staged client/server migration below, or drop the bridge packages immediately if you are already using the native runtime everywhere.
+Password users should be able to sign in through the native `convex-auth` HTTP routes (`/api/auth/sign-in/email`) with their existing passwords.
 
-## Migration stages
+## Step 4 — Cut over the runtime
 
-### Stage 1 — Use the `convex-auth` component on the backend
+If you ran `pnpm dlx convex-auth migrate better-auth --cutover`, the files were already rewritten. Otherwise, do it manually.
 
-The Convex-native runtime and the Better Auth bridge can share the same `convex-auth` component. Install the component first; the auth flow you use can move to native later.
-
-```ts
-// convex/auth.config.ts
-import { createConvexAuthProvider } from "convex-auth/convex";
-
-export default {
-  providers: [createConvexAuthProvider()],
-};
-```
+`convex/convex.config.ts` after cutover:
 
 ```ts
-// convex/convex.config.ts
 import { defineApp } from "convex/server";
 import { v } from "convex/values";
 import auth from "convex-auth/convex.config";
@@ -75,18 +155,25 @@ app.use(auth, {
 export default app;
 ```
 
-If you are already using the `convex-better-auth` bridge, this is the same component it already mounts.
-
-### Stage 2 — Move server auth to `convexAuth`
-
-Replace the Better Auth server setup with the native `convexAuth` API. You keep the same providers, OAuth, and email flows; they are now Convex actions and HTTP routes.
+`convex/http.ts` after cutover:
 
 ```ts
-// convex/auth.ts
+import { httpRouter } from "convex/server";
+import { auth } from "./auth";
+
+const http = httpRouter();
+auth.addHttpRoutes(http);
+
+export default http;
+```
+
+`convex/auth.ts` remains the same as the native setup:
+
+```ts
 import { components } from "./_generated/api";
 import { convexAuth, type EmailDraft } from "convex-auth/convex";
 
-const siteUrl = process.env.CONVEX_SITE_URL?.replace(/\/$/, "");
+const siteUrl = process.env.CONVEX_SITE_URL?.replace(/\/+$/, "");
 
 export const auth = convexAuth({
   component: components.convexAuth,
@@ -96,10 +183,11 @@ export const auth = convexAuth({
       from: process.env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
       appOrigin: siteUrl,
       sendEmail: async (draft: EmailDraft) => {
-        // Send via Resend/Postmark/SES in production.
         console.log("Email draft", draft);
         return "email-id";
       },
+      sendOnSignUp: true,
+      sendOnSignIn: false,
     },
   },
   oauth: {
@@ -122,31 +210,26 @@ export const {
   signUp,
   signIn,
   signOut,
-  // ... everything else you need
+  updateSession,
+  sendEmailVerification,
+  verifyEmail,
+  sendPasswordReset,
+  resetPassword,
+  verifyPassword,
+  twoFactorEnable,
+  twoFactorVerifyTOTP,
+  twoFactorVerifyBackupCode,
 } = auth;
 ```
 
-```ts
-// convex/http.ts
-import { httpRouter } from "convex/server";
-import { auth } from "./auth";
+## Step 5 — Swap the React client
 
-const http = httpRouter();
-auth.addHttpRoutes(http);
-
-export default http;
-```
-
-`convexAuth` exposes the same feature surface you configured with Better Auth (email/password, OAuth, magic links, email OTP, 2FA) as Convex function references.
-
-### Stage 3 — Move the React client to `convex-auth-react`
-
-Replace `createAuthClient` from `better-auth` with the native Convex client.
+Replace Better Auth’s client with `convex-auth/react`:
 
 ```tsx
 // src/main.tsx
 import { ConvexReactClient, ConvexProvider } from "convex/react";
-import { ConvexAuthProvider } from "convex-auth/react";
+import { ConvexAuthClientProvider } from "convex-auth/react";
 import { api } from "../convex/_generated/api";
 import App from "./App";
 
@@ -155,28 +238,21 @@ const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
 function Root() {
   return (
     <ConvexProvider client={convex}>
-      <ConvexAuthProvider
-        actions={{
-          signUp: api.auth.signUp,
-          signIn: api.auth.signIn,
-          signOut: api.auth.signOut,
-        }}
-      >
+      <ConvexAuthClientProvider actions={api.auth}>
         <App />
-      </ConvexAuthProvider>
+      </ConvexAuthClientProvider>
     </ConvexProvider>
   );
 }
 ```
 
-Components then use `useAuthActions` instead of calling `authClient.signIn.email` directly:
+Components use `useAuthActions` from `convex-auth/react`:
 
 ```tsx
-// src/SignIn.tsx
 import { useAuthActions } from "convex-auth/react";
 
 export function SignIn() {
-  const { signIn, isLoading, isAuthenticated } = useAuthActions();
+  const { signIn } = useAuthActions();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -187,76 +263,34 @@ export function SignIn() {
     });
   }
 
-  // ...
-}
-```
-
-`convex-auth-react/client` still exports a `ConvexBetterAuthClient`-shaped client if you need to pass a client to older components, but for new code `ConvexAuthProvider` and `useAuthActions` are the intended APIs.
-
-### Stage 4 — Move the React Native / Expo client
-
-Use `ExpoConvexAuthProvider` from `convex-auth-react-native`:
-
-```tsx
-import { ConvexProvider, ConvexReactClient } from "convex/react";
-import { ExpoConvexAuthProvider } from "convex-auth-react-native";
-import { api } from "./convex/_generated/api";
-
-const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!);
-
-export default function Root() {
   return (
-    <ConvexProvider client={convex}>
-      <ExpoConvexAuthProvider
-        actions={{
-          signUp: api.auth.signUp,
-          signIn: api.auth.signIn,
-          signOut: api.auth.signOut,
-        }}
-      >
-        <App />
-      </ExpoConvexAuthProvider>
-    </ConvexProvider>
+    <form onSubmit={handleSubmit}>
+      <input name="email" type="email" required />
+      <input name="password" type="password" required />
+      <button type="submit">Sign in</button>
+    </form>
   );
 }
 ```
 
-### Stage 5 — Drop the bridge packages
-
-Once the native client and server are wired and tested, remove the Better Auth dependencies from `package.json`:
+## Step 6 — Remove the bridge packages
 
 ```bash
-pnpm remove better-auth @better-auth/expo
 pnpm remove convex-better-auth convex-better-auth-adapter
 ```
 
-Your app then depends only on:
+Then remove any remaining Better Auth client imports and configuration from your app.
 
-- `convex-auth`
-- `convex-auth-react` (web)
-- `convex-auth-react-native` (Expo / React Native)
-- `convex`
+## Troubleshooting
 
-The `convex-better-auth` and `convex-better-auth-adapter` packages can remain in your monorepo if other consumers still need the bridge, but the app itself no longer pulls `better-auth` at runtime.
+### `invalid_email_or_password` after migration
 
-## What does not need to change
+The user’s password hash is probably from a format `convex-auth` does not yet support. The current release supports Better Auth’s default scrypt `salt:derivedKey` format. If you changed Better Auth’s password hashing, open an issue with the exact hash format.
 
-- **B2B control-plane data** — users, sessions, identities, organizations, members, invitations, and permissions are already stored in your Convex database. The shape is the same whether you use the bridge or the native runtime.
-- **UI shape** — the exported forms and hooks in `convex-auth-react` are modeled after the Better Auth `createAuthClient` contract, so component props and hook return values stay familiar.
+### No migrated user found for legacy user
 
-## Verification
+The migration ran accounts/sessions before users, or a user was added after the migration started. Re-run with the default (reset) behavior so users are migrated first.
 
-After each stage run the full proof from the repo root:
+### Sessions are not preserved
 
-```bash
-pnpm run typecheck
-pnpm run check
-pnpm run build
-pnpm test
-```
-
-For Convex-specific linting also run:
-
-```bash
-pnpm run lint:convex
-```
+Migrated sessions are rows in the native `authSessions` table, but the tokens are not migrated. Users must sign in again and obtain new `convex-auth` tokens.
