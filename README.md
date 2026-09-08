@@ -21,7 +21,7 @@ A public, Convex-native auth platform for [Convex](https://convex.dev), with a [
 
 ## Status
 
-Public — `convex-auth` is at `1.7.3` and the `convex-better-auth-adapter` is at `0.13.3`. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, and MCP auth) is passing full conformance. The Better Auth compatibility bridge (`convex-better-auth` 2.0.4) is stable for migration.
+Public — `convex-auth` is at `1.7.5`, `convex-better-auth-adapter` is at `0.13.4`, and `convex-better-auth` is at `2.0.5`. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, and MCP auth) is passing full conformance. The Better Auth compatibility bridge is stable for one-time migration only.
 
 ## Why this exists
 
@@ -30,7 +30,7 @@ Convex is building the future of auth, but it is not there yet. Better Auth has 
 This repo is the pragmatic middle path:
 
 1. **Convex-native auth is the end state.** Authentication state (users, sessions, identities, organizations, permissions, API keys, and more) lives in your Convex database and is accessed through components, queries, mutations, and actions.
-2. **Better Auth is a compatibility and migration bridge, not the final runtime.** The `convex-better-auth-adapter` and `convex-better-auth` packages let existing Better Auth users move to Convex tables and the native runtime without a big bang.
+2. **Better Auth is a one-time migration bridge, not the final runtime.** The `convex-better-auth-adapter` and `convex-better-auth` packages let existing Better Auth users move to Convex tables and the native runtime in a single cutover. We do not keep real-time translation between the two after migration.
 3. **We are not copying Convex Auth 2.0.** We are learning from its design constraints and shipping our own implementation that preserves the B2B surface we have already built.
 
 Read the full rationale in [`docs/motivation.md`](docs/motivation.md) and the design details in [`docs/better-auth-to-convex.md`](docs/better-auth-to-convex.md).
@@ -280,77 +280,25 @@ See `packages/conformance-consumer` for a working deployment with email capture 
 
 ## Better Auth bridge (for migration)
 
-If you are already using Better Auth and want to migrate to Convex tables and the native runtime without a big bang, the Better Auth compatibility bridge is still available.
+If you are already using Better Auth and want to migrate to Convex tables and the native runtime in a single step, the Better Auth compatibility bridge is available. Run the migration, cut over the runtime, then remove `convex-better-auth` and `convex-better-auth-adapter` from your dependencies.
 
 ### Convex component
 
-Use the `convex-auth` component in your `convex/convex.config.ts`:
-
-```ts
-// convex/auth.config.ts
-import { createConvexAuthProvider } from "convex-auth/convex";
-
-export default {
-  providers: [createConvexAuthProvider()],
-};
-```
-
-```ts
-// convex/convex.config.ts
-import { defineApp } from "convex/server";
-import { v } from "convex/values";
-import auth from "convex-auth/convex.config";
-
-const app = defineApp({
-  env: {
-    JWT_PRIVATE_KEY: v.string(),
-    JWKS: v.string(),
-  },
-});
-
-app.use(auth, {
-  env: {
-    JWT_PRIVATE_KEY: app.env.JWT_PRIVATE_KEY,
-    JWKS: app.env.JWKS,
-  },
-});
-
-export default app;
-```
-
-For the full mapping, see [`docs/better-auth-to-convex.md`](docs/better-auth-to-convex.md).
+During the migration, mount the legacy `betterAuth` adapter component and the native `convexAuth` component together. The exact `convex/convex.config.ts` wiring is in [`docs/migrating-from-better-auth.md`](docs/migrating-from-better-auth.md). After the cutover, you remove the legacy adapter and keep only the `convex-auth` component shown in the native section above.
 
 ### React client
 
-Create an auth client with the Convex plugin:
+The bridge does not add a new React provider. While you are running both Better Auth and `convex-auth` side by side, use Better Auth's own client. The low-level Convex helper is:
 
 ```ts
-import { createAuthClient } from "convex-auth-react";
-import { convexClient } from "convex-better-auth-adapter/client/plugins";
+import { createBetterAuthConvexClient } from "convex-better-auth";
 
-export const authClient = createAuthClient({
-  plugins: [convexClient()],
+export const authClient = createBetterAuthConvexClient({
+  baseURL: "https://your-site.convex.site/api/auth",
 });
 ```
 
-Wrap your app in the provider:
-
-```tsx
-import { ConvexProvider, ConvexReactClient } from "convex/react";
-import { BetterAuthConvexProvider } from "convex-auth-react";
-
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
-
-export function App() {
-  return (
-    <ConvexProvider client={convex}>
-      <BetterAuthConvexProvider client={convex} authClient={authClient}>
-        {/** your app */}
-      </BetterAuthConvexProvider>
-    </ConvexProvider>
-  );
-}
-```
+After the cutover to the native runtime, swap to the `convex-auth/react` client and `ConvexAuthClientProvider` shown in the [Convex-native auth section](#convex-native-auth-recommended).
 
 ## Compatibility and migration
 
