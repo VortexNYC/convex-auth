@@ -8,6 +8,7 @@ import {
   authVerificationCodes,
   authVerifiers,
 } from "../schema/native.js";
+import { organizations } from "../schema/organizations.js";
 
 export default defineSchema({
   users,
@@ -18,4 +19,5 @@ export default defineSchema({
   authVerificationCodes,
   authVerifiers,
   authMagicLinkTokens,
+  organizations,
 });

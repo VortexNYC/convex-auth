@@ -13,7 +13,7 @@ A public, Convex-native auth platform for [Convex](https://convex.dev), with a [
 [![Node][node-badge]][node]
 [![pnpm][pnpm-badge]][pnpm]
 
-**[Docs](https://gregarious-perch-710.convex.site)** · **[Why this exists](#why-this-exists)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth-recommended)**
+**[Docs](https://convex-auth.vortex.nyc)** · **[Why this exists](#why-this-exists)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth-recommended)**
 
 </div>
 
@@ -375,7 +375,7 @@ Apache-2.0 — see `LICENSE`.
 [ci-badge]: https://img.shields.io/github/actions/workflow/status/shlomokabareti/convex-better-auth-2.0/ci.yml?branch=main&style=for-the-badge&label=CI
 [ci]: https://github.com/shlomokabareti/convex-better-auth-2.0/actions/workflows/ci.yml
 [docs-badge]: https://img.shields.io/badge/docs-online-292a44?style=for-the-badge
-[docs]: https://gregarious-perch-710.convex.site
+[docs]: https://convex-auth.vortex.nyc
 [license-badge]: https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=for-the-badge
 [license]: LICENSE
 [status-badge]: https://img.shields.io/badge/status-public-blueviolet.svg?style=for-the-badge

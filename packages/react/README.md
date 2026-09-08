@@ -57,7 +57,7 @@ export function SignIn() {
 }
 ```
 
-See the [full docs](https://gregarious-perch-710.convex.site).
+See the [full docs](https://convex-auth.vortex.nyc).
 
 ## License
 

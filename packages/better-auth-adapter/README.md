@@ -37,7 +37,7 @@ Most consumers should use the higher-level packages instead:
 - [`convex-auth-react`](https://npmjs.com/package/convex-auth-react) — React UI and hooks.
 - [`convex-auth-react-native`](https://npmjs.com/package/convex-auth-react-native) — Expo / React Native client.
 
-See the [full docs](https://gregarious-perch-710.convex.site) for the design rationale and migration guide.
+See the [full docs](https://convex-auth.vortex.nyc) for the design rationale and migration guide.
 
 ## Attribution
 

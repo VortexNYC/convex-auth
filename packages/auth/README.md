@@ -21,7 +21,7 @@ pnpm add convex-auth
 5. Wire `convex/http.ts`.
 6. Wrap your React app with `ConvexAuthClientProvider` from `convex-auth-react`.
 
-See the [full docs](https://gregarious-perch-710.convex.site) and the root [README](../README.md) for the complete quick start, JWT generation snippet, and examples.
+See the [full docs](https://convex-auth.vortex.nyc) and the root [README](../README.md) for the complete quick start, JWT generation snippet, and examples.
 
 ## License
 

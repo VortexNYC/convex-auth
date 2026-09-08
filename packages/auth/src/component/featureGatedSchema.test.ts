@@ -14,7 +14,7 @@ function tableNames(schema: { tables: Record<string, unknown> }): string[] {
 }
 
 describe("feature-gated component schemas", () => {
-  it("core includes only native auth and user tables", () => {
+  it("core includes native auth, user, and organization tables", () => {
     const tables = tableNames(coreSchema);
     expect(tables).toEqual([
       "users",
@@ -25,6 +25,7 @@ describe("feature-gated component schemas", () => {
       "authVerificationCodes",
       "authVerifiers",
       "authMagicLinkTokens",
+      "organizations",
     ]);
   });
 

@@ -30,7 +30,7 @@ export function RootLayout() {
 }
 ```
 
-See the [full docs](https://gregarious-perch-710.convex.site) and [`docs/react-native.md`](../docs/react-native.md) for the complete Expo setup.
+See the [full docs](https://convex-auth.vortex.nyc) and [`docs/react-native.md`](../docs/react-native.md) for the complete Expo setup.
 
 ## License
 
