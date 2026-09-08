@@ -164,8 +164,26 @@ CONVEX_URL=https://<your>.convex.cloud \
 pnpm dlx tsx ./node_modules/convex-auth/conformance/prove-auth-lifecycle.ts
 ```
 
+## Troubleshooting the migration CLI
+
+### "No `betterAuth` component found"
+
+Make sure `convex/convex.config.ts` still mounts the legacy component and `npx convex dev` has generated `_generated`.
+
+### Migration stops with "conflict on `users` table"
+
+The migration does not overwrite existing `convex-auth` data. If you already mounted the native component, remove the `convexAuth` component and its tables first, or pass `--resume` to continue a previous run.
+
+### OAuth providers are missing after cutover
+
+The CLI migrates `accounts` and `sessions` but does not port Better Auth provider configuration. Re-declare Google / GitHub / Discord `clientId` and `clientSecret` in the new `oauth` config.
+
+### Client calls still hit Better Auth URLs
+
+After cutover, `convex/http.ts` uses `addNativeAuthHttpRoutes`. The browser no longer calls `https://<your>.convex.site/api/auth/callback/<provider>` through Better Auth; the same path is now served by `convex-auth` HTTP actions. Make sure `callbackURL` in `signInWithRedirect` points at that same `convex.site` origin.
+
 ## What is not migrated
 
-- **Plugins that are not natively implemented** must be re-implemented against `convex-auth` actions. See [plugin parity](../from-better-auth/better-auth-to-convex).
+- **Plugins that are not natively implemented** must be re-implemented against `convex-auth` actions. See [plugin parity](../from-better-auth/better-auth-to-convex) and [migration recipes](../from-better-auth/migration-recipes).
 - **Frameworks without a guide** (Next.js, TanStack Start, SvelteKit) are not yet supported by `convex-auth`. Use the React client as a stopgap in non-SSR mode, or wait for the framework-specific package.
 - **Local install / schema customizations** from `@convex-dev/better-auth` do not carry over. The native schema is fixed per `convex-auth` version.
