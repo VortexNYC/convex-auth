@@ -28,8 +28,8 @@ This is a one-time cutover, not a long-term bridge. The `convex-better-auth-adap
 
 - `convex` CLI installed
 - pnpm and Node `>=20.12.0`
-- A Better Auth 1.7.x setup on the vendored `convex-better-auth-adapter` (`0.13.4`)
-- The native `convex-auth` component available (`1.7.5`)
+- A Better Auth 1.7.x setup on the vendored `convex-better-auth-adapter` (`0.13.5`)
+- The native `convex-auth` component available (`1.7.6`)
 
 ## Step 1 — Mount both components
 

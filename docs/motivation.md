@@ -37,4 +37,3 @@ Better Auth is no longer a runtime dependency for new projects. New projects use
 
 This repo is not a copy of Convex Auth 2.0. It is an independent implementation that learns from Convex Auth 2.0's design constraints and ships its own B2B surface. When Convex Auth 2.0 is ready, migration should be straightforward because the data already lives in your Convex database and the table layout is intentionally close.
 
-See [`how-we-got-here.md`](./how-we-got-here.md) for the full journey from the original Better Auth integration to the native `convex-auth` runtime.
