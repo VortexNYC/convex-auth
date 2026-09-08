@@ -67,11 +67,11 @@ app.post("/auth/sign-in", async (c) => {
 
 ## React Native / Expo
 
-`examples/react-native` is a minimal Expo app using `convex-auth-react-native`. See [React Native](./react-native) for setup details.
+`examples/react-native` is a minimal Expo app using `convex-auth-react-native`. See [React Native](../authentication/react-native) for setup details.
 
 ## OAuth
 
-`examples/oauth` demonstrates Google, GitHub, and Discord sign-in. See [OAuth](./oauth) for provider configuration.
+`examples/oauth` demonstrates Google, GitHub, and Discord sign-in. See [OAuth](../authentication/oauth) for provider configuration.
 
 ## Regenerating `_generated`
 

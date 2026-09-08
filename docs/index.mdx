@@ -10,16 +10,16 @@ Convex-native auth for production apps. Users, sessions, identities, organizatio
 If you are new here, follow this order:
 
 <Steps>
-  <Step title="Read the motivation" href="./motivation">
+  <Step title="Read the motivation" href="./architecture/motivation">
     Why `convex-auth` exists and how it relates to Better Auth and Convex Auth 2.0.
   </Step>
-  <Step title="Understand the concepts" href="./concepts">
+  <Step title="Understand the concepts" href="./getting-started/concepts">
     The five building blocks: component, config, actions, HTTP routes, and React client.
   </Step>
-  <Step title="Install" href="./installation">
+  <Step title="Install" href="./getting-started/installation">
     Add the packages, generate signing keys, and set environment variables.
   </Step>
-  <Step title="Quickstart" href="./quickstart">
+  <Step title="Quickstart" href="./getting-started/quickstart">
     Wire `convex/auth.ts`, mount the component, set up the React client, and sign up a user.
   </Step>
 </Steps>
@@ -27,19 +27,19 @@ If you are new here, follow this order:
 ## Get started
 
 <CardGroup cols={2}>
-  <Card title="Installation" href="./installation" icon="download">
+  <Card title="Installation" href="./getting-started/installation" icon="download">
     Install packages and set the minimum environment variables.
   </Card>
-  <Card title="Quickstart" href="./quickstart" icon="rocket">
+  <Card title="Quickstart" href="./getting-started/quickstart" icon="rocket">
     End-to-end setup with email/password and OAuth.
   </Card>
-  <Card title="Concepts" href="./concepts" icon="book-open">
+  <Card title="Concepts" href="./getting-started/concepts" icon="book-open">
     Component, config, actions, HTTP routes, and React client.
   </Card>
-  <Card title="React client" href="./client" icon="monitor">
+  <Card title="React client" href="./authentication/client" icon="monitor">
     Hooks and the Better-Auth-shaped client.
   </Card>
-  <Card title="React Native" href="./react-native" icon="smartphone">
+  <Card title="React Native" href="./authentication/react-native" icon="smartphone">
     Expo and React Native setup.
   </Card>
 </CardGroup>
@@ -47,28 +47,28 @@ If you are new here, follow this order:
 ## Features
 
 <CardGroup cols={2}>
-  <Card title="Email and password" href="./email-password" icon="mail">
+  <Card title="Email and password" href="./authentication/email-password" icon="mail">
     Sign-up, sign-in, email verification, and password reset.
   </Card>
-  <Card title="OAuth" href="./oauth" icon="globe">
+  <Card title="OAuth" href="./authentication/oauth" icon="globe">
     Google, GitHub, and Discord sign-in.
   </Card>
-  <Card title="Two-factor" href="./two-factor" icon="shield">
+  <Card title="Two-factor" href="./authentication/two-factor" icon="shield">
     TOTP and backup codes.
   </Card>
-  <Card title="Magic links" href="./magic-links" icon="wand-2">
+  <Card title="Magic links" href="./authentication/magic-links" icon="wand-2">
     Password-less email sign-in.
   </Card>
-  <Card title="Email OTP" href="./email-otp" icon="shield-check">
+  <Card title="Email OTP" href="./authentication/email-otp" icon="shield-check">
     One-time email passcodes.
   </Card>
-  <Card title="Organizations" href="./organizations" icon="building">
+  <Card title="Organizations" href="./advanced/organizations" icon="building">
     Multi-tenant workspaces, members, and roles.
   </Card>
-  <Card title="API keys" href="./api-keys" icon="key">
+  <Card title="API keys" href="./advanced/api-keys" icon="key">
     Create, rotate, and revoke service API keys.
   </Card>
-  <Card title="Webhooks" href="./webhooks" icon="webhook">
+  <Card title="Webhooks" href="./advanced/webhooks" icon="webhook">
     Signed webhook events.
   </Card>
 </CardGroup>
@@ -76,16 +76,16 @@ If you are new here, follow this order:
 ## Tooling
 
 <CardGroup cols={2}>
-  <Card title="Testing" href="./testing" icon="test-tube">
+  <Card title="Testing" href="./tooling/testing" icon="test-tube">
     Test helpers, the conformance consumer, and CI setup.
   </Card>
-  <Card title="Preflight" href="./preflight" icon="plane">
+  <Card title="Preflight" href="./tooling/preflight" icon="plane">
     Validate your auth setup before deploying.
   </Card>
-  <Card title="Examples" href="./examples" icon="book">
+  <Card title="Examples" href="./tooling/examples" icon="book">
     Runnable React, Hono, React Native, and OAuth consumers.
   </Card>
-  <Card title="Compatibility" href="./compatibility" icon="scale">
+  <Card title="Compatibility" href="./tooling/compatibility" icon="scale">
     Supported versions of Better Auth, Convex, React, Node, and pnpm.
   </Card>
 </CardGroup>
@@ -93,22 +93,30 @@ If you are new here, follow this order:
 ## Reference
 
 <CardGroup cols={2}>
-  <Card title="Configuration" href="./configuration" icon="sliders">
+  <Card title="Configuration" href="./reference/configuration" icon="sliders">
     Every option on `convexAuth`.
   </Card>
-  <Card title="Server API" href="./server-api" icon="terminal">
+  <Card title="Server API" href="./reference/server-api" icon="terminal">
     Actions, queries, and HTTP routes.
   </Card>
-  <Card title="Security" href="./security" icon="shield">
+  <Card title="Security" href="./reference/security" icon="shield">
     2FA, CAPTCHA, breach checks, rate limits, and keys.
   </Card>
-  <Card title="Production" href="./production" icon="rocket">
+  <Card title="Production" href="./reference/production" icon="rocket">
     Deploy, monitor, and rotate.
   </Card>
-  <Card title="Better Auth alternatives" href="./better-auth-alternatives" icon="book-open">
+  <Card
+    title="Better Auth alternatives"
+    href="./reference/better-auth-alternatives"
+    icon="book-open"
+  >
     Map Better Auth docs to `convex-auth` pages.
   </Card>
-  <Card title="Better Auth to Convex" href="./better-auth-to-convex" icon="arrow-right-left">
+  <Card
+    title="Better Auth to Convex"
+    href="./reference/better-auth-to-convex"
+    icon="arrow-right-left"
+  >
     Terminology and behavior mapping between Better Auth and the native runtime.
   </Card>
 </CardGroup>
@@ -116,16 +124,24 @@ If you are new here, follow this order:
 ## Architecture
 
 <CardGroup cols={2}>
-  <Card title="Motivation" href="./motivation" icon="lightbulb">
+  <Card title="Motivation" href="./architecture/motivation" icon="lightbulb">
     Why `convex-auth` exists and how it relates to Convex Auth 2.0.
   </Card>
-  <Card title="How we got here" href="./how-we-got-here" icon="history">
+  <Card title="How we got here" href="./architecture/how-we-got-here" icon="history">
     The journey from Better Auth to a native Convex auth runtime.
   </Card>
-  <Card title="Convex-native auth strategy" href="./convex-native-auth-strategy" icon="compass">
+  <Card
+    title="Convex-native auth strategy"
+    href="./architecture/convex-native-auth-strategy"
+    icon="compass"
+  >
     The recommended runtime and roadmap.
   </Card>
-  <Card title="Feature-gated components" href="./feature-gated-components" icon="layers">
+  <Card
+    title="Feature-gated components"
+    href="./architecture/feature-gated-components"
+    icon="layers"
+  >
     How to mount and compose the `convexAuth` component.
   </Card>
 </CardGroup>
@@ -133,22 +149,22 @@ If you are new here, follow this order:
 ## Advanced features
 
 <CardGroup cols={2}>
-  <Card title="Identity" href="./identity" icon="fingerprint">
+  <Card title="Identity" href="./advanced/identity" icon="fingerprint">
     Users, identities, providers, and account linking.
   </Card>
-  <Card title="MCP" href="./mcp" icon="bot">
+  <Card title="MCP" href="./advanced/mcp" icon="bot">
     Model Context Protocol sessions and user linking.
   </Card>
-  <Card title="Agent auth" href="./agent-auth" icon="cpu">
+  <Card title="Agent auth" href="./advanced/agent-auth" icon="cpu">
     Autonomous and delegated agent credentials.
   </Card>
-  <Card title="Audit" href="./audit" icon="eye">
+  <Card title="Audit" href="./advanced/audit" icon="eye">
     Auth audit events and authorization denials.
   </Card>
-  <Card title="Authorization" href="./authorization" icon="lock">
+  <Card title="Authorization" href="./advanced/authorization" icon="lock">
     Permission helpers and Convex function wrappers.
   </Card>
-  <Card title="Consumer contract" href="./consumer-contract" icon="file-check">
+  <Card title="Consumer contract" href="./advanced/consumer-contract" icon="file-check">
     CI guardrails for component-owned tables.
   </Card>
 </CardGroup>
@@ -157,6 +173,6 @@ If you are new here, follow this order:
 
 If you already have a Better Auth integration:
 
-- [Migrating from Better Auth](./migrating-from-better-auth)
-- [Migrating from `@convex-dev/better-auth`](./migrating-from-convex-dev-better-auth)
-- [Migrating from the full component](./migrating-from-full-component)
+- [Migrating from Better Auth](./migration/migrating-from-better-auth)
+- [Migrating from `@convex-dev/better-auth`](./migration/migrating-from-convex-dev-better-auth)
+- [Migrating from the full component](./migration/migrating-from-full-component)

@@ -78,5 +78,5 @@ The script returns a list of violations with file, line, and rule. Fix them befo
 
 ## See also
 
-- [Feature-gated components](./feature-gated-components)
+- [Feature-gated components](../architecture/feature-gated-components)
 - [Organizations](./organizations)
