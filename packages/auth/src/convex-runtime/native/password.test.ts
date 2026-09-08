@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { scryptAsync } from "@noble/hashes/scrypt.js";
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 import { bytesToBase64url, hashPassword, legacyPbkdf2Hash, verifyPassword } from "./password.js";
 
 describe("password", () => {
@@ -49,11 +49,14 @@ describe("password", () => {
   it("verifies Better Auth legacy scrypt hashes", async () => {
     const password = "LongPassword123!";
     const saltHex = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
-    const derived = await scryptAsync(password, hexToBytes(saltHex), {
+    // Better Auth hashes with the salt as a lowercase hex string, not decoded bytes,
+    // and normalizes the password to NFKC before scrypt.
+    const derived = await scryptAsync(password.normalize("NFKC"), saltHex, {
       N: 16384,
       r: 16,
       p: 1,
       dkLen: 64,
+      maxmem: 128 * 16384 * 16 * 2,
     });
     const legacyHash = `${saltHex}:${bytesToHex(derived)}`;
     expect(await verifyPassword(password, legacyHash)).toBe(true);
