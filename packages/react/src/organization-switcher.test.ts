@@ -103,4 +103,17 @@ describe("ConvexOrganizationSwitcher — SSR smoke", () => {
     assert.match(html, /aria-haspopup="menu"/);
     assert.match(html, /aria-expanded="false"/);
   });
+
+  it("accepts the new search and in-place create props without changing closed SSR markup", () => {
+    const html = render({
+      organizations: [acme, beta],
+      currentOrganizationId: "org_acme",
+      enableSearch: true,
+      onInPlaceCreateOrganization: async () => {},
+    });
+    assert.match(html, /Acme Pizza/);
+    assert.match(html, /aria-expanded="false"/);
+    // Search and in-place create UI only render inside the open dropdown.
+    assert.equal(/Search workspaces/.test(html), false);
+  });
 });

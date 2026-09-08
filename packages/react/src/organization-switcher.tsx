@@ -25,6 +25,11 @@ export type ConvexOrgSwitcherClassNames = {
   dropdownItemMeta?: string;
   dropdownDivider?: string;
   createButton?: string;
+  searchInput?: string;
+  inPlaceCreateForm?: string;
+  inPlaceCreateInput?: string;
+  inPlaceCreateButton?: string;
+  inPlaceCreateCancel?: string;
 };
 
 export type ConvexOrgSwitcherCopy = {
@@ -33,6 +38,10 @@ export type ConvexOrgSwitcherCopy = {
   createOrganizationLabel?: string;
   personalAccountLabel?: string;
   noOrganizationsLabel?: string;
+  searchPlaceholder?: string;
+  inPlaceCreatePlaceholder?: string;
+  inPlaceCreateButtonLabel?: string;
+  inPlaceCreateCancelLabel?: string;
 };
 
 export type ConvexOrgSwitcherProps = {
@@ -43,7 +52,9 @@ export type ConvexOrgSwitcherProps = {
   onSelectOrganization: (organizationId: string) => void | Promise<void>;
   onSelectPersonalAccount?: () => void | Promise<void>;
   onCreateOrganization?: () => void | Promise<void>;
+  onInPlaceCreateOrganization?: (name: string) => void | Promise<void>;
   showPersonalAccount?: boolean;
+  enableSearch?: boolean;
   currentOrganization?: ConvexOrgSwitcherOrganization | null;
   personalAccountLabel?: string;
   renderCustomTrigger?: (args: {
@@ -60,6 +71,10 @@ const defaultCopy: Required<ConvexOrgSwitcherCopy> = {
   createOrganizationLabel: "Create workspace",
   personalAccountLabel: "Personal account",
   noOrganizationsLabel: "No organizations",
+  searchPlaceholder: "Search workspaces",
+  inPlaceCreatePlaceholder: "Workspace name",
+  inPlaceCreateButtonLabel: "Create",
+  inPlaceCreateCancelLabel: "Cancel",
 };
 
 function resolveCopy(copy: ConvexOrgSwitcherCopy | undefined): Required<ConvexOrgSwitcherCopy> {
@@ -317,6 +332,87 @@ function CreateOrganizationSection(props: {
   );
 }
 
+function SearchInput(props: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  classNames?: ConvexOrgSwitcherClassNames;
+}) {
+  return (
+    <div className={cn("px-3 pb-2", props.classNames?.dropdownPanel)}>
+      <input
+        type="text"
+        value={props.value}
+        onChange={(event) => props.onChange(event.target.value)}
+        placeholder={props.placeholder}
+        aria-label={props.placeholder}
+        className={cn(
+          "border-foreground/10 bg-foreground/5 text-foreground focus:border-foreground/25 h-9 w-full rounded-md border px-3 text-sm outline-none",
+          props.classNames?.searchInput,
+        )}
+      />
+    </div>
+  );
+}
+
+function InPlaceCreateSection(props: {
+  name: string;
+  onNameChange: (value: string) => void;
+  onSubmit: () => void;
+  onCancel?: () => void;
+  isLoading: boolean;
+  classNames?: ConvexOrgSwitcherClassNames;
+  copy: Required<ConvexOrgSwitcherCopy>;
+}) {
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        props.onSubmit();
+      }}
+      className={cn("space-y-2 px-3 py-2", props.classNames?.inPlaceCreateForm)}
+    >
+      <input
+        type="text"
+        value={props.name}
+        onChange={(event) => props.onNameChange(event.target.value)}
+        placeholder={props.copy.inPlaceCreatePlaceholder}
+        aria-label={props.copy.inPlaceCreatePlaceholder}
+        disabled={props.isLoading}
+        className={cn(
+          "border-foreground/10 bg-foreground/5 text-foreground focus:border-foreground/25 h-9 w-full rounded-md border px-3 text-sm outline-none disabled:opacity-50",
+          props.classNames?.inPlaceCreateInput,
+        )}
+      />
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={props.isLoading || !props.name.trim()}
+          className={cn(
+            "bg-foreground text-background hover:bg-foreground/90 inline-flex h-9 flex-1 items-center justify-center rounded-md px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+            props.classNames?.inPlaceCreateButton,
+          )}
+        >
+          {props.isLoading ? "Creating..." : props.copy.inPlaceCreateButtonLabel}
+        </button>
+        {props.onCancel ? (
+          <button
+            type="button"
+            disabled={props.isLoading}
+            onClick={props.onCancel}
+            className={cn(
+              "border-foreground/15 text-foreground/70 hover:bg-foreground/5 inline-flex h-9 flex-1 items-center justify-center rounded-md border px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+              props.classNames?.inPlaceCreateCancel,
+            )}
+          >
+            {props.copy.inPlaceCreateCancelLabel}
+          </button>
+        ) : null}
+      </div>
+    </form>
+  );
+}
+
 function OrganizationSwitcherDropdown(props: {
   currentOrg: ConvexOrgSwitcherOrganization | null;
   otherOrgs: readonly ConvexOrgSwitcherOrganization[];
@@ -324,6 +420,16 @@ function OrganizationSwitcherDropdown(props: {
   copy: Required<ConvexOrgSwitcherCopy>;
   showPersonalAccount: boolean;
   canCreateOrganization: boolean;
+  hasInPlaceCreate: boolean;
+  enableSearch: boolean;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  creating: boolean;
+  inPlaceCreateName: string;
+  onInPlaceCreateNameChange: (value: string) => void;
+  showInPlaceCreate: boolean;
+  onToggleInPlaceCreate: () => void;
+  onInPlaceCreateSubmit: () => void;
   onSelect: (organizationId: string) => void;
   onPersonal: () => void;
   onCreate: () => void;
@@ -335,10 +441,31 @@ function OrganizationSwitcherDropdown(props: {
     copy,
     showPersonalAccount,
     canCreateOrganization,
+    hasInPlaceCreate,
+    enableSearch,
+    searchQuery,
+    onSearchChange,
+    creating,
+    inPlaceCreateName,
+    onInPlaceCreateNameChange,
+    showInPlaceCreate,
+    onToggleInPlaceCreate,
+    onInPlaceCreateSubmit,
     onSelect,
     onPersonal,
     onCreate,
   } = props;
+
+  const filteredOtherOrgs = enableSearch
+    ? otherOrgs.filter(
+        (org) =>
+          org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (org.slug ?? "").toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : otherOrgs;
+
+  const canCreate = canCreateOrganization && !showInPlaceCreate;
+  const creatingInPlace = showInPlaceCreate && hasInPlaceCreate;
 
   return (
     <div
@@ -348,9 +475,17 @@ function OrganizationSwitcherDropdown(props: {
       )}
       role="menu"
     >
+      {enableSearch ? (
+        <SearchInput
+          value={searchQuery}
+          onChange={onSearchChange}
+          placeholder={copy.searchPlaceholder}
+          classNames={classNames}
+        />
+      ) : null}
       <CurrentOrganizationSection currentOrg={currentOrg} classNames={classNames} copy={copy} />
       <OtherOrganizationsSection
-        organizations={otherOrgs}
+        organizations={filteredOtherOrgs}
         classNames={classNames}
         copy={copy}
         onSelect={onSelect}
@@ -361,12 +496,24 @@ function OrganizationSwitcherDropdown(props: {
         copy={copy}
         onSelect={onPersonal}
       />
-      <CreateOrganizationSection
-        enabled={canCreateOrganization}
-        classNames={classNames}
-        copy={copy}
-        onCreate={onCreate}
-      />
+      {creatingInPlace ? (
+        <InPlaceCreateSection
+          name={inPlaceCreateName}
+          onNameChange={onInPlaceCreateNameChange}
+          onSubmit={onInPlaceCreateSubmit}
+          onCancel={canCreateOrganization ? onToggleInPlaceCreate : undefined}
+          isLoading={creating}
+          classNames={classNames}
+          copy={copy}
+        />
+      ) : (
+        <CreateOrganizationSection
+          enabled={canCreate}
+          classNames={classNames}
+          copy={copy}
+          onCreate={hasInPlaceCreate ? onToggleInPlaceCreate : onCreate}
+        />
+      )}
     </div>
   );
 }
@@ -382,13 +529,19 @@ export function ConvexOrganizationSwitcher(props: ConvexOrgSwitcherProps) {
     onSelectOrganization,
     onSelectPersonalAccount,
     onCreateOrganization,
+    onInPlaceCreateOrganization,
     showPersonalAccount,
+    enableSearch,
     currentOrganization,
     renderCustomTrigger,
   } = props;
 
   const resolvedCopy = resolveCopy(copy);
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showInPlaceCreate, setShowInPlaceCreate] = useState(false);
+  const [inPlaceCreateName, setInPlaceCreateName] = useState("");
+  const [creating, setCreating] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -420,9 +573,26 @@ export function ConvexOrganizationSwitcher(props: ConvexOrgSwitcherProps) {
   }, [onSelectPersonalAccount]);
 
   const handleCreate = useCallback(async () => {
+    if (onInPlaceCreateOrganization) {
+      setShowInPlaceCreate(true);
+      return;
+    }
     setOpen(false);
     await onCreateOrganization?.();
-  }, [onCreateOrganization]);
+  }, [onCreateOrganization, onInPlaceCreateOrganization]);
+
+  const handleInPlaceCreateSubmit = useCallback(async () => {
+    if (!onInPlaceCreateOrganization || !inPlaceCreateName.trim()) return;
+    setCreating(true);
+    try {
+      await onInPlaceCreateOrganization(inPlaceCreateName.trim());
+      setInPlaceCreateName("");
+      setShowInPlaceCreate(false);
+      setOpen(false);
+    } finally {
+      setCreating(false);
+    }
+  }, [inPlaceCreateName, onInPlaceCreateOrganization]);
 
   const currentOrg =
     currentOrganization ?? organizations.find((o) => o._id === currentOrganizationId) ?? null;
@@ -454,7 +624,20 @@ export function ConvexOrganizationSwitcher(props: ConvexOrgSwitcherProps) {
           showPersonalAccount={
             showPersonalAccount === true && typeof onSelectPersonalAccount === "function"
           }
-          canCreateOrganization={typeof onCreateOrganization === "function"}
+          canCreateOrganization={
+            typeof onCreateOrganization === "function" ||
+            typeof onInPlaceCreateOrganization === "function"
+          }
+          hasInPlaceCreate={typeof onInPlaceCreateOrganization === "function"}
+          enableSearch={enableSearch === true}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          creating={creating}
+          inPlaceCreateName={inPlaceCreateName}
+          onInPlaceCreateNameChange={setInPlaceCreateName}
+          showInPlaceCreate={showInPlaceCreate}
+          onToggleInPlaceCreate={() => setShowInPlaceCreate((prev) => !prev)}
+          onInPlaceCreateSubmit={handleInPlaceCreateSubmit}
           onSelect={handleSelect}
           onPersonal={handlePersonal}
           onCreate={handleCreate}
