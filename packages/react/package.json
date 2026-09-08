@@ -32,6 +32,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@base-ui/react": "^1.8.0",
+    "class-variance-authority": "^0.7.1",
     "convex-auth-core": "workspace:*",
     "convex-auth-ui": "workspace:*",
     "react-dom": "^19.0.0"

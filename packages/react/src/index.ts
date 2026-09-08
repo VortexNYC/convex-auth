@@ -3,6 +3,7 @@ export * from "./auth-client-hooks";
 export * from "./auth-client-identity-provisioner";
 export * from "./auth-client-route-helpers";
 export * from "./auth-client-types";
+export * from "./auth-buttons";
 export * from "./auth-forms";
 export * from "./auth-flow";
 export * from "./auth-pages";
