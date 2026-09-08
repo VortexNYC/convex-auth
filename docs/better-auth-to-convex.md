@@ -1,85 +1,38 @@
-# Rebuilding Better Auth plugins as Convex primitives
+# Better Auth to `convex-auth` mapping
 
-This document explains the design decision to keep Better Auth's battle-tested auth primitives, but to **re-implement its plugin surface as Convex-native components, queries, mutations, and actions**.
+This document maps Better Auth concepts to the native `convex-auth` runtime. It is useful if you are migrating from Better Auth or comparing the two systems.
 
-## The Better Auth plugin model
+## What changed
 
-Better Auth is a pluggable TypeScript framework. Each plugin owns a slice of auth:
+`convex-auth` is now a fully native Convex auth runtime. It does not import or depend on `better-auth` at runtime. The `convex-better-auth-adapter` and `convex-better-auth` packages are used only for the one-time data and client migration.
 
-- `organization` — orgs, members, invitations
-- `admin` — admin dashboards and flows
-- `two-factor` — TOTP, backup codes
-- `api-key` — API keys and M2M auth
-- `oauth-provider` — acting as an OAuth provider
-- `passkey` — WebAuthn
-- `mcp` — Model Context Protocol auth
-- `sso` — enterprise SSO
-- `jwt` — token claims and JWKS
+## Mapping Better Auth plugins to `convex-auth`
 
-The plugins are high-quality, but they are built around a **Node/Edge runtime** and a **generic database adapter**. They assume they can create their own tables, run raw SQL or adapter calls, and handle HTTP request/response cycles directly.
+| Better Auth plugin | `convex-auth` replacement                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------- |
+| `organization`     | `packages/auth/src/component/organizations.ts` — orgs, members, invitations                       |
+| `admin`            | `packages/auth/src/component/scopes.ts` and `servicePrincipals.ts` — roles and permissions        |
+| `api-key`          | `packages/auth/src/component/apiKeys.ts` — API key issuance, rotation, and verification           |
+| `two-factor`       | `packages/auth/src/component/identity.ts` — TOTP and backup codes                                 |
+| `oauth-provider`   | `packages/auth/src/mcp.ts` and `agent-auth-protocol/` — MCP and agent auth flows                  |
+| `webhooks`         | `packages/auth/src/component/webhooks.ts` — webhook fan-out and security                          |
+| Authentication     | `convex-auth` native email/password, OAuth, session minting, JWT/JWKS, and password reset actions |
 
-## Why the standard Better Auth Convex integration is not enough
+The data that used to live in Better Auth's adapter tables is now stored directly in the `convexAuth` component tables (`users`, `auth_identities`, `authAccounts`, `authSessions`, etc.).
 
-The community Convex adapter (`@convex-dev/better-auth`) was a useful starting point, but it was **not feature-complete** and lagged behind Better Auth 1.x releases. At the time this project was built, it supported a subset of plugins:
+## Migration terminology
 
-- anonymous
-- email OTP
-- generic OAuth
-- JWT
-- magic link
-- one tap
-- phone number
-- 2fa
-- username
+| Better Auth term | `convex-auth` term                 | Notes                                                                                              |
+| ---------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `user`           | `users`                            | Stored in the `convexAuth` component.                                                              |
+| `account`        | `authAccounts` + `auth_identities` | Password and OAuth accounts are both identities.                                                   |
+| `session`        | `authSessions`                     | Native JWT sessions, not Better Auth opaque sessions.                                              |
+| `organization`   | `organizations` / `members`        | Convex-native B2B control plane.                                                                   |
+| `apiKey`         | `authApiKeys`                      | API keys and service sessions.                                                                     |
+| `twoFactor`      | `auth_identities.totp`             | TOTP secret and backup codes per identity.                                                         |
+| `jwt`            | `JWT_PRIVATE_KEY` / `JWKS` env     | Convex signs and verifies tokens with `crypto.subtle` and `jose`.                                  |
+| `oauth`          | Provider metadata + HTTP actions   | Google, GitHub, and Discord are built in; provider metadata is pure data, not a runtime framework. |
 
-Important plugins were **not** supported out of the box:
+## What happens to the bridge packages after migration
 
-- organization
-- admin
-- api-key
-- passkey
-- sso
-- MCP / oauth-provider-heavy flows
-
-That meant a production Convex app could not safely lean on the adapter for the full Clerk/WorkOS feature surface. It also reported real operational issues — slow queries on empty DBs, intermittent "Not authenticated" errors in Convex queries, missing session indexes, and async JWT claim handling.
-
-This repository now maintains the adapter directly as `packages/better-auth-adapter` (`convex-better-auth-adapter` on npm). It carries the Better Auth 1.7 migration, keeps the adapter in lock-step with the rest of the auth stack, and serves as the low-level bridge while the higher-level Convex primitives in `packages/auth` are built out.
-
-## Why not just use Better Auth's tables?
-
-Better Auth's plugin model stores state in tables it controls. If we let those tables become the product's source of truth, we re-create the same lock-in problem that Clerk creates:
-
-- Org, member, invite, and permission semantics become **provider-shaped**, not **app-shaped**.
-- Future migration requires rewriting app code and foreign keys.
-- Authorization rules in Convex cannot naturally depend on tables that live outside the component model.
-
-The non-negotiable rule for this architecture is:
-
-**Better Auth owns authentication. The Convex component owns organizations, members, invitations, active org, permissions, and admin policy.**
-
-## What we rebuilt as Convex primitives
-
-This project takes Better Auth's feature set and re-implements the B2B control plane as a Convex component:
-
-| Better Auth plugin       | Convex primitive in this repo                                                                                       |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `organization`           | `packages/auth/src/component/organizations.ts` — queries, mutations, and actions for orgs, members, and invitations |
-| `admin`                  | `packages/auth/src/component/scopes.ts` + `servicePrincipals.ts` — role and permission checks                       |
-| `api-key`                | `packages/auth/src/component/apiKeys.ts` — API key issuance, rotation, and verification                             |
-| `two-factor`             | `packages/auth/src/component/identity.ts` + React Native/Expo forms for TOTP and backup codes                       |
-| `oauth-provider` / `mcp` | `packages/auth/src/mcp.ts` + `agent-auth-protocol/` — MCP and agent auth flows                                      |
-| `jwt`                    | `packages/better-auth/src/server/createConvexAuthConfig.ts` — JWKS and issuer configuration for Convex              |
-| `webhooks`               | `packages/auth/src/component/webhooks.ts` — webhook fan-out and security                                            |
-
-Better Auth's **authentication core** (password hashing, session issuance, OAuth dance, token signing) is still used. Its **B2B domain plugins** are rebuilt so the data lives in your Convex database.
-
-## The migration path
-
-As Convex Auth matures, individual pieces can move from Better Auth to native Convex components without a rip-and-replace:
-
-- Password storage and session issuance can move to Convex auth when first-class.
-- Org and member tables are already in Convex, so app code does not change.
-- JWT/JWKS can be generated by Convex directly when the platform supports it.
-- React and React Native components already consume `ConvexAuth*` primitives, so UI stays stable.
-
-This is the difference between **adopting a vendor** and **building on an interface**.
+Once the one-time migration finishes and the consumer cuts over to the native runtime, `convex-better-auth` and `convex-better-auth-adapter` are removed from `package.json`. They should not be used for new features or kept as a runtime dependency.

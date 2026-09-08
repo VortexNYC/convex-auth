@@ -303,7 +303,7 @@ After the cutover to the native runtime, swap to the `convex-auth/react` client 
 ## Compatibility and migration
 
 - See [`docs/compatibility.md`](docs/compatibility.md) for the current supported versions of Better Auth, Convex, React, React Native / Expo, Node, and pnpm.
-- See [`docs/migrating-from-better-auth.md`](docs/migrating-from-better-auth.md) for the staged migration from a Better Auth setup to the native `convex-auth` runtime.
+- See [`docs/migrating-from-better-auth.md`](docs/migrating-from-better-auth.md) for the one-time migration from a Better Auth setup to the native `convex-auth` runtime.
 - See [`docs/migrating-from-convex-dev-better-auth.md`](docs/migrating-from-convex-dev-better-auth.md) if you are moving from `@convex-dev/better-auth` to `convex-better-auth-adapter`.
 
 ## Development
