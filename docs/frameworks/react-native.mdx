@@ -28,8 +28,11 @@ import { api } from "../convex/_generated/api";
 const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!);
 
 const storage = {
-  getItem: (key: string) => SecureStore.getItemAsync(key),
-  setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
+  getItem: () => null,
+  setItem: () => {},
+  getItemAsync: (key: string) => SecureStore.getItemAsync(key),
+  setItemAsync: (key: string, value: string) => SecureStore.setItemAsync(key, value),
+  deleteItemAsync: (key: string) => SecureStore.deleteItemAsync(key),
 };
 
 function Root() {
@@ -43,7 +46,7 @@ function Root() {
 }
 ```
 
-`ExpoConvexAuthProvider` accepts a `storage` object with `getItem`, `setItem`, and `removeItem` to persist the token, refresh token, and session id. `expo-secure-store` is the recommended implementation.
+`ExpoConvexAuthProvider` accepts a `storage` object with `getItem`/`getItemAsync`, `setItem`/`setItemAsync`, and `deleteItem`/`deleteItemAsync` to persist the token, refresh token, and session id. `expo-secure-store` is the recommended async implementation.
 
 ## Sign in and sign up
 

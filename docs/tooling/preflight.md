@@ -21,12 +21,6 @@ description: "Validate a convex-auth setup before deploying."
 pnpm dlx convex-auth preflight
 ```
 
-In a workspace where `convex-auth` is a local dependency:
-
-```bash
-pnpm --filter convex-auth preflight
-```
-
 ## When to run it
 
 - After a fresh checkout, before the first `convex dev`.

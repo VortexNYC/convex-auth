@@ -54,8 +54,7 @@ requirePermission(context, "document:update");
 `createConvexAuthFunctions` builds `query` and `mutation` constructors that inject an authorized `viewer` before the handler runs. The handler cannot bypass the gate because the permission is a parameter of the builder.
 
 ```ts convex/functions.ts
-import { createConvexAuthFunctions } from "convex-auth/convex";
-import { createConvexAuthGlue } from "convex-auth/b2b";
+import { createConvexAuthFunctions, createConvexAuthGlue } from "convex-auth/convex";
 import { query, mutation } from "./_generated/server";
 
 const glue = createConvexAuthGlue({

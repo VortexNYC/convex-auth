@@ -68,10 +68,10 @@ Consumers may keep a one-way cache of events (e.g., `organizationMemberJoined`) 
 
 ## CI guardrail
 
-Run `scripts/check-consumer-contract.ts` against your `convex/` directory:
+Run the consumer-contract check against your `convex/` directory:
 
 ```bash
-pnpm dlx convex-auth check-consumer-contract --convex-dir convex
+pnpm dlx convex-auth check --convex-dir convex
 ```
 
 The script returns a list of violations with file, line, and rule. Fix them before merging.

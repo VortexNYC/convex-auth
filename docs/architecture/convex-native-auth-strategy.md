@@ -45,4 +45,4 @@ If you are already using Better Auth, `convex-better-auth-adapter` and `convex-b
 4. Swap the React client to `convex-auth/react`.
 5. Remove `convex-better-auth` and `convex-better-auth-adapter` from `package.json`.
 
-See [`migrating-from-better-auth.md`](../migration/migrating-from-better-auth.md) for the full migration guide.
+See [`migrating-from-convex-dev-better-auth.md`](../migration/migrating-from-convex-dev-better-auth.md) for the full migration guide.

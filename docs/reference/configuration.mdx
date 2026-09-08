@@ -49,25 +49,25 @@ export const { signUp, signIn, signOut, addHttpRoutes } = auth;
 
 ## `emailAndPassword`
 
-| Option                          | Type                        | Default   | Description                                                             |
-| ------------------------------- | --------------------------- | --------- | ----------------------------------------------------------------------- |
-| `enabled`                       | `boolean`                   | `true`    | Enable email/password sign-up and sign-in.                              |
-| `disableSignUp`                 | `boolean`                   | `false`   | Disable new sign-ups. Existing users can still sign in.                 |
-| `autoSignIn`                    | `boolean`                   | `true`    | Automatically sign the user in after successful sign-up.                |
-| `requireVerifiedEmail`          | `boolean`                   | `false`   | Reject sign-in for users whose email is not verified.                   |
-| `minPasswordLength`             | `number`                    | `8`       | Minimum password length.                                                |
-| `maxPasswordLength`             | `number`                    | `256`     | Maximum password length.                                                |
-| `checkBreach`                   | `boolean`                   | `true`    | Check new passwords against Have I Been Pwned and reject breached ones. |
-| `sessionTtlMs`                  | `number`                    | `7 days`  | Access-token/session lifetime in milliseconds.                          |
-| `refreshTokenTtlMs`             | `number`                    | `30 days` | Refresh-token lifetime in milliseconds.                                 |
-| `verificationCodeTtlMs`         | `number`                    | `1 hour`  | Email-verification code lifetime.                                       |
-| `passwordResetCodeTtlMs`        | `number`                    | `1 hour`  | Password-reset code lifetime.                                           |
-| `trustedOrigins`                | `string[]`                  | `[]`      | Origins allowed for `callbackURL` in verify/reset routes.               |
-| `revokeSessionsOnPasswordReset` | `boolean`                   | `true`    | Revoke all sessions after a successful password reset.                  |
-| `rateLimit`                     | `{ windowMs, maxAttempts }` | —         | Rate limiting for sign-in attempts per email.                           |
-| `email`                         | `EmailConfig`               | Required  | Email sender and path configuration.                                    |
-| `onExistingUserSignUp`          | `(data) => Promise<void>`   | —         | Callback when an existing user tries to sign up.                        |
-| `onPasswordReset`               | `(data) => Promise<void>`   | —         | Callback after a successful password reset.                             |
+| Option                          | Type                        | Default    | Description                                                             |
+| ------------------------------- | --------------------------- | ---------- | ----------------------------------------------------------------------- |
+| `enabled`                       | `boolean`                   | `true`     | Enable email/password sign-up and sign-in.                              |
+| `disableSignUp`                 | `boolean`                   | `false`    | Disable new sign-ups. Existing users can still sign in.                 |
+| `autoSignIn`                    | `boolean`                   | `true`     | Automatically sign the user in after successful sign-up.                |
+| `requireVerifiedEmail`          | `boolean`                   | `false`    | Reject sign-in for users whose email is not verified.                   |
+| `minPasswordLength`             | `number`                    | `8`        | Minimum password length.                                                |
+| `maxPasswordLength`             | `number`                    | `128`      | Maximum password length.                                                |
+| `checkBreach`                   | `boolean`                   | `true`     | Check new passwords against Have I Been Pwned and reject breached ones. |
+| `sessionTtlMs`                  | `number`                    | `7 days`   | Access-token/session lifetime in milliseconds.                          |
+| `refreshTokenTtlMs`             | `number`                    | `30 days`  | Refresh-token lifetime in milliseconds.                                 |
+| `verificationCodeTtlMs`         | `number`                    | `24 hours` | Email-verification code lifetime.                                       |
+| `passwordResetCodeTtlMs`        | `number`                    | `1 hour`   | Password-reset code lifetime.                                           |
+| `trustedOrigins`                | `string[]`                  | `[]`       | Origins allowed for `callbackURL` in verify/reset routes.               |
+| `revokeSessionsOnPasswordReset` | `boolean`                   | `true`     | Revoke all sessions after a successful password reset.                  |
+| `rateLimit`                     | `{ windowMs, maxAttempts }` | —          | Rate limiting for sign-in attempts per email.                           |
+| `email`                         | `EmailConfig`               | Required   | Email sender and path configuration.                                    |
+| `onExistingUserSignUp`          | `(data) => Promise<void>`   | —          | Callback when an existing user tries to sign up.                        |
+| `onPasswordReset`               | `(data) => Promise<void>`   | —          | Callback after a successful password reset.                             |
 
 ### `email`
 
@@ -137,7 +137,7 @@ Set the corresponding `*_CLIENT_ID` and `*_CLIENT_SECRET` environment variables.
 | `sessionTtlMs`        | `number`                    | 7 days  | Session lifetime after verification.             |
 | `refreshTokenTtlMs`   | `number`                    | 30 days | Refresh-token lifetime.                          |
 | `minPasswordLength`   | `number`                    | `8`     | Minimum password length when OTP creates a user. |
-| `maxPasswordLength`   | `number`                    | `256`   | Maximum password length when OTP creates a user. |
+| `maxPasswordLength`   | `number`                    | `128`   | Maximum password length when OTP creates a user. |
 | `sendVerificationOTP` | `(data) => Promise<string>` | Yes     | Send the OTP email.                              |
 
 ## `captcha`

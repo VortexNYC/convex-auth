@@ -13,26 +13,32 @@ description: "Test helpers for the convex-auth native runtime."
 pnpm add -D convex-auth
 ```
 
-## Exports
+## Unit tests with `convex-test`
 
-The `convex-auth/testing` entry exposes test fixtures and factory functions. These are designed to be used from Convex's `convex-test` harness or from a Node test runner that sets up a `ConvexHttpClient`.
-
-## Example: email/password sign-up in a test
+For backend unit tests, use `convex-test` with the generated `api` and the mounted `convex-auth` schema:
 
 ```ts
-import { ConvexHttpClient } from "convex/browser";
+import { describe, expect, it } from "vitest";
+import { convexTest } from "convex-test";
 import { api } from "./convex/_generated/api";
+import schema from "./convex/schema";
 
-const client = new ConvexHttpClient(process.env.CONVEX_URL!);
+const t = convexTest(schema);
 
-async function signUpUser(email: string) {
-  return await client.action(api.auth.signUp, {
-    name: "Test User",
-    email,
-    password: "S3cur3P@ss!0001",
+describe("auth", () => {
+  it("signs up", async () => {
+    await t.action(api.auth.signUp, {
+      name: "Test User",
+      email: "test@example.com",
+      password: "S3cur3P@ss!0001",
+    });
   });
-}
+});
 ```
+
+## E2E tests with `convex-auth/testing`
+
+`convex-auth/testing` is for end-to-end browser tests. It exposes environment and credential helpers, not a unit-test harness.
 
 ## Conformance consumer
 

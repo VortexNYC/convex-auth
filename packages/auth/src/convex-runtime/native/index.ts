@@ -34,6 +34,8 @@ export {
 } from "./oauthState.js";
 export { addNativeOAuthHttpRoutes, type NativeOAuthHttpConfig } from "./oauthHttp.js";
 export { addNativeAuthHttpRoutes } from "./http.js";
+export { createConvexAuthGlue, type B2BGlue } from "../glue";
+export { createConvexAuthFunctions } from "../authz-functions";
 export {
   createResendEmailOtpSender,
   createResendEmailSender,

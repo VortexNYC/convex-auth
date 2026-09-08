@@ -53,6 +53,6 @@ The goal is to get consumers completely off Better Auth. A runtime bridge cannot
 
 ## Related
 
-- `docs/convex-native-auth-strategy.md`
-- `docs/migrating-from-better-auth.md`
-- `docs/better-auth-to-convex.md`
+- `docs/architecture/convex-native-auth-strategy.md`
+- `docs/migration/migrating-from-convex-dev-better-auth.md`
+- `docs/from-better-auth/better-auth-to-convex.md`

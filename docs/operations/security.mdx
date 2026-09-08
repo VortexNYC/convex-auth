@@ -103,10 +103,13 @@ export const auth = convexAuth({
 
 ## Session and refresh tokens
 
-- Access tokens are short-lived (default 7 days).
+- Access tokens are long-lived session JWTs (default 7 days). Rotate keys to invalidate leaked tokens; use the session-list hooks to revoke a single session.
 - Refresh tokens are long-lived (default 30 days).
-- Revoke sessions from the client with the session-list hooks.
 - Password reset revokes all sessions by default.
+
+## Tokens in query strings
+
+OAuth callbacks, magic links, email verification, and password reset redirect the browser back to your app with the session token in the `?token=` query string. This is visible in browser history, referrers, access logs, and analytics. Keep `callbackURL` paths internal, expire verification/reset codes quickly, and treat tokens as session secrets. Shortening `sessionTtlMs` and `verificationCodeTtlMs` limits the window if a URL leaks.
 
 ## Security checklist
 

@@ -11,10 +11,10 @@ sidebar:
 
 ## Model
 
-- `auth_users` — the canonical user. One row per real person or service.
+- `users` — the canonical user. One row per real person or service.
 - `auth_identities` — one row per `provider:issuer:subject` combination. The same user can have an `email` identity, a `google` identity, a `github` identity, etc.
-- `auth_accounts` — provider-specific account data (credential hash, TOTP state, etc.).
-- `auth_sessions` and `auth_refresh_tokens` — session state.
+- `authAccounts` — provider-specific account data (credential hash, TOTP state, etc.).
+- `authSessions` and `authRefreshTokens` — session state.
 
 When a user signs up or links a new provider, the runtime provisions an identity:
 
@@ -51,11 +51,11 @@ If a user signs in with Google while already having an email identity with the s
 ## React client
 
 ```tsx
-import { useAuthState } from "convex-auth/react";
+import { useUser } from "convex-auth/react";
 
 export function Profile() {
-  const { user, isAuthenticated } = useAuthState();
-  return <pre>{JSON.stringify({ user, isAuthenticated }, null, 2)}</pre>;
+  const user = useUser();
+  return <pre>{JSON.stringify(user, null, 2)}</pre>;
 }
 ```
 

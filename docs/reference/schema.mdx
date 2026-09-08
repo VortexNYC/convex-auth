@@ -1,0 +1,39 @@
+---
+title: Schema
+description: "Table and field glossary for the convex-auth component."
+---
+
+# Schema
+
+`convex-auth` is a Convex component. The tables below live in the component's namespace and are visible to your consumer functions through `components.convexAuth`.
+
+## Core tables
+
+| Table                   | Purpose                                                                 |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `users`                 | One row per real person or service.                                     |
+| `auth_identities`       | One row per `provider:issuer:subject` identity proof.                   |
+| `authAccounts`          | Provider-specific account data: password hash, TOTP, OAuth tokens, etc. |
+| `authSessions`          | Active session JWT records.                                             |
+| `authRefreshTokens`     | Long-lived refresh tokens.                                              |
+| `authVerificationCodes` | Email verification and password reset codes.                            |
+| `authVerifiers`         | TOTP and backup-code state.                                             |
+| `authMagicLinkTokens`   | Magic-link sign-in tokens.                                              |
+
+## Identity vs. account split
+
+- A `user` is the person or service.
+- An `auth_identities` row is a proof: `email:local:<email>` or `google:google:<google-id>`.
+- An `authAccounts` row is the provider-specific account record for that identity. It owns the credential, TOTP secret, and OAuth tokens.
+
+## Feature-gated tables
+
+Additional tables appear only when you mount the relevant feature-gated component:
+
+- `organizations`, `organizationMembers`, `organizationInvitations`, `organizationMemberRoles`
+- `servicePrincipals`, `apiKeys`
+- `webhookEndpoints`, `webhookDeliveries`
+- `mcpOAuthClients`, `mcpSessions`
+- `agentCredentials`, `agentCredentialGrants`
+
+Consumers must not create local mirrors of these tables. Use the public actions and the consumer-contract `convex-auth check` to enforce this.

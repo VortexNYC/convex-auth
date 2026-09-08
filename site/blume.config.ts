@@ -12,8 +12,9 @@ if (typeof globalThis.navigator === "undefined") {
 }
 
 export default defineConfig({
-  title: "Convex Better Auth 2.0",
-  description: "Full-stack auth for Convex and Better Auth.",
+  title: "convex-auth",
+  description:
+    "Native auth runtime for Convex, with a one-time migration path from the Better Auth Convex component.",
   content: {
     root: "../docs",
   },

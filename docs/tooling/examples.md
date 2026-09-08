@@ -67,7 +67,7 @@ app.post("/auth/sign-in", async (c) => {
 
 ## React Native / Expo
 
-`examples/react-native` is a minimal Expo app using `convex-auth-react-native`. See [React Native](../authentication/react-native) for setup details.
+`examples/react-native` is a minimal Expo app using `convex-auth-react-native`. See [React Native](../frameworks/react-native) for setup details.
 
 ## OAuth
 

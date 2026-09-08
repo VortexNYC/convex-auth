@@ -2,5 +2,5 @@ import { defineMeta } from "blume";
 
 export default defineMeta({
   title: "Reference",
-  pages: ["configuration", "server-api"],
+  pages: ["configuration", "server-api", "schema"],
 });

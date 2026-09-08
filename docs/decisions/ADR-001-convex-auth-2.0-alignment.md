@@ -21,9 +21,9 @@ Issue #70 audited the remaining gaps between the `convex-auth` native runtime an
 2. Public `convexAuth` seam — missing `isAuthenticated` and `store`.
 3. Provider metadata — hand-authored `createGitHubProvider`, `createGoogleProvider`, `createDiscordProvider` instead of `@auth/core/providers/*`.
 4. Consumer wiring shape — `convexAuth({ component, emailAndPassword, oauth })` vs. `convexAuth({ providers: [] })`.
-5. Missing magic-link / email-OTP sign-in.
+5. Magic-link / email-OTP sign-in — now implemented as dedicated native features.
 
-This ADR records which gaps are accepted as deliberate divergence and which will be built or reconsidered later.
+This ADR records which gaps are accepted as deliberate divergence and which have been implemented.
 
 ## Decisions
 
@@ -61,21 +61,19 @@ The current scope is intentionally limited to three OAuth providers. Hand-author
 
 This shape is a deliberate match for the Convex component model: the consumer registers the `convexAuth` component in `convex.config.ts`, then wires its handle into the auth configuration. It is not a one-to-one config swap with Convex Auth's `convexAuth({ providers: [] })`, and migration guides will map between the two.
 
-### 5. Magic-link / email-OTP: implement as a dedicated feature, not an alignment change
+### 5. Magic-link / email-OTP: now implemented as dedicated native features
 
-**Decision:** Magic-link and email-OTP sign-in are missing features, not architecture alignment gaps. They will be implemented in a dedicated milestone with their own spec and tests.
-
-The existing verification-token and email-sender infrastructure is reused for email verification and password reset. Magic-link will extend that infrastructure with a new `sign-in/magic-link` action and a `magic-link/verify` HTTP route.
+**Decision:** Magic-link and email-OTP sign-in are implemented as native `convex-auth` features, not as alignment changes to Convex Auth 2.0. They reuse the verification-token and email-sender infrastructure.
 
 ## Consequences
 
 - Issue #70 can be closed once this ADR lands.
 - Migration guides from `@convex-dev/auth` must explicitly describe the schema, `store`, provider, and wiring differences.
 - The public `convexAuth` surface is stable: typed action refs plus queries, no `store` indirection.
-- Magic-link / email-OTP becomes the next feature milestone.
+- Magic-link and email-OTP are now available as native features.
 
 ## Related
 
 - Issue #70
-- `docs/convex-native-auth-strategy.md`
-- `docs/migrating-from-convex-dev-better-auth.md`
+- `docs/architecture/convex-native-auth-strategy.md`
+- `docs/migration/migrating-from-convex-dev-better-auth.md`
