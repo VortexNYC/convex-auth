@@ -374,19 +374,9 @@ export const createClient = <
       const staticAuth = createAuth({} as any);
       const path = staticAuth.options.basePath ?? "/api/auth";
       const authRequestHandler = httpActionGeneric(async (ctx, request) => {
-        if (config?.verbose) {
-          // eslint-disable-next-line no-console
-          console.log("options.baseURL", staticAuth.options.baseURL);
-          // eslint-disable-next-line no-console
-          console.log("request headers", request.headers);
-        }
         const auth = createAuth(ctx as any);
         const normalizedRequest = restoreOriginalForwardedHeaders(request);
         const response = await auth.handler(normalizedRequest);
-        if (config?.verbose) {
-          // eslint-disable-next-line no-console
-          console.log("response headers", response.headers);
-        }
         return response;
       });
       const wellKnown = http.lookup("/.well-known/openid-configuration", "GET");
@@ -483,19 +473,9 @@ export const createClient = <
       const path = opts.basePath ?? "/api/auth";
       let trustedOriginsOption = opts.trustedOrigins;
       const authRequestHandler = httpActionGeneric(async (ctx, request) => {
-        if (config?.verbose) {
-          // eslint-disable-next-line no-console
-          console.log("options.baseURL", getRegistrationAuth().options.baseURL);
-          // eslint-disable-next-line no-console
-          console.log("request headers", request.headers);
-        }
         const auth = createAuth(ctx as any);
         const normalizedRequest = restoreOriginalForwardedHeaders(request);
         const response = await auth.handler(normalizedRequest);
-        if (config?.verbose) {
-          // eslint-disable-next-line no-console
-          console.log("response headers", response.headers);
-        }
         return response;
       });
       const wellKnown = http.lookup("/.well-known/openid-configuration", "GET");
