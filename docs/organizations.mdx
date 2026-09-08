@@ -1,0 +1,155 @@
+---
+title: Organizations
+description: B2B workspaces, members, invitations, and roles with convex-auth.
+sidebar:
+  order: 9
+---
+
+# Organizations
+
+`convex-auth` supports multi-tenant organizations natively in Convex. Users, organizations, memberships, invitations, and roles all live in the `convexAuth` component tables. The `convex-auth-react` package ships uncontrolled UI components that you wire to your own Convex queries and mutations.
+
+## How it works
+
+Organizations are stored as first-class data in the `convexAuth` component. Every organization has:
+
+- a `name`, `slug`, and `imageUrl`
+- a set of members with a `roleKey`
+- pending invitations with an `expiresAt` and `roleKey`
+- customizable role templates with permissions
+
+Your app keeps local anchor rows (for example, a `workspaces` table) that map one-to-one to the component organization rows. The `createConvexAuthOrganizationOperations` factory returns typed reader/writer helpers that keep the component data and your local data in sync.
+
+## Mount the organizations component
+
+If you only need the core auth runtime, you do not have to mount this. If you need orgs, mount it alongside the core component:
+
+```ts convex/convex.config.ts
+import { defineApp } from "convex/server";
+import { v } from "convex/values";
+import authCore from "convex-auth/convex.config/core";
+import authOrganizations from "convex-auth/convex.config/organizations";
+
+const app = defineApp({
+  env: {
+    JWT_PRIVATE_KEY: v.string(),
+    JWKS: v.string(),
+  },
+});
+
+app.use(authCore, {
+  env: {
+    JWT_PRIVATE_KEY: app.env.JWT_PRIVATE_KEY,
+    JWKS: app.env.JWKS,
+  },
+});
+
+app.use(authOrganizations, {
+  env: {
+    JWT_PRIVATE_KEY: app.env.JWT_PRIVATE_KEY,
+    JWKS: app.env.JWKS,
+  },
+});
+
+export default app;
+```
+
+<Callout type="info">
+  The full `convexAuth` component already includes the core tables. The `organizations` component
+  adds `auth_organizations`, `auth_organization_members`, `auth_organization_invitations`, and
+  `auth_organization_roles`.
+</Callout>
+
+## React components
+
+<CardGroup cols={2}>
+  <Card title="ConvexCreateOrganization" icon="plus" href="/docs/organizations">
+    A controlled form for name, slug, and logo. Calls your `onCreate` callback.
+  </Card>
+  <Card title="ConvexOrganizationList" icon="list" href="/docs/organizations">
+    Lists a user's organizations and pending invitations.
+  </Card>
+  <Card title="ConvexOrganizationSwitcher" icon="switch" href="/docs/organizations">
+    A dropdown to switch between workspaces.
+  </Card>
+  <Card title="ConvexOrganizationProfile" icon="building" href="/docs/organizations">
+    Edits the org name, slug, and image.
+  </Card>
+  <Card title="ConvexOrganizationMembers" icon="users" href="/docs/organizations">
+    Invites members, lists members, and manages member status.
+  </Card>
+  <Card title="ConvexOrganizationRoleManager" icon="shield" href="/docs/organizations">
+    Creates and lists custom roles with permission checklists.
+  </Card>
+</CardGroup>
+
+## Create an organization
+
+```tsx src/CreateOrganization.tsx
+import { ConvexCreateOrganization } from "convex-auth/react";
+import { useMutation } from "convex/react";
+import { api } from "../convex/_generated/api";
+
+export function CreateOrganization() {
+  const create = useMutation(api.myOrganizations.create);
+
+  return (
+    <ConvexCreateOrganization
+      onCreate={async ({ name, slug, imageUrl }) => {
+        await create({ name, slug, imageUrl });
+      }}
+      defaultName="Acme"
+      defaultSlug="acme"
+    />
+  );
+}
+```
+
+`ConvexCreateOrganization` calls `onCreate` with `{ name, string, slug, imageUrl? }`. The component validates the slug format and required fields. Your `create` mutation is responsible for:
+
+1. Calling the component writer to insert the org.
+2. Creating the local anchor row.
+3. Backfilling the bridge id.
+
+## Switch workspaces
+
+```tsx src/WorkspaceSwitcher.tsx
+import { ConvexOrganizationSwitcher } from "convex-auth/react";
+import { useAction } from "convex/react";
+import { api } from "../convex/_generated/api";
+
+export function WorkspaceSwitcher(props: {
+  organizations: { _id: string; name: string; slug?: string; imageUrl?: string }[];
+  currentOrganizationId: string | null;
+}) {
+  const setActive = useAction(api.myOrganizations.setActive);
+
+  return (
+    <ConvexOrganizationSwitcher
+      organizations={props.organizations}
+      currentOrganizationId={props.currentOrganizationId}
+      onSelectOrganization={async (id) => setActive({ organizationId: id })}
+      onCreateOrganization={() => {
+        /* open create modal */
+      }}
+    />
+  );
+}
+```
+
+## Server-side operations
+
+The `convex-auth` component exposes the organization tables, but the public helpers are low-level. Import `createConvexAuthOrganizationOperations` from `convex-auth/convex` and pass it:
+
+- `component` — the `components.convexAuthOrganizations` handle.
+- `resolveLocalOrganizationId` and `resolveLocalUserId` — bridge lookup callbacks.
+- `roleCatalog` — a `roleKey → permissions[]` map.
+- `validateRoleKey` — a type guard for your consumer role keys.
+
+It returns a typed suite of `read` and `write` functions for organizations, members, invitations, roles, and API keys. Use these inside your own Convex actions and mutations.
+
+<Callout type="warning">
+  The `createConvexAuthOrganizationOperations` API is **increment 3** and still internal-facing. The
+  React components above are the stable, public surface. If you need the detailed server action
+  reference, open an issue and we will expand this page.
+</Callout>
