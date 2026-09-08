@@ -1,19 +1,29 @@
 packages:
-  - "packages/*"
-  - "examples/*"
-  - "site"
+  - packages/*
+  - examples/*
+  - site
 
 onlyBuiltDependencies:
-  - "argon2"
+  - argon2
 
 overrides:
-  vitest: 4.1.10
-  "@better-auth/utils": "0.5.0"
-  uuid: ^14.0.0
-  chromium-edge-launcher: ^2.0.1
+  '@better-auth/utils': 0.5.0
   babel-plugin-istanbul: ^8.0.2
+  chromium-edge-launcher: ^2.0.1
   test-exclude: ^8.0.0
+  uuid: ^14.0.0
+  vitest: 4.1.10
 
 peerDependencyRules:
   allowedVersions:
-    "@better-auth/utils": ">=0.4.2 <0.6.0"
+    '@better-auth/utils': '>=0.4.2 <0.6.0'
+
+auditConfig:
+  ignoreCves:
+    # These are docs-only transitive dependencies. They do not ship in convex-auth.
+    # image-size via blume has no patched version on npm.
+    - CVE-2025-71330
+    - CVE-2025-71329
+    # qs via blume>@modelcontextprotocol/sdk>express; only the static docs build uses it.
+    - CVE-2026-82562
+    - CVE-2026-82417
