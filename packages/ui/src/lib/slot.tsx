@@ -24,8 +24,15 @@ function mergeProps(
     if (key === "className" && result.className) {
       result.className = cn(result.className as string, value as string);
     } else if (key === "style") {
-      result.style = { ...(result.style as React.CSSProperties), ...(value as React.CSSProperties) };
-    } else if (key.startsWith("on") && typeof value === "function" && typeof result[key] === "function") {
+      result.style = {
+        ...(result.style as React.CSSProperties),
+        ...(value as React.CSSProperties),
+      };
+    } else if (
+      key.startsWith("on") &&
+      typeof value === "function" &&
+      typeof result[key] === "function"
+    ) {
       const existing = result[key] as (...args: unknown[]) => void;
       result[key] = (...args: unknown[]) => {
         existing(...args);
@@ -51,7 +58,9 @@ export const Slot = React.forwardRef<HTMLElement, SlotProps>(function Slot(
     return <span {...props}>{children}</span>;
   }
 
-  const child = children as React.ReactElement<Record<string, unknown>> & { ref?: React.Ref<unknown> };
+  const child = children as React.ReactElement<Record<string, unknown>> & {
+    ref?: React.Ref<unknown>;
+  };
 
   return React.cloneElement(child, {
     ...mergeProps(props as Record<string, unknown>, child.props as Record<string, unknown>),

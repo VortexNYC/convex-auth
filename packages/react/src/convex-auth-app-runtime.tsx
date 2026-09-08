@@ -18,7 +18,11 @@ import {
   type ConvexAuthInviteOpenedEvent,
   type ConvexAuthInviteRedirectedEvent,
 } from "./auth-pages";
-import { ConvexAuthSignInButton, ConvexAuthSignOutButton, ConvexAuthSignUpButton } from "./auth-triggers";
+import {
+  ConvexAuthSignInButton,
+  ConvexAuthSignOutButton,
+  ConvexAuthSignUpButton,
+} from "./auth-triggers";
 import { AuthRuntimeProvider } from "./AuthRuntimeProvider";
 import { AuthSignedInBoundary, AuthSignedOutBoundary } from "./auth-client-boundaries";
 import type {

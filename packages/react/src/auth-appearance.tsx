@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 export type ConvexAuthTheme = "light" | "dark" | "system";
 
@@ -14,16 +8,13 @@ export type ConvexAuthAppearanceContextValue = {
   setTheme: (theme: ConvexAuthTheme) => void;
 };
 
-const ConvexAuthAppearanceContext =
-  createContext<ConvexAuthAppearanceContextValue | null>(null);
+const ConvexAuthAppearanceContext = createContext<ConvexAuthAppearanceContextValue | null>(null);
 
 function getSystemTheme(): "light" | "dark" {
   if (typeof window === "undefined") {
     return "light";
   }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function resolveTheme(theme: ConvexAuthTheme): "light" | "dark" {
@@ -33,9 +24,7 @@ function resolveTheme(theme: ConvexAuthTheme): "light" | "dark" {
 export function useConvexAuthAppearance(): ConvexAuthAppearanceContextValue {
   const ctx = useContext(ConvexAuthAppearanceContext);
   if (ctx === null) {
-    throw new Error(
-      "useConvexAuthAppearance must be used within a ConvexAuthAppearanceProvider",
-    );
+    throw new Error("useConvexAuthAppearance must be used within a ConvexAuthAppearanceProvider");
   }
   return ctx;
 }
@@ -64,11 +53,7 @@ export function ConvexAuthAppearanceProvider({
     }
     try {
       const stored = window.localStorage.getItem(storageKey);
-      if (
-        stored === "light" ||
-        stored === "dark" ||
-        stored === "system"
-      ) {
+      if (stored === "light" || stored === "dark" || stored === "system") {
         setTheme(stored);
       }
     } catch {
@@ -91,10 +76,7 @@ export function ConvexAuthAppearanceProvider({
     }
 
     if (typeof document !== "undefined") {
-      document.documentElement.setAttribute(
-        "data-convex-auth-theme",
-        resolved,
-      );
+      document.documentElement.setAttribute("data-convex-auth-theme", resolved);
     }
   }, [theme, storageKey]);
 
@@ -109,9 +91,7 @@ export function ConvexAuthAppearanceProvider({
   }, [enableSystem, theme]);
 
   return (
-    <ConvexAuthAppearanceContext.Provider
-      value={{ theme, resolvedTheme, setTheme }}
-    >
+    <ConvexAuthAppearanceContext.Provider value={{ theme, resolvedTheme, setTheme }}>
       {children}
     </ConvexAuthAppearanceContext.Provider>
   );

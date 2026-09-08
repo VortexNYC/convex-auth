@@ -21,20 +21,14 @@ export function Checkbox({
         className,
       )}
       render={(htmlProps, state) => (
-        <span
-          data-state={checkboxState(state.checked, state.indeterminate)}
-          {...htmlProps}
-        />
+        <span data-state={checkboxState(state.checked, state.indeterminate)} {...htmlProps} />
       )}
       {...props}
     >
       <CheckboxPrimitive.Indicator
         className="flex items-center justify-center"
         render={(htmlProps, state) => (
-          <span
-            data-state={checkboxState(state.checked, state.indeterminate)}
-            {...htmlProps}
-          />
+          <span data-state={checkboxState(state.checked, state.indeterminate)} {...htmlProps} />
         )}
       >
         <Check className="size-3" />

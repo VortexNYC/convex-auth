@@ -82,7 +82,10 @@ function SelectContent({
   );
 }
 
-function SelectLabel({ className, ...props }: React.ComponentProps<typeof SelectPrimitive.GroupLabel>) {
+function SelectLabel({
+  className,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.GroupLabel>) {
   return (
     <SelectPrimitive.GroupLabel
       data-slot="select-label"
@@ -105,11 +108,7 @@ function SelectItem({
         className,
       )}
       render={(htmlProps, state) => (
-        <div
-          data-disabled={state.disabled}
-          data-selected={state.selected}
-          {...htmlProps}
-        />
+        <div data-disabled={state.disabled} data-selected={state.selected} {...htmlProps} />
       )}
       {...props}
     >

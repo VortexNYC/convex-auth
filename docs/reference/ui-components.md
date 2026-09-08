@@ -20,9 +20,7 @@ import {
 Wrap your app with `ConvexAuthAppearanceProvider` to manage light/dark/system theming.
 
 ```tsx
-<ConvexAuthAppearanceProvider defaultTheme="system">
-  {children}
-</ConvexAuthAppearanceProvider>
+<ConvexAuthAppearanceProvider defaultTheme="system">{children}</ConvexAuthAppearanceProvider>
 ```
 
 `useConvexAuthAppearance` returns the current `theme` (`"light" | "dark" | "system"`) and the resolved `resolvedTheme` (`"light" | "dark"`). The provider sets `data-convex-auth-theme` on the document root and persists the user's choice in `localStorage`.

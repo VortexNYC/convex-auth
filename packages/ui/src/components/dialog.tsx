@@ -15,14 +15,19 @@ function DialogTrigger({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" className={cn(className)} {...props} />;
+  return (
+    <DialogPrimitive.Trigger data-slot="dialog-trigger" className={cn(className)} {...props} />
+  );
 }
 
 function DialogPortal({ ...props }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
 
-function DialogOverlay({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Backdrop>) {
+function DialogOverlay({
+  className,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Backdrop>) {
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
@@ -75,7 +80,11 @@ function DialogContent({
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div data-slot="dialog-header" className={cn("flex flex-col gap-2 text-center sm:text-left", className)} {...props} />
+    <div
+      data-slot="dialog-header"
+      className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
+      {...props}
+    />
   );
 }
 
@@ -86,7 +95,11 @@ function DialogFooter({
   ...props
 }: React.ComponentProps<"div"> & { showCloseButton?: boolean }) {
   return (
-    <div data-slot="dialog-footer" className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)} {...props}>
+    <div
+      data-slot="dialog-footer"
+      className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
+      {...props}
+    >
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close
@@ -128,8 +141,7 @@ function DialogClose({
   variant = "default",
   size = "default",
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Close> &
-  Parameters<typeof buttonVariants>[0]) {
+}: React.ComponentProps<typeof DialogPrimitive.Close> & Parameters<typeof buttonVariants>[0]) {
   return (
     <DialogPrimitive.Close
       data-slot="dialog-close"

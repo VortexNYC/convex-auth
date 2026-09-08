@@ -30,9 +30,7 @@ describe("Auth trigger components", () => {
   });
 
   it("ConvexAuthSignOutButton renders with default copy and secondary variant", () => {
-    const html = renderToStaticMarkup(
-      createElement(ConvexAuthSignOutButton, { signOut: noop }),
-    );
+    const html = renderToStaticMarkup(createElement(ConvexAuthSignOutButton, { signOut: noop }));
     assert.match(html, /<button[^>]+type="button"/);
     assert.match(html, />Sign out</);
   });
