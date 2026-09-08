@@ -30,7 +30,7 @@ export function RootLayout() {
 }
 ```
 
-See the [full docs](https://convex-auth.vortex.nyc) and [`docs/react-native.md`](../docs/react-native.md) for the complete Expo setup.
+See the [full docs](https://convex-auth.vortex.nyc) and [`docs/frameworks/react-native.mdx`](../docs/frameworks/react-native.mdx) for the complete Expo setup.
 
 ## License
 
