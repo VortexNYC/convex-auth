@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { hasPermission } from "convex-auth-core";
+import { hasPermission } from "../../core";
 import { describe, test } from "vitest";
 
 import {

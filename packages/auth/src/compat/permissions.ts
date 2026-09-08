@@ -1,1 +1,1 @@
-export * from "convex-auth-core";
+export * from "../core";

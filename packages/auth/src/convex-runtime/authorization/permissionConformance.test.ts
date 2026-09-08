@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   permissionIntersectionConformanceCases,
   permissionMatcherConformanceCases,
-} from "convex-auth-core";
+} from "../../core";
 import { describe, it } from "vitest";
 
 import type { AuthPrincipal, ResolvedAuthContext } from "../coreTypes";
