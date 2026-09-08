@@ -11,7 +11,7 @@ export default defineConfig({
     hash: false,
     outDir: "dist",
     deps: {
-      neverBundle: ["react", "react-dom", /^radix-ui/, /^@radix-ui/],
+      neverBundle: ["react", "react-dom"],
     },
   },
 });

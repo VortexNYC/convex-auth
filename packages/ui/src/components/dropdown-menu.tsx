@@ -4,6 +4,16 @@ import type * as React from "react";
 
 import { cn } from "../lib/cn";
 
+function composeEventHandlers<E>(
+  originalEventHandler?: (event: E) => void,
+  ourEventHandler?: (event: E) => void,
+) {
+  return function handleEvent(event: E) {
+    originalEventHandler?.(event);
+    ourEventHandler?.(event);
+  };
+}
+
 function DropdownMenu({ ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
   return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
 }
@@ -32,7 +42,7 @@ function DropdownMenuContent({
         <DropdownMenuPrimitive.Popup
           data-slot="dropdown-menu-content"
           className={cn(
-            "bg-popover text-popover-foreground z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
+            "bg-popover text-popover-foreground z-50 max-h-96 min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
             className,
           )}
           render={(htmlProps, state) => (
@@ -45,7 +55,7 @@ function DropdownMenuContent({
           )}
           {...props}
         >
-          <DropdownMenuPrimitive.Viewport className="p-1">{children}</DropdownMenuPrimitive.Viewport>
+          <DropdownMenuPrimitive.Viewport>{children}</DropdownMenuPrimitive.Viewport>
         </DropdownMenuPrimitive.Popup>
       </DropdownMenuPrimitive.Positioner>
     </DropdownMenuPrimitive.Portal>
@@ -83,7 +93,10 @@ function DropdownMenuItem({
           data-inset={inset}
           data-variant={variant}
           {...htmlProps}
-          onClick={onSelect}
+          onClick={composeEventHandlers(
+            (htmlProps as React.HTMLAttributes<HTMLDivElement>).onClick,
+            onSelect,
+          )}
         />
       )}
       {...props}
@@ -205,11 +218,20 @@ function DropdownMenuSubTrigger({
         "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
+      render={(htmlProps, state) => (
+        <div
+          data-disabled={state.disabled}
+          data-highlighted={state.highlighted}
+          data-inset={inset}
+          data-state={state.open ? "open" : "closed"}
+          {...htmlProps}
+        >
+          {children}
+          <ChevronRightIcon className="ml-auto size-4" />
+        </div>
+      )}
       {...props}
-    >
-      {children}
-      <ChevronRightIcon className="ml-auto size-4" />
-    </DropdownMenuPrimitive.SubmenuTrigger>
+    />
   );
 }
 
@@ -224,7 +246,7 @@ function DropdownMenuSubContent({
         <DropdownMenuPrimitive.Popup
           data-slot="dropdown-menu-sub-content"
           className={cn(
-            "bg-popover text-popover-foreground z-50 min-w-[8rem] overflow-hidden rounded-md border p-1 shadow-lg",
+            "bg-popover text-popover-foreground z-50 max-h-96 min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-lg",
             className,
           )}
           render={(htmlProps, state) => (
@@ -237,7 +259,7 @@ function DropdownMenuSubContent({
           )}
           {...props}
         >
-          <DropdownMenuPrimitive.Viewport className="p-1">{children}</DropdownMenuPrimitive.Viewport>
+          <DropdownMenuPrimitive.Viewport>{children}</DropdownMenuPrimitive.Viewport>
         </DropdownMenuPrimitive.Popup>
       </DropdownMenuPrimitive.Positioner>
     </DropdownMenuPrimitive.Portal>

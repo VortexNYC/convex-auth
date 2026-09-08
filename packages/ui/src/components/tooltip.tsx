@@ -1,8 +1,8 @@
-import { Slot } from "@radix-ui/react-slot";
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import type * as React from "react";
 
 import { cn } from "../lib/cn";
+import { Slot } from "../lib/slot";
 
 function TooltipProvider({
   delayDuration = 0,
