@@ -6,6 +6,7 @@ export * from "./auth-client-types";
 export * from "./auth-forms";
 export * from "./auth-flow";
 export * from "./auth-pages";
+export * from "./auth-triggers";
 export * from "./api-keys";
 export * from "./AuthRuntimeProvider";
 export * from "./convex-auth-app-runtime";

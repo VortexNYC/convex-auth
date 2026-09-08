@@ -18,6 +18,7 @@ import {
   type ConvexAuthInviteOpenedEvent,
   type ConvexAuthInviteRedirectedEvent,
 } from "./auth-pages";
+import { ConvexAuthSignInButton, ConvexAuthSignOutButton, ConvexAuthSignUpButton } from "./auth-triggers";
 import { AuthRuntimeProvider } from "./AuthRuntimeProvider";
 import { AuthSignedInBoundary, AuthSignedOutBoundary } from "./auth-client-boundaries";
 import type {
@@ -234,6 +235,7 @@ export function createConvexAuthRuntime(args: ConvexAuthRuntimeCreateArgs) {
   const hooks = createConvexAuthRuntimeHooks(args);
   const providers = createConvexAuthProviderComponents(args, hooks);
   const screens = createConvexAuthRuntimeScreens(args, hooks);
+  const triggers = createConvexAuthRuntimeTriggers(hooks);
   const entryRoutes = createConvexAuthEntryRoutePages(hooks, screens);
   const workspaceRoutes = createConvexAuthWorkspaceRoutePages();
   const AuthenticatedRouteGate = createConvexAuthAuthenticatedRouteGate(hooks);
@@ -245,12 +247,15 @@ export function createConvexAuthRuntime(args: ConvexAuthRuntimeCreateArgs) {
     AuthAuthenticatedRouteGate: AuthenticatedRouteGate,
     AuthOrganizationChooserRoutePage: workspaceRoutes.OrganizationChooserRoutePage,
     AuthPostSignUpRoutePage: workspaceRoutes.PostSignUpRoutePage,
+    AuthSignInButton: triggers.AuthSignInButton,
     AuthSignInRoutePage: entryRoutes.SignInRoutePage,
+    AuthSignInScreen: screens.SignInScreen,
+    AuthSignOutButton: triggers.AuthSignOutButton,
+    AuthSignUpButton: triggers.AuthSignUpButton,
     AuthSignUpRoutePage: entryRoutes.SignUpRoutePage,
+    AuthSignUpScreen: screens.SignUpScreen,
     AuthSignedIn: providers.SignedIn,
     AuthSignedOut: providers.SignedOut,
-    AuthSignInScreen: screens.SignInScreen,
-    AuthSignUpScreen: screens.SignUpScreen,
     actions: args.actions,
     storage: args.storage ?? "local",
     useAppAuth: hooks.useAuth,
@@ -383,6 +388,27 @@ function createConvexAuthRuntimeScreens(
   }
 
   return { SignInScreen, SignUpScreen };
+}
+
+type ConvexAuthRuntimeTriggers = ReturnType<typeof createConvexAuthRuntimeTriggers>;
+
+function createConvexAuthRuntimeTriggers(hooks: ConvexAuthRuntimeHooks) {
+  function AuthSignInButton(props: { children?: ReactNode; variant?: "primary" | "secondary" }) {
+    const { redirectToSignIn } = hooks.useAuthActions();
+    return <ConvexAuthSignInButton redirectToSignIn={redirectToSignIn} {...props} />;
+  }
+
+  function AuthSignUpButton(props: { children?: ReactNode; variant?: "primary" | "secondary" }) {
+    const { redirectToSignUp } = hooks.useAuthActions();
+    return <ConvexAuthSignUpButton redirectToSignUp={redirectToSignUp} {...props} />;
+  }
+
+  function AuthSignOutButton(props: { children?: ReactNode; variant?: "primary" | "secondary" }) {
+    const { signOut } = hooks.useAuthActions();
+    return <ConvexAuthSignOutButton signOut={signOut} {...props} />;
+  }
+
+  return { AuthSignInButton, AuthSignUpButton, AuthSignOutButton };
 }
 
 function createConvexAuthEntryRoutePages(

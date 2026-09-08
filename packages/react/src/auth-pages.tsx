@@ -433,7 +433,7 @@ export function ConvexAuthActionButton({
 }: {
   children: ReactNode;
   variant?: "primary" | "secondary";
-  onClick?: () => void;
+  onClick?: () => void | Promise<void>;
   type?: "button" | "submit" | "reset";
 }) {
   return (

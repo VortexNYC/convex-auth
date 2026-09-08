@@ -833,6 +833,9 @@ export function getConvexAuthActions(args: {
     redirectToSignIn: async (options?: { signInForceRedirectUrl?: string }) => {
       assignLocation(options?.signInForceRedirectUrl ?? args.signInPath);
     },
+    redirectToSignUp: async () => {
+      assignLocation(args.signUpPath);
+    },
     buildSignUpUrl: () => args.signUpPath,
   };
 }
