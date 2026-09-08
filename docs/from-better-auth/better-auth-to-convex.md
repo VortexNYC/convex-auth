@@ -1,6 +1,6 @@
 ---
 title: Better Auth to `convex-auth` mapping
-description: "Map Better Auth concepts and behavior to convex-auth."
+description: "Map Better Auth concepts, plugins, and frameworks to convex-auth."
 ---
 
 # Better Auth to `convex-auth` mapping
@@ -11,19 +11,35 @@ This document maps Better Auth concepts to the native `convex-auth` runtime. It 
 
 `convex-auth` is now a fully native Convex auth runtime. It does not import or depend on `better-auth` at runtime. The `convex-better-auth-adapter` and `convex-better-auth` packages are used only for the one-time data and client migration.
 
-## Mapping Better Auth plugins to `convex-auth`
+## Framework guide parity
 
-| Better Auth plugin | `convex-auth` replacement                                                                         |
-| ------------------ | ------------------------------------------------------------------------------------------------- |
-| `organization`     | `packages/auth/src/component/organizations.ts` — orgs, members, invitations                       |
-| `admin`            | `packages/auth/src/component/scopes.ts` and `servicePrincipals.ts` — roles and permissions        |
-| `api-key`          | `packages/auth/src/component/apiKeys.ts` — API key issuance, rotation, and verification           |
-| `two-factor`       | `packages/auth/src/component/identity.ts` — TOTP and backup codes                                 |
-| `oauth-provider`   | `packages/auth/src/mcp.ts` and `agent-auth-protocol/` — MCP and agent auth flows                  |
-| `webhooks`         | `packages/auth/src/component/webhooks.ts` — webhook fan-out and security                          |
-| Authentication     | `convex-auth` native email/password, OAuth, session minting, JWT/JWKS, and password reset actions |
+| `@convex-dev/better-auth` guide | `convex-auth` status                                             |
+| ------------------------------- | ---------------------------------------------------------------- |
+| React (Vite SPA)                | [`convex-auth-react`](../frameworks/client)                      |
+| Expo (React Native)             | [`convex-auth-react-native`](../frameworks/react-native)         |
+| TanStack Start                  | Not yet supported. Use `convex-auth-react` in non-SSR mode.      |
+| Next.js                         | Not yet supported. Use `convex-auth-react` in client components. |
+| SvelteKit                       | Not yet supported.                                               |
 
-The data that used to live in Better Auth's adapter tables is now stored directly in the `convexAuth` component tables (`users`, `auth_identities`, `authAccounts`, `authSessions`, etc.).
+## Better Auth plugin parity
+
+| Better Auth plugin | `convex-auth` replacement                                                                                                         | Status        |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `organization`     | `convex-auth` organizations component (`organizations`, `organization_members`, `organization_invitations`, `organization_roles`) | Supported     |
+| `admin`            | `convex-auth` scopes + service principals + RBAC helpers                                                                          | Supported     |
+| `api-key`          | `convex-auth` API keys component (`api_keys`, `service_principals`)                                                               | Supported     |
+| `two-factor`       | `convex-auth` TOTP + backup codes in `auth_identities`                                                                            | Supported     |
+| `oauth`            | Built-in Google, GitHub, Discord providers + HTTP actions                                                                         | Supported     |
+| `webhooks`         | `convex-auth` webhooks component (`webhook_endpoints`, `webhook_deliveries`)                                                      | Supported     |
+| `email-otp`        | Native email OTP actions (`sendVerificationOtp`, `verifyEmailOtp`)                                                                | Supported     |
+| `magic-link`       | Native magic-link HTTP routes and actions                                                                                         | Supported     |
+| `anonymous`        | No direct replacement. Use `convexAuth` session actions + a guest-identity pattern.                                               | Not supported |
+| `generic-oauth`    | Built-in providers or custom OAuth metadata. No generic `oauth2` plugin.                                                          | Partial       |
+| `jwt`              | Convex native JWT sessions + JWKS endpoint                                                                                        | Equivalent    |
+| `one-tap`          | Not implemented.                                                                                                                  | Not supported |
+| `phone-number`     | Not implemented. Use `convex-auth` OTP with a custom `PhoneOtpSender` as a stopgap.                                               | Not supported |
+| `username`         | Not implemented.                                                                                                                  | Not supported |
+| `sso`              | Not supported by `convex-auth`. SSO via OIDC/SAML is out of scope.                                                                | Not supported |
 
 ## Migration terminology
 
@@ -38,6 +54,43 @@ The data that used to live in Better Auth's adapter tables is now stored directl
 | `jwt`            | `JWT_PRIVATE_KEY` / `JWKS` env     | Convex signs and verifies tokens with `crypto.subtle` and `jose`.                                  |
 | `oauth`          | Provider metadata + HTTP actions   | Google, GitHub, and Discord are built in; provider metadata is pure data, not a runtime framework. |
 
+## Common client-side rewrites
+
+### Sign in
+
+```tsx
+// Better Auth
+await authClient.signIn.email({ email, password });
+
+// convex-auth
+import { useAuthActions } from "convex-auth/react";
+const { signIn } = useAuthActions();
+await signIn.email({ email, password });
+```
+
+### OAuth
+
+```tsx
+// Better Auth
+await authClient.signIn.social({ provider: "google", callbackURL: "/" });
+
+// convex-auth
+const { signInWithRedirect } = useAuthActions();
+await signInWithRedirect({ provider: "google", callbackURL: window.location.href });
+```
+
+### Get current user
+
+```tsx
+// Better Auth
+import { useSession } from "better-auth/react";
+const { data: session } = useSession();
+
+// convex-auth
+import { useUser } from "convex-auth/react";
+const user = useUser();
+```
+
 ## What happens to the bridge packages after migration
 
-Once the one-time migration finishes and the consumer cuts over to the native runtime, `convex-better-auth` and `convex-better-auth-adapter` are removed from `package.json`. They should not be used for new features or kept as a runtime dependency.
+Once the one-time migration finishes and the consumer cuts over to the native runtime, `better-auth`, `@convex-dev/better-auth`, `convex-better-auth`, and `convex-better-auth-adapter` are removed from `package.json`. They should not be used for new features or kept as a runtime dependency.

@@ -1,74 +1,153 @@
 ---
 title: Migrating from `@convex-dev/better-auth`
-description: "Move from the Convex-dev adapter to this workspace."
+description: "One-time migration from the Convex Better Auth component to the native convex-auth runtime."
 ---
 
 # Migrating from `@convex-dev/better-auth`
 
-If you were using `@convex-dev/better-auth`, the move to this workspace is mostly a package-name change. The runtime semantics are the same; the adapter was vendored to keep it on the Better Auth 1.7 line and in the same repo as the higher-level Convex primitives.
+`convex-auth` is a fully native Convex auth runtime. It does not import or depend on `better-auth` at runtime. Better Auth is used only once — as a data bridge during migration.
 
-## 1. Install the new package
+The migration is intentionally a single step. After it finishes, consumers remove the Better Auth dependencies.
+
+## Before you start
+
+Read the [Better Auth to `convex-auth` mapping](../from-better-auth/better-auth-to-convex) so the terminology differences are clear:
+
+- `user` → `users`
+- `account` → `auth_identities` + `authAccounts`
+- `session` → `authSessions`
+- `organization` → `organizations` / `organization_members`
+- `apiKey` → `api_keys` + `service_principals`
+- `jwt` → Convex `JWT_PRIVATE_KEY` / JWKS
+
+## 1. Install the native packages
 
 ```bash
-pnpm remove @convex-dev/better-auth
-pnpm add convex-better-auth-adapter
+pnpm add convex-auth convex-auth-react
+pnpm remove @convex-dev/better-auth better-auth
 ```
 
-## 2. Update imports
+Keep the legacy packages around only for the one-time migration if you have live user data to move.
 
-Replace any imports from `@convex-dev/better-auth` with the same path under `convex-better-auth-adapter`:
+## 2. Configure `convex-auth`
+
+`convex/convex.config.ts`
 
 ```ts
-// Before
-import { convexClient } from "@convex-dev/better-auth/client/plugins";
+import { defineApp } from "convex/server";
+import convexAuth from "convex-auth/convex.config";
 
-// After
-import { convexClient } from "convex-better-auth-adapter/client/plugins";
+const app = defineApp();
+app.use(convexAuth);
+
+export default app;
 ```
 
-React / React Native provider imports also move:
+`convex/auth.ts`
+
+```ts
+import { convexAuth } from "convex-auth/convex";
+import { components } from "./_generated/api";
+
+export const { auth, emailAndPassword, oauth } = convexAuth(components.convexAuth, {
+  emailAndPassword: { enabled: true },
+  oauth: { enabled: true },
+});
+```
+
+`convex/http.ts`
+
+```ts
+import { httpRouter } from "convex/server";
+import { addNativeAuthHttpRoutes } from "convex-auth/convex";
+
+const http = httpRouter();
+addNativeAuthHttpRoutes(http, { auth });
+export default http;
+```
+
+`src/main.tsx`
 
 ```tsx
-// Before
-import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+import { ConvexReactClient, ConvexProvider } from "convex/react";
+import { ConvexAuthClientProvider } from "convex-auth/react";
+import { api } from "../convex/_generated/api";
 
-// After
-import { ConvexBetterAuthProvider } from "convex-better-auth-adapter/react";
-```
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
 
-## 3. Bump Better Auth to 1.7.x
-
-Update your `package.json` to require `better-auth` in the `>=1.7.1 <1.8.0` range:
-
-```json
-{
-  "dependencies": {
-    "better-auth": "^1.7.2"
-  }
+function Root() {
+  return (
+    <ConvexProvider client={convex}>
+      <ConvexAuthClientProvider actions={api.auth}>
+        <App />
+      </ConvexAuthClientProvider>
+    </ConvexProvider>
+  );
 }
 ```
 
-The adapter is not compatible with Better Auth 1.6.x or earlier.
+## 3. Run the one-time migration CLI
 
-## 4. Account issuer migration
+The migration CLI copies data from the Better Auth Convex component tables into the `convexAuth` component tables.
 
-Better Auth 1.7 changed how the `account` table stores the provider issuer. The adapter includes a backfill path for existing data, but you should read the migration notes in the upstream PR that landed this work:
+Dry run first:
 
-- [`get-convex/better-auth#430`](https://github.com/get-convex/better-auth/pull/430)
+```bash
+pnpm dlx convex-auth migrate better-auth --dry-run \
+  --from-component betterAuth \
+  --auth-component convexAuth
+```
 
-If you are starting a new project, no migration is needed — the 1.7 schema is used from the beginning.
+If the dry run looks right, run the cutover:
 
-## 5. React Native / Expo storage
+```bash
+pnpm dlx convex-auth migrate better-auth --cutover \
+  --from-component betterAuth \
+  --auth-component convexAuth
+```
 
-If you use the Expo client, `convex-auth-react-native` now wires the `expoClient` storage with both sync and async `SecureStore` methods. You should still pass a `SecureStore`-compatible object as `storage`, but the package no longer needs a custom sync-only wrapper.
+`--cutover` rewrites `convex/convex.config.ts` and `convex/http.ts` to the native runtime and removes the legacy packages from `package.json`.
 
-## 6. Update your `convex` version
+If the migration is interrupted, resume with:
 
-The rest of the workspace currently requires `convex >=1.39.0`. Make sure your app is on at least that version.
+```bash
+pnpm dlx convex-auth migrate better-auth --resume
+```
 
-## 7. Run the full local proof
+## 4. Remove Better Auth dependencies
 
-After the rename and bump, run:
+After the cutover completes and the app is verified:
+
+```bash
+pnpm remove better-auth @convex-dev/better-auth convex-better-auth convex-better-auth-adapter
+```
+
+## 5. Update client code
+
+Replace Better Auth client calls with `convex-auth` hooks and actions.
+
+```tsx
+// Before
+import { createAuthClient } from "better-auth/react";
+import { convexClient } from "@convex-dev/better-auth/client/plugins";
+
+const authClient = createAuthClient({
+  baseURL: import.meta.env.VITE_CONVEX_SITE_URL,
+  plugins: [convexClient()],
+});
+
+await authClient.signIn.email({ email, password });
+
+// After
+import { useAuthActions } from "convex-auth/react";
+
+const { signIn } = useAuthActions();
+await signIn.email({ email, password });
+```
+
+See the [React client guide](../frameworks/client) and [React Native guide](../frameworks/react-native) for the full API.
+
+## 6. Run the full proof
 
 ```bash
 pnpm install
@@ -77,4 +156,16 @@ pnpm run build
 pnpm run test
 ```
 
-If you were previously on Better Auth 1.6, read the [Better Auth 1.7 release notes](https://www.better-auth.com/changelog) first — there may be auth-options or plugin changes outside the adapter.
+Then run the conformance suite against a live deployment:
+
+```bash
+CONVEX_SITE_URL=https://<your>.convex.site \
+CONVEX_URL=https://<your>.convex.cloud \
+pnpm dlx tsx ./node_modules/convex-auth/conformance/prove-auth-lifecycle.ts
+```
+
+## What is not migrated
+
+- **Plugins that are not natively implemented** must be re-implemented against `convex-auth` actions. See [plugin parity](../from-better-auth/better-auth-to-convex).
+- **Frameworks without a guide** (Next.js, TanStack Start, SvelteKit) are not yet supported by `convex-auth`. Use the React client as a stopgap in non-SSR mode, or wait for the framework-specific package.
+- **Local install / schema customizations** from `@convex-dev/better-auth` do not carry over. The native schema is fixed per `convex-auth` version.
