@@ -5,6 +5,7 @@ export default defineMeta({
   pages: [
     "index",
     "getting-started",
+    "frameworks",
     "authentication",
     "advanced",
     "tooling",
