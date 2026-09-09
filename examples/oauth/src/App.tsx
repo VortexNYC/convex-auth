@@ -1,5 +1,54 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { useAuthActions, useSession, useUser } from "convex-auth/react";
+import { api } from "../convex/_generated/api";
+
+type SessionDoc = {
+  sessionId: string;
+  createdAt: number;
+  updatedAt: number;
+  expiresAt: number;
+};
+
+function SessionsSection() {
+  const sessions = useQuery(api.sessions.list) as SessionDoc[] | undefined;
+  const revoke = useMutation(api.sessions.revoke);
+  const [status, setStatus] = useState<string | null>(null);
+
+  const onRevoke = async (sessionId: string) => {
+    setStatus(null);
+    try {
+      await revoke({ sessionId });
+      setStatus("Session revoked.");
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Failed to revoke.");
+    }
+  };
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <h2>Active sessions</h2>
+      {!sessions ? (
+        <p>Loading sessions…</p>
+      ) : sessions.length === 0 ? (
+        <p>No active sessions.</p>
+      ) : (
+        <ul style={{ listStyle: "none", paddingLeft: 0, fontFamily: "monospace", fontSize: 12 }}>
+          {sessions.map((s) => (
+            <li key={s.sessionId} style={{ marginBottom: 8 }}>
+              <div>{s.sessionId}</div>
+              <div style={{ color: "#666" }}>
+                Created {new Date(s.createdAt).toLocaleString()} · Expires {new Date(s.expiresAt).toLocaleString()}
+              </div>
+              <button onClick={() => void onRevoke(s.sessionId)}>Revoke</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {status ? <p style={{ color: "#666" }}>{status}</p> : null}
+    </div>
+  );
+}
 
 function TwoFactorSection() {
   const { twoFactor } = useAuthActions();
@@ -226,6 +275,7 @@ function SignedInView() {
           <button onClick={() => signOut()}>Sign out</button>
         </div>
       </div>
+      <SessionsSection />
       <TwoFactorSection />
       {status ? <p style={{ color: "#666" }}>{status}</p> : null}
     </div>
