@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexReactClient, ConvexProvider } from "convex/react";
-import { ExpoConvexAuthProvider } from "convex-auth/react-native";
+import { ExpoConvexAuthClientProvider } from "convex-auth/react-native";
 import { api } from "../convex/_generated/api";
 import App from "./App";
 
@@ -21,14 +21,18 @@ const storage = {
     if (typeof window === "undefined") return;
     localStorage.setItem(key, value);
   },
+  deleteItem: (key: string) => {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem(key);
+  },
 };
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ConvexProvider client={convex}>
-      <ExpoConvexAuthProvider actions={api.auth} storage={storage}>
+      <ExpoConvexAuthClientProvider actions={api.auth} storage={storage}>
         <App />
-      </ExpoConvexAuthProvider>
+      </ExpoConvexAuthClientProvider>
     </ConvexProvider>
   </StrictMode>,
 );
