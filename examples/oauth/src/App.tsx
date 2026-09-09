@@ -1,6 +1,63 @@
 import { useState } from "react";
 import { useAuthActions, useSession, useUser } from "convex-auth/react";
 
+function EmailPasswordForm() {
+  const { signIn, signUp } = useAuthActions();
+  const [mode, setMode] = useState<"in" | "up">("in");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus(null);
+    try {
+      if (mode === "in") {
+        await signIn({ email, password });
+      } else {
+        await signUp({ email, password, name });
+      }
+      setStatus("Success — reload if not automatic.");
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Auth failed");
+    }
+  };
+
+  return (
+    <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 8, width: 260 }}>
+      {mode === "up" ? (
+        <input
+          type="text"
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+      ) : null}
+      <input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
+      <button type="submit">{mode === "in" ? "Sign in" : "Sign up"}</button>
+      <button type="button" onClick={() => setMode(mode === "in" ? "up" : "in")}>
+        {mode === "in" ? "Create account" : "Already have an account?"}
+      </button>
+      {status ? <p style={{ color: "#666" }}>{status}</p> : null}
+    </form>
+  );
+}
+
 function SignInView() {
   const { signInWithRedirect } = useAuthActions();
 
@@ -22,6 +79,8 @@ function SignInView() {
         <button onClick={() => startOAuth("github")}>Sign in with GitHub</button>
         <button onClick={() => startOAuth("discord")}>Sign in with Discord</button>
       </div>
+      <div style={{ width: "100%", height: 1, background: "#ccc" }} />
+      <EmailPasswordForm />
     </div>
   );
 }
