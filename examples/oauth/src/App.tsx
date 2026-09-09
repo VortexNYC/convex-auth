@@ -10,6 +10,105 @@ type SessionDoc = {
   expiresAt: number;
 };
 
+type OrganizationDoc = {
+  _id: string;
+  name: string;
+  slug: string;
+  status: string;
+};
+
+function OrganizationsSection() {
+  const organizations = useQuery(api.organizations.list) as OrganizationDoc[] | undefined;
+  const create = useMutation(api.organizations.create);
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus(null);
+    try {
+      await create({ name, slug });
+      setName("");
+      setSlug("");
+      setStatus("Organization created.");
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Failed to create organization");
+    }
+  };
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <h2>Organizations</h2>
+      <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 8, width: 260, margin: "0 auto" }}>
+        <input
+          type="text"
+          placeholder="Organization name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+        <input
+          type="text"
+          placeholder="Slug"
+          value={slug}
+          onChange={(e) => setSlug(e.target.value)}
+          required
+        />
+        <button type="submit">Create organization</button>
+      </form>
+      {!organizations ? (
+        <p>Loading organizations…</p>
+      ) : organizations.length === 0 ? (
+        <p>No organizations yet.</p>
+      ) : (
+        <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+          {organizations.map((org) => (
+            <li key={org._id}>
+              <strong>{org.name}</strong> ({org.slug}) — {org.status}
+            </li>
+          ))}
+        </ul>
+      )}
+      {status ? <p style={{ color: "#666" }}>{status}</p> : null}
+    </div>
+  );
+}
+
+function ProfileEditSection() {
+  const user = useUser();
+  const { updateUser } = useAuthActions();
+  const [name, setName] = useState(user?.name ?? "");
+  const [status, setStatus] = useState<string | null>(null);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus(null);
+    try {
+      await updateUser({ name });
+      setStatus("Profile updated.");
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Update failed");
+    }
+  };
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <h2>Edit profile</h2>
+      <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 8, width: 260, margin: "0 auto" }}>
+        <input
+          type="text"
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <button type="submit">Update name</button>
+      </form>
+      {status ? <p style={{ color: "#666" }}>{status}</p> : null}
+    </div>
+  );
+}
+
 function SessionsSection() {
   const sessions = useQuery(api.sessions.list) as SessionDoc[] | undefined;
   const revoke = useMutation(api.sessions.revoke);
@@ -275,8 +374,10 @@ function SignedInView() {
           <button onClick={() => signOut()}>Sign out</button>
         </div>
       </div>
+      <ProfileEditSection />
       <SessionsSection />
       <TwoFactorSection />
+      <OrganizationsSection />
       {status ? <p style={{ color: "#666" }}>{status}</p> : null}
     </div>
   );

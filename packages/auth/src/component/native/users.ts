@@ -60,6 +60,28 @@ export const setTwoFactor = mutation({
   },
 });
 
+export const updateUser = mutation({
+  args: {
+    userId: v.id("users"),
+    name: v.optional(v.string()),
+    image: v.optional(v.string()),
+    metadataJson: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const patch: {
+      name?: string;
+      image?: string;
+      metadataJson?: string;
+      updatedAt: number;
+    } = { updatedAt: now };
+    if (args.name !== undefined) patch.name = args.name;
+    if (args.image !== undefined) patch.image = args.image;
+    if (args.metadataJson !== undefined) patch.metadataJson = args.metadataJson;
+    await ctx.db.patch(args.userId, patch);
+  },
+});
+
 export const consumeBackupCode = mutation({
   args: {
     userId: v.id("users"),

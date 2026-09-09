@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as organizations from "../organizations.js";
 import type * as sessions from "../sessions.js";
 
 import type {
@@ -21,6 +22,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
+  organizations: typeof organizations;
   sessions: typeof sessions;
 }>;
 
@@ -52,5 +54,6 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   convexAuth: import("convex-auth/_generated/component.js").ComponentApi<"convexAuth">;
+  convexAuthOrganizations: import("convex-auth/_generated/component.js").ComponentApi<"convexAuthOrganizations">;
   staticHosting: import("@convex-dev/static-hosting/_generated/component.js").ComponentApi<"staticHosting">;
 };

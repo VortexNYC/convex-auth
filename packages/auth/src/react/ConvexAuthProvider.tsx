@@ -183,6 +183,15 @@ export type NativeAuthChangeEmailArgs = {
   callbackURL?: string;
 };
 
+export type NativeAuthUpdateUserArgs = {
+  token: string;
+  name?: string;
+  image?: string;
+  metadataJson?: string;
+};
+
+export type NativeAuthUpdateUserResult = { success: true } | { success: false; error: string };
+
 export type NativeAuthTwoFactorEnableArgs = {
   token: string;
   password: string;
@@ -336,6 +345,12 @@ export type NativeAuthActions = {
     "public",
     NativeAuthVerifyEmailOtpArgs,
     NativeAuthVerifyEmailOtpResult
+  >;
+  updateUser?: FunctionReference<
+    "action",
+    "public",
+    NativeAuthUpdateUserArgs,
+    NativeAuthUpdateUserResult
   >;
   twoFactorEnable?: FunctionReference<
     "action",
@@ -552,6 +567,7 @@ export function useAuthActions() {
   const sendPasswordResetAction = useAction(ctx.sendPasswordReset);
   const resetPasswordAction = useAction(ctx.resetPassword);
   const verifyPasswordAction = useAction(ctx.verifyPassword);
+  const updateUserAction = ctx.updateUser ? useAction(ctx.updateUser) : null;
   const twoFactorEnableAction = ctx.twoFactorEnable ? useAction(ctx.twoFactorEnable) : null;
   const twoFactorVerifyTOTPAction = ctx.twoFactorVerifyTOTP
     ? useAction(ctx.twoFactorVerifyTOTP)
@@ -825,6 +841,24 @@ export function useAuthActions() {
     [verifyPasswordAction],
   );
 
+  const updateUser = useCallback(
+    async (args: { name?: string; image?: string; metadataJson?: string }) => {
+      if (ctx.token === null) {
+        throw new Error("Session required to update user");
+      }
+      if (updateUserAction === null) {
+        throw new Error("updateUser is not configured");
+      }
+      setIsLoading(true);
+      try {
+        return await updateUserAction({ ...args, token: ctx.token });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [ctx, updateUserAction],
+  );
+
   const twoFactor = useMemo(() => {
     const notAvailable = async () => {
       throw new Error("Two-factor authentication is not configured");
@@ -901,6 +935,7 @@ export function useAuthActions() {
     verifyEmailOtp,
     signOut,
     updateSession,
+    updateUser,
     twoFactor,
     sendEmailVerification,
     verifyEmail,

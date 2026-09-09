@@ -1306,6 +1306,27 @@ export function nativeEmailAndPassword(
     };
   }
 
+  const updateUser = action({
+    args: {
+      token: v.string(),
+      name: v.optional(v.string()),
+      image: v.optional(v.string()),
+      metadataJson: v.optional(v.string()),
+    },
+    returns: v.object({ success: v.optional(v.boolean()), error: v.optional(v.string()) }),
+    handler: async (ctx, args) => {
+      const resolved = await resolveSessionUser(ctx, args.token);
+      if (!resolved) return { error: "unauthorized" };
+      await ctx.runMutation(component.native.users.updateUser, {
+        userId: resolved.userId,
+        name: args.name,
+        image: args.image,
+        metadataJson: args.metadataJson,
+      });
+      return { success: true };
+    },
+  });
+
   return {
     signUp,
     signIn,
@@ -1316,6 +1337,7 @@ export function nativeEmailAndPassword(
     sendPasswordReset,
     resetPassword,
     verifyPassword,
+    updateUser,
     twoFactorEnable,
     twoFactorVerifyTOTP,
     twoFactorVerifyBackupCode,
