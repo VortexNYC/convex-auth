@@ -46,6 +46,8 @@ export function AuthView() {
     }
     if (result.data?.url) {
       window.location.href = result.data.url;
+    } else {
+      setStatus("OAuth sign-in failed: no redirect URL");
     }
   };
 
@@ -117,7 +119,7 @@ export function AuthView() {
       <div className="w-full max-w-md space-y-4">
         {mode === "verifyTwoFactor" ? (
           <>
-            <ConvexVerifyTwoFactorForm onVerified={handleVerified} />
+            <ConvexVerifyTwoFactorForm authClient={authClient} onVerified={handleVerified} />
             <div className="text-center">{footerLink("Back to sign in", "signIn")}</div>
           </>
         ) : mode === "forgot" ? (
