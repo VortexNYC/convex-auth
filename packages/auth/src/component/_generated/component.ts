@@ -544,6 +544,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "mutation",
         "internal",
         {
+          allowedIpRanges?: Array<string> | null;
           environment: "sandbox" | "production";
           expiresAt?: number;
           keyBrand?: string;
@@ -572,6 +573,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "mutation",
         "internal",
         {
+          allowedIpRanges?: Array<string> | null;
           environment: "sandbox" | "production";
           expiresAt?: number;
           keyBrand?: string;

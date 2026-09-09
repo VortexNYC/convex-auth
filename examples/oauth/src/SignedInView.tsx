@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import {
+  ConvexApiKeyCreateForm,
+  ConvexApiKeyList,
   ConvexCreateOrganization,
   ConvexEnableTwoFactorForm,
   ConvexOrganizationList,
   ConvexSessionList,
   ConvexUserProfile,
   ConvexVerifyEmailScreen,
+  getConvexApiKeyExpiresAt,
+  parseConvexApiKeyAllowedIpRanges,
   useAuthActions,
   useConvexAuthClient,
 } from "convex-auth/react";
@@ -33,6 +37,7 @@ export function SignedInView() {
   const authClient = useConvexAuthClient();
   const [activeTab, setActiveTab] = useState("profile");
   const [message, setMessage] = useState<string | null>(null);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
 
   const user = actions.user;
   const token = actions.token;
@@ -82,6 +87,7 @@ export function SignedInView() {
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="organizations">Organizations</TabsTrigger>
+            <TabsTrigger value="apiKeys">API keys</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
@@ -114,7 +120,20 @@ export function SignedInView() {
           </TabsContent>
 
           <TabsContent value="organizations" className="space-y-4">
-            <OrganizationPanel userId={user.id} onMessage={setMessage} />
+            <OrganizationPanel
+              userId={user.id}
+              onMessage={setMessage}
+              selectedOrganizationId={selectedOrganizationId}
+              onSelectOrganization={setSelectedOrganizationId}
+            />
+          </TabsContent>
+
+          <TabsContent value="apiKeys" className="space-y-4">
+            <ApiKeysPanel
+              userId={user.id}
+              organizationId={selectedOrganizationId}
+              onMessage={setMessage}
+            />
           </TabsContent>
         </Tabs>
       </div>
@@ -285,9 +304,13 @@ function RegenerateBackupCodesPanel({ onMessage }: { onMessage: (msg: string) =>
 function OrganizationPanel({
   userId,
   onMessage,
+  selectedOrganizationId,
+  onSelectOrganization,
 }: {
   userId: string;
   onMessage: (msg: string) => void;
+  selectedOrganizationId: string | null;
+  onSelectOrganization: (organizationId: string) => void;
 }) {
   const organizations = useQuery(api.organizations.list, { userId });
   const create = useMutation(api.organizations.create);
@@ -303,8 +326,9 @@ function OrganizationPanel({
     <div className="space-y-4">
       <ConvexOrganizationList
         organizations={orgList ?? []}
+        currentOrganizationId={selectedOrganizationId}
         isLoading={organizations === undefined}
-        onSelectOrganization={() => {}}
+        onSelectOrganization={onSelectOrganization}
         onCreateOrganization={() => setShowCreate(true)}
       />
       {showCreate ? (
@@ -321,6 +345,150 @@ function OrganizationPanel({
           onCancel={() => setShowCreate(false)}
         />
       ) : null}
+    </div>
+  );
+}
+
+const DEMO_API_KEY_SCOPES = ["data:read", "data:write"] as const;
+
+function ApiKeysPanel({
+  userId,
+  organizationId,
+  onMessage,
+}: {
+  userId: string;
+  organizationId: string | null;
+  onMessage: (msg: string) => void;
+}) {
+  const apiKeys = useQuery(
+    api.apiKeys.list,
+    organizationId ? { organizationId } : "skip",
+  );
+  const create = useMutation(api.apiKeys.create);
+  const revoke = useMutation(api.apiKeys.revoke);
+  const rotate = useMutation(api.apiKeys.rotate);
+  const [creating, setCreating] = useState(false);
+  const [newKey, setNewKey] = useState<string | null>(null);
+  const [state, setState] = useState({
+    name: "",
+    scopes: [] as string[],
+    ipAllowlist: "",
+    expiresInDays: "none",
+  });
+
+  if (organizationId === null) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">API keys</CardTitle>
+          <CardDescription>
+            Select an organization in the Organizations tab to manage API keys.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  const listItems = apiKeys?.map((key) => ({
+    _id: key._id,
+    name: key.name,
+    keyPrefix: key.keyPrefix,
+    scopes: key.scopes,
+    allowedIpRanges: key.allowedIpRanges ?? [],
+    status: key.status,
+    expiresAt: key.expiresAt,
+    lastUsedAt: key.lastUsedAt,
+    lastUsedIp: key.lastUsedIp,
+    createdAt: key.createdAt,
+    updatedAt: key.updatedAt,
+    createdBy: null,
+  }));
+
+  const handleCreate = async () => {
+    setCreating(true);
+    setNewKey(null);
+    try {
+      const result = await create({
+        organizationId,
+        userId,
+        name: state.name,
+        scopes: state.scopes,
+        allowedIpRanges: parseConvexApiKeyAllowedIpRanges(state.ipAllowlist),
+        expiresAt: getConvexApiKeyExpiresAt(state.expiresInDays),
+      });
+
+      setNewKey(result.apiKey);
+      onMessage("API key created. Save it now — it will not be shown again.");
+      setState({ name: "", scopes: [], ipAllowlist: "", expiresInDays: "none" });
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : "Could not create API key");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleRevoke = async (apiKeyId: string) => {
+    try {
+      await revoke({ apiKeyId, organizationId });
+      onMessage("API key revoked.");
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : "Could not revoke API key");
+    }
+  };
+
+  const handleRotate = async (apiKeyId: string) => {
+    setNewKey(null);
+    try {
+      const result = await rotate({ apiKeyId, organizationId, userId });
+      setNewKey(result.apiKey);
+      onMessage("API key rotated. Save the new key — it will not be shown again.");
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : "Could not rotate API key");
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Create API key</CardTitle>
+          <CardDescription>
+            Issue a key for the selected organization.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ConvexApiKeyCreateForm
+            apiEnabled={true}
+            creating={creating}
+            scopeOptions={DEMO_API_KEY_SCOPES}
+            state={state}
+            onNameChange={(name) => setState((s) => ({ ...s, name }))}
+            onScopesChange={(scopes) => setState((s) => ({ ...s, scopes }))}
+            onIpAllowlistChange={(ipAllowlist) => setState((s) => ({ ...s, ipAllowlist }))}
+            onExpiresInDaysChange={(expiresInDays) => setState((s) => ({ ...s, expiresInDays }))}
+            onSubmit={handleCreate}
+          />
+          {newKey ? (
+            <div className="bg-muted mt-4 rounded p-2 break-all font-mono text-xs" role="status">
+              {newKey}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Active API keys</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ConvexApiKeyList
+            apiKeys={listItems}
+            copy={{ emptyMessage: "No API keys for this organization." }}
+            onRevoke={handleRevoke}
+            onRotate={handleRotate}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
