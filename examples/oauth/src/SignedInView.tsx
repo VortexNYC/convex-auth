@@ -9,6 +9,9 @@ import {
   ConvexSessionList,
   ConvexUserProfile,
   ConvexVerifyEmailScreen,
+  ConvexWebhookCreateForm,
+  ConvexWebhookDeliveryList,
+  ConvexWebhookEndpointList,
   getConvexApiKeyExpiresAt,
   parseConvexApiKeyAllowedIpRanges,
   useAuthActions,
@@ -88,6 +91,7 @@ export function SignedInView() {
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="organizations">Organizations</TabsTrigger>
             <TabsTrigger value="apiKeys">API keys</TabsTrigger>
+            <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
@@ -134,6 +138,10 @@ export function SignedInView() {
               organizationId={selectedOrganizationId}
               onMessage={setMessage}
             />
+          </TabsContent>
+
+          <TabsContent value="webhooks" className="space-y-4">
+            <WebhooksPanel userId={user.id} organizationId={selectedOrganizationId} />
           </TabsContent>
         </Tabs>
       </div>
@@ -350,6 +358,7 @@ function OrganizationPanel({
 }
 
 const DEMO_API_KEY_SCOPES = ["data:read", "data:write"] as const;
+const DEMO_WEBHOOK_EVENTS = ["user.created", "user.updated", "test.event"] as const;
 
 function ApiKeysPanel({
   userId,
@@ -360,10 +369,7 @@ function ApiKeysPanel({
   organizationId: string | null;
   onMessage: (msg: string) => void;
 }) {
-  const apiKeys = useQuery(
-    api.apiKeys.list,
-    organizationId ? { organizationId } : "skip",
-  );
+  const apiKeys = useQuery(api.apiKeys.list, organizationId ? { organizationId } : "skip");
   const create = useMutation(api.apiKeys.create);
   const revoke = useMutation(api.apiKeys.revoke);
   const rotate = useMutation(api.apiKeys.rotate);
@@ -452,9 +458,7 @@ function ApiKeysPanel({
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Create API key</CardTitle>
-          <CardDescription>
-            Issue a key for the selected organization.
-          </CardDescription>
+          <CardDescription>Issue a key for the selected organization.</CardDescription>
         </CardHeader>
         <CardContent>
           <ConvexApiKeyCreateForm
@@ -486,6 +490,176 @@ function ApiKeysPanel({
             copy={{ emptyMessage: "No API keys for this organization." }}
             onRevoke={handleRevoke}
             onRotate={handleRotate}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function WebhooksPanel({
+  userId,
+  organizationId,
+}: {
+  userId: string;
+  organizationId: string | null;
+}) {
+  const [form, setForm] = useState({ url: "", description: "", events: [] as string[] });
+  const [creating, setCreating] = useState(false);
+  const [secret, setSecret] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [sendingTestEndpointId, setSendingTestEndpointId] = useState<string | null>(null);
+
+  const endpointsArgs = organizationId ? { organizationId } : ("skip" as const);
+  const deliveriesArgs = organizationId ? { organizationId } : ("skip" as const);
+
+  const endpoints = useQuery(api.webhooks.listEndpoints, endpointsArgs);
+  const deliveries = useQuery(api.webhooks.listRecentDeliveries, deliveriesArgs);
+
+  const createEndpointMutation = useMutation(api.webhooks.createEndpoint);
+  const updateEndpointMutation = useMutation(api.webhooks.updateEndpoint);
+  const archiveEndpointMutation = useMutation(api.webhooks.archiveEndpoint);
+  const disableEndpointMutation = useMutation(api.webhooks.disableEndpoint);
+  const removeEndpointMutation = useMutation(api.webhooks.removeEndpoint);
+  const rotateEndpointSecretMutation = useMutation(api.webhooks.rotateEndpointSecret);
+  const sendTestMutation = useMutation(api.webhooks.sendTest);
+
+  if (organizationId === null) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Webhooks</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-sm">
+            Select an organization in the Organizations tab to manage webhooks.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const handleCreate = async () => {
+    setCreating(true);
+    setSecret(null);
+    setStatusMessage(null);
+    try {
+      const result = await createEndpointMutation({
+        organizationId,
+        userId,
+        url: form.url,
+        description: form.description || undefined,
+        events: form.events,
+      });
+      if (
+        typeof result === "object" &&
+        result !== null &&
+        "secret" in result &&
+        typeof result.secret === "string"
+      ) {
+        setSecret(result.secret);
+      }
+      setForm({ url: "", description: "", events: [] });
+    } catch (error) {
+      setStatusMessage(
+        `Could not create webhook endpoint: ${error instanceof Error ? error.message : "unknown error"}`,
+      );
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleSave = async (
+    endpointId: string,
+    values: { url: string; description?: string; events: string[] },
+  ) => {
+    await updateEndpointMutation({
+      organizationId,
+      endpointId,
+      url: values.url,
+      description: values.description,
+      events: values.events,
+    });
+  };
+
+  const handleRotate = async (endpointId: string) => {
+    setSecret(null);
+    setStatusMessage(null);
+    try {
+      const result = await rotateEndpointSecretMutation({ organizationId, endpointId });
+      if (
+        typeof result === "object" &&
+        result !== null &&
+        "secret" in result &&
+        typeof result.secret === "string"
+      ) {
+        setSecret(result.secret);
+      }
+    } catch (error) {
+      setStatusMessage(
+        `Could not rotate secret: ${error instanceof Error ? error.message : "unknown error"}`,
+      );
+    }
+  };
+
+  const handleSendTest = async (endpointId: string) => {
+    setSendingTestEndpointId(endpointId);
+    try {
+      await sendTestMutation({ organizationId, endpointId });
+    } catch (error) {
+      setStatusMessage(
+        `Could not send test event: ${error instanceof Error ? error.message : "unknown error"}`,
+      );
+    } finally {
+      setSendingTestEndpointId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Webhooks</CardTitle>
+          <CardDescription>
+            Create endpoints, rotate secrets, send test events, and view deliveries.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {secret !== null && (
+            <div className="bg-muted rounded p-3 space-y-2" role="status">
+              <p className="text-sm font-medium">Endpoint secret</p>
+              <code className="break-all text-xs">{secret}</code>
+              <p className="text-xs text-muted-foreground">
+                Save it now — it will not be shown again.
+              </p>
+            </div>
+          )}
+          {statusMessage !== null && <p className="text-destructive text-sm">{statusMessage}</p>}
+          <ConvexWebhookCreateForm
+            enabled={true}
+            eventOptions={DEMO_WEBHOOK_EVENTS}
+            creating={creating}
+            state={form}
+            onUrlChange={(url) => setForm((f) => ({ ...f, url }))}
+            onDescriptionChange={(description) => setForm((f) => ({ ...f, description }))}
+            onEventsChange={(events) => setForm((f) => ({ ...f, events }))}
+            onSubmit={handleCreate}
+          />
+          <ConvexWebhookEndpointList
+            copy={{ emptyMessage: "No webhook endpoints configured yet." }}
+            endpoints={endpoints}
+            eventOptions={DEMO_WEBHOOK_EVENTS}
+            sendingTestEndpointId={sendingTestEndpointId}
+            onArchive={(endpointId) => archiveEndpointMutation({ organizationId, endpointId })}
+            onDelete={(endpointId) => removeEndpointMutation({ organizationId, endpointId })}
+            onDisable={(endpointId) => disableEndpointMutation({ organizationId, endpointId })}
+            onRotateSecret={handleRotate}
+            onSave={handleSave}
+            onSendTest={handleSendTest}
+          />
+          <ConvexWebhookDeliveryList
+            copy={{ emptyMessage: "No webhook deliveries yet." }}
+            deliveries={deliveries}
           />
         </CardContent>
       </Card>

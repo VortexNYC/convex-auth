@@ -5,10 +5,9 @@ import { v } from "convex/values";
 export const list = query({
   args: { organizationId: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.runQuery(
-      components.convexAuth.apiKeys.listApiKeysByOrganization,
-      { organizationId: args.organizationId },
-    );
+    return await ctx.runQuery(components.convexAuth.apiKeys.listApiKeysByOrganization, {
+      organizationId: args.organizationId,
+    });
   },
 });
 
