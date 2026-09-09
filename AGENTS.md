@@ -43,7 +43,12 @@ See `examples/server/convex/` for a working minimal setup.
 
 ## Branch and PR workflow
 
-- Use `gt` (Graphite) for branch and PR operations. Never raw `git push`.
-- Create branches with `gt create` (or `gt branch`).
-- Submit with `gt submit --publish`.
-- Merge with `gt submit --merge-when-ready` or via the Graphite UI.
+Graphite is retired. Entire does not manage branches or PRs, so use `git` + `gh` (GitHub CLI) directly.
+
+- Track work and sessions with Entire: `entire session`, `entire dispatch`, `entire recap`.
+- Branch from the latest `main` with `git checkout -b <branch>`.
+- For stacked PRs, branch from the parent feature branch and open each PR against that parent: `gh pr create --base <parent-branch>`.
+- Push with `git push -u origin <branch>`.
+- Open PRs with `gh pr create --base <target>`.
+- Merge with `gh pr merge <number>` or from the GitHub UI.
+- After merge, `git checkout main && git pull` and clean up local branches.
