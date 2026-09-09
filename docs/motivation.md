@@ -19,19 +19,18 @@ This project gives you the Clerk/WorkOS feature surface — users, orgs, invites
 
 ## What this repo does about it
 
-`convex-better-auth-2.0` is now a Convex-native auth platform with a one-time Better Auth migration bridge:
+`convex-better-auth-2.0` is now a single public package, `convex-auth`, with a one-time Better Auth migration bridge. Everything ships as subpaths of `convex-auth`:
 
-| Package                      | What it is today                                                                 |
-| ---------------------------- | -------------------------------------------------------------------------------- |
-| `convex-auth`                | Convex-native auth runtime and component. This is what most apps install.        |
-| `convex-auth-react`          | React UI and hooks for the native runtime.                                       |
-| `convex-auth-react-native`   | Expo / React Native client for the native runtime.                               |
-| `convex-auth-core`           | Auth domain core (permissions, roles, scopes).                                   |
-| `convex-auth-ui`             | Base shadcn-style UI primitives.                                                 |
-| `convex-better-auth-adapter` | One-time migration bridge from an existing Better Auth database.                 |
-| `convex-better-auth`         | One-time migration helper for the Better Auth client/runtime during the cutover. |
+| Subpath                    | What it is today                          |
+| -------------------------- | ----------------------------------------- |
+| `convex-auth`              | Convex-native auth runtime and component. |
+| `convex-auth/react`        | React UI and hooks.                       |
+| `convex-auth/react-native` | Expo / React Native client.               |
+| `convex-auth/mcp`          | MCP OAuth helpers.                        |
+| `convex-auth/preflight`    | Deployment readiness checks.              |
+| `convex-auth/testing`      | Test helpers.                             |
 
-Better Auth is no longer a runtime dependency for new projects. New projects use `convex-auth` directly. The `convex-better-auth-*` packages exist only to help existing Better Auth consumers migrate their data and then uninstall.
+Better Auth is no longer a runtime dependency for new projects. New projects use `convex-auth` directly. The migration helper at `packages/auth/scripts/migrate-better-auth.ts` exists only to help existing Better Auth consumers move their data, then remove.
 
 ## Relationship to Convex Auth 2.0
 

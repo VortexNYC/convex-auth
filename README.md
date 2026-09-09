@@ -13,7 +13,7 @@ A public, Convex-native auth platform for [Convex](https://convex.dev), with a [
 [![Node][node-badge]][node]
 [![pnpm][pnpm-badge]][pnpm]
 
-**[Docs](https://gregarious-perch-710.convex.site)** · **[Why this exists](#why-this-exists)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth-recommended)**
+**[Docs](https://<your-site>.convex.site)** · **[Why this exists](#why-this-exists)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth-recommended)**
 
 </div>
 
@@ -21,7 +21,7 @@ A public, Convex-native auth platform for [Convex](https://convex.dev), with a [
 
 ## Status
 
-Public — `convex-auth` is at `1.7.6`, `convex-better-auth-adapter` is at `0.13.5`, and `convex-better-auth` is at `2.0.6`. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, and MCP auth) is passing full conformance. The Better Auth compatibility bridge is stable for one-time migration only.
+Public — `convex-auth` is at `2.0.1` on npm. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, MCP auth, agent auth, and waitlists) is passing full conformance. The Better Auth data migration helper is in `packages/auth/scripts/migrate-better-auth.ts` for one-time use.
 
 ## How we got here
 
@@ -43,17 +43,21 @@ Read the full rationale in [`docs/motivation.md`](docs/motivation.md) and the ma
 
 ## Packages
 
-| Package                      | npm                          | Path                           | Description                                                                                          |
-| ---------------------------- | ---------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| `convex-auth`                | `convex-auth`                | `packages/auth`                | Convex auth component, control plane, and native server integration. This is what most apps install. |
-| `convex-auth-react`          | `convex-auth-react`          | `packages/react`               | React UI and hooks.                                                                                  |
-| `convex-auth-react-native`   | `convex-auth-react-native`   | `packages/react-native`        | Expo / React Native client.                                                                          |
-| `convex-auth-core`           | `convex-auth-core`           | `packages/core`                | Auth domain core (permissions, roles, scopes).                                                       |
-| `convex-auth-ui`             | `convex-auth-ui`             | `packages/ui`                  | Base shadcn-style UI primitives.                                                                     |
-| `convex-better-auth`         | `convex-better-auth`         | `packages/better-auth`         | One-time migration bridge for the Better Auth client/runtime.                                        |
-| `convex-better-auth-adapter` | `convex-better-auth-adapter` | `packages/better-auth-adapter` | One-time data migration from Better Auth tables to `convex-auth`.                                    |
+| Package       | npm           | Path            | Description                                                                                                                  |
+| ------------- | ------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `convex-auth` | `convex-auth` | `packages/auth` | The only public package. Convex-native auth component, control plane, native server integration, React/React Native clients. |
 
-All packages are independently buildable and published under the Apache-2.0 license.
+Subpaths:
+
+- `convex-auth` — server-side auth API and configuration
+- `convex-auth/convex` — Convex native runtime entrypoints
+- `convex-auth/react` — React hooks and providers
+- `convex-auth/react-native` — Expo / React Native client
+- `convex-auth/mcp` — MCP OAuth helpers
+- `convex-auth/preflight` — deployment readiness checks
+- `convex-auth/testing` — test helpers
+
+Published under the Apache-2.0 license.
 
 ## Convex-native auth (recommended)
 
@@ -64,7 +68,7 @@ The native flow is the intended end state of this repository. The Better Auth br
 ### 1. Install
 
 ```bash
-pnpm add convex-auth convex-auth-react convex
+pnpm add convex-auth convex-auth/react convex
 ```
 
 ### 2. Set environment variables
@@ -376,7 +380,7 @@ Apache-2.0 — see `LICENSE`.
 [ci-badge]: https://img.shields.io/github/actions/workflow/status/shlomokabareti/convex-better-auth-2.0/ci.yml?branch=main&style=for-the-badge&label=CI
 [ci]: https://github.com/shlomokabareti/convex-better-auth-2.0/actions/workflows/ci.yml
 [docs-badge]: https://img.shields.io/badge/docs-online-292a44?style=for-the-badge
-[docs]: https://gregarious-perch-710.convex.site
+[docs]: https://<your-site>.convex.site
 [license-badge]: https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=for-the-badge
 [license]: LICENSE
 [status-badge]: https://img.shields.io/badge/status-public-blueviolet.svg?style=for-the-badge

@@ -16,11 +16,11 @@ Register this callback URL in each provider's developer console:
 https://<CONVEX_SITE_URL>/api/auth/callback/<provider>
 ```
 
-For the shared example deployment `fast-gopher-450`:
+For an example deployment `your-deployment`:
 
-- GitHub: `https://fast-gopher-450.convex.site/api/auth/callback/github`
-- Google: `https://fast-gopher-450.convex.site/api/auth/callback/google`
-- Discord: `https://fast-gopher-450.convex.site/api/auth/callback/discord`
+- GitHub: `https://<your-deployment>.convex.site/api/auth/callback/github`
+- Google: `https://<your-deployment>.convex.site/api/auth/callback/google`
+- Discord: `https://<your-deployment>.convex.site/api/auth/callback/discord`
 
 If you run locally without `CONVEX_SITE_URL`, `convex/auth.ts` falls back to `http://localhost:3000`, so the callback path becomes `http://localhost:3000/api/auth/callback/<provider>`.
 
