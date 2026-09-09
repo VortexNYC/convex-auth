@@ -40,7 +40,11 @@
     "entire:blame": "entire blame",
     "entire:experts": "entire experts",
     "entire:tokens": "entire tokens",
-    "entire:tokens:profile": "entire tokens profile"
+    "entire:tokens:profile": "entire tokens profile",
+    "entire:dispatch": "entire dispatch",
+    "entire:recap": "entire recap",
+    "entire:session:tokens": "entire session tokens",
+    "entire:import:claude-code": "entire import claude-code"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.1",
