@@ -1,6 +1,77 @@
 import { useState } from "react";
 import { useAuthActions, useSession, useUser } from "convex-auth/react";
 
+function TwoFactorSection() {
+  const { twoFactor } = useAuthActions();
+  const [status, setStatus] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [totpURI, setTotpURI] = useState<string | null>(null);
+  const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
+
+  const onEnable = async () => {
+    setStatus(null);
+    const result = await twoFactor.enable({ password });
+    if (result.error) {
+      setStatus(result.error);
+      return;
+    }
+    setTotpURI(result.totpURI ?? null);
+    setBackupCodes(result.backupCodes ?? null);
+    setStatus("2FA enabled — scan the TOTP URI and save the backup codes.");
+  };
+
+  const onDisable = async () => {
+    setStatus(null);
+    const result = await twoFactor.disable({ password });
+    if (result.success) {
+      setTotpURI(null);
+      setBackupCodes(null);
+      setStatus("2FA disabled.");
+    } else {
+      setStatus("Failed to disable 2FA.");
+    }
+  };
+
+  const onRegenerate = async () => {
+    setStatus(null);
+    const result = await twoFactor.generateBackupCodes();
+    setBackupCodes(result.backupCodes ?? null);
+    setStatus("Backup codes regenerated.");
+  };
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <h2>Two-factor authentication</h2>
+      <input
+        type="password"
+        placeholder="Current password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        style={{ marginRight: 8 }}
+      />
+      <button onClick={onEnable}>Enable 2FA</button>
+      <button onClick={onDisable}>Disable 2FA</button>
+      <button onClick={onRegenerate}>Regenerate backup codes</button>
+      {totpURI ? (
+        <div style={{ marginTop: 8 }}>
+          <p style={{ maxWidth: 320, wordBreak: "break-all", fontFamily: "monospace", fontSize: 12 }}>
+            {totpURI}
+          </p>
+        </div>
+      ) : null}
+      {backupCodes ? (
+        <div style={{ marginTop: 8 }}>
+          <p>Backup codes:</p>
+          <ul style={{ fontFamily: "monospace", fontSize: 12, paddingLeft: 0, listStyle: "none" }}>
+            {backupCodes.map((c, i) => <li key={i}>{c}</li>)}
+          </ul>
+        </div>
+      ) : null}
+      {status ? <p style={{ color: "#666" }}>{status}</p> : null}
+    </div>
+  );
+}
+
 function EmailPasswordForm() {
   const { signIn, signUp } = useAuthActions();
   const [mode, setMode] = useState<"in" | "up">("in");
@@ -155,6 +226,7 @@ function SignedInView() {
           <button onClick={() => signOut()}>Sign out</button>
         </div>
       </div>
+      <TwoFactorSection />
       {status ? <p style={{ color: "#666" }}>{status}</p> : null}
     </div>
   );
