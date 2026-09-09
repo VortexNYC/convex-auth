@@ -466,6 +466,11 @@ async function readBackendSetup(
         envNames: ["CONVEX_SITE_URL"],
         values: env,
       },
+      {
+        name: "Convex auth signing keys",
+        envNames: ["JWT_PRIVATE_KEY", "JWKS"],
+        values: env,
+      },
     ],
   };
 }

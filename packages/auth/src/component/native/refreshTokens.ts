@@ -143,3 +143,20 @@ export const revokeRefreshTokensForUser = mutation({
     return revoked;
   },
 });
+
+const CLEANUP_BATCH_SIZE = 250;
+
+export const cleanupExpiredRefreshTokens = mutation({
+  args: { batchSize: v.optional(v.number()), before: v.optional(v.number()) },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const now = args.before ?? Date.now();
+    const batchSize = args.batchSize ?? CLEANUP_BATCH_SIZE;
+    const expired = await ctx.db
+      .query("authRefreshTokens")
+      .withIndex("by_expires_at", (q) => q.lt("expiresAt", now))
+      .take(batchSize);
+    await Promise.all(expired.map((token) => ctx.db.delete(token._id)));
+    return expired.length;
+  },
+});
