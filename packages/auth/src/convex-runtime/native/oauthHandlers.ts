@@ -137,7 +137,7 @@ export async function handleSignIn(
 }
 
 function resolveErrorURL(statePayload: OAuthStatePayload): string {
-  return statePayload.errorURL || process.env.SITE_URL || "/";
+  return statePayload.errorURL || statePayload.callbackURL || process.env.SITE_URL || "/";
 }
 
 function resolveCallbackURL(statePayload: OAuthStatePayload, createdUser: boolean): string {
