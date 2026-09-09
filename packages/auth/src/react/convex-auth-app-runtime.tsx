@@ -394,8 +394,6 @@ function createConvexAuthRuntimeScreens(
   return { SignInScreen, SignUpScreen };
 }
 
-type ConvexAuthRuntimeTriggers = ReturnType<typeof createConvexAuthRuntimeTriggers>;
-
 function createConvexAuthRuntimeTriggers(hooks: ConvexAuthRuntimeHooks) {
   function AuthSignInButton(props: { children?: ReactNode; variant?: "primary" | "secondary" }) {
     const { redirectToSignIn } = hooks.useAuthActions();

@@ -551,6 +551,18 @@ export type NativeEmailAndPasswordComponentHandle = {
         { success: boolean },
         string
       >;
+      updateUser: FunctionReference<
+        "mutation",
+        "public" | "internal",
+        {
+          userId: string;
+          name?: string;
+          image?: string;
+          metadataJson?: string;
+        },
+        void,
+        string
+      >;
     };
     codes: {
       createVerificationCode: FunctionReference<

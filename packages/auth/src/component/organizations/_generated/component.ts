@@ -476,6 +476,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         >;
       };
       refreshTokens: {
+        cleanupExpiredRefreshTokens: FunctionReference<
+          "mutation",
+          "internal",
+          { batchSize?: number; before?: number },
+          number,
+          Name
+        >;
         consumeRefreshToken: FunctionReference<
           "mutation",
           "internal",
@@ -538,6 +545,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         >;
       };
       sessions: {
+        cleanupExpiredSessions: FunctionReference<
+          "mutation",
+          "internal",
+          { batchSize?: number; before?: number },
+          number,
+          Name
+        >;
         createSession: FunctionReference<
           "mutation",
           "internal",
@@ -665,6 +679,18 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             twoFactorBackupCodes?: Array<string>;
             twoFactorEnabled: boolean;
             twoFactorSecret?: string;
+            userId: string;
+          },
+          any,
+          Name
+        >;
+        updateUser: FunctionReference<
+          "mutation",
+          "internal",
+          {
+            image?: string;
+            metadataJson?: string;
+            name?: string;
             userId: string;
           },
           any,

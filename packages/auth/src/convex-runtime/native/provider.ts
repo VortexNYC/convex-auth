@@ -952,6 +952,7 @@ export function nativeEmailAndPassword(
       issuer: v.optional(v.string()),
     },
     returns: v.object({
+      token: v.optional(v.string()),
       totpURI: v.optional(v.string()),
       backupCodes: v.optional(v.array(v.string())),
       error: v.optional(v.string()),
@@ -982,7 +983,7 @@ export function nativeEmailAndPassword(
         label,
       });
 
-      return { totpURI, backupCodes: codes };
+      return { token: args.token, totpURI, backupCodes: codes };
     },
   });
 
@@ -1138,9 +1139,13 @@ export function nativeEmailAndPassword(
         twoFactorBackupCodes: user.twoFactorBackupCodes,
       });
 
+      const updatedUser = await ctx.runQuery(component.native.users.getUserById, {
+        userId: sessionResolved.userId,
+      });
+
       return {
         token: null,
-        user: toNativeAuthUser(user),
+        user: toNativeAuthUser(updatedUser ?? user),
         userId: sessionResolved.userId,
         identityId: sessionResolved.payload.identityId as string | undefined,
       };
@@ -1306,6 +1311,94 @@ export function nativeEmailAndPassword(
     };
   }
 
+  const updateUser = action({
+    args: {
+      token: v.string(),
+      name: v.optional(v.string()),
+      image: v.optional(v.string()),
+      metadataJson: v.optional(v.string()),
+    },
+    returns: v.object({ success: v.boolean(), error: v.optional(v.string()) }),
+    handler: async (ctx, args) => {
+      const resolved = await resolveSessionUser(ctx, args.token);
+      if (!resolved) return { success: false, error: "unauthorized" };
+      await ctx.runMutation(component.native.users.updateUser, {
+        userId: resolved.userId,
+        name: args.name,
+        image: args.image,
+        metadataJson: args.metadataJson,
+      });
+      return { success: true };
+    },
+  });
+
+  const listSessions = action({
+    args: { token: v.string() },
+    returns: v.array(
+      v.object({
+        id: v.string(),
+        token: v.string(),
+        userId: v.string(),
+        expiresAt: v.string(),
+        ipAddress: v.optional(v.union(v.string(), v.null())),
+        userAgent: v.optional(v.union(v.string(), v.null())),
+        createdAt: v.string(),
+        updatedAt: v.string(),
+      }),
+    ),
+    handler: async (ctx, args) => {
+      const resolved = await resolveSessionUser(ctx, args.token);
+      if (!resolved) return [];
+      const sessions = await ctx.runQuery(component.native.sessions.listSessionsByUser, {
+        userId: resolved.userId,
+      });
+      const now = Date.now();
+      return sessions
+        .filter((s) => (s.expiresAt ?? 0) >= now && s.revokedAt === undefined)
+        .map((s) => ({
+          id: s.sessionId,
+          token: s.token,
+          userId: s.userId,
+          expiresAt: new Date(s.expiresAt).toISOString(),
+          ipAddress: s.ipAddress ?? null,
+          userAgent: s.userAgent ?? null,
+          createdAt: new Date(s.createdAt).toISOString(),
+          updatedAt: new Date(s.updatedAt).toISOString(),
+        }));
+    },
+  });
+
+  const revokeSession = action({
+    args: { token: v.string() },
+    returns: v.object({ success: v.boolean() }),
+    handler: async (ctx, args) => {
+      const session = await ctx.runQuery(component.native.sessions.getSessionByToken, {
+        token: args.token,
+      });
+      if (!session || session.revokedAt !== undefined) {
+        return { success: true };
+      }
+      await ctx.runMutation(component.native.sessions.revokeSession, {
+        sessionId: session.sessionId,
+      });
+      return { success: true };
+    },
+  });
+
+  const revokeOtherSessions = action({
+    args: { token: v.string() },
+    returns: v.object({ success: v.boolean() }),
+    handler: async (ctx, args) => {
+      const resolved = await resolveSessionUser(ctx, args.token);
+      if (!resolved) return { success: false };
+      await ctx.runMutation(component.native.sessions.revokeSessionsForUser, {
+        userId: resolved.userId,
+        excludeSessionId: resolved.session.sessionId,
+      });
+      return { success: true };
+    },
+  });
+
   return {
     signUp,
     signIn,
@@ -1316,10 +1409,14 @@ export function nativeEmailAndPassword(
     sendPasswordReset,
     resetPassword,
     verifyPassword,
+    updateUser,
     twoFactorEnable,
     twoFactorVerifyTOTP,
     twoFactorVerifyBackupCode,
     twoFactorDisable,
     twoFactorGenerateBackupCodes,
+    listSessions,
+    revokeSession,
+    revokeOtherSessions,
   };
 }

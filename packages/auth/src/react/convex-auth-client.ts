@@ -1,7 +1,7 @@
 import { useRef } from "react";
 
 import { useAuthActions } from "./ConvexAuthProvider";
-import type { ConvexBetterAuthClient } from "./auth-client-types";
+import type { ConvexAuthSessionListItem, ConvexBetterAuthClient } from "./auth-client-types";
 
 function toError(err: unknown): { message: string } {
   return { message: err instanceof Error ? err.message : "Unknown error" };
@@ -41,6 +41,10 @@ export function useConvexAuthClient() {
     isPending: actions.isLoading,
     isRefetching: false,
   };
+
+  const currentToken = () => actions.token;
+
+  const resolveTwoFactorToken = () => twoFactorTokenRef.current ?? actions.token;
 
   return {
     useSession: () => session,
@@ -90,13 +94,61 @@ export function useConvexAuthClient() {
       }),
     },
 
+    updateUser: async (args) => {
+      try {
+        const result = await actions.updateUser(args);
+        if (!result.success) {
+          throw new Error(result.error ?? "Update failed");
+        }
+        return { data: result, error: null };
+      } catch (err) {
+        return { data: null, error: toError(err) };
+      }
+    },
+
+    listSessions: async () => {
+      if (actions.listSessions === undefined) {
+        return { data: null, error: toError("Session listing is not available") };
+      }
+      try {
+        const sessions: ConvexAuthSessionListItem[] = await actions.listSessions();
+        return { data: sessions, error: null };
+      } catch (err) {
+        return { data: null, error: toError(err) };
+      }
+    },
+
+    revokeSession: async (args) => {
+      if (actions.revokeSession === undefined) {
+        return { data: null, error: toError("Revoke is not available") };
+      }
+      try {
+        await actions.revokeSession(args);
+        return { data: { status: true }, error: null };
+      } catch (err) {
+        return { data: null, error: toError(err) };
+      }
+    },
+
+    revokeOtherSessions: async () => {
+      if (actions.revokeOtherSessions === undefined) {
+        return { data: null, error: toError("Revoke is not available") };
+      }
+      try {
+        await actions.revokeOtherSessions();
+        return { data: { status: true }, error: null };
+      } catch (err) {
+        return { data: null, error: toError(err) };
+      }
+    },
+
     forgetPassword: async (args) => {
       try {
-        await actions.sendPasswordReset({
+        const result = await actions.sendPasswordReset({
           email: args.email,
           redirectTo: args.redirectTo,
         });
-        return { data: { status: true }, error: null };
+        return { data: result, error: null };
       } catch (err) {
         return { data: null, error: toError(err) };
       }
@@ -149,11 +201,20 @@ export function useConvexAuthClient() {
 
     twoFactor: {
       enable: async (args) => {
+        const token = currentToken();
+        if (token === null) {
+          return {
+            data: null,
+            error: toError("Session required to enable two-factor authentication"),
+          };
+        }
         try {
           const result = await actions.twoFactor.enable(args);
           if (typeof result.error === "string") {
             return { data: null, error: toError(result.error) };
           }
+          // The enable action returns the session token so verification can proceed.
+          twoFactorTokenRef.current = result.token ?? token;
           return {
             data: {
               totpURI: result.totpURI ?? "",
@@ -166,7 +227,7 @@ export function useConvexAuthClient() {
         }
       },
       verifyTotp: async (args) => {
-        const token = twoFactorTokenRef.current;
+        const token = resolveTwoFactorToken();
         if (token === null) {
           return { data: null, error: toError("No two-factor challenge in progress") };
         }
@@ -185,7 +246,7 @@ export function useConvexAuthClient() {
         }
       },
       verifyBackupCode: async (args) => {
-        const token = twoFactorTokenRef.current;
+        const token = resolveTwoFactorToken();
         if (token === null) {
           return { data: null, error: toError("No two-factor challenge in progress") };
         }
@@ -204,6 +265,13 @@ export function useConvexAuthClient() {
         }
       },
       disable: async (args) => {
+        const token = currentToken();
+        if (token === null) {
+          return {
+            data: null,
+            error: toError("Session required to disable two-factor authentication"),
+          };
+        }
         try {
           const result = await actions.twoFactor.disable(args);
           return { data: { status: result.success }, error: null };
@@ -212,9 +280,15 @@ export function useConvexAuthClient() {
         }
       },
       generateBackupCodes: async (args) => {
-        void args.password;
+        const token = currentToken();
+        if (token === null) {
+          return { data: null, error: toError("Session required to generate backup codes") };
+        }
         try {
-          const result = await actions.twoFactor.generateBackupCodes();
+          const result = await actions.twoFactor.generateBackupCodes(args);
+          if (typeof result.error === "string") {
+            return { data: null, error: toError(result.error) };
+          }
           return { data: { status: true, backupCodes: result.backupCodes }, error: null };
         } catch (err) {
           return { data: null, error: toError(err) };

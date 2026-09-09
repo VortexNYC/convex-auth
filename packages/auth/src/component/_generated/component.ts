@@ -1795,6 +1795,18 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           any,
           Name
         >;
+        updateUser: FunctionReference<
+          "mutation",
+          "internal",
+          {
+            image?: string;
+            metadataJson?: string;
+            name?: string;
+            userId: string;
+          },
+          any,
+          Name
+        >;
       };
       verifiers: {
         consumeVerifier: FunctionReference<

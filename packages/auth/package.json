@@ -14,6 +14,7 @@
   "files": [
     "dist",
     "test.ts",
+    "src/ui/styles.css",
     "src/convex-runtime/native/index.ts",
     "src/convex-runtime/native/http.ts",
     "src/component/convex.config.ts",
@@ -50,6 +51,15 @@
       "types": "./dist/react.d.ts",
       "import": "./dist/react.js",
       "default": "./dist/react.js"
+    },
+    "./ui": {
+      "types": "./dist/ui.d.ts",
+      "import": "./dist/ui.js",
+      "default": "./dist/ui.js"
+    },
+    "./ui/styles.css": {
+      "import": "./src/ui/styles.css",
+      "default": "./src/ui/styles.css"
     },
     "./react-native": {
       "types": "./dist/react-native.d.ts",
