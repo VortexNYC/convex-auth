@@ -34,7 +34,7 @@
     "ci:publish": "pnpm changeset publish"
   },
   "devDependencies": {
-    "@changesets/cli": "3.0.1",
+    "@changesets/cli": "3.0.2",
     "@convex-dev/eslint-plugin": "4.0.0",
     "@types/node": "^26.4.0",
     "vite-plus": "0.2.4"
