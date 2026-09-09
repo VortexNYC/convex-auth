@@ -25,7 +25,10 @@ function EmailPasswordForm() {
   };
 
   return (
-    <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 8, width: 260 }}>
+    <form
+      onSubmit={onSubmit}
+      style={{ display: "flex", flexDirection: "column", gap: 8, width: 260 }}
+    >
       {mode === "up" ? (
         <input
           type="text"
@@ -122,11 +125,22 @@ function SignedInView() {
       <h1>Signed in</h1>
       <div style={{ textAlign: "center" }}>
         <h2>User</h2>
-        <p><strong>ID:</strong> {user?.id ?? "—"}</p>
-        <p><strong>Email:</strong> {user?.email ?? "—"}</p>
-        <p><strong>Name:</strong> {user?.name ?? "—"}</p>
-        <p><strong>Verified:</strong> {user?.emailVerified ? "yes" : "no"}</p>
-        <p><strong>Joined:</strong> {user?.createdAt ? new Date(user.createdAt).toLocaleString() : "—"}</p>
+        <p>
+          <strong>ID:</strong> {user?.id ?? "—"}
+        </p>
+        <p>
+          <strong>Email:</strong> {user?.email ?? "—"}
+        </p>
+        <p>
+          <strong>Name:</strong> {user?.name ?? "—"}
+        </p>
+        <p>
+          <strong>Verified:</strong> {user?.emailVerified ? "yes" : "no"}
+        </p>
+        <p>
+          <strong>Joined:</strong>{" "}
+          {user?.createdAt ? new Date(user.createdAt).toLocaleString() : "—"}
+        </p>
       </div>
       <div style={{ textAlign: "center" }}>
         <h2>Session</h2>
@@ -154,7 +168,14 @@ export default function App() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center" }}>
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
       {isAuthenticated ? <SignedInView /> : <SignInView />}
     </div>
   );
