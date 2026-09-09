@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { permissionMatcherConformanceCases } from "convex-auth-core";
+import { permissionMatcherConformanceCases } from "../../core";
 import { describe, it } from "vitest";
 
 import { assembleViewerContext, sessionIdFromConvexIdentity } from "./assembleViewerContext";

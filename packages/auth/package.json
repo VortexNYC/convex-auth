@@ -189,23 +189,25 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@base-ui/react": "^1.8.0",
     "@convex-dev/rate-limiter": "^0.3.2",
     "@noble/hashes": "^2.4.0",
     "@types/node": "^26.4.0",
-    "convex-auth-core": "workspace:*",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "convex-helpers": "^0.1.80",
     "cookie": "^2.0.1",
     "jose": "^6.2.2",
+    "lucide-react": "^1.8.0",
     "oauth4webapi": "^3.8.7",
     "otpauth": "^9.5.1",
-    "set-cookie-parser": "^3.1.2"
+    "set-cookie-parser": "^3.1.2",
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "convex": "^1.45.0",
-    "convex-auth-react": "workspace:*",
-    "convex-auth-react-native": "workspace:*",
     "convex-test": "0.0.56",
     "typescript": "^5.7.0",
     "vite": "^8.2.2",
@@ -213,25 +215,45 @@
   },
   "peerDependencies": {
     "convex": ">=1.39.0",
-    "convex-auth-react": "workspace:*",
-    "convex-auth-react-native": "workspace:*",
+    "expo-constants": ">=17.0.0",
+    "expo-linking": ">=7.0.0",
+    "expo-network": ">=8.0.7",
+    "expo-secure-store": ">=14.0.0",
+    "expo-web-browser": ">=14.0.0",
     "react": ">=19.0.0",
-    "react-dom": ">=19.0.0"
+    "react-dom": ">=19.0.0",
+    "react-native": ">=0.81.0",
+    "uniwind": ">=1.5.0"
   },
   "peerDependenciesMeta": {
     "convex": {
       "optional": false
     },
-    "convex-auth-react": {
-      "optional": true
-    },
-    "convex-auth-react-native": {
-      "optional": true
-    },
     "react": {
       "optional": true
     },
     "react-dom": {
+      "optional": true
+    },
+    "expo-constants": {
+      "optional": true
+    },
+    "expo-linking": {
+      "optional": true
+    },
+    "expo-network": {
+      "optional": true
+    },
+    "expo-secure-store": {
+      "optional": true
+    },
+    "expo-web-browser": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    },
+    "uniwind": {
       "optional": true
     }
   }

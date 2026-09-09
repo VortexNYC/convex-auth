@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { hasPermission, permissionMatcherConformanceCases } from "convex-auth-core";
+import { hasPermission, permissionMatcherConformanceCases } from "../../core";
 import { describe, it } from "vitest";
 
 import type { VerifiedUserToken } from "../coreTypes";
