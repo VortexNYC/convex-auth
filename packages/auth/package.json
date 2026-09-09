@@ -1,6 +1,6 @@
 {
   "name": "convex-auth",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Convex-native auth server, component, and integration.",
   "license": "Apache-2.0",
   "repository": {
@@ -13,9 +13,18 @@
   },
   "files": [
     "dist",
-    "src",
-    "conformance",
-    "test.ts"
+    "test.ts",
+    "src/convex-runtime/native/index.ts",
+    "src/convex-runtime/native/http.ts",
+    "src/component/convex.config.ts",
+    "src/component/core/convex.config.ts",
+    "src/component/organizations/convex.config.ts",
+    "src/component/servicePrincipals/convex.config.ts",
+    "src/component/apiKeys/convex.config.ts",
+    "src/component/agentAuth/convex.config.ts",
+    "src/component/authMd/convex.config.ts",
+    "src/component/webhooks/convex.config.ts",
+    "src/component/mcpOauth/convex.config.ts"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -62,7 +71,6 @@
       "import": "./dist/component.js",
       "default": "./dist/component.js"
     },
-    "./conformance/*": "./conformance/*",
     "./consumer-contract": {
       "types": "./dist/consumer-contract.d.ts",
       "import": "./dist/consumer-contract.js",
@@ -192,6 +200,7 @@
     "@base-ui/react": "^1.8.0",
     "@convex-dev/rate-limiter": "^0.3.2",
     "@noble/hashes": "^2.4.0",
+    "@radix-ui/react-slot": "^1.3.3",
     "@types/node": "^26.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

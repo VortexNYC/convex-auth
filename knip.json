@@ -1,79 +1,27 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignoreFiles": ["**/*.type-test.ts"],
-  "exclude": ["types"],
   "workspaces": {
     "packages/auth": {
-      "ignoreDependencies": ["react", "react-dom"],
       "entry": [
         "src/index.ts",
         "src/convex.ts",
-        "src/convex-runtime/native/index.ts",
-        "src/convex-runtime/native/http.ts",
-        "src/mcp.ts",
-        "src/react.ts",
-        "src/react-native.ts",
+        "src/react.entry.ts",
+        "src/react-native.entry.ts",
         "src/preflight.ts",
         "src/testing.ts",
         "src/component.ts",
         "src/consumer-contract.ts",
         "src/agent-auth-protocol.ts",
-        "src/agent-auth-protocol-convex.ts",
-        "src/agent-auth-protocol-http.ts",
         "src/auth-md.ts",
         "src/waitlist.tsx",
-        "src/component/convex.config.ts",
-        "src/component/core/convex.config.ts",
-        "test.ts",
-        "scripts/cli.ts",
-        "scripts/check-consumer-contract.ts",
-        "scripts/preflight.ts"
-      ]
-    },
-    "packages/better-auth": {
-      "entry": [
-        "src/index.ts",
-        "src/client.ts",
-        "src/server.ts",
-        "src/convex.ts",
-        "src/test-auth.ts"
-      ]
-    },
-    "packages/better-auth-adapter": {
-      "entry": [
-        "src/client/index.ts",
-        "src/component/convex.config.ts",
-        "src/component/adapter.ts",
-        "src/auth-config.ts",
-        "src/client/plugins/index.ts",
-        "src/nextjs/index.ts",
-        "src/nextjs/client.tsx",
-        "src/plugins/index.ts",
-        "src/react/index.tsx",
-        "src/react-start/index.ts",
-        "src/test.ts",
-        "src/utils/index.ts"
-      ]
-    },
-    "packages/react": {
-      "entry": ["src/index.ts", "src/client.ts"]
-    },
-    "packages/react-native": {
-      "ignoreDependencies": ["expo-linking"],
-      "entry": ["src/index.ts"]
-    },
-    "packages/ui": {
-      "entry": ["src/index.ts"]
-    },
-    "packages/core": {
-      "entry": ["src/index.ts"]
-    },
-    "packages/conformance-consumer": {
-      "entry": ["scripts/*.mjs"],
-      "ignore": ["convex-split/*.ts"]
-    },
-    "site": {
-      "entry": ["blume.config.ts"]
+        "src/mcp.ts",
+        "src/scopes.ts",
+        "src/convex-runtime/native/index.ts",
+        "src/convex-runtime/native/http.ts",
+        "src/component/*/convex.config.ts",
+        "src/scripts/*.ts"
+      ],
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
     }
   }
 }

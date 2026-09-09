@@ -23,3 +23,11 @@ CHANGELOG.md
 coverage/
 .vite/
 *.tsbuildinfo
+.convex/
+.claude/
+.codex/
+.cursor/
+.entire/settings.local.json
+.entire/metadata/
+.entire/logs/
+.entire/tmp/

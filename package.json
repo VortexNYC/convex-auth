@@ -31,13 +31,29 @@
     "fix": "vp lint --fix && vp fmt",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "ci:publish": "pnpm changeset publish"
+    "ci:publish": "pnpm changeset publish",
+    "scan:secrets": "secretlint . --no-gitignore --secretlintignore .secretlintignore",
+    "knip": "knip",
+    "entire:review": "entire review",
+    "entire:investigate": "entire investigate",
+    "entire:why": "entire why",
+    "entire:blame": "entire blame",
+    "entire:experts": "entire experts",
+    "entire:tokens": "entire tokens",
+    "entire:tokens:profile": "entire tokens profile"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.1",
     "@convex-dev/eslint-plugin": "4.0.0",
+    "@secretlint/secretlint-rule-preset-recommend": "^13.0.5",
     "@types/node": "^26.4.0",
+    "knip": "^6.35.0",
+    "secretlint": "^13.0.5",
+    "simple-git-hooks": "^2.14.0",
     "vite-plus": "0.2.4"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm run scan:secrets"
   },
   "engines": {
     "node": ">=20.12.0"

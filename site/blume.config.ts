@@ -18,6 +18,6 @@ export default defineConfig({
     root: "../docs",
   },
   deployment: {
-    site: "https://gregarious-perch-710.convex.site",
+    site: "https://convex-auth.example.com",
   },
 });

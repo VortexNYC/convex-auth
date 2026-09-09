@@ -48,7 +48,7 @@ The full `convex-auth/convex.config` component still works and is the safest sta
    });
    ```
 
-4. Run `npx convex dev` or `npx convex deploy` to regenerate bindings and push the new schema.
+4. Run `pnpm dlx convex dev` or `pnpm dlx convex deploy` to regenerate bindings and push the new schema.
 5. Run your full local proof (`pnpm run typecheck`, `pnpm run build`, `pnpm test`).
 
 ## What happens to old tables?
@@ -57,4 +57,4 @@ Convex does not drop tables when they are removed from the active schema. Data i
 
 ## Rollback
 
-If you need to return to the full component, restore the original `convex.config.ts` and `auth.ts`, then run `npx convex dev` again. The full component will remount and expose the same `components.convexAuth` handle.
+If you need to return to the full component, restore the original `convex.config.ts` and `auth.ts`, then run `pnpm dlx convex dev` again. The full component will remount and expose the same `components.convexAuth` handle.

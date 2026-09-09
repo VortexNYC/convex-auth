@@ -24,10 +24,10 @@ pnpm dlx convex env set GITHUB_CLIENT_ID '...'
 pnpm dlx convex env set GITHUB_CLIENT_SECRET '...'
 ```
 
-For the shared example deployment:
+For an example deployment:
 
 ```bash
-CONVEX_URL=https://fast-gopher-450.convex.cloud pnpm run dev
+CONVEX_URL=https://<your-deployment>.convex.cloud pnpm run dev
 ```
 
 ## Endpoints

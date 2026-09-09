@@ -55,7 +55,7 @@ If you are starting a new project, no migration is needed — the 1.7 schema is 
 
 ## 5. React Native / Expo storage
 
-If you use the Expo client, `convex-auth-react-native` now wires the `expoClient` storage with both sync and async `SecureStore` methods. You should still pass a `SecureStore`-compatible object as `storage`, but the package no longer needs a custom sync-only wrapper.
+If you use the Expo client, `convex-auth/react-native` now wires the `expoClient` storage with both sync and async `SecureStore` methods. You should still pass a `SecureStore`-compatible object as `storage`, but the package no longer needs a custom sync-only wrapper.
 
 ## 6. Update your `convex` version
 
