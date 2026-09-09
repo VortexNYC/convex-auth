@@ -18,7 +18,11 @@ type OrganizationDoc = {
 };
 
 function OrganizationsSection() {
-  const organizations = useQuery(api.organizations.list) as OrganizationDoc[] | undefined;
+  const user = useUser();
+  const organizations = useQuery(
+    api.organizations.list,
+    user ? { userId: user.id } : "skip",
+  ) as OrganizationDoc[] | undefined;
   const create = useMutation(api.organizations.create);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -27,8 +31,9 @@ function OrganizationsSection() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus(null);
+    if (!user) return;
     try {
-      await create({ name, slug });
+      await create({ userId: user.id, name, slug });
       setName("");
       setSlug("");
       setStatus("Organization created.");
@@ -110,7 +115,11 @@ function ProfileEditSection() {
 }
 
 function SessionsSection() {
-  const sessions = useQuery(api.sessions.list) as SessionDoc[] | undefined;
+  const user = useUser();
+  const sessions = useQuery(
+    api.sessions.list,
+    user ? { userId: user.id } : "skip",
+  ) as SessionDoc[] | undefined;
   const revoke = useMutation(api.sessions.revoke);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -150,9 +159,10 @@ function SessionsSection() {
 }
 
 function TwoFactorSection() {
-  const { twoFactor } = useAuthActions();
+  const { token, twoFactor } = useAuthActions();
   const [status, setStatus] = useState<string | null>(null);
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
   const [totpURI, setTotpURI] = useState<string | null>(null);
   const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
 
@@ -165,7 +175,21 @@ function TwoFactorSection() {
     }
     setTotpURI(result.totpURI ?? null);
     setBackupCodes(result.backupCodes ?? null);
-    setStatus("2FA enabled — scan the TOTP URI and save the backup codes.");
+    setStatus("2FA setup started — scan the TOTP URI and enter a code to verify.");
+  };
+
+  const onVerify = async () => {
+    setStatus(null);
+    if (!token) {
+      setStatus("Sign in first.");
+      return;
+    }
+    try {
+      await twoFactor.verifyTotp({ token, code });
+      setStatus("TOTP verified. 2FA is active.");
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Verification failed.");
+    }
   };
 
   const onDisable = async () => {
@@ -205,6 +229,18 @@ function TwoFactorSection() {
           <p style={{ maxWidth: 320, wordBreak: "break-all", fontFamily: "monospace", fontSize: 12 }}>
             {totpURI}
           </p>
+        </div>
+      ) : null}
+      {totpURI ? (
+        <div style={{ marginTop: 8 }}>
+          <input
+            type="text"
+            placeholder="TOTP code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            style={{ marginRight: 8 }}
+          />
+          <button onClick={onVerify}>Verify TOTP</button>
         </div>
       ) : null}
       {backupCodes ? (
@@ -344,22 +380,12 @@ function SignedInView() {
       <h1>Signed in</h1>
       <div style={{ textAlign: "center" }}>
         <h2>User</h2>
-        <p>
-          <strong>ID:</strong> {user?.id ?? "—"}
-        </p>
-        <p>
-          <strong>Email:</strong> {user?.email ?? "—"}
-        </p>
-        <p>
-          <strong>Name:</strong> {user?.name ?? "—"}
-        </p>
-        <p>
-          <strong>Verified:</strong> {user?.emailVerified ? "yes" : "no"}
-        </p>
-        <p>
-          <strong>Joined:</strong>{" "}
-          {user?.createdAt ? new Date(user.createdAt).toLocaleString() : "—"}
-        </p>
+        <p><strong>ID:</strong> {user?.id ?? "—"}</p>
+        <p><strong>Email:</strong> {user?.email ?? "—"}</p>
+        <p><strong>Name:</strong> {user?.name ?? "—"}</p>
+        <p><strong>Verified:</strong> {user?.emailVerified ? "yes" : "no"}</p>
+        <p><strong>2FA enabled:</strong> {user?.twoFactorEnabled ? "yes" : "no"}</p>
+        <p><strong>Joined:</strong> {user?.createdAt ? new Date(user.createdAt).toLocaleString() : "—"}</p>
       </div>
       <div style={{ textAlign: "center" }}>
         <h2>Session</h2>

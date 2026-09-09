@@ -1138,9 +1138,13 @@ export function nativeEmailAndPassword(
         twoFactorBackupCodes: user.twoFactorBackupCodes,
       });
 
+      const updatedUser = await ctx.runQuery(component.native.users.getUserById, {
+        userId: sessionResolved.userId,
+      });
+
       return {
         token: null,
-        user: toNativeAuthUser(user),
+        user: toNativeAuthUser(updatedUser ?? user),
         userId: sessionResolved.userId,
         identityId: sessionResolved.payload.identityId as string | undefined,
       };
@@ -1313,10 +1317,10 @@ export function nativeEmailAndPassword(
       image: v.optional(v.string()),
       metadataJson: v.optional(v.string()),
     },
-    returns: v.object({ success: v.optional(v.boolean()), error: v.optional(v.string()) }),
+    returns: v.object({ success: v.boolean(), error: v.optional(v.string()) }),
     handler: async (ctx, args) => {
       const resolved = await resolveSessionUser(ctx, args.token);
-      if (!resolved) return { error: "unauthorized" };
+      if (!resolved) return { success: false, error: "unauthorized" };
       await ctx.runMutation(component.native.users.updateUser, {
         userId: resolved.userId,
         name: args.name,

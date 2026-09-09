@@ -56,6 +56,7 @@ export const {
   signIn,
   signOut,
   updateSession,
+  updateUser,
   sendEmailVerification,
   verifyEmail,
   sendPasswordReset,

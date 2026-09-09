@@ -1,5 +1,6 @@
 import { useAction, useConvex, useQuery } from "convex/react";
 import type { FunctionReference } from "convex/server";
+import type { NativeAuthUser } from "../convex-runtime/native/types.js";
 import {
   createContext,
   useCallback,
@@ -190,7 +191,7 @@ export type NativeAuthUpdateUserArgs = {
   metadataJson?: string;
 };
 
-export type NativeAuthUpdateUserResult = { success: true } | { success: false; error: string };
+export type NativeAuthUpdateUserResult = { success: boolean; error?: string };
 
 export type NativeAuthTwoFactorEnableArgs = {
   token: string;
@@ -232,15 +233,7 @@ export type NativeAuthSignOutArgs = {
   callbackURL?: string;
 };
 
-export type NativeAuthUser = {
-  id: string;
-  email?: string;
-  name?: string;
-  image?: string;
-  emailVerified: boolean;
-  createdAt: number;
-  updatedAt: number;
-};
+export type { NativeAuthUser };
 
 export type NativeAuthTwoFactorResult = {
   twoFactorRedirect?: boolean;
