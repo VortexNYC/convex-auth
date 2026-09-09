@@ -10,6 +10,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
+    "@convex-dev/static-hosting": "^0.2.1",
     "convex": "^1.45.0",
     "convex-auth": "workspace:*",
     "react": "^19.0.0",

@@ -1448,6 +1448,15 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           Name
         >;
       };
+      audit: {
+        cleanupAuthAuditEvents: FunctionReference<
+          "mutation",
+          "internal",
+          { batchSize?: number; maxAgeMs: number },
+          number,
+          Name
+        >;
+      };
       codes: {
         cleanupVerificationCodes: FunctionReference<
           "mutation",
@@ -1578,6 +1587,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         >;
       };
       refreshTokens: {
+        cleanupExpiredRefreshTokens: FunctionReference<
+          "mutation",
+          "internal",
+          { batchSize?: number; before?: number },
+          number,
+          Name
+        >;
         consumeRefreshToken: FunctionReference<
           "mutation",
           "internal",
@@ -1640,6 +1656,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         >;
       };
       sessions: {
+        cleanupExpiredSessions: FunctionReference<
+          "mutation",
+          "internal",
+          { batchSize?: number; before?: number },
+          number,
+          Name
+        >;
         createSession: FunctionReference<
           "mutation",
           "internal",
