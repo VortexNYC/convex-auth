@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const LEGACY_PACKAGE = "@convex-dev/better-auth";
-const VENDORED_PACKAGE = "convex-better-auth-adapter";
+const VENDORED_PACKAGE = "convex-auth";
 const LEGACY_PACKAGES = [
   "better-auth",
   "@better-auth/expo",
@@ -123,14 +123,14 @@ export function removeLegacyFromConvexConfig(content: string): string {
   let result = content;
   for (const pkg of [...LEGACY_PACKAGES, VENDORED_PACKAGE]) {
     const regex = new RegExp(
-      `^\\s*import\\s+\\w+\\s+from\\s+["']${pkg.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/convex\\.config(?:\\.js)?["'];?\\s*(?:\\r?\\n)?`,
+      `^\\s*import\\s+\\w+\\s+from\\s+["']${pkg.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/convex\\.config(?:\\.js)?["'];?[ \\t]*(?:\\r?\\n)?`,
       "gm",
     );
     result = result.replace(regex, "");
   }
   for (const name of legacyImports) {
     const regex = new RegExp(
-      `^\\s*app\\.use\\s*\\(\\s*${name}\\s*[^)]*\\)\\s*;?\\s*(?:\\r?\\n)?`,
+      `^\\s*app\\.use\\s*\\(\\s*${name}\\s*[^)]*\\)\\s*;?[ \\t]*(?:\\r?\\n)?`,
       "gm",
     );
     result = result.replace(regex, "");

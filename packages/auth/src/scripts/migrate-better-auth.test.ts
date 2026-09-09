@@ -59,7 +59,7 @@ describe("swapPackageInPackageJson", () => {
   it("replaces @convex-dev/better-auth with the vendored adapter", () => {
     const input = `{\n  "dependencies": {\n    "@convex-dev/better-auth": "^0.12.0"\n  }\n}`;
     expect(swapPackageInPackageJson(input)).toBe(
-      `{\n  "dependencies": {\n    "convex-better-auth-adapter": "^0.12.0"\n  }\n}`,
+      `{\n  "dependencies": {\n    "convex-auth": "^0.12.0"\n  }\n}`,
     );
   });
 });
@@ -67,11 +67,9 @@ describe("swapPackageInPackageJson", () => {
 describe("swapPackageInConvexConfig", () => {
   it("rewrites the import source", () => {
     const input = `import betterAuth from "@convex-dev/better-auth/convex.config";
-import auth from "convex-auth/convex.config";
 `;
     expect(swapPackageInConvexConfig(input)).toBe(
-      `import betterAuth from "convex-better-auth-adapter/convex.config";
-import auth from "convex-auth/convex.config";
+      `import betterAuth from "convex-auth/convex.config";
 `,
     );
   });
@@ -80,7 +78,7 @@ import auth from "convex-auth/convex.config";
     const input = `import betterAuth from "@convex-dev/better-auth/convex.config.js";
 `;
     expect(swapPackageInConvexConfig(input)).toBe(
-      `import betterAuth from "convex-better-auth-adapter/convex.config.js";
+      `import betterAuth from "convex-auth/convex.config.js";
 `,
     );
   });
@@ -90,20 +88,16 @@ describe("removeLegacyFromConvexConfig", () => {
   it("removes the adapter import and app.use", () => {
     const input = `import { defineApp } from "convex/server";
 import betterAuth from "convex-better-auth-adapter/convex.config";
-import auth from "convex-auth/convex.config";
 
 const app = defineApp();
 app.use(betterAuth);
-app.use(auth);
 
 export default app;
 `;
     expect(removeLegacyFromConvexConfig(input)).toBe(
       `import { defineApp } from "convex/server";
-import auth from "convex-auth/convex.config";
 
 const app = defineApp();
-app.use(auth);
 
 export default app;
 `,
@@ -113,20 +107,16 @@ export default app;
   it("removes @convex-dev/better-auth import and app.use with env", () => {
     const input = `import { defineApp } from "convex/server";
 import betterAuth from "@convex-dev/better-auth/convex.config";
-import auth from "convex-auth/convex.config";
 
 const app = defineApp();
 app.use(betterAuth, { env: { BETTER_AUTH_SECRET: app.env.BETTER_AUTH_SECRET } });
-app.use(auth);
 
 export default app;
 `;
     expect(removeLegacyFromConvexConfig(input)).toBe(
       `import { defineApp } from "convex/server";
-import auth from "convex-auth/convex.config";
 
 const app = defineApp();
-app.use(auth);
 
 export default app;
 `,
