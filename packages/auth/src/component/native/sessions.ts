@@ -285,5 +285,3 @@ export const cleanupExpiredSessions = mutation({
     return expired.length;
   },
 });
-
-
