@@ -8,9 +8,9 @@ This page lists the runtime and dependency versions `convex-auth` is tested agai
 
 | Package / subpath          | Version | Convex     | React      | React Native / Expo | Node        | pnpm      |
 | -------------------------- | ------- | ---------- | ---------- | ------------------- | ----------- | --------- |
-| `convex-auth`              | `2.0.1` | `>=1.45.0` | `>=19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
-| `convex-auth/react`        | `2.0.1` | `>=1.45.0` | `>=19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
-| `convex-auth/react-native` | `2.0.1` | `>=1.45.0` | `>=19.0.0` | `expo-*` (optional) | `>=20.12.0` | `10.25.0` |
+| `convex-auth`              | `2.0.3` | `>=1.45.0` | `>=19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
+| `convex-auth/react`        | `2.0.3` | `>=1.45.0` | `>=19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
+| `convex-auth/react-native` | `2.0.3` | `>=1.45.0` | `>=19.0.0` | `expo-*` (optional) | `>=20.12.0` | `10.25.0` |
 
 Better Auth is not a runtime dependency for `convex-auth`. The migration helper at `packages/auth/scripts/migrate-better-auth.ts` can bridge an existing Better Auth 1.7.x database, but it is removed after the data cutover.
 
