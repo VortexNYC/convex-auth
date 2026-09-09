@@ -43,12 +43,12 @@ See `examples/server/convex/` for a working minimal setup.
 
 ## Branch and PR workflow
 
-Graphite is retired. Entire does not manage branches or PRs, so use `git` + `gh` (GitHub CLI) directly.
+Graphite is retired. Entire does not manage branches or PRs. Use the `gh` CLI and the installed `gh stack` extension.
 
 - Track work and sessions with Entire: `entire session`, `entire dispatch`, `entire recap`.
-- Branch from the latest `main` with `git checkout -b <branch>`.
-- For stacked PRs, branch from the parent feature branch and open each PR against that parent: `gh pr create --base <parent-branch>`.
-- Push with `git push -u origin <branch>`.
-- Open PRs with `gh pr create --base <target>`.
-- Merge with `gh pr merge <number>` or from the GitHub UI.
-- After merge, `git checkout main && git pull` and clean up local branches.
+- Start a new stack from `main`: `gh stack init`.
+- Add a branch to the current stack: `gh stack add <branch>`.
+- Submit the stack as a chain of PRs: `gh stack submit`.
+- Sync the stack with remote: `gh stack sync`.
+- Merge the whole stack: `gh stack merge`.
+- View the stack: `gh stack view`.
