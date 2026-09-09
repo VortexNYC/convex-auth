@@ -223,7 +223,7 @@
     "vitest": "^4.1.10"
   },
   "peerDependencies": {
-    "convex": ">=1.39.0",
+    "convex": ">=1.45.0",
     "expo-constants": ">=17.0.0",
     "expo-linking": ">=7.0.0",
     "expo-network": ">=8.0.7",

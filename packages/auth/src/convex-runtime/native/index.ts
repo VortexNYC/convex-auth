@@ -62,3 +62,4 @@ export {
   type ProcessConvexWebhookDeliveryResult,
 } from "../webhooks/deliveryProcessor.js";
 export type { NativeEmailAndPasswordComponentHandle, NativeOAuthComponentHandle } from "./types.js";
+export { gatedCrons } from "../gatedCrons.js";

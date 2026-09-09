@@ -34,7 +34,8 @@ export const authSessions = defineTable({
 })
   .index("by_session_id", ["sessionId"])
   .index("by_token", ["token"])
-  .index("by_user", ["userId"]);
+  .index("by_user", ["userId"])
+  .index("by_expires_at", ["expiresAt"]);
 
 export const authRefreshTokens = defineTable({
   tokenHash: v.string(),
@@ -47,7 +48,8 @@ export const authRefreshTokens = defineTable({
 })
   .index("by_token_hash", ["tokenHash"])
   .index("by_session", ["sessionId"])
-  .index("by_user", ["userId"]);
+  .index("by_user", ["userId"])
+  .index("by_expires_at", ["expiresAt"]);
 
 export const authVerificationCodes = defineTable({
   userId: v.id("users"),
