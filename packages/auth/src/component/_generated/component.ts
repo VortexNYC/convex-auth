@@ -1458,6 +1458,42 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           number,
           Name
         >;
+        createAuthAuditEvent: FunctionReference<
+          "mutation",
+          "internal",
+          {
+            actorType: "anonymous" | "user" | "machine" | "service" | "system";
+            actorUserId?: string;
+            eventType: string;
+            metadataJson?: string;
+            organizationId?: string;
+            targetId?: string;
+            targetType: string;
+          },
+          string,
+          Name
+        >;
+        listAuthAuditEvents: FunctionReference<
+          "query",
+          "internal",
+          { limit?: number; organizationId?: string },
+          Array<{
+            _id: string;
+            action: string;
+            actor?: null | { _id: string; email: string; name?: string };
+            createdAt: number;
+            description?: string;
+            ipAddress?: string;
+            newValue?: string;
+            oldValue?: string;
+            resourceType?: string;
+            targetUserEmail?: string;
+            userAgent?: string;
+            userEmail?: string;
+            userName?: string;
+          }>,
+          Name
+        >;
       };
       codes: {
         cleanupVerificationCodes: FunctionReference<

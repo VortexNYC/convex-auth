@@ -21,7 +21,7 @@ export const create = mutation({
     expiresAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    return await ctx.runMutation(components.convexAuth.apiKeys.issueApiKey, {
+    const result = await ctx.runMutation(components.convexAuth.apiKeys.issueApiKey, {
       organizationId: args.organizationId,
       userId: args.userId,
       name: args.name,
@@ -30,6 +30,18 @@ export const create = mutation({
       allowedIpRanges: args.allowedIpRanges,
       expiresAt: args.expiresAt,
     });
+
+    await ctx.runMutation(components.convexAuth.native.audit.createAuthAuditEvent, {
+      actorUserId: args.userId,
+      actorType: "user",
+      eventType: "api_key.created",
+      targetType: "api_key",
+      targetId: result.apiKeyId,
+      organizationId: args.organizationId,
+      metadataJson: `API key created: ${args.name}`,
+    });
+
+    return result;
   },
 });
 

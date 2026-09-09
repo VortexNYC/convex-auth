@@ -6,6 +6,7 @@ import {
   ConvexCreateOrganization,
   ConvexEnableTwoFactorForm,
   ConvexOrganizationList,
+  ConvexSecurityAuditList,
   ConvexSessionList,
   ConvexUserProfile,
   ConvexVerifyEmailScreen,
@@ -92,6 +93,7 @@ export function SignedInView() {
             <TabsTrigger value="organizations">Organizations</TabsTrigger>
             <TabsTrigger value="apiKeys">API keys</TabsTrigger>
             <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+            <TabsTrigger value="securityAudit">Audit</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
@@ -142,6 +144,10 @@ export function SignedInView() {
 
           <TabsContent value="webhooks" className="space-y-4">
             <WebhooksPanel userId={user.id} organizationId={selectedOrganizationId} />
+          </TabsContent>
+
+          <TabsContent value="securityAudit" className="space-y-4">
+            <SecurityAuditPanel organizationId={selectedOrganizationId} />
           </TabsContent>
         </Tabs>
       </div>
@@ -664,5 +670,42 @@ function WebhooksPanel({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function SecurityAuditPanel({ organizationId }: { organizationId: string | null }) {
+  const args = organizationId ? { organizationId, limit: 50 } : ("skip" as const);
+  const logs = useQuery(api.securityAudit.list, args);
+
+  if (organizationId === null) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Security audit</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-sm">
+            Select an organization in the Organizations tab to view audit events.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Security audit</CardTitle>
+        <CardDescription>
+          Recent authorization and security events for this workspace.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ConvexSecurityAuditList
+          copy={{ emptyMessage: "No security audit events yet." }}
+          logs={logs}
+        />
+      </CardContent>
+    </Card>
   );
 }

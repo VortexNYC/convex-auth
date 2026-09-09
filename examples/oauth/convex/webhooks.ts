@@ -235,13 +235,23 @@ export const createEndpoint = mutation({
   },
   handler: async (ctx, args) => {
     const secret = generateWebhookSecret();
-    await ctx.runMutation(components.convexAuth.webhooks.createWebhookEndpoint, {
+    const result = await ctx.runMutation(components.convexAuth.webhooks.createWebhookEndpoint, {
       organizationId: args.organizationId,
       url: args.url,
       description: args.description,
       eventTypes: normalizeEventTypes(args.events),
       secret,
       createdBy: args.userId,
+    });
+
+    await ctx.runMutation(components.convexAuth.native.audit.createAuthAuditEvent, {
+      actorUserId: args.userId,
+      actorType: "user",
+      eventType: "webhook_endpoint.created",
+      targetType: "webhook_endpoint",
+      targetId: result.endpointId,
+      organizationId: args.organizationId,
+      metadataJson: `Webhook endpoint created for ${args.url}`,
     });
 
     return { secret };
