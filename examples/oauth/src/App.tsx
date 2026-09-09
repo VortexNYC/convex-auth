@@ -114,6 +114,80 @@ function ProfileEditSection() {
   );
 }
 
+function EmailVerificationSection() {
+  const user = useUser();
+  const { sendEmailVerification, verifyEmail, updateSession } = useAuthActions();
+  const [verificationToken, setVerificationToken] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+
+  const onSend = async () => {
+    if (!user?.email) return;
+    setStatus(null);
+    setVerificationToken(null);
+    const result = await sendEmailVerification({
+      email: user.email,
+      callbackURL: window.location.origin,
+    });
+    if (result.status === "queued" && result.emailId) {
+      setVerificationToken(result.emailId);
+      setStatus("Verification token issued — paste it below to verify.");
+    } else if (result.status === "not_configured") {
+      setStatus(`Not configured: ${result.reason}`);
+    } else {
+      setStatus(`Failed: ${result.reason}`);
+    }
+  };
+
+  const onVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verificationToken) return;
+    setStatus(null);
+    try {
+      const result = await verifyEmail(verificationToken);
+      if (result.success) {
+        setStatus("Email verified.");
+        await updateSession();
+      } else {
+        setStatus(`Verification failed: ${result.reason}`);
+      }
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Verification failed");
+    }
+  };
+
+  if (user?.emailVerified) {
+    return (
+      <div style={{ textAlign: "center" }}>
+        <h2>Email verification</h2>
+        <p style={{ color: "#666" }}>Email verified.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <h2>Email verification</h2>
+      <button onClick={onSend}>Send verification email</button>
+      {verificationToken ? (
+        <form onSubmit={onVerify} style={{ display: "flex", flexDirection: "column", gap: 8, width: 260, margin: "16px auto 0" }}>
+          <p style={{ fontFamily: "monospace", fontSize: 12, wordBreak: "break-all", color: "#666" }}>
+            {verificationToken}
+          </p>
+          <input
+            type="text"
+            placeholder="Verification token"
+            value={verificationToken}
+            onChange={(e) => setVerificationToken(e.target.value)}
+            required
+          />
+          <button type="submit">Verify email</button>
+        </form>
+      ) : null}
+      {status ? <p style={{ color: "#666" }}>{status}</p> : null}
+    </div>
+  );
+}
+
 function SessionsSection() {
   const user = useUser();
   const sessions = useQuery(
@@ -153,6 +227,42 @@ function SessionsSection() {
           ))}
         </ul>
       )}
+      {status ? <p style={{ color: "#666" }}>{status}</p> : null}
+    </div>
+  );
+}
+
+function VerifyPasswordSection() {
+  const { token, verifyPassword } = useAuthActions();
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    setStatus(null);
+    try {
+      const result = await verifyPassword({ token, password });
+      setStatus(result.success ? "Password verified." : "Password incorrect.");
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Verification failed");
+    }
+    setPassword("");
+  };
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <h2>Verify password</h2>
+      <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 8, width: 260, margin: "0 auto" }}>
+        <input
+          type="password"
+          placeholder="Current password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        <button type="submit">Verify password</button>
+      </form>
       {status ? <p style={{ color: "#666" }}>{status}</p> : null}
     </div>
   );
@@ -257,27 +367,100 @@ function TwoFactorSection() {
 }
 
 function EmailPasswordForm() {
-  const { signIn, signUp } = useAuthActions();
+  const { signIn, signUp, twoFactor, setToken, setRefreshToken, setSessionId } = useAuthActions();
   const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [status, setStatus] = useState<string | null>(null);
+  const [challenge, setChallenge] = useState<{
+    token: string;
+    methods?: string[];
+  } | null>(null);
+  const [code, setCode] = useState("");
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus(null);
     try {
+      if (challenge) {
+        return;
+      }
       if (mode === "in") {
-        await signIn({ email, password });
+        const result = await signIn({ email, password });
+        if (result.twoFactorRedirect && result.twoFactorChallengeToken) {
+          setChallenge({ token: result.twoFactorChallengeToken, methods: result.twoFactorMethods });
+          setStatus("Two-factor authentication required.");
+          return;
+        }
+        setStatus("Signed in.");
       } else {
         await signUp({ email, password, name });
+        setStatus("Account created.");
       }
-      setStatus("Success — reload if not automatic.");
     } catch (err) {
       setStatus(err instanceof Error ? err.message : "Auth failed");
     }
   };
+
+  const finishChallenge = async (result: {
+    token?: string | null;
+    refreshToken?: string;
+    sessionId?: string;
+  }) => {
+    if (result.token) {
+      setToken(result.token);
+      if (result.refreshToken) setRefreshToken(result.refreshToken);
+      if (result.sessionId) setSessionId(result.sessionId);
+    }
+    setChallenge(null);
+    setCode("");
+    setStatus("Signed in.");
+  };
+
+  const onVerifyTotp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!challenge) return;
+    setStatus(null);
+    try {
+      const result = await twoFactor.verifyTotp({ token: challenge.token, code });
+      await finishChallenge(result);
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "TOTP verification failed");
+    }
+  };
+
+  const onVerifyBackupCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!challenge) return;
+    setStatus(null);
+    try {
+      const result = await twoFactor.verifyBackupCode({ token: challenge.token, code });
+      await finishChallenge(result);
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : "Backup code verification failed");
+    }
+  };
+
+  if (challenge) {
+    return (
+      <form onSubmit={onVerifyTotp} style={{ display: "flex", flexDirection: "column", gap: 8, width: 260 }}>
+        <p>Two-factor code required</p>
+        <input
+          type="text"
+          placeholder="Code"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          required
+        />
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="submit">Verify TOTP</button>
+          <button type="button" onClick={onVerifyBackupCode}>Use backup code</button>
+        </div>
+        {status ? <p style={{ color: "#666" }}>{status}</p> : null}
+      </form>
+    );
+  }
 
   return (
     <form
@@ -316,8 +499,81 @@ function EmailPasswordForm() {
   );
 }
 
+function PasswordResetSection({ onDone }: { onDone: () => void }) {
+  const { sendPasswordReset, resetPassword } = useAuthActions();
+  const [email, setEmail] = useState("");
+  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
+
+  const onSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus(null);
+    setResetToken(null);
+    const result = await sendPasswordReset({ email, redirectTo: window.location.origin });
+    if (result.status === "queued" && result.emailId) {
+      setResetToken(result.emailId);
+      setStatus("Reset token issued — paste it below and set a new password.");
+    } else if (result.status === "not_configured") {
+      setStatus(`Not configured: ${result.reason}`);
+    } else {
+      setStatus(`Failed: ${result.reason}`);
+    }
+  };
+
+  const onReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetToken) return;
+    setStatus(null);
+    const result = await resetPassword({ token: resetToken, newPassword });
+    if (result.status) {
+      setStatus("Password reset. Sign in with your new password.");
+      setEmail("");
+      setNewPassword("");
+      onDone();
+    } else {
+      setStatus(`Reset failed: ${result.reason}`);
+    }
+  };
+
+  if (!resetToken) {
+    return (
+      <form onSubmit={onSend} style={{ display: "flex", flexDirection: "column", gap: 8, width: 260 }}>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <button type="submit">Send reset email</button>
+        {status ? <p style={{ color: "#666" }}>{status}</p> : null}
+      </form>
+    );
+  }
+
+  return (
+    <form onSubmit={onReset} style={{ display: "flex", flexDirection: "column", gap: 8, width: 260 }}>
+      <p style={{ fontFamily: "monospace", fontSize: 12, wordBreak: "break-all", color: "#666" }}>
+        {resetToken}
+      </p>
+      <input
+        type="password"
+        placeholder="New password"
+        value={newPassword}
+        onChange={(e) => setNewPassword(e.target.value)}
+        required
+      />
+      <button type="submit">Reset password</button>
+      <button type="button" onClick={onDone}>Back to sign in</button>
+      {status ? <p style={{ color: "#666" }}>{status}</p> : null}
+    </form>
+  );
+}
+
 function SignInView() {
   const { signInWithRedirect } = useAuthActions();
+  const [showReset, setShowReset] = useState(false);
 
   const startOAuth = async (provider: "google" | "github" | "discord") => {
     const { url } = await signInWithRedirect({
@@ -327,6 +583,16 @@ function SignInView() {
     });
     window.location.href = url;
   };
+
+  if (showReset) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "center" }}>
+        <h1>Reset password</h1>
+        <PasswordResetSection onDone={() => setShowReset(false)} />
+        <button type="button" onClick={() => setShowReset(false)}>Back to sign in</button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "center" }}>
@@ -339,12 +605,13 @@ function SignInView() {
       </div>
       <div style={{ width: "100%", height: 1, background: "#ccc" }} />
       <EmailPasswordForm />
+      <button type="button" onClick={() => setShowReset(true)}>Forgot password?</button>
     </div>
   );
 }
 
 function SignedInView() {
-  const { signOut, updateSession, sendEmailVerification } = useAuthActions();
+  const { signOut, updateSession } = useAuthActions();
   const user = useUser();
   const { sessionId } = useSession();
   const [status, setStatus] = useState<string | null>(null);
@@ -356,22 +623,6 @@ function SignedInView() {
       setStatus("Session refreshed.");
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Refresh failed");
-    }
-  };
-
-  const onVerify = async () => {
-    if (!user?.email) return;
-    setStatus("Sending verification email…");
-    const result = await sendEmailVerification({
-      email: user.email,
-      callbackURL: window.location.origin,
-    });
-    if (result.status === "queued") {
-      setStatus("Verification email queued.");
-    } else if (result.status === "not_configured") {
-      setStatus(`Not configured: ${result.reason}`);
-    } else {
-      setStatus(`Failed: ${result.reason}`);
     }
   };
 
@@ -394,15 +645,14 @@ function SignedInView() {
         </p>
         <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
           <button onClick={onRefresh}>Refresh session</button>
-          {user?.email && !user.emailVerified ? (
-            <button onClick={onVerify}>Send verification email</button>
-          ) : null}
           <button onClick={() => signOut()}>Sign out</button>
         </div>
       </div>
       <ProfileEditSection />
+      <EmailVerificationSection />
       <SessionsSection />
       <TwoFactorSection />
+      <VerifyPasswordSection />
       <OrganizationsSection />
       {status ? <p style={{ color: "#666" }}>{status}</p> : null}
     </div>
