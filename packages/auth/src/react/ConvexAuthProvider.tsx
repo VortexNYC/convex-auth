@@ -1,6 +1,7 @@
 import { useAction, useConvex, useQuery } from "convex/react";
 import type { FunctionReference } from "convex/server";
 import type { NativeAuthUser } from "../convex-runtime/native/types.js";
+import type { ConvexAuthSessionListItem } from "./auth-client-types";
 import {
   createContext,
   useCallback,
@@ -216,13 +217,16 @@ export type NativeAuthTwoFactorDisableArgs = {
 
 export type NativeAuthTwoFactorGenerateBackupCodesArgs = {
   token: string;
+  password: string;
 };
 
 export type NativeAuthTwoFactorGenerateBackupCodesResult = {
   backupCodes: string[];
+  error?: string;
 };
 
 export type NativeAuthTwoFactorEnableResult = {
+  token?: string;
   totpURI?: string;
   backupCodes?: string[];
   error?: string;
@@ -374,6 +378,19 @@ export type NativeAuthActions = {
     "public",
     NativeAuthTwoFactorGenerateBackupCodesArgs,
     NativeAuthTwoFactorGenerateBackupCodesResult
+  >;
+  listSessions?: FunctionReference<
+    "action",
+    "public",
+    { token: string },
+    ConvexAuthSessionListItem[]
+  >;
+  revokeSession?: FunctionReference<"action", "public", { token: string }, { success: boolean }>;
+  revokeOtherSessions?: FunctionReference<
+    "action",
+    "public",
+    { token: string },
+    { success: boolean }
   >;
 };
 
@@ -571,6 +588,11 @@ export function useAuthActions() {
   const twoFactorDisableAction = ctx.twoFactorDisable ? useAction(ctx.twoFactorDisable) : null;
   const twoFactorGenerateBackupCodesAction = ctx.twoFactorGenerateBackupCodes
     ? useAction(ctx.twoFactorGenerateBackupCodes)
+    : null;
+  const listSessionsAction = ctx.listSessions ? useAction(ctx.listSessions) : null;
+  const revokeSessionAction = ctx.revokeSession ? useAction(ctx.revokeSession) : null;
+  const revokeOtherSessionsAction = ctx.revokeOtherSessions
+    ? useAction(ctx.revokeOtherSessions)
     : null;
 
   const [isLoading, setIsLoading] = useState(false);
@@ -891,11 +913,14 @@ export function useAuthActions() {
           }
         : notAvailable,
       generateBackupCodes: twoFactorGenerateBackupCodesAction
-        ? async () => {
+        ? async (args: { password: string }) => {
             if (ctx.token === null) {
               throw new Error("Session required to generate backup codes");
             }
-            return await twoFactorGenerateBackupCodesAction({ token: ctx.token });
+            return await twoFactorGenerateBackupCodesAction({
+              token: ctx.token,
+              password: args.password,
+            });
           }
         : notAvailable,
     };
@@ -907,6 +932,30 @@ export function useAuthActions() {
     twoFactorDisableAction,
     twoFactorGenerateBackupCodesAction,
   ]);
+
+  const listSessions = useCallback(async () => {
+    if (listSessionsAction === null || ctx.token === null) {
+      throw new Error("Session listing is not configured");
+    }
+    return await listSessionsAction({ token: ctx.token });
+  }, [listSessionsAction, ctx.token]);
+
+  const revokeSession = useCallback(
+    async (args: { token: string }) => {
+      if (revokeSessionAction === null) {
+        throw new Error("Revoke session is not configured");
+      }
+      return await revokeSessionAction(args);
+    },
+    [revokeSessionAction],
+  );
+
+  const revokeOtherSessions = useCallback(async () => {
+    if (revokeOtherSessionsAction === null || ctx.token === null) {
+      throw new Error("Revoke other sessions is not configured");
+    }
+    return await revokeOtherSessionsAction({ token: ctx.token });
+  }, [revokeOtherSessionsAction, ctx.token]);
 
   const session = useQuery(
     ctx.verifySession,
@@ -929,6 +978,9 @@ export function useAuthActions() {
     signOut,
     updateSession,
     updateUser,
+    listSessions,
+    revokeSession,
+    revokeOtherSessions,
     twoFactor,
     sendEmailVerification,
     verifyEmail,

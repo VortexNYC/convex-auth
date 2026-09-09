@@ -11,10 +11,9 @@ export const list = query({
     );
     const organizations = await Promise.all(
       memberships.map(async (membership) => {
-        return await ctx.runQuery(
-          components.convexAuth.organizations.getOrganization,
-          { organizationId: membership.organizationId },
-        );
+        return await ctx.runQuery(components.convexAuth.organizations.getOrganization, {
+          organizationId: membership.organizationId,
+        });
       }),
     );
     return organizations.filter((org) => org !== null);
@@ -39,31 +38,25 @@ export const create = mutation({
       },
     );
 
-    await ctx.runMutation(
-      components.convexAuth.organizations.seedDefaultRoles,
-      {
-        organizationId,
-        createdBy: args.userId,
-      },
-    );
+    await ctx.runMutation(components.convexAuth.organizations.seedDefaultRoles, {
+      organizationId,
+      createdBy: args.userId,
+    });
 
-    const ownerRole = await ctx.runQuery(
-      components.convexAuth.organizations.getRoleByKey,
-      { organizationId, key: "owner" },
-    );
+    const ownerRole = await ctx.runQuery(components.convexAuth.organizations.getRoleByKey, {
+      organizationId,
+      key: "owner",
+    });
     if (!ownerRole) return null;
 
-    await ctx.runMutation(
-      components.convexAuth.organizations.upsertMember,
-      {
-        organizationId,
-        userId: args.userId,
-        roleId: ownerRole._id,
-        status: "active",
-        assignedBy: args.userId,
-        acceptedAt: now,
-      },
-    );
+    await ctx.runMutation(components.convexAuth.organizations.upsertMember, {
+      organizationId,
+      userId: args.userId,
+      roleId: ownerRole._id,
+      status: "active",
+      assignedBy: args.userId,
+      acceptedAt: now,
+    });
 
     return { organizationId };
   },
