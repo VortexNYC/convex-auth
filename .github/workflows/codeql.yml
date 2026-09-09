@@ -22,7 +22,7 @@ jobs:
         language: [typescript]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: github/codeql-action/init@5ba2889ada762081db2c4f32a729827dce632c7b
+      - uses: github/codeql-action/init@6f5948dfacef28e207b48d0905cf90c03365536d
         with:
           languages: ${{ matrix.language }}
       - uses: github/codeql-action/analyze@5ba2889ada762081db2c4f32a729827dce632c7b
