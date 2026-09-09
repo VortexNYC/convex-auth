@@ -43,6 +43,9 @@ importers:
 
   examples/oauth:
     dependencies:
+      '@convex-dev/static-hosting':
+        specifier: ^0.2.1
+        version: 0.2.1(convex@1.45.0(react@19.2.8))(react@19.2.8)
       convex:
         specifier: ^1.45.0
         version: 1.45.0(react@19.2.8)
