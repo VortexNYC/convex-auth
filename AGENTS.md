@@ -43,7 +43,7 @@ See `examples/server/convex/` for a working minimal setup.
 
 ## Branch and PR workflow
 
-Graphite is retired. Entire does not manage branches or PRs. Use the `gh` CLI and the installed `gh stack` extension.
+Use the `gh` CLI and the `github/gh-stack` extension for branch and PR work. Entire manages session/context only.
 
 - Track work and sessions with Entire: `entire session`, `entire dispatch`, `entire recap`.
 - Start a new stack from `main`: `gh stack init`.
