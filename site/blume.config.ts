@@ -21,4 +21,10 @@ export default defineConfig({
   deployment: {
     site: "https://resilient-blackbird-58.convex.site",
   },
+  theme: {
+    accent: {
+      light: "#000000",
+      dark: "#ffffff",
+    },
+  },
 });

@@ -12,8 +12,5 @@ export default defineMeta({
     "installation",
     "quickstart",
     "configuration",
-    "client",
-    "react-native",
-    "theming",
   ],
 });
