@@ -4,7 +4,7 @@ import {
   createResendEmailOtpSender,
   createResendEmailSender,
   type EmailDraft,
-} from "convex-auth/convex";
+} from "@vortex-api/convex-auth/convex";
 
 const siteUrl =
   process.env.CONVEX_SITE_URL?.replace(/\/$/, "") ??

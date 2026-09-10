@@ -12,7 +12,7 @@ import {
   ConvexAuthSignUpButton,
   ConvexAuthSignOutButton,
   ConvexOrganizationSwitcher,
-} from "convex-auth/react";
+} from "@vortex-api/convex-auth/react";
 ```
 
 ## Theming

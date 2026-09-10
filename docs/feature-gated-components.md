@@ -23,7 +23,7 @@ Every add-on component includes its own prerequisite tables and is self-containe
 ```ts
 import { defineApp } from "convex/server";
 import { v } from "convex/values";
-import authCore from "convex-auth/convex.config/core";
+import authCore from "@vortex-api/convex-auth/convex.config/core";
 
 const app = defineApp({
   env: {
@@ -46,7 +46,7 @@ In `convex/auth.ts`:
 
 ```ts
 import { components } from "./_generated/api";
-import { convexAuth } from "convex-auth/convex";
+import { convexAuth } from "@vortex-api/convex-auth/convex";
 
 export const auth = convexAuth({
   components: { core: components.convexAuthCore },
@@ -58,9 +58,9 @@ export const auth = convexAuth({
 ```ts
 import { defineApp } from "convex/server";
 import { v } from "convex/values";
-import authCore from "convex-auth/convex.config/core";
-import authOrganizations from "convex-auth/convex.config/organizations";
-import authApiKeys from "convex-auth/convex.config/apiKeys";
+import authCore from "@vortex-api/convex-auth/convex.config/core";
+import authOrganizations from "@vortex-api/convex-auth/convex.config/organizations";
+import authApiKeys from "@vortex-api/convex-auth/convex.config/apiKeys";
 
 const app = defineApp({
   env: {
@@ -97,7 +97,7 @@ The add-on components (`servicePrincipals`, `agentAuth`, `authMd`, `webhooks`, `
 If you use `createConvexAuthOrganizationOperations`, pass a `components` object instead of the legacy single `component` handle:
 
 ```ts
-import { createConvexAuthOrganizationOperations } from "convex-auth/convex";
+import { createConvexAuthOrganizationOperations } from "@vortex-api/convex-auth/convex";
 
 const ops = createConvexAuthOrganizationOperations({
   components: {

@@ -30,25 +30,25 @@ Primary user: an existing `@convex-dev/better-auth` consumer who has already mou
 
 ```bash
 # Dry-run data migration and print a report.
-pnpm dlx convex-auth migrate better-auth --dry-run
+pnpm dlx @vortex-api/convex-auth migrate better-auth --dry-run
 
 # Run the one-time data migration (default legacy component is `betterAuth`).
-pnpm dlx convex-auth migrate better-auth
+pnpm dlx @vortex-api/convex-auth migrate better-auth
 
 # Migrate from a vendored adapter mounted under a different name.
-pnpm dlx convex-auth migrate better-auth --from-component betterAuthAdapter
+pnpm dlx @vortex-api/convex-auth migrate better-auth --from-component betterAuthAdapter
 
 # Run migration + cutover file edits in one pass.
-pnpm dlx convex-auth migrate better-auth --cutover
+pnpm dlx @vortex-api/convex-auth migrate better-auth --cutover
 
 # Resume an interrupted migration from the last cursor.
-pnpm dlx convex-auth migrate better-auth --resume
+pnpm dlx @vortex-api/convex-auth migrate better-auth --resume
 
 # Limit batch/page size for large deployments.
-pnpm dlx convex-auth migrate better-auth --batch-size 100
+pnpm dlx @vortex-api/convex-auth migrate better-auth --batch-size 100
 
 # Print help.
-pnpm dlx convex-auth migrate better-auth --help
+pnpm dlx @vortex-api/convex-auth migrate better-auth --help
 ```
 
 ## Project structure
@@ -107,9 +107,9 @@ packages/better-auth-adapter/
 
 ## Success criteria
 
-- `pnpm dlx convex-auth migrate better-auth --dry-run` prints the legacy table counts and the planned commands without modifying anything.
-- `pnpm dlx convex-auth migrate better-auth` migrates all legacy users, accounts, and sessions into `users`, `auth_identities`, `authAccounts`, and `authSessions`.
-- `pnpm dlx convex-auth migrate better-auth --from-component betterAuthAdapter` works for consumers who mounted the vendored `convex-better-auth-adapter` directly.
+- `pnpm dlx @vortex-api/convex-auth migrate better-auth --dry-run` prints the legacy table counts and the planned commands without modifying anything.
+- `pnpm dlx @vortex-api/convex-auth migrate better-auth` migrates all legacy users, accounts, and sessions into `users`, `auth_identities`, `authAccounts`, and `authSessions`.
+- `pnpm dlx @vortex-api/convex-auth migrate better-auth --from-component betterAuthAdapter` works for consumers who mounted the vendored `convex-better-auth-adapter` directly.
 - Rerunning the migration completes without duplicates.
 - `--cutover` produces the expected file edits for `convex/convex.config.ts`, `convex/auth.ts`, `convex/http.ts`, `src/main.tsx` (or `App.tsx`), and `package.json`.
 - After cutover, a consumer can `pnpm remove better-auth @convex-dev/better-auth` (or bridge packages) and sign in with native `convex-auth` using existing data.

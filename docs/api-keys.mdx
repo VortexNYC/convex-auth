@@ -16,8 +16,8 @@ If you need service/API-key authentication, mount the `apiKeys` component alongs
 ```ts convex/convex.config.ts
 import { defineApp } from "convex/server";
 import { v } from "convex/values";
-import authCore from "convex-auth/convex.config/core";
-import authApiKeys from "convex-auth/convex.config/apiKeys";
+import authCore from "@vortex-api/convex-auth/convex.config/core";
+import authApiKeys from "@vortex-api/convex-auth/convex.config/apiKeys";
 
 const app = defineApp({
   env: {
@@ -59,7 +59,7 @@ export default app;
 ```tsx src/ApiKeys.tsx
 import { useState } from "react";
 import { useMutation } from "convex/react";
-import { ConvexApiKeyCreateForm } from "convex-auth/react";
+import { ConvexApiKeyCreateForm } from "@vortex-api/convex-auth/react";
 import { api } from "../convex/_generated/api";
 
 const SCOPES = ["read:users", "write:users"] as const;
@@ -109,7 +109,7 @@ export function CreateApiKey() {
 
 ```tsx
 import { useMutation, useQuery } from "convex/react";
-import { ConvexApiKeyList } from "convex-auth/react";
+import { ConvexApiKeyList } from "@vortex-api/convex-auth/react";
 import { api } from "../convex/_generated/api";
 
 export function ApiKeySettings() {

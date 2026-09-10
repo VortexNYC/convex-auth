@@ -65,7 +65,7 @@ pnpm dlx convex env set DISCORD_CLIENT_SECRET '...'
 
 ```ts
 import { components } from "./_generated/api";
-import { convexAuth } from "convex-auth/convex";
+import { convexAuth } from "@vortex-api/convex-auth/convex";
 
 export const auth = convexAuth({
   component: components.convexAuth,
@@ -126,7 +126,7 @@ Your frontend should read the token from the query string and pass it to the pro
 
 ```tsx
 import { useEffect } from "react";
-import { useAuthActions } from "convex-auth/react";
+import { useAuthActions } from "@vortex-api/convex-auth/react";
 
 function OAuthCallback() {
   const { updateSession } = useAuthActions();

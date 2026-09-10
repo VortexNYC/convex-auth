@@ -1,6 +1,6 @@
 <div align="center">
 
-# convex-auth
+# @vortex-api/convex-auth
 
 A public, Convex-native auth platform for [Convex](https://convex.dev), with a [Better Auth](https://www.better-auth.com) compatibility bridge.
 
@@ -23,7 +23,7 @@ Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 
 ## Status
 
-Public — `convex-auth` is at `2.0.5` on npm. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, MCP auth, agent auth, and waitlists) is passing full conformance. The Better Auth data migration helper is in `packages/auth/scripts/migrate-better-auth.ts` for one-time use.
+Public — `@vortex-api/convex-auth` is at `2.1.2` on npm. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, MCP auth, agent auth, and waitlists) is passing full conformance. The Better Auth data migration helper is in `packages/auth/scripts/migrate-better-auth.ts` for one-time use.
 
 ## How we got here
 
@@ -45,32 +45,32 @@ Read the full rationale in [`docs/motivation.md`](docs/motivation.md) and the ma
 
 ## Packages
 
-| Package       | npm           | Path            | Description                                                                                                                  |
-| ------------- | ------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `convex-auth` | `convex-auth` | `packages/auth` | The only public package. Convex-native auth component, control plane, native server integration, React/React Native clients. |
+| Package                   | npm                       | Path            | Description                                                                                                                  |
+| ------------------------- | ------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `@vortex-api/convex-auth` | `@vortex-api/convex-auth` | `packages/auth` | The only public package. Convex-native auth component, control plane, native server integration, React/React Native clients. |
 
 Subpaths:
 
-- `convex-auth` — server-side auth API and configuration
-- `convex-auth/convex` — Convex native runtime entrypoints
-- `convex-auth/react` — React hooks and providers
-- `convex-auth/react-native` — Expo / React Native client
-- `convex-auth/mcp` — MCP OAuth helpers
-- `convex-auth/preflight` — deployment readiness checks
-- `convex-auth/testing` — test helpers
+- `@vortex-api/convex-auth` — server-side auth API and configuration
+- `@vortex-api/convex-auth/convex` — Convex native runtime entrypoints
+- `@vortex-api/convex-auth/react` — React hooks and providers
+- `@vortex-api/convex-auth/react-native` — Expo / React Native client
+- `@vortex-api/convex-auth/mcp` — MCP OAuth helpers
+- `@vortex-api/convex-auth/preflight` — deployment readiness checks
+- `@vortex-api/convex-auth/testing` — test helpers
 
 Published under the Apache-2.0 license.
 
 ## Convex-native auth (recommended)
 
-`convex-auth` ships a Convex-native auth runtime that stores users, sessions, and identities in your Convex database and runs in the default Convex isolate. It supports email/password, Google/GitHub/Discord OAuth, 2FA, email verification, password reset, sessions, and refresh tokens. No Better Auth server is required.
+`@vortex-api/convex-auth` ships a Convex-native auth runtime that stores users, sessions, and identities in your Convex database and runs in the default Convex isolate. It supports email/password, Google/GitHub/Discord OAuth, 2FA, email verification, password reset, sessions, and refresh tokens. No Better Auth server is required.
 
 The native flow is the intended end state of this repository. The Better Auth bridge below is still available for teams that need it while migrating.
 
 ### 1. Install
 
 ```bash
-pnpm add convex-auth convex-auth/react convex
+pnpm add @vortex-api/convex-auth convex
 ```
 
 ### 2. Set environment variables
@@ -114,7 +114,7 @@ convex env set DISCORD_CLIENT_SECRET '...'
 
 ```ts
 // convex/auth.config.ts
-import { createConvexAuthProvider } from "convex-auth/convex";
+import { createConvexAuthProvider } from "@vortex-api/convex-auth/convex";
 
 export default {
   providers: [createConvexAuthProvider()],
@@ -127,7 +127,7 @@ export default {
 // convex/convex.config.ts
 import { defineApp } from "convex/server";
 import { v } from "convex/values";
-import auth from "convex-auth/convex.config";
+import auth from "@vortex-api/convex-auth/convex.config";
 
 const app = defineApp({
   env: {
@@ -151,7 +151,7 @@ export default app;
 ```ts
 // convex/auth.ts
 import { components } from "./_generated/api";
-import { convexAuth, type EmailDraft } from "convex-auth/convex";
+import { convexAuth, type EmailDraft } from "@vortex-api/convex-auth/convex";
 
 const siteUrl = process.env.CONVEX_SITE_URL?.replace(/\/$/, "");
 
@@ -224,7 +224,7 @@ export default http;
 ```tsx
 // src/main.tsx
 import { ConvexReactClient, ConvexProvider } from "convex/react";
-import { ConvexAuthClientProvider } from "convex-auth/react";
+import { ConvexAuthClientProvider } from "@vortex-api/convex-auth/react";
 import { api } from "../convex/_generated/api";
 import App from "./App";
 
@@ -245,7 +245,7 @@ function Root() {
 
 ```tsx
 // src/SignIn.tsx
-import { useAuthActions } from "convex-auth/react";
+import { useAuthActions } from "@vortex-api/convex-auth/react";
 
 export function SignIn() {
   const { signIn, isLoading, isAuthenticated } = useAuthActions();
@@ -277,11 +277,11 @@ export function SignIn() {
 
 ### 9. Validate your setup
 
-The `convex-auth` CLI ships with `check` (consumer contract) and `preflight` (live install verification):
+The `@vortex-api/convex-auth` CLI ships with `check` (consumer contract) and `preflight` (live install verification):
 
 ```bash
-pnpm dlx convex-auth check
-pnpm dlx convex-auth preflight
+pnpm dlx @vortex-api/convex-auth check
+pnpm dlx @vortex-api/convex-auth preflight
 ```
 
 `check` validates that your `convex/` files do not accidentally import internal exports. `preflight` verifies that `VITE_CONVEX_URL` / `CONVEX_URL`, `CONVEX_SITE_URL`, and the component mount are set up correctly.

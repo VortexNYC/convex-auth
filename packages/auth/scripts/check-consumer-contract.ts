@@ -19,7 +19,7 @@ import { resolve } from "node:path";
 import {
   checkConsumerContract,
   type ConsumerContractViolation,
-} from "convex-auth/consumer-contract";
+} from "@vortex-api/convex-auth/consumer-contract";
 
 function parseArgs(argv: readonly string[]): {
   convexDir: string;

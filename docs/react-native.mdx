@@ -12,7 +12,7 @@ sidebar:
 ## Install
 
 ```bash
-pnpm add convex-auth/react-native convex-auth convex
+pnpm add @vortex-api/convex-auth convex
 # or, if you use Expo:
 pnpm add expo-secure-store
 ```
@@ -21,7 +21,7 @@ pnpm add expo-secure-store
 
 ```tsx src/App.tsx
 import { ConvexReactClient, ConvexProvider } from "convex/react";
-import { ExpoConvexAuthProvider } from "convex-auth/react-native";
+import { ExpoConvexAuthProvider } from "@vortex-api/convex-auth/react-native";
 import * as SecureStore from "expo-secure-store";
 import { api } from "../convex/_generated/api";
 
@@ -50,7 +50,7 @@ function Root() {
 ```tsx src/SignIn.tsx
 import { useState } from "react";
 import { View, TextInput, Button } from "react-native";
-import { useAuthActions } from "convex-auth/react-native";
+import { useAuthActions } from "@vortex-api/convex-auth/react-native";
 
 export function SignIn() {
   const { signIn, signUp, isLoading } = useAuthActions();
@@ -85,7 +85,7 @@ For apps that need the Better-Auth-shaped client, use `ExpoConvexAuthClientProvi
 
 ```tsx src/Root.tsx
 import { ConvexProvider } from "convex/react";
-import { ExpoConvexAuthClientProvider } from "convex-auth/react-native";
+import { ExpoConvexAuthClientProvider } from "@vortex-api/convex-auth/react-native";
 import { api } from "../convex/_generated/api";
 
 function Root() {

@@ -20,7 +20,7 @@ pnpm run typecheck
 pnpm run lint
 pnpm run build
 pnpm test
-pnpm --filter convex-auth test -- src/convex-runtime/native/twoFactor.test.ts
+pnpm --filter @vortex-api/convex-auth test -- src/convex-runtime/native/twoFactor.test.ts
 ```
 
 ## Project structure

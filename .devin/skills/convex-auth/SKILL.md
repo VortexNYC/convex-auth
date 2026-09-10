@@ -42,7 +42,7 @@ This skill covers the `convex-auth` native runtime in the `convex-auth` repo. It
 ### 1. Install
 
 ```bash
-pnpm add convex-auth convex-auth-react convex
+pnpm add @vortex-api/convex-auth convex-auth-react convex
 ```
 
 ### 2. Environment variables
@@ -66,7 +66,7 @@ convex env set DISCORD_CLIENT_SECRET '...'
 // convex/convex.config.ts
 import { defineApp } from "convex/server";
 import { v } from "convex/values";
-import auth from "convex-auth/convex.config";
+import auth from "@vortex-api/convex-auth/convex.config";
 
 const app = defineApp({
   env: {
@@ -90,7 +90,7 @@ export default app;
 ```ts
 // convex/auth.ts
 import { components } from "./_generated/api";
-import { convexAuth, type EmailDraft } from "convex-auth/convex";
+import { convexAuth, type EmailDraft } from "@vortex-api/convex-auth/convex";
 
 const siteUrl = process.env.CONVEX_SITE_URL?.replace(/\/$/, "");
 
@@ -155,7 +155,7 @@ export default http;
 ```tsx
 // src/main.tsx
 import { ConvexReactClient, ConvexProvider } from "convex/react";
-import { ConvexAuthProvider } from "convex-auth/react";
+import { ConvexAuthProvider } from "@vortex-api/convex-auth/react";
 import { api } from "../convex/_generated/api";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
@@ -180,8 +180,8 @@ function Root() {
 ## Validate
 
 ```bash
-pnpm dlx convex-auth check     # consumer contract (static)
-pnpm dlx convex-auth preflight # live install + deployment checks
+pnpm dlx @vortex-api/convex-auth check     # consumer contract (static)
+pnpm dlx @vortex-api/convex-auth preflight # live install + deployment checks
 ```
 
 ## Migrating from Better Auth

@@ -13,13 +13,13 @@
 ## Run it
 
 ```bash
-pnpm dlx convex-auth preflight
+pnpm dlx @vortex-api/convex-auth preflight
 ```
 
 In a workspace where `convex-auth` is a local dependency:
 
 ```bash
-pnpm --filter convex-auth preflight
+pnpm --filter @vortex-api/convex-auth preflight
 ```
 
 ## When to run it

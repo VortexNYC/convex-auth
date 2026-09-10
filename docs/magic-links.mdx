@@ -13,7 +13,7 @@ sidebar:
 
 ```ts convex/auth.ts
 import { components } from "./_generated/api";
-import { convexAuth } from "convex-auth/convex";
+import { convexAuth } from "@vortex-api/convex-auth/convex";
 
 const siteUrl = process.env.CONVEX_SITE_URL?.replace(/\/$/, "");
 
@@ -37,7 +37,7 @@ export const auth = convexAuth({
 ## Request a link from React
 
 ```tsx src/SignInWithMagicLink.tsx
-import { useAuthActions } from "convex-auth/react";
+import { useAuthActions } from "@vortex-api/convex-auth/react";
 
 export function SignInWithMagicLink() {
   const { signInWithMagicLink, isLoading } = useAuthActions();
@@ -80,7 +80,7 @@ Your callback page should read the token from the query string and call `updateS
 
 ```tsx src/MagicLinkCallback.tsx
 import { useEffect } from "react";
-import { useAuthActions } from "convex-auth/react";
+import { useAuthActions } from "@vortex-api/convex-auth/react";
 
 export function MagicLinkCallback() {
   const { updateSession } = useAuthActions();

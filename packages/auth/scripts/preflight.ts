@@ -26,7 +26,7 @@ function printHelp(): void {
   process.stdout.write(
     "convex-auth preflight — install/runtime auth preflight\n\n" +
       "Usage:\n" +
-      "  pnpm dlx convex-auth preflight [options] [-- command...]\n\n" +
+      "  pnpm dlx @vortex-api/convex-auth preflight [options] [-- command...]\n\n" +
       "Options:\n" +
       "  --repo-root <path>              Consumer repo root. Default: .\n" +
       "  --convex-dir <path>             Convex dir containing auth files. Default: ./convex\n" +
@@ -38,9 +38,9 @@ function printHelp(): void {
       "  --skip-backend-setup            Skip Convex backend file signal checks.\n" +
       "  --help                          Print this help.\n\n" +
       "Examples:\n" +
-      "  pnpm dlx convex-auth preflight\n" +
-      "  pnpm dlx convex-auth preflight --repo-root . --convex-dir ./apps/backend/convex\n" +
-      "  pnpm dlx convex-auth preflight -- pnpm run test:e2e:prod-smoke\n",
+      "  pnpm dlx @vortex-api/convex-auth preflight\n" +
+      "  pnpm dlx @vortex-api/convex-auth preflight --repo-root . --convex-dir ./apps/backend/convex\n" +
+      "  pnpm dlx @vortex-api/convex-auth preflight -- pnpm run test:e2e:prod-smoke\n",
   );
 }
 

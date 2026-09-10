@@ -29,7 +29,7 @@ The goal is to get consumers completely off Better Auth. A runtime bridge cannot
 **Decision:** The migration is implemented as Convex actions that read the legacy Better Auth adapter tables and write to the native `convex-auth` tables.
 
 - All table translation happens in one project deployment.
-- Consumers trigger it via `pnpm dlx convex-auth migrate better-auth`.
+- Consumers trigger it via `pnpm dlx @vortex-api/convex-auth migrate better-auth`.
 - No external ETL pipeline or manual row-by-row export is required.
 
 ### 3. Migration is opt-in and idempotent

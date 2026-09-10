@@ -1,6 +1,6 @@
 import { defineApp } from "convex/server";
 import { v } from "convex/values";
-import auth from "convex-auth/convex.config";
+import auth from "@vortex-api/convex-auth/convex.config";
 
 const app = defineApp({
   env: {

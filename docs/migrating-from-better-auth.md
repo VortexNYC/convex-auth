@@ -36,7 +36,7 @@ This is a one-time cutover, not a long-term bridge. The `convex-better-auth-adap
 `convex/auth.config.ts`:
 
 ```ts
-import { createConvexAuthProvider } from "convex-auth/convex";
+import { createConvexAuthProvider } from "@vortex-api/convex-auth/convex";
 
 export default {
   providers: [createConvexAuthProvider()],
@@ -48,7 +48,7 @@ export default {
 ```ts
 import { defineApp } from "convex/server";
 import { v } from "convex/values";
-import auth from "convex-auth/convex.config";
+import auth from "@vortex-api/convex-auth/convex.config";
 import betterAuth from "convex-better-auth-adapter/convex.config";
 
 const app = defineApp({
@@ -96,7 +96,7 @@ convex env set EMAIL_FROM_ADDRESS 'auth@yourdomain.com'
 ## Step 2 — Run the data migration
 
 ```bash
-pnpm dlx convex-auth migrate better-auth
+pnpm dlx @vortex-api/convex-auth migrate better-auth
 ```
 
 The CLI migrates users first, then accounts, then sessions. It is idempotent: re-running without `--resume` resets from the beginning. Use `--resume` to continue from the stored cursor.
@@ -129,14 +129,14 @@ Password users should be able to sign in through the native `convex-auth` HTTP r
 
 ## Step 4 — Cut over the runtime
 
-If you ran `pnpm dlx convex-auth migrate better-auth --cutover`, the files were already rewritten. Otherwise, do it manually.
+If you ran `pnpm dlx @vortex-api/convex-auth migrate better-auth --cutover`, the files were already rewritten. Otherwise, do it manually.
 
 `convex/convex.config.ts` after cutover:
 
 ```ts
 import { defineApp } from "convex/server";
 import { v } from "convex/values";
-import auth from "convex-auth/convex.config";
+import auth from "@vortex-api/convex-auth/convex.config";
 
 const app = defineApp({
   env: {
@@ -171,7 +171,7 @@ export default http;
 
 ```ts
 import { components } from "./_generated/api";
-import { convexAuth, type EmailDraft } from "convex-auth/convex";
+import { convexAuth, type EmailDraft } from "@vortex-api/convex-auth/convex";
 
 const siteUrl = process.env.CONVEX_SITE_URL?.replace(/\/+$/, "");
 
@@ -229,7 +229,7 @@ Replace Better Auth’s client with `convex-auth/react`:
 ```tsx
 // src/main.tsx
 import { ConvexReactClient, ConvexProvider } from "convex/react";
-import { ConvexAuthClientProvider } from "convex-auth/react";
+import { ConvexAuthClientProvider } from "@vortex-api/convex-auth/react";
 import { api } from "../convex/_generated/api";
 import App from "./App";
 
@@ -249,7 +249,7 @@ function Root() {
 Components use `useAuthActions` from `convex-auth/react`:
 
 ```tsx
-import { useAuthActions } from "convex-auth/react";
+import { useAuthActions } from "@vortex-api/convex-auth/react";
 
 export function SignIn() {
   const { signIn } = useAuthActions();

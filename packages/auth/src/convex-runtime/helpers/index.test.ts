@@ -18,7 +18,7 @@ import { describe, it } from "vitest";
 
 import * as helpers from "./index";
 
-describe("convex-auth/convex/helpers", () => {
+describe("@vortex-api/convex-auth/convex/helpers", () => {
   it("re-exports the sanctioned convex-helpers server primitives", () => {
     assert.deepEqual(Object.keys(helpers).toSorted(), [
       "ValidationError",

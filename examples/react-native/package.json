@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vortex-api/convex-auth": "workspace:*",
     "convex": "^1.45.0",
-    "convex-auth": "workspace:*",
     "expo-linking": "^7.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

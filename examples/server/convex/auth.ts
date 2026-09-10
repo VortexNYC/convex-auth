@@ -1,5 +1,5 @@
 import { components } from "./_generated/api";
-import { convexAuth, type EmailDraft } from "convex-auth/convex";
+import { convexAuth, type EmailDraft } from "@vortex-api/convex-auth/convex";
 
 const siteUrl =
   process.env.CONVEX_SITE_URL?.replace(/\/$/, "") ??

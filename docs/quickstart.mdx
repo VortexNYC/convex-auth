@@ -41,7 +41,7 @@ When you are done, your project will look like this:
     `convex/auth.config.ts` tells Convex that `convex-auth` is your auth provider:
 
     ```ts convex/auth.config.ts
-    import { createConvexAuthProvider } from "convex-auth/convex";
+    import { createConvexAuthProvider } from "@vortex-api/convex-auth/convex";
 
     export default {
       providers: [createConvexAuthProvider()],
@@ -56,7 +56,7 @@ When you are done, your project will look like this:
     ```ts convex/convex.config.ts
     import { defineApp } from "convex/server";
     import { v } from "convex/values";
-    import auth from "convex-auth/convex.config";
+    import auth from "@vortex-api/convex-auth/convex.config";
 
     const app = defineApp({
       env: {
@@ -82,7 +82,7 @@ When you are done, your project will look like this:
 
     ```ts convex/auth.ts
     import { components } from "./_generated/api";
-    import { convexAuth, type EmailDraft } from "convex-auth/convex";
+    import { convexAuth, type EmailDraft } from "@vortex-api/convex-auth/convex";
 
     const siteUrl = process.env.CONVEX_SITE_URL?.replace(/\/$/, "");
 
@@ -158,7 +158,7 @@ When you are done, your project will look like this:
 
     ```tsx src/main.tsx
     import { ConvexReactClient, ConvexProvider } from "convex/react";
-    import { ConvexAuthClientProvider } from "convex-auth/react";
+    import { ConvexAuthClientProvider } from "@vortex-api/convex-auth/react";
     import { api } from "../convex/_generated/api";
     import App from "./App";
 
@@ -181,7 +181,7 @@ When you are done, your project will look like this:
 
   <Step title="Sign in from a component">
     ```tsx src/SignIn.tsx
-    import { useAuthActions } from "convex-auth/react";
+    import { useAuthActions } from "@vortex-api/convex-auth/react";
 
     export function SignIn() {
       const { signIn, isLoading, isAuthenticated } = useAuthActions();
@@ -215,8 +215,8 @@ When you are done, your project will look like this:
 
   <Step title="Verify and deploy">
     ```bash
-    pnpm dlx convex-auth check
-    pnpm dlx convex-auth preflight
+    pnpm dlx @vortex-api/convex-auth check
+    pnpm dlx @vortex-api/convex-auth preflight
     pnpm dlx convex deploy
     ```
 

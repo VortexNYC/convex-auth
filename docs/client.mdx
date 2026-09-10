@@ -16,7 +16,7 @@ sidebar:
 ```tsx
 // src/main.tsx
 import { ConvexReactClient, ConvexProvider } from "convex/react";
-import { ConvexAuthClientProvider } from "convex-auth/react";
+import { ConvexAuthClientProvider } from "@vortex-api/convex-auth/react";
 import { api } from "../convex/_generated/api";
 import App from "./App";
 
@@ -40,7 +40,7 @@ function Root() {
 `useAuthActions` is the low-level hook for signing in, signing up, signing out, and managing 2FA.
 
 ```tsx
-import { useAuthActions } from "convex-auth/react";
+import { useAuthActions } from "@vortex-api/convex-auth/react";
 
 export function SignIn() {
   const { signIn, isLoading, isAuthenticated } = useAuthActions();
@@ -89,7 +89,7 @@ export function SignIn() {
 `useConvexAuthClient` wraps `useAuthActions` in a Better-Auth-compatible client shape. Use this if you are porting existing Better Auth forms and hooks.
 
 ```tsx
-import { useConvexAuthClient } from "convex-auth/react";
+import { useConvexAuthClient } from "@vortex-api/convex-auth/react";
 
 export function BetterAuthSignIn() {
   const client = useConvexAuthClient();

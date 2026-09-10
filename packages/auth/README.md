@@ -9,7 +9,7 @@ This is the main package most apps install. It runs users, sessions, identities,
 ## Install
 
 ```bash
-pnpm add convex-auth
+pnpm add @vortex-api/convex-auth
 ```
 
 ## Quick start

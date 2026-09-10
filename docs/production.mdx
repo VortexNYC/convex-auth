@@ -39,8 +39,8 @@ This is the checklist for shipping `convex-auth` beyond local development.
 
   <Step title="Run check and preflight">
     ```bash
-    pnpm dlx convex-auth check
-    pnpm dlx convex-auth preflight
+    pnpm dlx @vortex-api/convex-auth check
+    pnpm dlx @vortex-api/convex-auth preflight
     ```
 
     `check` validates imports and exports. `preflight` verifies environment variables and component mounting.
@@ -69,7 +69,7 @@ The `oauth.trustedOrigins` in `convex/auth.ts` must include the origin you use f
 `convex-auth` exposes runtime observability events you can capture with `useAuthRuntimeStatus` on the client:
 
 ```tsx
-import { useAuthRuntimeStatus } from "convex-auth/react";
+import { useAuthRuntimeStatus } from "@vortex-api/convex-auth/react";
 
 export function AuthStatus() {
   const status = useAuthRuntimeStatus();

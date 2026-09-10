@@ -162,16 +162,16 @@ describe("testing helpers", () => {
   it("fails auth preflight command when backend setup is missing", async () => {
     const repoRoot = await mkdtemp(join(tmpdir(), "convex-auth-preflight-missing-"));
     await mkdir(join(repoRoot, "apps/web"), { recursive: true });
-    await mkdir(join(repoRoot, "node_modules/convex-auth"), {
+    await mkdir(join(repoRoot, "node_modules/@vortex-api/convex-auth"), {
       recursive: true,
     });
     await writeFile(
       join(repoRoot, "package.json"),
-      JSON.stringify({ dependencies: { "convex-auth": "0.1.25" } }),
+      JSON.stringify({ dependencies: { "@vortex-api/convex-auth": "0.1.25" } }),
     );
     await writeFile(join(repoRoot, "apps/web/package.json"), JSON.stringify({}));
     await writeFile(
-      join(repoRoot, "node_modules/convex-auth/package.json"),
+      join(repoRoot, "node_modules/@vortex-api/convex-auth/package.json"),
       JSON.stringify({ version: "0.1.25" }),
     );
     await writeFile(

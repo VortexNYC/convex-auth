@@ -27,8 +27,8 @@ If you only need the core auth runtime, you do not have to mount this. If you ne
 ```ts convex/convex.config.ts
 import { defineApp } from "convex/server";
 import { v } from "convex/values";
-import authCore from "convex-auth/convex.config/core";
-import authOrganizations from "convex-auth/convex.config/organizations";
+import authCore from "@vortex-api/convex-auth/convex.config/core";
+import authOrganizations from "@vortex-api/convex-auth/convex.config/organizations";
 
 const app = defineApp({
   env: {
@@ -86,7 +86,7 @@ export default app;
 ## Create an organization
 
 ```tsx src/CreateOrganization.tsx
-import { ConvexCreateOrganization } from "convex-auth/react";
+import { ConvexCreateOrganization } from "@vortex-api/convex-auth/react";
 import { useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 
@@ -114,7 +114,7 @@ export function CreateOrganization() {
 ## Switch workspaces
 
 ```tsx src/WorkspaceSwitcher.tsx
-import { ConvexOrganizationSwitcher } from "convex-auth/react";
+import { ConvexOrganizationSwitcher } from "@vortex-api/convex-auth/react";
 import { useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 

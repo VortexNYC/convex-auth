@@ -23,7 +23,7 @@ The app uses `ConvexAuthClientProvider` and `useAuthActions` from `convex-auth/r
 
 ```tsx
 import { ConvexReactClient, ConvexProvider } from "convex/react";
-import { ConvexAuthClientProvider } from "convex-auth/react";
+import { ConvexAuthClientProvider } from "@vortex-api/convex-auth/react";
 import { api } from "../convex/_generated/api";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);

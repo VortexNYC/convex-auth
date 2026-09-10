@@ -19,7 +19,7 @@ import {
   useAuthActions,
   useConvexAuthClient,
   useUser,
-} from "convex-auth/react";
+} from "@vortex-api/convex-auth/react";
 import {
   Badge,
   Button,
@@ -35,10 +35,10 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "convex-auth/ui";
+} from "@vortex-api/convex-auth/ui";
 import { api } from "../convex/_generated/api.js";
-import type { ConvexOrgListOrganization } from "convex-auth/react";
-import { runAuthPreflight, formatAuthPreflightResult } from "convex-auth/preflight";
+import type { ConvexOrgListOrganization } from "@vortex-api/convex-auth/react";
+import { runAuthPreflight, formatAuthPreflightResult } from "@vortex-api/convex-auth/preflight";
 
 export function SignedInView() {
   const actions = useAuthActions();

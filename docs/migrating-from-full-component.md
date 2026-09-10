@@ -17,7 +17,7 @@ The full `convex-auth/convex.config` component still works and is the safest sta
    ```ts
    import { defineApp } from "convex/server";
    import { v } from "convex/values";
-   import authCore from "convex-auth/convex.config/core";
+   import authCore from "@vortex-api/convex-auth/convex.config/core";
 
    const app = defineApp({
      env: {
@@ -40,7 +40,7 @@ The full `convex-auth/convex.config` component still works and is the safest sta
 
    ```ts
    import { components } from "./_generated/api";
-   import { convexAuth } from "convex-auth/convex";
+   import { convexAuth } from "@vortex-api/convex-auth/convex";
 
    export const auth = convexAuth({
      components: { core: components.convexAuthCore },

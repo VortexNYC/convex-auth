@@ -6,7 +6,7 @@ import {
   ConvexVerifyEmailScreen,
   useAuthActions,
   useConvexAuthClient,
-} from "convex-auth/react";
+} from "@vortex-api/convex-auth/react";
 import {
   Button,
   Card,
@@ -21,7 +21,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "convex-auth/ui";
+} from "@vortex-api/convex-auth/ui";
 
 export function SignedInView() {
   const actions = useAuthActions();

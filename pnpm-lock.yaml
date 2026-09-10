@@ -53,12 +53,12 @@ importers:
       '@convex-dev/static-hosting':
         specifier: ^0.2.1
         version: 0.2.1(convex@1.45.0(react@19.2.8))(react@19.2.8)
+      '@vortex-api/convex-auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       convex:
         specifier: ^1.45.0
         version: 1.45.0(react@19.2.8)
-      convex-auth:
-        specifier: workspace:*
-        version: link:../../packages/auth
       react:
         specifier: ^19.0.0
         version: 19.2.8
@@ -90,12 +90,12 @@ importers:
 
   examples/react:
     dependencies:
+      '@vortex-api/convex-auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       convex:
         specifier: ^1.45.0
         version: 1.45.0(react@19.2.8)
-      convex-auth:
-        specifier: workspace:*
-        version: link:../../packages/auth
       react:
         specifier: ^19.0.0
         version: 19.2.8
@@ -127,12 +127,12 @@ importers:
 
   examples/react-native:
     dependencies:
+      '@vortex-api/convex-auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       convex:
         specifier: ^1.45.0
         version: 1.45.0(react@19.2.8)
-      convex-auth:
-        specifier: workspace:*
-        version: link:../../packages/auth
       expo-linking:
         specifier: ^7.0.0
         version: 7.1.7(expo@57.0.16)(react-native@0.84.1(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.8))(react@19.2.8)
@@ -170,12 +170,12 @@ importers:
       '@hono/node-server':
         specifier: ^1.13.0
         version: 1.19.17(hono@4.13.5)
+      '@vortex-api/convex-auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       convex:
         specifier: ^1.45.0
         version: 1.45.0(react@19.2.8)
-      convex-auth:
-        specifier: workspace:*
-        version: link:../../packages/auth
       dotenv:
         specifier: ^16.4.0
         version: 16.6.1

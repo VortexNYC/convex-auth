@@ -49,5 +49,5 @@ export declare const internal: FilterApi<
 >;
 
 export declare const components: {
-  convexAuth: import("convex-auth/_generated/component.js").ComponentApi<"convexAuth">;
+  convexAuth: import("@vortex-api/convex-auth/_generated/component.js").ComponentApi<"convexAuth">;
 };

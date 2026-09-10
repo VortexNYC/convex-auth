@@ -59,7 +59,7 @@ describe("swapPackageInPackageJson", () => {
   it("replaces @convex-dev/better-auth with the vendored adapter", () => {
     const input = `{\n  "dependencies": {\n    "@convex-dev/better-auth": "^0.12.0"\n  }\n}`;
     expect(swapPackageInPackageJson(input)).toBe(
-      `{\n  "dependencies": {\n    "convex-auth": "^0.12.0"\n  }\n}`,
+      `{\n  "dependencies": {\n    "@vortex-api/convex-auth": "^0.12.0"\n  }\n}`,
     );
   });
 });
@@ -69,7 +69,7 @@ describe("swapPackageInConvexConfig", () => {
     const input = `import betterAuth from "@convex-dev/better-auth/convex.config";
 `;
     expect(swapPackageInConvexConfig(input)).toBe(
-      `import betterAuth from "convex-auth/convex.config";
+      `import betterAuth from "@vortex-api/convex-auth/convex.config";
 `,
     );
   });
@@ -78,7 +78,7 @@ describe("swapPackageInConvexConfig", () => {
     const input = `import betterAuth from "@convex-dev/better-auth/convex.config.js";
 `;
     expect(swapPackageInConvexConfig(input)).toBe(
-      `import betterAuth from "convex-auth/convex.config.js";
+      `import betterAuth from "@vortex-api/convex-auth/convex.config.js";
 `,
     );
   });
@@ -163,7 +163,8 @@ import { createBetterAuthConvexRuntime } from "convex-better-auth/convex";
 
 export const { auth } = createBetterAuthConvexRuntime({ ... });
 `;
-    expect(rewriteAuthToNative(input)).toBe(`import { convexAuth } from "convex-auth/convex";
+    expect(rewriteAuthToNative(input))
+      .toBe(`import { convexAuth } from "@vortex-api/convex-auth/convex";
 import { components } from "./_generated/api.js";
 
 export const auth = convexAuth({
@@ -173,7 +174,7 @@ export const auth = convexAuth({
   });
 
   it("leaves an already-native auth.ts alone", () => {
-    const input = `import { convexAuth } from "convex-auth/convex";
+    const input = `import { convexAuth } from "@vortex-api/convex-auth/convex";
 import { components } from "./_generated/api.js";
 
 export const auth = convexAuth({ component: components.convexAuth });

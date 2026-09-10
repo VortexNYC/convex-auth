@@ -35,7 +35,7 @@ A Node/Edge auth framework like Better Auth fights these constraints. The `conve
 If you are already using Better Auth, `convex-better-auth-adapter` and `convex-better-auth` provide a one-time data and client migration. The steps are:
 
 1. Mount the legacy `betterAuth` adapter component alongside the native `convexAuth` component.
-2. Run `pnpm dlx convex-auth migrate better-auth` to copy users, accounts, and sessions.
+2. Run `pnpm dlx @vortex-api/convex-auth migrate better-auth` to copy users, accounts, and sessions.
 3. Cut over `convex/convex.config.ts` and `convex/http.ts` to native `convex-auth`.
 4. Swap the React client to `convex-auth/react`.
 5. Remove `convex-better-auth` and `convex-better-auth-adapter` from `package.json`.

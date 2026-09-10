@@ -3,13 +3,13 @@
  * convex-auth CLI — the single entry point a consumer needs.
  *
  * Designed as the 'appliance' surface: a fresh consumer should never
- * type `node node_modules/convex-auth/scripts/<long-path>.ts`.
+ * type `node node_modules/@vortex-api/convex-auth/scripts/<long-path>.ts`.
  * Instead:
  *
- *   pnpm dlx convex-auth check                # consumer-contract checker
- *   pnpm dlx convex-auth check --convex-dir ./apps/backend/convex
- *   pnpm dlx convex-auth preflight            # install/runtime preflight
- *   pnpm dlx convex-auth migrate better-auth  # one-time migration from @convex-dev/better-auth
+ *   pnpm dlx @vortex-api/convex-auth check                # consumer-contract checker
+ *   pnpm dlx @vortex-api/convex-auth check --convex-dir ./apps/backend/convex
+ *   pnpm dlx @vortex-api/convex-auth preflight            # install/runtime preflight
+ *   pnpm dlx @vortex-api/convex-auth migrate better-auth  # one-time migration from @convex-dev/better-auth
  *
  * Subcommands:
  *   check    Run the cold consumer-contract checker against ./convex
@@ -37,7 +37,7 @@ function printHelp(): void {
   process.stdout.write(
     "convex-auth — Convex auth component CLI\n\n" +
       "Usage:\n" +
-      "  pnpm dlx convex-auth <command> [options]\n\n" +
+      "  pnpm dlx @vortex-api/convex-auth <command> [options]\n\n" +
       "Commands:\n" +
       "  check [--convex-dir <path>] [--legit-anchor-tables <a,b,c>]\n" +
       "    Run the consumer-contract checker (cold-runnable).\n" +
@@ -57,12 +57,12 @@ function printHelp(): void {
       "    Print this help.\n\n" +
       "Why this CLI exists:\n" +
       "  Consumers used to type:\n" +
-      "    node node_modules/convex-auth/scripts/check-consumer-contract.ts \\\n" +
+      "    node node_modules/@vortex-api/convex-auth/scripts/check-consumer-contract.ts \\\n" +
       "      --convex-dir ./apps/backend/convex\n" +
       "  Now:\n" +
-      "    pnpm dlx convex-auth check --convex-dir ./apps/backend/convex\n" +
-      "    pnpm dlx convex-auth preflight --repo-root . --convex-dir ./apps/backend/convex\n" +
-      "    pnpm dlx convex-auth migrate better-auth --dry-run\n",
+      "    pnpm dlx @vortex-api/convex-auth check --convex-dir ./apps/backend/convex\n" +
+      "    pnpm dlx @vortex-api/convex-auth preflight --repo-root . --convex-dir ./apps/backend/convex\n" +
+      "    pnpm dlx @vortex-api/convex-auth migrate better-auth --dry-run\n",
   );
 }
 

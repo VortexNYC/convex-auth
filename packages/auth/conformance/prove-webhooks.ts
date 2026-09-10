@@ -35,7 +35,7 @@ import {
   signConvexWebhookPayload,
   convexWebhookEndpointSubscribesTo,
   type ConvexWebhookFetch,
-} from "convex-auth/convex";
+} from "@vortex-api/convex-auth/convex";
 
 import { makeReporter } from "./_shared.js";
 

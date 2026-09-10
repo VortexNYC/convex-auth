@@ -13,7 +13,7 @@ sidebar:
 
 ```ts convex/auth.ts
 import { components } from "./_generated/api";
-import { convexAuth } from "convex-auth/convex";
+import { convexAuth } from "@vortex-api/convex-auth/convex";
 
 export const auth = convexAuth({
   component: components.convexAuth,
@@ -34,7 +34,7 @@ export const auth = convexAuth({
 ## Sign in with an OTP
 
 ```tsx src/SignInWithOtp.tsx
-import { useAuthActions } from "convex-auth/react";
+import { useAuthActions } from "@vortex-api/convex-auth/react";
 
 export function SignInWithOtp() {
   const { signInWithEmailOtp, verifyEmailOtp, isLoading } = useAuthActions();
@@ -62,7 +62,7 @@ export function SignInWithOtp() {
 ## Verify or change an email with an OTP
 
 ```tsx
-import { useAuthActions } from "convex-auth/react";
+import { useAuthActions } from "@vortex-api/convex-auth/react";
 
 export function VerifyEmailWithOtp() {
   const { sendVerificationOtp, verifyEmailOtp } = useAuthActions();
