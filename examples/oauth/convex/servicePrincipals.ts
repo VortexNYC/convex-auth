@@ -71,3 +71,40 @@ export const create = mutation({
     return result;
   },
 });
+
+export const issueApiKey = mutation({
+  args: {
+    organizationId: v.string(),
+    userId: v.string(),
+    servicePrincipalId: v.string(),
+    name: v.string(),
+    permissions: v.optional(v.array(v.string())),
+    environment: v.optional(v.string()),
+  },
+  returns: v.object({
+    apiKey: v.string(),
+    apiKeyId: v.string(),
+    keyPrefix: v.string(),
+    keyStart: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const result = await ctx.runMutation(components.convexAuth.apiKeys.issueServiceOwnedApiKey, {
+      servicePrincipalId: args.servicePrincipalId,
+      name: args.name,
+      environment: (args.environment as "sandbox" | "production") ?? "production",
+      permissions: args.permissions ?? undefined,
+    });
+
+    await ctx.runMutation(components.convexAuth.native.audit.createAuthAuditEvent, {
+      actorUserId: args.userId,
+      actorType: "user",
+      eventType: "service_api_key.issued",
+      targetType: "api_key",
+      targetId: result.apiKeyId,
+      organizationId: args.organizationId,
+      metadataJson: `Service API key issued for ${args.servicePrincipalId}`,
+    });
+
+    return result;
+  },
+});

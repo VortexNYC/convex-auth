@@ -734,6 +734,7 @@ function ServicePrincipalsPanel({
     organizationId ? { organizationId } : "skip",
   );
   const create = useMutation(api.servicePrincipals.create);
+  const issue = useMutation(api.servicePrincipals.issueApiKey);
   const [creating, setCreating] = useState(false);
   const [state, setState] = useState({
     name: "",
@@ -741,6 +742,7 @@ function ServicePrincipalsPanel({
     description: "",
     permissions: "",
   });
+  const [newServiceKeys, setNewServiceKeys] = useState<Record<string, string | null>>({});
 
   if (organizationId === null) {
     return (
@@ -781,6 +783,24 @@ function ServicePrincipalsPanel({
       onMessage(error instanceof Error ? error.message : "Could not create service principal");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleIssueApiKey = async (servicePrincipalId: string, permissions: string[]) => {
+    setNewServiceKeys((prev) => ({ ...prev, [servicePrincipalId]: null }));
+    try {
+      const result = await issue({
+        organizationId,
+        userId,
+        servicePrincipalId,
+        name: "default",
+        permissions,
+        environment: "production",
+      });
+      setNewServiceKeys((prev) => ({ ...prev, [servicePrincipalId]: result.apiKey }));
+      onMessage("Service API key issued. Save it now — it will not be shown again.");
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : "Could not issue service API key");
     }
   };
 
@@ -864,6 +884,22 @@ function ServicePrincipalsPanel({
                   <div className="text-muted-foreground text-xs mt-1">
                     {sp.permissions.length > 0 ? sp.permissions.join(", ") : "no permissions"}
                   </div>
+                  <Button
+                    className="mt-2"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void handleIssueApiKey(sp._id, sp.permissions)}
+                  >
+                    Issue API key
+                  </Button>
+                  {newServiceKeys[sp._id] ? (
+                    <div
+                      className="bg-background mt-2 rounded p-2 break-all font-mono text-xs"
+                      role="status"
+                    >
+                      {newServiceKeys[sp._id]}
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
