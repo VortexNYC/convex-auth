@@ -38,6 +38,7 @@ import {
 } from "convex-auth/ui";
 import { api } from "../convex/_generated/api.js";
 import type { ConvexOrgListOrganization } from "convex-auth/react";
+import { runAuthPreflight, formatAuthPreflightResult } from "convex-auth/preflight";
 
 export function SignedInView() {
   const actions = useAuthActions();
@@ -137,6 +138,7 @@ export function SignedInView() {
             <TabsTrigger value="servicePrincipals">Service principals</TabsTrigger>
             <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
             <TabsTrigger value="securityAudit">Audit</TabsTrigger>
+            <TabsTrigger value="preflight">Preflight</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
@@ -199,6 +201,10 @@ export function SignedInView() {
 
           <TabsContent value="securityAudit" className="space-y-4">
             <SecurityAuditPanel organizationId={selectedOrganizationId} />
+          </TabsContent>
+
+          <TabsContent value="preflight" className="space-y-4">
+            <PreflightPanel />
           </TabsContent>
         </Tabs>
       </div>
@@ -992,5 +998,46 @@ function ServicePrincipalsPanel({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function PreflightPanel() {
+  const [result, setResult] = useState<ReturnType<typeof formatAuthPreflightResult> | null>(null);
+  const [running, setRunning] = useState(false);
+  const convexUrl = import.meta.env.VITE_CONVEX_URL as string | undefined;
+
+  const run = async () => {
+    setRunning(true);
+    const res = await runAuthPreflight({
+      convexUrl,
+      appServer: {
+        baseUrl: window.location.origin,
+        expectedValues: convexUrl ? [convexUrl] : [],
+        probePaths: ["/"],
+      },
+    });
+    setResult(formatAuthPreflightResult(res));
+    setRunning(false);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Auth preflight</CardTitle>
+        <CardDescription>
+          Runtime checks for the Convex auth deployment and served app.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Button onClick={() => void run()} disabled={running}>
+          {running ? "Running…" : "Run preflight"}
+        </Button>
+        {result ? (
+          <pre className="bg-muted text-foreground whitespace-pre-wrap rounded p-3 font-mono text-xs">
+            {result}
+          </pre>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }

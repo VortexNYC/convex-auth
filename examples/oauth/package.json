@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "check:contract": "convex-auth check --convex-dir ./convex",
+    "preflight": "convex-auth preflight --repo-root . --convex-dir ./convex --test-env .env.local --skip-backend-setup"
   },
   "dependencies": {
     "@convex-dev/static-hosting": "^0.2.1",
