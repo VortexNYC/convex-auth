@@ -6,13 +6,13 @@ This page lists the runtime and dependency versions `convex-auth` is tested agai
 
 ## Current matrix
 
-| Package / subpath          | Version | Convex     | React      | React Native / Expo | Node        | pnpm      |
-| -------------------------- | ------- | ---------- | ---------- | ------------------- | ----------- | --------- |
-| `convex-auth`              | `2.0.3` | `>=1.45.0` | `>=19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
-| `convex-auth/react`        | `2.0.3` | `>=1.45.0` | `>=19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
-| `convex-auth/react-native` | `2.0.3` | `>=1.45.0` | `>=19.0.0` | `expo-*` (optional) | `>=20.12.0` | `10.25.0` |
+| Package / subpath                      | Version | Convex     | React      | React Native / Expo | Node        | pnpm      |
+| -------------------------------------- | ------- | ---------- | ---------- | ------------------- | ----------- | --------- |
+| `@vortex-api/convex-auth`              | `2.1.2` | `>=1.45.0` | `>=19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
+| `@vortex-api/convex-auth/react`        | `2.1.2` | `>=1.45.0` | `>=19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
+| `@vortex-api/convex-auth/react-native` | `2.1.2` | `>=1.45.0` | `>=19.0.0` | `expo-*` (optional) | `>=20.12.0` | `10.25.0` |
 
-Better Auth is not a runtime dependency for `convex-auth`. The migration helper at `packages/auth/scripts/migrate-better-auth.ts` can bridge an existing Better Auth 1.7.x database, but it is removed after the data cutover.
+Better Auth is not a runtime dependency for `@vortex-api/convex-auth`. The migration helper at `packages/auth/scripts/migrate-better-auth.ts` can bridge an existing Better Auth 1.7.x database, but it is removed after the data cutover.
 
 ## What the ranges mean
 
