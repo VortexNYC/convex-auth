@@ -40,6 +40,9 @@ export function SignInView() {
   const [otpSent, setOtpSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const isResendEmailId = (id: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
   const startOAuth = async (provider: string) => {
     const result = await authClient.signIn.social({
       provider,
@@ -107,11 +110,16 @@ export function SignInView() {
         return;
       }
       if (result.data?.status === "queued" && result.data.emailId) {
-        const token = result.data.emailId;
-        const siteUrl = import.meta.env.VITE_CONVEX_SITE_URL ?? window.location.origin;
-        const url = `${siteUrl}/api/auth/magic-link/verify?token=${encodeURIComponent(token)}&callbackURL=${encodeURIComponent(window.location.origin)}`;
-        setMagicLinkUrl(url);
-        setStatus("Magic link queued. Click the link to sign in.");
+        const id = result.data.emailId;
+        if (isResendEmailId(id)) {
+          setMagicLinkUrl(null);
+          setStatus(`Magic link sent to ${magicEmail}. Check your inbox. (Resend: ${id})`);
+        } else {
+          const siteUrl = import.meta.env.VITE_CONVEX_SITE_URL ?? window.location.origin;
+          const url = `${siteUrl}/api/auth/magic-link/verify?token=${encodeURIComponent(id)}&callbackURL=${encodeURIComponent(window.location.origin)}`;
+          setMagicLinkUrl(url);
+          setStatus("Magic link queued. Click the link to sign in.");
+        }
       } else {
         setStatus(result.data?.reason ?? "Magic link not sent");
       }
@@ -133,9 +141,14 @@ export function SignInView() {
         return;
       }
       if (result?.data?.status === "queued" && result.data.emailId) {
+        const id = result.data.emailId;
         setOtpSent(true);
         setOtpCode("");
-        setStatus(`Email OTP queued: ${result.data.emailId}`);
+        setStatus(
+          isResendEmailId(id)
+            ? `Email OTP sent to ${otpEmail}. Check your inbox for the code. (Resend: ${id})`
+            : `Email OTP queued: ${id}`,
+        );
       } else {
         setStatus(result?.data?.reason ?? "Email OTP not sent");
       }
