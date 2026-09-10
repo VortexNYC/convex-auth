@@ -1,0 +1,58 @@
+---
+title: Troubleshooting
+description: How to diagnose problems and report issues with @vortex-api/convex-auth.
+sidebar:
+  order: 12
+---
+
+# Troubleshooting
+
+## Collect a diagnostics bundle
+
+`convex-auth` ships a CLI command that gathers a safe, sanitized diagnostics bundle you can paste into a GitHub issue. It reads package versions, Convex wiring, and public environment variables, and it redacts secret-like values in your `convex/auth.ts` and related files.
+
+```bash
+pnpm dlx @vortex-api/convex-auth bug-report --repo-root . --convex-dir ./convex
+```
+
+Add `--open` to print a GitHub issue URL:
+
+```bash
+pnpm dlx @vortex-api/convex-auth bug-report --repo-root . --convex-dir ./convex --open --title "Sign-in redirect loop"
+```
+
+The command checks for the standard wiring:
+
+- `convex/auth.ts` calls `convexAuth`.
+- `convex/auth.config.ts` exports `createConvexAuthProvider()`.
+- `convex/convex.config.ts` mounts the `convexAuth` component.
+- `convex/http.ts` calls `auth.addHttpRoutes`.
+- `CONVEX_DEPLOYMENT`, `CONVEX_URL`, or `VITE_CONVEX_URL` is set.
+
+If any are missing or suspicious, the report lists them under **Diagnostics checks**.
+
+## Common mistakes
+
+### `Authentication required` on a public page
+
+- Make sure the page component is rendered inside `ConvexAuthProvider`.
+- If you use `useConvexAuthUser`, ensure the provider is above it in the tree.
+
+### OAuth callback fails with `state mismatch`
+
+- Verify `auth.addHttpRoutes(http)` is wired in `convex/http.ts`.
+- Check that `trustedOrigins` in `convexAuth({ emailAndPassword: { trustedOrigins } })` includes your app's origin.
+
+### Magic-link / OTP email not sent
+
+- Configure `RESEND_API_KEY` and `EMAIL_FROM_ADDRESS`.
+- For local testing, set `ALLOW_EMAIL_TOKEN_FALLBACK=true` to return tokens in the response instead of sending email.
+
+### Theming does not toggle dark mode
+
+- Wrap the app with `ConvexAuthAppearanceProvider`.
+- Import `@vortex-api/convex-auth/ui/styles.css` in your root CSS.
+
+## Report an issue
+
+If the docs and diagnostics bundle do not solve the problem, open a bug report on [GitHub](https://github.com/VortexNYC/convex-auth/issues/new?template=bug.md).

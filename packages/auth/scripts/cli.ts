@@ -9,6 +9,7 @@
  *   pnpm dlx @vortex-api/convex-auth check                # consumer-contract checker
  *   pnpm dlx @vortex-api/convex-auth check --convex-dir ./apps/backend/convex
  *   pnpm dlx @vortex-api/convex-auth preflight            # install/runtime preflight
+ *   pnpm dlx @vortex-api/convex-auth bug-report           # collect a safe diagnostics bundle
  *   pnpm dlx @vortex-api/convex-auth migrate better-auth  # one-time migration from @convex-dev/better-auth
  *
  * Subcommands:
@@ -49,6 +50,10 @@ function printHelp(): void {
       "    Run the auth install/runtime preflight from the repo root.\n" +
       "    Defaults: --repo-root . and --convex-dir ./convex.\n" +
       "    Use -- after flags to run a command only after preflight passes.\n\n" +
+      "  bug-report [--repo-root <path>] [--convex-dir <path>] [--output <path>]\n" +
+      "             [--title <title>] [--open]\n" +
+      "    Collect a sanitized diagnostics bundle for GitHub issues.\n" +
+      "    Secrets in auth files are redacted; only public env vars are printed.\n\n" +
       "  migrate better-auth [--dry-run] [--cutover] [--resume]\n" +
       "                      [--from-component <name>] [--auth-component <name>]\n" +
       "    One-time migration from @convex-dev/better-auth to convex-auth.\n" +
@@ -62,6 +67,7 @@ function printHelp(): void {
       "  Now:\n" +
       "    pnpm dlx @vortex-api/convex-auth check --convex-dir ./apps/backend/convex\n" +
       "    pnpm dlx @vortex-api/convex-auth preflight --repo-root . --convex-dir ./apps/backend/convex\n" +
+      "    pnpm dlx @vortex-api/convex-auth bug-report --repo-root . --convex-dir ./apps/backend/convex\n" +
       "    pnpm dlx @vortex-api/convex-auth migrate better-auth --dry-run\n",
   );
 }
@@ -97,6 +103,12 @@ function main(): void {
     }
     case "preflight": {
       runScript("preflight", rest);
+      return;
+    }
+    case "bug-report":
+    case "bug":
+    case "diagnostics": {
+      runScript("bug-report", rest);
       return;
     }
     case "migrate": {
