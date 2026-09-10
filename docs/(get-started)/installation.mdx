@@ -58,6 +58,29 @@ This guide installs the packages and sets the minimum environment variables. For
   </Step>
 </Steps>
 
+## Supported versions
+
+`convex-auth` is tested against the following ranges:
+
+| Package / subpath                      | Version | Convex     | React      | React Native / Expo | Node        | pnpm      |
+| -------------------------------------- | ------- | ---------- | ---------- | ------------------- | ----------- | --------- |
+| `@vortex-api/convex-auth`              | `2.1.2` | `>=1.45.0` | `>=19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
+| `@vortex-api/convex-auth/react`        | `2.1.2` | `>=1.45.0` | `>=19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
+| `@vortex-api/convex-auth/react-native` | `2.1.2` | `>=1.45.0` | `>=19.0.0` | `expo-*` (optional) | `>=20.12.0` | `10.25.0` |
+
+- **Convex** — `>=1.45.0` covers the modern backend system and generated component API.
+- **React** — React 19 is the primary target; the client side does not depend on a specific React 18 release.
+- **Node** — CI runs on Node 20.12+ and Node 22. Older Node versions are not tested.
+- **pnpm** — the workspace uses pnpm only.
+
+## Updating Convex
+
+If you want to widen the `convex` peer range:
+
+1. Update the range in `packages/auth/package.json`.
+2. Run `pnpm run typecheck`, `pnpm run build`, and `pnpm test` from the repo root.
+3. Do not widen a peer range without running the full test suite.
+
 ## Optional: set OAuth credentials
 
 If you want Google, GitHub, or Discord sign-in, also set these and register the callback URL `https://<CONVEX_SITE_URL>/api/auth/callback/<provider>`:

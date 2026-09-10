@@ -5,13 +5,5 @@ export default defineMeta({
   order: 6,
   display: "group",
   icon: "book-open",
-  pages: [
-    "server-api",
-    "ui-components",
-    "architecture",
-    "feature-gated-components",
-    "examples",
-    "compatibility",
-    "changelog",
-  ],
+  pages: ["server-api", "ui-components", "architecture", "feature-gated-components", "examples"],
 });
