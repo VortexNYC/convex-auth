@@ -1,7 +1,13 @@
-import { type JWTPayload, type JSONWebKeySet, SignJWT, importJWK } from "jose";
+import {
+  type JWTPayload,
+  type JSONWebKeySet,
+  SignJWT,
+  importJWK,
+  calculateJwkThumbprint,
+} from "jose";
 import { base64urlToBytes } from "./password.js";
 
-export async function getJwtPrivateKey(): Promise<{ key: CryptoKey; kid?: string }> {
+export async function getJwtPrivateKey(): Promise<{ key: CryptoKey; kid: string }> {
   const raw = process.env.JWT_PRIVATE_KEY;
   if (!raw) {
     throw new Error("JWT_PRIVATE_KEY environment variable is not set");
@@ -11,15 +17,25 @@ export async function getJwtPrivateKey(): Promise<{ key: CryptoKey; kid?: string
   if (keyLike instanceof Uint8Array) {
     throw new Error("JWT_PRIVATE_KEY must be an asymmetric key, not a symmetric secret");
   }
-  return { key: keyLike, kid: jwk.kid };
+  const kid = jwk.kid ?? (await calculateJwkThumbprint(jwk, "sha256"));
+  return { key: keyLike, kid };
 }
 
-export function getJwks(): JSONWebKeySet {
+export async function getJwks(): Promise<JSONWebKeySet> {
   const raw = process.env.JWKS;
   if (!raw) {
     throw new Error("JWKS environment variable is not set");
   }
-  return JSON.parse(raw) as JSONWebKeySet;
+  const jwks = JSON.parse(raw) as JSONWebKeySet;
+  const keys = await Promise.all(
+    jwks.keys.map(async (jwk) => {
+      if (jwk === null || typeof jwk !== "object" || jwk.kid) {
+        return jwk;
+      }
+      return { ...jwk, kid: await calculateJwkThumbprint(jwk, "sha256") };
+    }),
+  );
+  return { keys };
 }
 
 const DEFAULT_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
@@ -120,7 +136,7 @@ export async function verifyToken(token: string): Promise<JWTPayload> {
     throw new Error(`Invalid JWT: unsupported algorithm ${header.alg ?? "none"}`);
   }
 
-  const jwks = getJwks();
+  const jwks = await getJwks();
   const jwk = findPublicKey(jwks, header.kid);
   if (!jwk) {
     throw new Error("Invalid JWT: no matching public key");

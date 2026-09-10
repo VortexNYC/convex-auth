@@ -31,8 +31,8 @@ describe("jwt", () => {
     await expect(verifyToken("not-a-token")).rejects.toThrow();
   });
 
-  it("exposes the JWKS", () => {
-    const jwks = getJwks();
+  it("exposes the JWKS", async () => {
+    const jwks = await getJwks();
     expect(jwks.keys).toHaveLength(1);
     expect(jwks.keys[0].kty).toBe("RSA");
   });
