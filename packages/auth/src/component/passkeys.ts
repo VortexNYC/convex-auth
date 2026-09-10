@@ -1,8 +1,15 @@
 import { mutation } from "./_generated/server.js";
 import { v } from "convex/values";
-import { generateRegistrationOptions, verifyRegistrationResponse } from "@simplewebauthn/server";
-import type { RegistrationResponseJSON } from "@simplewebauthn/server";
-import { bytesToBase64url } from "../convex-runtime/native/password.js";
+import {
+  generateAuthenticationOptions,
+  generateRegistrationOptions,
+  verifyAuthenticationResponse,
+  verifyRegistrationResponse,
+} from "@simplewebauthn/server";
+import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simplewebauthn/server";
+import { bytesToBase64url, base64urlToBytes } from "../convex-runtime/native/password.js";
+import { mintToken } from "../convex-runtime/native/jwt.js";
+import { generateVerificationToken, hashToken } from "../convex-runtime/native/tokens.js";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
@@ -220,5 +227,205 @@ export const revokePasskey = mutation({
 
     await ctx.db.patch(passkey._id, { revokedAt: Date.now() });
     return true;
+  },
+});
+
+const authenticationResponseValidator = v.object({
+  id: v.string(),
+  rawId: v.string(),
+  response: v.object({
+    clientDataJSON: v.string(),
+    authenticatorData: v.string(),
+    signature: v.string(),
+    userHandle: v.optional(v.string()),
+  }),
+  clientExtensionResults: v.optional(v.record(v.string(), v.any())),
+  type: v.optional(v.string()),
+});
+
+export const generatePasskeyAuthenticationOptions = mutation({
+  args: {
+    userId: v.optional(v.id("users")),
+    credentialId: v.optional(v.string()),
+    rpID: v.string(),
+    userVerification: v.optional(
+      v.union(v.literal("required"), v.literal("preferred"), v.literal("discouraged")),
+    ),
+  },
+  returns: v.record(v.string(), v.any()),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const challengeBytes = new Uint8Array(32);
+    globalThis.crypto.getRandomValues(challengeBytes);
+    const challenge = bytesToBase64url(challengeBytes);
+
+    let allowCredentials: { id: string; type: string; transports: string[] }[] = [];
+
+    if (args.credentialId) {
+      const passkey = await ctx.db
+        .query("auth_passkeys")
+        .withIndex("by_credentialId", (q) => q.eq("credentialId", args.credentialId!))
+        .first();
+      if (passkey && !passkey.revokedAt) {
+        allowCredentials = [
+          {
+            id: passkey.credentialId,
+            type: "public-key",
+            transports: passkey.transports ?? [],
+          },
+        ];
+      }
+    } else if (args.userId) {
+      const passkeys = await ctx.db
+        .query("auth_passkeys")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId!))
+        .take(100);
+      allowCredentials = passkeys
+        .filter((pk) => !pk.revokedAt)
+        .map((pk) => ({
+          id: pk.credentialId,
+          type: "public-key" as const,
+          transports: pk.transports ?? [],
+        }));
+    }
+
+    const options = await generateAuthenticationOptions({
+      rpID: args.rpID,
+      challenge,
+      allowCredentials,
+      userVerification: args.userVerification ?? "preferred",
+    });
+
+    await ctx.db.insert("auth_passkey_challenges", {
+      challenge: options.challenge,
+      type: "authentication",
+      userId: args.userId ?? undefined,
+      identifier: undefined,
+      expiresAt: now + CHALLENGE_TTL_MS,
+      createdAt: now,
+    });
+
+    return options;
+  },
+});
+
+const SESSION_TTL_MS = 15 * 60 * 1000;
+const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+export const verifyPasskeyAuthentication = mutation({
+  args: {
+    challenge: v.string(),
+    response: authenticationResponseValidator,
+    rpID: v.string(),
+    origin: v.string(),
+  },
+  returns: v.object({
+    token: v.string(),
+    refreshToken: v.string(),
+    userId: v.id("users"),
+    identityId: v.optional(v.id("auth_identities")),
+    sessionId: v.string(),
+    expiresAt: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    const challengeRecord = await ctx.db
+      .query("auth_passkey_challenges")
+      .withIndex("by_challenge", (q) => q.eq("challenge", args.challenge))
+      .first();
+
+    if (!challengeRecord || challengeRecord.type !== "authentication") {
+      throw new Error("Invalid or unknown authentication challenge");
+    }
+    if (challengeRecord.expiresAt < now) {
+      await ctx.db.delete(challengeRecord._id);
+      throw new Error("Authentication challenge has expired");
+    }
+    await ctx.db.delete(challengeRecord._id);
+
+    const passkey = await ctx.db
+      .query("auth_passkeys")
+      .withIndex("by_credentialId", (q) => q.eq("credentialId", args.response.id))
+      .first();
+
+    if (!passkey || passkey.revokedAt) {
+      throw new Error("Passkey not found or has been revoked");
+    }
+
+    const verification = await verifyAuthenticationResponse({
+      response: args.response as AuthenticationResponseJSON,
+      expectedChallenge: args.challenge,
+      expectedOrigin: args.origin,
+      expectedRPID: args.rpID,
+      credential: {
+        id: passkey.credentialId,
+        publicKey: new Uint8Array(base64urlToBytes(passkey.publicKey)),
+        counter: passkey.counter,
+        transports: passkey.transports ?? [],
+      },
+      requireUserVerification: true,
+    });
+
+    if (!verification.verified) {
+      throw new Error("Passkey authentication could not be verified");
+    }
+
+    const { authenticationInfo } = verification;
+
+    await ctx.db.patch(passkey._id, {
+      counter: authenticationInfo.newCounter,
+      lastUsedAt: now,
+      deviceType: authenticationInfo.credentialDeviceType,
+      backedUp: authenticationInfo.credentialBackedUp,
+    });
+
+    const user = await ctx.db.get(passkey.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const sessionId = crypto.randomUUID();
+    const sessionExpiresAt = now + SESSION_TTL_MS;
+    const token = await mintToken(
+      user._id,
+      sessionId,
+      { identityId: passkey.identityId },
+      { expiresInSeconds: SESSION_TTL_MS / 1000 },
+    );
+    const refreshToken = generateVerificationToken();
+    const refreshTokenHash = await hashToken(refreshToken);
+    const refreshTokenExpiresAt = now + REFRESH_TOKEN_TTL_MS;
+
+    await ctx.db.insert("authRefreshTokens", {
+      tokenHash: refreshTokenHash,
+      sessionId,
+      userId: user._id,
+      expiresAt: refreshTokenExpiresAt,
+      revokedAt: undefined,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("authSessions", {
+      sessionId,
+      userId: user._id,
+      token,
+      expiresAt: sessionExpiresAt,
+      ipAddress: undefined,
+      userAgent: undefined,
+      revokedAt: undefined,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return {
+      token,
+      refreshToken,
+      userId: user._id,
+      identityId: passkey.identityId,
+      sessionId,
+      expiresAt: sessionExpiresAt,
+    };
   },
 });
