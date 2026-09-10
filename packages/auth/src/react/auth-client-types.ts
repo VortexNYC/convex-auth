@@ -50,6 +50,17 @@ export type ConvexBetterAuthClient = {
     }): Promise<BetterAuthResponse>;
     social(args: { provider: string; callbackURL?: string }): Promise<BetterAuthResponse>;
   };
+  signInWithMagicLink?: (args: {
+    email: string;
+    name?: string;
+    callbackURL?: string;
+    newUserCallbackURL?: string;
+    errorCallbackURL?: string;
+    metadata?: Record<string, string>;
+  }) => Promise<{
+    data?: { status: string; reason?: string | null; emailId?: string | null } | null;
+    error: { message?: string | null } | null;
+  }>;
   signUp: {
     email(args: {
       name: string;

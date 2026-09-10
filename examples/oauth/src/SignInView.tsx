@@ -20,7 +20,7 @@ import {
   Separator,
 } from "convex-auth/ui";
 
-type ViewMode = "signIn" | "signUp" | "forgot" | "reset" | "verifyTwoFactor";
+type ViewMode = "signIn" | "signUp" | "forgot" | "reset" | "verifyTwoFactor" | "magicLink";
 
 const providers = [
   { id: "google", label: "Google" },
@@ -33,6 +33,8 @@ export function SignInView() {
   const [mode, setMode] = useState<ViewMode>("signIn");
   const [status, setStatus] = useState<string | null>(null);
   const [resetToken, setResetToken] = useState("");
+  const [magicEmail, setMagicEmail] = useState("");
+  const [magicLinkUrl, setMagicLinkUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const startOAuth = async (provider: string) => {
@@ -86,6 +88,35 @@ export function SignInView() {
   const handleVerified = () => {
     setStatus("Two-factor verified.");
     setMode("signIn");
+  };
+
+  const handleSendMagicLink = async () => {
+    setIsSubmitting(true);
+    setStatus(null);
+    setMagicLinkUrl(null);
+    try {
+      const result = await authClient.signInWithMagicLink({
+        email: magicEmail,
+        callbackURL: window.location.origin,
+      });
+      if (result.error) {
+        setStatus(result.error.message ?? "Could not send magic link");
+        return;
+      }
+      if (result.data?.status === "queued" && result.data.emailId) {
+        const token = result.data.emailId;
+        const siteUrl = import.meta.env.VITE_CONVEX_SITE_URL ?? window.location.origin;
+        const url = `${siteUrl}/api/auth/magic-link/verify?token=${encodeURIComponent(token)}&callbackURL=${encodeURIComponent(window.location.origin)}`;
+        setMagicLinkUrl(url);
+        setStatus("Magic link queued. Click the link to sign in.");
+      } else {
+        setStatus(result.data?.reason ?? "Magic link not sent");
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not send magic link");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const footerLink = (label: string, next: ViewMode) => (
@@ -156,6 +187,44 @@ export function SignInView() {
               }
             />
           </>
+        ) : mode === "magicLink" ? (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Magic link sign-in</CardTitle>
+                <CardDescription>Enter your email and click the link we queue.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="magic-email">Email</Label>
+                  <Input
+                    id="magic-email"
+                    type="email"
+                    value={magicEmail}
+                    onChange={(e) => setMagicEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <Button onClick={() => void handleSendMagicLink()} disabled={isSubmitting || !magicEmail.trim()}>
+                  {isSubmitting ? "Sending…" : "Send magic link"}
+                </Button>
+                {magicLinkUrl ? (
+                  <div className="space-y-2">
+                    <p className="text-muted-foreground text-sm">Click the link to finish signing in:</p>
+                    <a
+                      href={magicLinkUrl}
+                      className="text-foreground break-all font-mono text-xs underline"
+                    >
+                      {magicLinkUrl}
+                    </a>
+                  </div>
+                ) : null}
+                {status ? <p className="text-muted-foreground text-sm">{status}</p> : null}
+              </CardContent>
+            </Card>
+            <div className="text-center">{footerLink("Back to sign in", "signIn")}</div>
+          </>
         ) : (
           <>
             <AuthSignInForm
@@ -169,6 +238,7 @@ export function SignInView() {
               footer={
                 <div className="flex flex-col gap-2 text-center">
                   {footerLink("Forgot password?", "forgot")}
+                  {footerLink("Sign in with magic link", "magicLink")}
                   {footerLink("Create account", "signUp")}
                 </div>
               }

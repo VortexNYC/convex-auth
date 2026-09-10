@@ -24,6 +24,7 @@ export const auth = convexAuth({
   emailAndPassword: {
     enabled: true,
     checkBreach: true,
+    trustedOrigins: [siteUrl, "http://localhost:5173"],
     email: {
       from: process.env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
       appOrigin: siteUrl,
@@ -47,6 +48,15 @@ export const auth = convexAuth({
     discord: {
       clientId: process.env.DISCORD_CLIENT_ID ?? "",
       clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
+    },
+  },
+  magicLink: {
+    enabled: true,
+    appOrigin: siteUrl,
+    sendMagicLink: async ({ token }) => {
+      // In a real app, send the URL via email. For the demo, return the
+      // token so the user can click the verification link manually.
+      return token;
     },
   },
 });
@@ -74,4 +84,6 @@ export const {
   verifySession,
   signInWithRedirect,
   callback,
+  signInMagicLink,
+  verifyMagicLink,
 } = auth;

@@ -76,6 +76,18 @@ export function useConvexAuthClient() {
       },
     },
 
+    signInWithMagicLink: async (args) => {
+      if (actions.signInWithMagicLink === undefined) {
+        return { data: null, error: toError("Magic link is not available") };
+      }
+      try {
+        const result = await actions.signInWithMagicLink(args);
+        return { data: result, error: null };
+      } catch (err) {
+        return { data: null, error: toError(err) };
+      }
+    },
+
     signUp: {
       email: async (args) => {
         try {
