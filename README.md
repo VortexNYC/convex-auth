@@ -17,7 +17,7 @@ Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 [![Node][node-badge]][node]
 [![pnpm][pnpm-badge]][pnpm]
 
-**[Docs](https://resilient-blackbird-58.convex.site)** · **[How we got here](#how-we-got-here)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth-recommended)** · **[Architecture](<docs/(reference)/architecture.md>)**
+**[Docs](https://resilient-blackbird-58.convex.site)** · **[How we got here](#how-we-got-here)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth)** · **[Architecture](<docs/(reference)/architecture.md>)**
 
 </div>
 
@@ -63,11 +63,11 @@ Subpaths:
 
 Published under the Apache-2.0 license.
 
-## Convex-native auth (recommended)
+## Convex-native auth
 
 `@vortex-api/convex-auth` ships a Convex-native auth runtime that stores users, sessions, and identities in your Convex database and runs in the default Convex isolate. It supports email/password, Google/GitHub/Discord OAuth, 2FA, email verification, password reset, sessions, and refresh tokens. No Better Auth server is required.
 
-The native flow is the intended end state of this repository. The Better Auth bridge below is still available for teams that need it while migrating.
+This is the intended way to use the package. The Better Auth bridge below is a one-time migration tool for existing Better Auth users.
 
 ### 1. Install
 
@@ -330,7 +330,7 @@ export function App() {
 }
 ```
 
-After the cutover to the native runtime, remove the provider and use the `convex-auth/react` client and `ConvexAuthClientProvider` shown in the [Convex-native auth section](#convex-native-auth-recommended).
+After the cutover to the native runtime, remove the provider and use the `convex-auth/react` client and `ConvexAuthClientProvider` shown in the [Convex-native auth section](#convex-native-auth).
 
 ## Compatibility and migration
 
