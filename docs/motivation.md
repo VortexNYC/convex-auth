@@ -1,4 +1,4 @@
-# Why `convex-better-auth-2.0` exists
+# Why `convex-auth` exists
 
 This workspace is a full-stack, open-source auth solution for [Convex](https://convex.dev). It gives Convex developers an out-of-the-box auth layer that covers the same surface area as Clerk or WorkOS, while keeping auth state in the same database as the rest of the app.
 
@@ -19,7 +19,7 @@ This project gives you the Clerk/WorkOS feature surface — users, orgs, invites
 
 ## What this repo does about it
 
-`convex-better-auth-2.0` is now a single public package, `convex-auth`, with a one-time Better Auth migration bridge. Everything ships as subpaths of `convex-auth`:
+`convex-auth` is now a single public package, `convex-auth`, with a one-time Better Auth migration bridge. Everything ships as subpaths of `convex-auth`:
 
 | Subpath                    | What it is today                          |
 | -------------------------- | ----------------------------------------- |

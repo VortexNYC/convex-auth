@@ -1,12 +1,12 @@
 # How we got here
 
-This is the short history of `convex-better-auth-2.0`: why we started on Better Auth rails, why that stopped being enough, and how Convex Auth 2.0 gave us the signal to build a native Convex auth runtime.
+This is the short history of `convex-auth`: why we started on Better Auth rails, why that stopped being enough, and how Convex Auth 2.0 gave us the signal to build a native Convex auth runtime.
 
 ## Level 1 — Better Auth as the pragmatic first rail
 
 When we started, Convex did not have a first-party auth product that covered the full Clerk/WorkOS surface: email/password, OAuth, 2FA, organizations, API keys, service sessions, webhooks, and MCP auth. Better Auth did. It was the best available auth framework for the feature set we needed.
 
-So we built `convex-better-auth-2.0` as a **Better Auth integration for Convex**. The idea was to let Better Auth own the auth primitives and wire them into Convex's database and component model.
+So we built `convex-auth` as a **Better Auth integration for Convex**. The idea was to let Better Auth own the auth primitives and wire them into Convex's database and component model.
 
 ### What worked
 

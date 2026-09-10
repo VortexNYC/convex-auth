@@ -1,8 +1,10 @@
 <div align="center">
 
-# convex-better-auth-2.0
+# convex-auth
 
 A public, Convex-native auth platform for [Convex](https://convex.dev), with a [Better Auth](https://www.better-auth.com) compatibility bridge.
+
+Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 
 > **Disclaimer:** This is an independent, community-driven project. It is not affiliated with or endorsed by Convex Inc.
 
@@ -13,7 +15,7 @@ A public, Convex-native auth platform for [Convex](https://convex.dev), with a [
 [![Node][node-badge]][node]
 [![pnpm][pnpm-badge]][pnpm]
 
-**[Docs](https://<your-site>.convex.site)** · **[Why this exists](#why-this-exists)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth-recommended)**
+**[Demo](https://perfect-dragon-698.convex.site)** · **[Why this exists](#why-this-exists)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth-recommended)**
 
 </div>
 
@@ -385,8 +387,8 @@ Apache-2.0 — see `LICENSE`.
 
 <!-- badges -->
 
-[ci-badge]: https://img.shields.io/github/actions/workflow/status/VortexNYC/convex-better-auth-2.0/ci.yml?branch=main&style=for-the-badge&label=CI
-[ci]: https://github.com/VortexNYC/convex-better-auth-2.0/actions/workflows/ci.yml
+[ci-badge]: https://img.shields.io/github/actions/workflow/status/VortexNYC/convex-auth/ci.yml?branch=main&style=for-the-badge&label=CI
+[ci]: https://github.com/VortexNYC/convex-auth/actions/workflows/ci.yml
 [docs-badge]: https://img.shields.io/badge/docs-online-292a44?style=for-the-badge
 [docs]: https://perfect-dragon-698.convex.site
 [license-badge]: https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=for-the-badge

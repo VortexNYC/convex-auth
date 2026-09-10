@@ -1,7 +1,7 @@
 ---
 name: convex-auth
 displayName: Convex Auth
-description: Guidelines for building with the convex-auth native runtime and migrating from Better Auth in the convex-better-auth-2.0 repo.
+description: Guidelines for building with the convex-auth native runtime and migrating from Better Auth in the convex-auth repo.
 version: 1.0.0
 author: Shlomo Kabareti
 tags: [convex, auth, better-auth, migration, components]
@@ -9,7 +9,7 @@ tags: [convex, auth, better-auth, migration, components]
 
 # Convex Auth
 
-This skill covers the `convex-auth` native runtime in the `convex-better-auth-2.0` repo. It is for humans and agents who need to understand the architecture, wire a consumer, or migrate from Better Auth.
+This skill covers the `convex-auth` native runtime in the `convex-auth` repo. It is for humans and agents who need to understand the architecture, wire a consumer, or migrate from Better Auth.
 
 ## Philosophy
 

@@ -1,4 +1,4 @@
-# Agent notes — convex-better-auth-2.0
+# Agent notes — convex-auth
 
 ## Verification commands
 

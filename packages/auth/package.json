@@ -6,7 +6,7 @@
   "author": "Shlomo Kabareti <shlomo@vortex.nyc>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/VortexNYC/convex-better-auth-2.0.git",
+    "url": "https://github.com/VortexNYC/convex-auth.git",
     "directory": "packages/auth"
   },
   "bin": {

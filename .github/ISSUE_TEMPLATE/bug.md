@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a problem with convex-better-auth-2.0
+about: Report a problem with convex-auth
 labels: bug
 ---
 

@@ -6,7 +6,7 @@ Security fixes land in the current development branch and the latest `main`.
 
 ## Reporting a Vulnerability
 
-Please open a [GitHub Security Advisory](https://github.com/VortexNYC/convex-better-auth-2.0/security/advisories/new) or email the maintainer directly if you cannot use GitHub.
+Please open a [GitHub Security Advisory](https://github.com/VortexNYC/convex-auth/security/advisories/new) or email the maintainer directly if you cannot use GitHub.
 
 Please include:
 
