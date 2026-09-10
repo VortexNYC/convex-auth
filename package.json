@@ -1,5 +1,5 @@
 {
-  "name": "convex-better-auth-2.0",
+  "name": "convex-auth-monorepo",
   "version": "2.0.0-alpha.0",
   "private": true,
   "description": "Convex-native full-stack auth packages.",
@@ -8,15 +8,15 @@
     "convex",
     "typescript"
   ],
-  "homepage": "https://github.com/shlomokabareti/convex-better-auth-2.0",
+  "homepage": "https://github.com/VortexNYC/convex-auth",
   "bugs": {
-    "url": "https://github.com/shlomokabareti/convex-better-auth-2.0/issues"
+    "url": "https://github.com/VortexNYC/convex-auth/issues"
   },
   "license": "Apache-2.0",
-  "author": "Shlomo Kabareti",
+  "author": "Shlomo Kabareti <shlomo@vortex.nyc>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/shlomokabareti/convex-better-auth-2.0.git"
+    "url": "https://github.com/VortexNYC/convex-auth.git"
   },
   "scripts": {
     "build": "vp run -r build",
@@ -32,7 +32,11 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "ci:publish": "pnpm changeset publish",
+    "scan:deps": "node scripts/scan-deps.mjs",
+    "scan:sast": "semgrep scan --config=auto --severity=ERROR --error .",
+    "scan:leaks": "trufflehog filesystem . -x .trufflehogignore --only-verified --fail",
     "scan:secrets": "secretlint . --no-gitignore --secretlintignore .secretlintignore",
+    "scan:security": "pnpm run scan:deps && pnpm run scan:secrets && pnpm run scan:sast && pnpm run scan:leaks",
     "knip": "knip",
     "entire:review": "entire review",
     "entire:investigate": "entire investigate",

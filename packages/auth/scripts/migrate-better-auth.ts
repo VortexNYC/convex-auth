@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const LEGACY_PACKAGE = "@convex-dev/better-auth";
-const VENDORED_PACKAGE = "convex-auth";
+const VENDORED_PACKAGE = "@vortex-api/convex-auth";
 const LEGACY_PACKAGES = [
   "better-auth",
   "@better-auth/expo",
@@ -154,7 +154,7 @@ export default http;
 }
 
 export function rewriteAuthToNative(content: string): string | null {
-  if (content.includes("convex-auth/convex") && content.includes("convexAuth(")) {
+  if (content.includes("@vortex-api/convex-auth/convex") && content.includes("convexAuth(")) {
     return content;
   }
   if (
@@ -165,7 +165,7 @@ export function rewriteAuthToNative(content: string): string | null {
   ) {
     return null;
   }
-  return `import { convexAuth } from "convex-auth/convex";
+  return `import { convexAuth } from "@vortex-api/convex-auth/convex";
 import { components } from "./_generated/api.js";
 
 export const auth = convexAuth({
@@ -233,7 +233,7 @@ function printMigrateHelp(): void {
   log(
     "migrate better-auth — one-time migration from Better Auth to convex-auth\n\n" +
       "Usage:\n" +
-      "  pnpm dlx convex-auth migrate better-auth [options]\n\n" +
+      "  pnpm dlx @vortex-api/convex-auth migrate better-auth [options]\n\n" +
       "Options:\n" +
       "  --dry-run              Print the plan and legacy table counts without changing anything\n" +
       "  --cutover              After migration, rewrite files and remove legacy packages\n" +

@@ -20,7 +20,8 @@ export const webhook_endpoints = defineTable({
 })
   .index("by_organization", ["organizationId"])
   .index("by_status", ["status"])
-  .index("by_org_status", ["organizationId", "status"]);
+  .index("by_org_status", ["organizationId", "status"])
+  .index("by_createdBy", ["createdBy"]);
 
 export const webhook_deliveries = defineTable({
   endpointId: v.id("webhook_endpoints"),

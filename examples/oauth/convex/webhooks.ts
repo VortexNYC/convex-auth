@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { components } from "./_generated/api";
 import { v } from "convex/values";
 import type { GenericQueryCtx, AnyDataModel } from "convex/server";
+import { requireCaller, requireOrganizationMembership } from "./authz";
 
 type Ctx = GenericQueryCtx<AnyDataModel>;
 
@@ -77,6 +78,18 @@ async function getEndpointWithSecret(ctx: Ctx, endpointId: string): Promise<Endp
   };
 }
 
+async function requireEndpointInOrganization(
+  ctx: Ctx,
+  endpointId: string,
+  organizationId: string,
+): Promise<EndpointItem> {
+  const endpoint = await getEndpoint(ctx, endpointId);
+  if (endpoint === null || endpoint.organizationId !== organizationId) {
+    throw new Error("Endpoint not found");
+  }
+  return endpoint;
+}
+
 function normalizeEventTypes(eventTypes: string[]): string[] {
   const normalized = eventTypes.map((t) => t.trim()).filter(Boolean);
   return normalized.length > 0 ? normalized : ["*"];
@@ -146,6 +159,9 @@ async function buildEndpointsMap(
 export const listEndpoints = query({
   args: { organizationId: v.string() },
   handler: async (ctx, args) => {
+    const callerId = await requireCaller(ctx);
+    await requireOrganizationMembership(ctx, callerId, args.organizationId);
+
     const endpoints = await ctx.runQuery(
       components.convexAuth.webhooks.listWebhookEndpointsByOrganization,
       { organizationId: args.organizationId },
@@ -179,6 +195,9 @@ export const listRecentDeliveries = query({
     offset: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const callerId = await requireCaller(ctx);
+    await requireOrganizationMembership(ctx, callerId, args.organizationId);
+
     const offset = args.offset ?? 0;
     const limit = args.limit ?? 10;
 
@@ -206,6 +225,9 @@ export const listExhaustedDeliveries = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const callerId = await requireCaller(ctx);
+    await requireOrganizationMembership(ctx, callerId, args.organizationId);
+
     const endpointsMap = await buildEndpointsMap(ctx, args.organizationId);
     let deliveries: DeliveryItem[] = [];
 
@@ -234,6 +256,9 @@ export const createEndpoint = mutation({
     events: v.array(v.string()),
   },
   handler: async (ctx, args) => {
+    const callerId = await requireCaller(ctx);
+    await requireOrganizationMembership(ctx, callerId, args.organizationId);
+
     const secret = generateWebhookSecret();
     const result = await ctx.runMutation(components.convexAuth.webhooks.createWebhookEndpoint, {
       organizationId: args.organizationId,
@@ -241,11 +266,11 @@ export const createEndpoint = mutation({
       description: args.description,
       eventTypes: normalizeEventTypes(args.events),
       secret,
-      createdBy: args.userId,
+      createdBy: callerId,
     });
 
     await ctx.runMutation(components.convexAuth.native.audit.createAuthAuditEvent, {
-      actorUserId: args.userId,
+      actorUserId: callerId,
       actorType: "user",
       eventType: "webhook_endpoint.created",
       targetType: "webhook_endpoint",
@@ -267,6 +292,10 @@ export const updateEndpoint = mutation({
     events: v.array(v.string()),
   },
   handler: async (ctx, args) => {
+    const callerId = await requireCaller(ctx);
+    await requireOrganizationMembership(ctx, callerId, args.organizationId);
+    await requireEndpointInOrganization(ctx, args.endpointId, args.organizationId);
+
     await ctx.runMutation(components.convexAuth.webhooks.updateWebhookEndpoint, {
       endpointId: args.endpointId,
       organizationId: args.organizationId,
@@ -280,6 +309,10 @@ export const updateEndpoint = mutation({
 export const archiveEndpoint = mutation({
   args: { organizationId: v.string(), endpointId: v.string() },
   handler: async (ctx, args) => {
+    const callerId = await requireCaller(ctx);
+    await requireOrganizationMembership(ctx, callerId, args.organizationId);
+    await requireEndpointInOrganization(ctx, args.endpointId, args.organizationId);
+
     await ctx.runMutation(components.convexAuth.webhooks.setWebhookEndpointStatus, {
       endpointId: args.endpointId,
       organizationId: args.organizationId,
@@ -291,6 +324,10 @@ export const archiveEndpoint = mutation({
 export const disableEndpoint = mutation({
   args: { organizationId: v.string(), endpointId: v.string() },
   handler: async (ctx, args) => {
+    const callerId = await requireCaller(ctx);
+    await requireOrganizationMembership(ctx, callerId, args.organizationId);
+    await requireEndpointInOrganization(ctx, args.endpointId, args.organizationId);
+
     await ctx.runMutation(components.convexAuth.webhooks.setWebhookEndpointStatus, {
       endpointId: args.endpointId,
       organizationId: args.organizationId,
@@ -302,6 +339,10 @@ export const disableEndpoint = mutation({
 export const removeEndpoint = mutation({
   args: { organizationId: v.string(), endpointId: v.string() },
   handler: async (ctx, args) => {
+    const callerId = await requireCaller(ctx);
+    await requireOrganizationMembership(ctx, callerId, args.organizationId);
+    await requireEndpointInOrganization(ctx, args.endpointId, args.organizationId);
+
     await ctx.runMutation(components.convexAuth.webhooks.deleteWebhookEndpoint, {
       endpointId: args.endpointId,
       organizationId: args.organizationId,
@@ -312,6 +353,10 @@ export const removeEndpoint = mutation({
 export const rotateEndpointSecret = mutation({
   args: { organizationId: v.string(), endpointId: v.string() },
   handler: async (ctx, args) => {
+    const callerId = await requireCaller(ctx);
+    await requireOrganizationMembership(ctx, callerId, args.organizationId);
+    await requireEndpointInOrganization(ctx, args.endpointId, args.organizationId);
+
     const secret = generateWebhookSecret();
     await ctx.runMutation(components.convexAuth.webhooks.rotateWebhookEndpointSecret, {
       endpointId: args.endpointId,
@@ -330,8 +375,9 @@ export const sendTest = mutation({
     requestId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const endpoint = await getEndpoint(ctx, args.endpointId);
-    if (endpoint === null) throw new Error("Endpoint not found");
+    const callerId = await requireCaller(ctx);
+    await requireOrganizationMembership(ctx, callerId, args.organizationId);
+    const endpoint = await requireEndpointInOrganization(ctx, args.endpointId, args.organizationId);
 
     const eventId = args.requestId ?? crypto.randomUUID();
     await ctx.runMutation(components.convexAuth.webhooks.createWebhookDelivery, {
@@ -346,6 +392,9 @@ export const sendTest = mutation({
 export const retryDelivery = mutation({
   args: { organizationId: v.string(), deliveryId: v.string() },
   handler: async (ctx, args) => {
+    const callerId = await requireCaller(ctx);
+    await requireOrganizationMembership(ctx, callerId, args.organizationId);
+
     const delivery = await ctx.runQuery(components.convexAuth.webhooks.getWebhookDelivery, {
       deliveryId: args.deliveryId,
     });
@@ -374,6 +423,9 @@ export const retryDelivery = mutation({
 export const triggerProcessing = mutation({
   args: { organizationId: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    const callerId = await requireCaller(ctx);
+    await requireOrganizationMembership(ctx, callerId, args.organizationId);
+
     const endpoints = await ctx.runQuery(
       components.convexAuth.webhooks.listWebhookEndpointsByOrganization,
       { organizationId: args.organizationId },

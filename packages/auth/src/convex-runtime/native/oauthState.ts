@@ -32,7 +32,7 @@ export async function mintOAuthState(payload: OAuthStatePayload): Promise<string
 }
 
 export async function verifyOAuthState(token: string): Promise<OAuthStatePayload> {
-  const jwks = createLocalJWKSet(getJwks());
+  const jwks = createLocalJWKSet(await getJwks());
   const { payload } = await jwtVerify(token, jwks, { algorithms: ["RS256"] });
 
   if (payload.state !== true) {

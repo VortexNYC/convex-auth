@@ -3,13 +3,14 @@
  * convex-auth CLI — the single entry point a consumer needs.
  *
  * Designed as the 'appliance' surface: a fresh consumer should never
- * type `node node_modules/convex-auth/scripts/<long-path>.ts`.
+ * type `node node_modules/@vortex-api/convex-auth/scripts/<long-path>.ts`.
  * Instead:
  *
- *   pnpm dlx convex-auth check                # consumer-contract checker
- *   pnpm dlx convex-auth check --convex-dir ./apps/backend/convex
- *   pnpm dlx convex-auth preflight            # install/runtime preflight
- *   pnpm dlx convex-auth migrate better-auth  # one-time migration from @convex-dev/better-auth
+ *   pnpm dlx @vortex-api/convex-auth check                # consumer-contract checker
+ *   pnpm dlx @vortex-api/convex-auth check --convex-dir ./apps/backend/convex
+ *   pnpm dlx @vortex-api/convex-auth preflight            # install/runtime preflight
+ *   pnpm dlx @vortex-api/convex-auth bug-report           # collect a safe diagnostics bundle
+ *   pnpm dlx @vortex-api/convex-auth migrate better-auth  # one-time migration from @convex-dev/better-auth
  *
  * Subcommands:
  *   check    Run the cold consumer-contract checker against ./convex
@@ -37,7 +38,7 @@ function printHelp(): void {
   process.stdout.write(
     "convex-auth — Convex auth component CLI\n\n" +
       "Usage:\n" +
-      "  pnpm dlx convex-auth <command> [options]\n\n" +
+      "  pnpm dlx @vortex-api/convex-auth <command> [options]\n\n" +
       "Commands:\n" +
       "  check [--convex-dir <path>] [--legit-anchor-tables <a,b,c>]\n" +
       "    Run the consumer-contract checker (cold-runnable).\n" +
@@ -49,6 +50,10 @@ function printHelp(): void {
       "    Run the auth install/runtime preflight from the repo root.\n" +
       "    Defaults: --repo-root . and --convex-dir ./convex.\n" +
       "    Use -- after flags to run a command only after preflight passes.\n\n" +
+      "  bug-report [--repo-root <path>] [--convex-dir <path>] [--output <path>]\n" +
+      "             [--title <title>] [--open]\n" +
+      "    Collect a sanitized diagnostics bundle for GitHub issues.\n" +
+      "    Secrets in auth files are redacted; only public env vars are printed.\n\n" +
       "  migrate better-auth [--dry-run] [--cutover] [--resume]\n" +
       "                      [--from-component <name>] [--auth-component <name>]\n" +
       "    One-time migration from @convex-dev/better-auth to convex-auth.\n" +
@@ -57,12 +62,13 @@ function printHelp(): void {
       "    Print this help.\n\n" +
       "Why this CLI exists:\n" +
       "  Consumers used to type:\n" +
-      "    node node_modules/convex-auth/scripts/check-consumer-contract.ts \\\n" +
+      "    node node_modules/@vortex-api/convex-auth/scripts/check-consumer-contract.ts \\\n" +
       "      --convex-dir ./apps/backend/convex\n" +
       "  Now:\n" +
-      "    pnpm dlx convex-auth check --convex-dir ./apps/backend/convex\n" +
-      "    pnpm dlx convex-auth preflight --repo-root . --convex-dir ./apps/backend/convex\n" +
-      "    pnpm dlx convex-auth migrate better-auth --dry-run\n",
+      "    pnpm dlx @vortex-api/convex-auth check --convex-dir ./apps/backend/convex\n" +
+      "    pnpm dlx @vortex-api/convex-auth preflight --repo-root . --convex-dir ./apps/backend/convex\n" +
+      "    pnpm dlx @vortex-api/convex-auth bug-report --repo-root . --convex-dir ./apps/backend/convex\n" +
+      "    pnpm dlx @vortex-api/convex-auth migrate better-auth --dry-run\n",
   );
 }
 
@@ -97,6 +103,12 @@ function main(): void {
     }
     case "preflight": {
       runScript("preflight", rest);
+      return;
+    }
+    case "bug-report":
+    case "bug":
+    case "diagnostics": {
+      runScript("bug-report", rest);
       return;
     }
     case "migrate": {

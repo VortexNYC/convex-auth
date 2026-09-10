@@ -403,6 +403,7 @@ type ConvexAuthContextValue = NativeAuthActions & {
   setSessionId: (sessionId: string | null) => void;
   twoFactorChallengeToken: string | null;
   setTwoFactorChallengeToken: (token: string | null) => void;
+  isAuthReady: boolean;
 };
 
 const ConvexAuthContext = createContext<ConvexAuthContextValue | null>(null);
@@ -423,6 +424,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState<string | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [storage, setStorage] = useState<TokenStorage | null>(null);
   const isHydrating = useRef(true);
 
@@ -494,7 +496,15 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
   ]);
 
   useEffect(() => {
-    client.setAuth(() => Promise.resolve(token));
+    if (token === null) {
+      setIsAuthReady(false);
+    }
+    client.setAuth(
+      () => Promise.resolve(token),
+      (authenticated) => {
+        setIsAuthReady(authenticated);
+      },
+    );
   }, [client, token]);
 
   useEffect(() => {
@@ -559,6 +569,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
       setSessionId,
       twoFactorChallengeToken,
       setTwoFactorChallengeToken,
+      isAuthReady,
     };
     return new Proxy(props.actions, {
       get(target, prop, receiver) {
@@ -568,7 +579,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
         return Reflect.get(target, prop, receiver);
       },
     }) as unknown as ConvexAuthContextValue;
-  }, [props.actions, token, refreshToken, sessionId, twoFactorChallengeToken]);
+  }, [props.actions, token, refreshToken, sessionId, twoFactorChallengeToken, isAuthReady]);
   return <ConvexAuthContext.Provider value={value}>{props.children}</ConvexAuthContext.Provider>;
 }
 
@@ -1043,13 +1054,13 @@ export function useSession(): {
     ctx.verifySession,
     ctx.token ? { token: ctx.token, sessionId: ctx.sessionId ?? undefined } : "skip",
   );
-  const isLoading = ctx.token !== null && session === undefined;
+  const isLoading = ctx.token !== null && (session === undefined || !ctx.isAuthReady);
   const user = session?.user ?? null;
   return {
     user,
     sessionId: session?.sessionId ?? null,
     isLoading,
-    isAuthenticated: user !== null,
+    isAuthenticated: user !== null && ctx.isAuthReady,
   };
 }
 

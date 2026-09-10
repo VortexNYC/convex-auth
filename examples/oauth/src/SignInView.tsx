@@ -7,7 +7,7 @@ import {
   ConvexResetPasswordForm,
   ConvexVerifyTwoFactorForm,
   useConvexAuthClient,
-} from "convex-auth/react";
+} from "@vortex-api/convex-auth/react";
 import {
   Button,
   Card,
@@ -17,7 +17,7 @@ import {
   CardTitle,
   Input,
   Label,
-} from "convex-auth/ui";
+} from "@vortex-api/convex-auth/ui";
 
 type ViewMode =
   | "signIn"

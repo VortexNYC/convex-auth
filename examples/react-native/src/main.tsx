@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexReactClient, ConvexProvider } from "convex/react";
-import { ExpoConvexAuthClientProvider } from "convex-auth/react-native";
+import { ExpoConvexAuthClientProvider } from "@vortex-api/convex-auth/react-native";
 import { api } from "../convex/_generated/api";
 import App from "./App";
 

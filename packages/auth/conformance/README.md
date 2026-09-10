@@ -25,7 +25,7 @@ imports), so the suite drops into any project unchanged.
 ```bash
 CONVEX_SITE_URL=https://<your>.convex.site \
 CONVEX_URL=https://<your>.convex.cloud \
-pnpm dlx tsx ./node_modules/convex-auth/conformance/prove-auth-lifecycle.ts
+pnpm dlx tsx ./node_modules/@vortex-api/convex-auth/conformance/prove-auth-lifecycle.ts
 ```
 
 A pass exits 0 and prints `[SUCCESS]`; a fail exits 1 and lists the failed checks.

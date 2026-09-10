@@ -13,7 +13,7 @@ Unacceptable behavior includes harassment, discrimination, trolling, or personal
 
 ## Reporting Issues
 
-Open an issue in the [GitHub repository](https://github.com/shlomokabareti/convex-better-auth-2.0/issues) or contact the maintainer directly to report conduct concerns. All reports will be handled confidentially.
+Open an issue in the [GitHub repository](https://github.com/VortexNYC/convex-auth/issues) or contact the maintainer directly to report conduct concerns. All reports will be handled confidentially.
 
 ## Scope
 

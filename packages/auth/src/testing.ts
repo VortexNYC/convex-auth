@@ -9,7 +9,7 @@ const DEFAULT_CONVEX_RUNTIME_TIMEOUT_MS = 15000;
 const DEFAULT_AUTH_RUNTIME_TIMEOUT_MS = 15000;
 const DEFAULT_POLL_INTERVAL_MS = 100;
 const DEFAULT_TEST_BASE_URL = "http://127.0.0.1:4173";
-const DEFAULT_PACKAGE_NAME = "convex-auth";
+const DEFAULT_PACKAGE_NAME = "@vortex-api/convex-auth";
 const DEFAULT_WEB_PACKAGE_JSON_CANDIDATES = [
   "apps/web/package.json",
   "examples/react/package.json",
@@ -445,13 +445,13 @@ async function readBackendSetup(
         name: "Convex Auth component registration",
         path: convexConfigPath,
         content: await readOptionalText(resolve(repoRoot, convexConfigPath)),
-        requiredSnippets: ["convex-auth/convex.config", "app.use"],
+        requiredSnippets: ["@vortex-api/convex-auth/convex.config", "app.use"],
       },
       {
         name: "Convex auth config",
         path: authConfigPath,
         content: await readOptionalText(resolve(repoRoot, authConfigPath)),
-        requiredSnippets: ["convexAuth", 'from "convex-auth/convex"'],
+        requiredSnippets: ["convexAuth", 'from "@vortex-api/convex-auth/convex"'],
       },
       {
         name: "Convex HTTP auth routes",

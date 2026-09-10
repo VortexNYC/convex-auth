@@ -1,0 +1,87 @@
+---
+title: Webhooks
+description: Send signed webhook events from convex-auth.
+sidebar:
+  order: 13
+---
+
+`convex-auth` can emit signed webhook events for any auth or application action. Endpoints, delivery attempts, retries, and secrets all live in your Convex database.
+
+## How it works
+
+1. You define the event types your app emits.
+2. Consumers create webhook endpoints with a URL and a list of subscribed events.
+3. `convex-auth` signs each payload with a per-endpoint secret and attempts delivery.
+4. Failed deliveries are retried with backoff and surfaced in a delivery log.
+
+The signing scheme is HMAC-SHA256, similar to Stripe. The consumer verifies the `x-convex-auth-signature` header with the endpoint secret.
+
+## React components
+
+<CardGroup cols={2}>
+  <Card title="ConvexWebhookSettingsSurface" icon="settings" href="/docs/webhooks">
+    The full settings page: create endpoints, list endpoints, view deliveries, and rotate secrets.
+  </Card>
+  <Card title="ConvexWebhookCreateForm" icon="plus" href="/docs/webhooks">
+    A form for adding a new endpoint and selecting event types.
+  </Card>
+  <Card title="ConvexWebhookEndpointList" icon="list" href="/docs/webhooks">
+    Lists, edits, disables, archives, and deletes endpoints.
+  </Card>
+  <Card title="ConvexWebhookDeliveryList" icon="inbox" href="/docs/webhooks">
+    Shows delivery attempts with status, failure kind, and retry controls.
+  </Card>
+</CardGroup>
+
+## Settings surface
+
+```tsx src/WebhooksSettings.tsx
+import { ConvexWebhookSettingsSurface } from "@vortex-api/convex-auth/react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
+
+const EVENT_OPTIONS = ["user.created", "user.updated", "session.created"] as const;
+
+export function WebhooksSettings() {
+  return (
+    <ConvexWebhookSettingsSurface
+      enabled
+      eventOptions={EVENT_OPTIONS}
+      refs={{
+        listEndpoints: api.webhooks.listEndpoints,
+        createEndpoint: api.webhooks.createEndpoint,
+        updateEndpoint: api.webhooks.updateEndpoint,
+        deleteEndpoint: api.webhooks.deleteEndpoint,
+        rotateEndpointSecret: api.webhooks.rotateEndpointSecret,
+        sendTestEvent: api.webhooks.sendTestEvent,
+        listDeliveries: api.webhooks.listDeliveries,
+        listExhaustedDeliveries: api.webhooks.listExhaustedDeliveries,
+        retryDelivery: api.webhooks.retryDelivery,
+        triggerProcessing: api.webhooks.triggerProcessing,
+      }}
+      createRequestId={(prefix) => `${prefix}_${crypto.randomUUID()}`}
+    />
+  );
+}
+```
+
+`refs` is the contract between the React UI and your Convex mutations/actions. You write the server functions using the `convex-auth/convex` webhook helpers; the UI above calls them by reference.
+
+## Server helpers
+
+`convex-auth/convex` re-exports the webhook runtime helpers:
+
+- `createConvexWebhookSecret` — generate a new endpoint secret.
+- `createConvexWebhookHeaders` — produce the signed headers for an outbound request.
+- `signConvexWebhookPayload` — sign the body with the endpoint secret.
+- `buildConvexWebhookPayload` — build a typed payload and event id.
+- `createConvexWebhookEndpointListItem` — format an endpoint for the UI.
+- `createConvexWebhookDeliveryListItem` — format a delivery for the UI.
+
+The `convexAuth` component stores `auth_webhook_endpoints`, `auth_webhook_deliveries`, and `auth_webhook_secrets`. Delivery processing is usually driven by a scheduled or internal mutation that picks pending deliveries, calls the endpoint, and records the result.
+
+<Callout type="warning">
+  The full step-by-step server reference for webhook delivery and verification is in progress. The
+  React surface above is the stable, public API. If you need the detailed mutation reference now,
+  open an issue and we will expand this page.
+</Callout>

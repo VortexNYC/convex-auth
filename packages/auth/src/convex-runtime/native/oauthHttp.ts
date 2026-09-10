@@ -259,8 +259,16 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
           ? Math.floor(config.oauth.sessionTtlMs / 1000)
           : undefined;
 
+      const redirect = new URL(
+        result.redirectUrl,
+        result.redirectUrl.startsWith("http") ? undefined : "http://localhost",
+      );
+      redirect.searchParams.set("token", result.token);
+      redirect.searchParams.set("refreshToken", result.refreshToken);
+      redirect.searchParams.set("sessionId", result.sessionId);
+
       const headers = new Headers();
-      headers.set("Location", result.redirectUrl);
+      headers.set("Location", redirect.toString());
       headers.append(
         "Set-Cookie",
         setCookieHeader(ACCESS_TOKEN_COOKIE, result.token, accessTokenMaxAge, secure),

@@ -6,7 +6,7 @@ import {
   type CaptchaProvider,
 } from "./captcha.js";
 
-const turnstileSecret = "1x0000000000000000000000000000000AA";
+const turnstileSecret = "1x0000000000000000000000000000000AA"; // nosemgrep: generic.secrets.security.detected-generic-secret.detected-generic-secret
 
 describe("captcha", () => {
   describe("verifyCaptchaResponse", () => {

@@ -121,6 +121,9 @@ export type ConvexBetterAuthClient = {
   twoFactor?: ConvexBetterAuthTwoFactorApi;
 };
 
+/** @deprecated Use `ConvexAuthClient` instead. */
+export type ConvexAuthClient = ConvexBetterAuthClient;
+
 export type ConvexBetterAuthTwoFactorApi = {
   enable: (args: { password: string; issuer?: string }) => Promise<{
     data?: { totpURI: string; backupCodes: string[] } | null;

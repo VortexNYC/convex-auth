@@ -7,7 +7,7 @@ import {
   useConvexAuthClientContext,
   type ExpoAuthClientScreenStyles,
   type ExpoSessionListStyles,
-} from "convex-auth/react-native";
+} from "@vortex-api/convex-auth/react-native";
 
 type Screen = "signIn" | "signUp" | "signedIn";
 

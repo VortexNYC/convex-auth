@@ -77,6 +77,7 @@ export function ConvexAuthAppearanceProvider({
 
     if (typeof document !== "undefined") {
       document.documentElement.setAttribute("data-convex-auth-theme", resolved);
+      document.documentElement.classList.toggle("dark", resolved === "dark");
     }
   }, [theme, storageKey]);
 

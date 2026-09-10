@@ -123,8 +123,9 @@ describe("auth preflight", () => {
           {
             name: "Convex Auth component registration",
             path: "convex/convex.config.ts",
-            content: 'import convexAuth from "convex-auth/convex.config.js";\napp.use(convexAuth);',
-            requiredSnippets: ["convex-auth/convex.config", "app.use"],
+            content:
+              'import convexAuth from "@vortex-api/convex-auth/convex.config.js";\napp.use(convexAuth);',
+            requiredSnippets: ["@vortex-api/convex-auth/convex.config", "app.use"],
           },
         ],
         envGroups: [

@@ -18,7 +18,8 @@ import {
   parseConvexApiKeyAllowedIpRanges,
   useAuthActions,
   useConvexAuthClient,
-} from "convex-auth/react";
+  useUser,
+} from "@vortex-api/convex-auth/react";
 import {
   Badge,
   Button,
@@ -34,23 +35,21 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "convex-auth/ui";
+} from "@vortex-api/convex-auth/ui";
 import { api } from "../convex/_generated/api.js";
-import type { ConvexOrgListOrganization } from "convex-auth/react";
-import { runAuthPreflight, formatAuthPreflightResult } from "convex-auth/preflight";
+import type { ConvexOrgListOrganization } from "@vortex-api/convex-auth/react";
+import { runAuthPreflight, formatAuthPreflightResult } from "@vortex-api/convex-auth/preflight";
 
 export function SignedInView() {
   const actions = useAuthActions();
   const authClient = useConvexAuthClient();
+  const user = useUser();
   const [activeTab, setActiveTab] = useState("profile");
   const [message, setMessage] = useState<string | null>(null);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
 
-  const user = actions.user;
   const token = actions.token;
-  const organizations = useQuery(api.organizations.list, {
-    userId: user?.id ?? "",
-  });
+  const organizations = useQuery(api.organizations.list, user ? { userId: user.id } : "skip");
 
   if (user === null) {
     return (

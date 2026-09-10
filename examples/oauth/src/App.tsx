@@ -1,4 +1,4 @@
-import { useSession } from "convex-auth/react";
+import { useSession } from "@vortex-api/convex-auth/react";
 import { SignInView } from "./SignInView";
 import { SignedInView } from "./SignedInView";
 

@@ -24,7 +24,7 @@ Add a single native OAuth provider (GitHub) to `convex-auth` as a Convex HTTP ac
 ## Commands
 
 - Build/test: `pnpm run typecheck && pnpm run check && pnpm run build && pnpm test`
-- Focused test: `pnpm --filter convex-auth test -- src/convex-runtime/native/oauth.test.ts`
+- Focused test: `pnpm --filter @vortex-api/convex-auth test -- src/convex-runtime/native/oauth.test.ts`
 
 ## Project structure
 

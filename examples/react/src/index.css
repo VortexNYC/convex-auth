@@ -1,6 +1,6 @@
 @import "tailwindcss";
-@import "convex-auth/ui/styles.css";
+@import "@vortex-api/convex-auth/ui/styles.css";
 
 @source ".";
-@source "../node_modules/convex-auth/src/ui";
-@source "../node_modules/convex-auth/dist";
+@source "../node_modules/@vortex-api/convex-auth/src/ui";
+@source "../node_modules/@vortex-api/convex-auth/dist";

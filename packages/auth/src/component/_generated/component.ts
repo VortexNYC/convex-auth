@@ -1800,6 +1800,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           { success: boolean },
           Name
         >;
+        deleteUser: FunctionReference<
+          "mutation",
+          "internal",
+          { userId: string },
+          { deleted: boolean; userId: string },
+          Name
+        >;
         getUserByEmail: FunctionReference<
           "query",
           "internal",

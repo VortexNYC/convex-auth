@@ -1,0 +1,154 @@
+---
+title: Server API
+description: Actions, queries, and HTTP routes re-exported by convexAuth.
+sidebar:
+  order: 16
+---
+
+`convexAuth(config)` returns Convex action, query, and HTTP route references. Re-export them from `convex/auth.ts` so Convex can see them and so the React client can call them via `api.auth`.
+
+## Expose the auth object
+
+```ts convex/auth.ts
+import { components } from "./_generated/api";
+import { convexAuth } from "@vortex-api/convex-auth/convex";
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+  emailAndPassword: { enabled: true },
+  oauth: {
+    /* ... */
+  },
+});
+
+export const {
+  signUp,
+  signIn,
+  signOut,
+  updateSession,
+  sendEmailVerification,
+  verifyEmail,
+  sendPasswordReset,
+  resetPassword,
+  verifyPassword,
+  changeEmail,
+  twoFactorEnable,
+  twoFactorVerifyTOTP,
+  twoFactorVerifyBackupCode,
+  twoFactorDisable,
+  twoFactorGenerateBackupCodes,
+} = auth;
+```
+
+## Core actions
+
+These are always present when `emailAndPassword` is enabled:
+
+| Action                         | Args (summary)                                   | Returns                                              |
+| ------------------------------ | ------------------------------------------------ | ---------------------------------------------------- |
+| `signUp`                       | `{ email, password, name?, rememberMe? }`        | `{ token, refreshToken, user, userId, identityId? }` |
+| `signIn`                       | `{ email, password, rememberMe?, callbackURL? }` | Session or two-factor challenge.                     |
+| `signOut`                      | `{ callbackURL? }`                               | `{ success, redirect?, url? }`                       |
+| `updateSession`                | `{ token }`                                      | Refreshes the session and returns it.                |
+| `sendEmailVerification`        | `{ email, callbackURL? }`                        | `EmailSendResult`.                                   |
+| `verifyEmail`                  | `{ token }`                                      | `NativeAuthVerifyResult`.                            |
+| `sendPasswordReset`            | `{ email, redirectTo? }`                         | `EmailSendResult`.                                   |
+| `resetPassword`                | `{ token, newPassword }`                         | `{ status, reason? }`.                               |
+| `verifyPassword`               | `{ token, password }`                            | `{ success }`.                                       |
+| `changeEmail`                  | `{ newEmail, callbackURL? }`                     | `EmailSendResult`.                                   |
+| `twoFactorEnable`              | `{ token, password, issuer? }`                   | `{ totpURI, backupCodes }` or `{ error }`.           |
+| `twoFactorVerifyTOTP`          | `{ token, code }`                                | `{ token: string \| null }`.                         |
+| `twoFactorVerifyBackupCode`    | `{ token, code }`                                | `{ token: string \| null }`.                         |
+| `twoFactorDisable`             | `{ token, password }`                            | `{ success }`.                                       |
+| `twoFactorGenerateBackupCodes` | `{ token }`                                      | `{ backupCodes }`.                                   |
+
+`signIn` returns a session by default. If the user has 2FA enabled, it returns a `twoFactorChallengeToken` instead.
+
+## OAuth actions
+
+Present when `oauth` is configured:
+
+| Action               | Args                                                 | Returns                            |
+| -------------------- | ---------------------------------------------------- | ---------------------------------- |
+| `signInWithRedirect` | `{ provider, callbackURL?, errorURL?, newUserURL? }` | `{ url }` to redirect the browser. |
+| `oauthCallback`      | `{ provider, code, state? }`                         | Session for server-side use.       |
+
+The `oauthCallback` action is also exposed as an HTTP route by `auth.addHttpRoutes(http)`. The browser usually completes OAuth through the HTTP callback rather than calling `oauthCallback` from the client.
+
+## Magic link actions
+
+Present when `magicLink` is configured:
+
+| Action            | Args (summary)                                                                      | Returns           |
+| ----------------- | ----------------------------------------------------------------------------------- | ----------------- |
+| `signInMagicLink` | `{ email, name?, callbackURL?, newUserCallbackURL?, errorCallbackURL?, metadata? }` | `EmailSendResult` |
+| `verifyMagicLink` | `{ token, callbackURL? }`                                                           | Session.          |
+
+`verifyMagicLink` is exposed as `GET /api/auth/magic-link/verify` by `addHttpRoutes`.
+
+## Email OTP actions
+
+Present when `emailOtp` is configured:
+
+| Action                | Args (summary)                        | Returns                                   |
+| --------------------- | ------------------------------------- | ----------------------------------------- |
+| `sendVerificationOtp` | `{ email, type?, name? }`             | `EmailSendResult`.                        |
+| `verifyEmailOtp`      | `{ email, otp, type?, newPassword? }` | Session, verify, reset, or change result. |
+
+## Queries
+
+`convexAuth` always re-exports these queries (they do not depend on which providers are enabled):
+
+| Query             | Args         | Returns                                        |
+| ----------------- | ------------ | ---------------------------------------------- |
+| `isAuthenticated` | none         | `boolean`                                      |
+| `verifySession`   | `{ token? }` | `{ user?, sessionId? }` if the token is valid. |
+
+## HTTP routes
+
+```ts convex/http.ts
+import { httpRouter } from "convex/server";
+import { auth } from "./auth";
+
+const http = httpRouter();
+auth.addHttpRoutes(http);
+
+export default http;
+```
+
+`addHttpRoutes` mounts the routes that handle browser redirects and email links:
+
+| Route                                 | Purpose                                    |
+| ------------------------------------- | ------------------------------------------ |
+| `GET /api/auth/verify-email`          | Confirm an email-verification token.       |
+| `GET /api/auth/reset-password/:token` | Validate a password-reset token.           |
+| `GET /api/auth/magic-link/verify`     | Validate a magic link and issue a session. |
+| `GET /api/auth/callback/:provider`    | OAuth provider callback.                   |
+
+## Calling actions from the client
+
+Once re-exported, the actions are available as `api.auth.*` and can be called with `useAction`:
+
+```tsx
+import { useAction } from "convex/react";
+import { api } from "../convex/_generated/api";
+
+function OAuthButton(props: { provider: "google" | "github" | "discord" }) {
+  const start = useAction(api.auth.signInWithRedirect);
+
+  async function onClick() {
+    const { url } = await start({
+      provider: props.provider,
+      callbackURL: `${window.location.origin}/auth/callback`,
+    });
+    window.location.href = url;
+  }
+
+  return <button onClick={onClick}>Sign in with {props.provider}</button>;
+}
+```
+
+## Next steps
+
+- Read the [`Configuration`](./configuration) reference for every `convexAuth` option.
+- Read the [`React client`](./client) guide for the hooks that call these actions.

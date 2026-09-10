@@ -1,11 +1,12 @@
 {
-  "name": "convex-auth",
-  "version": "2.0.4",
+  "name": "@vortex-api/convex-auth",
+  "version": "2.1.2",
   "description": "Convex-native auth server, component, and integration.",
   "license": "Apache-2.0",
+  "author": "Shlomo Kabareti <shlomo@vortex.nyc>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/shlomokabareti/convex-better-auth-2.0.git",
+    "url": "https://github.com/VortexNYC/convex-auth.git",
     "directory": "packages/auth"
   },
   "bin": {
@@ -230,7 +231,7 @@
     "convex-test": "0.0.56",
     "typescript": "^5.7.0",
     "vite": "^8.2.2",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "peerDependencies": {
     "convex": ">=1.45.0",

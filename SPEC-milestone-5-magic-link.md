@@ -19,7 +19,7 @@ pnpm run typecheck
 pnpm run check
 pnpm run build
 pnpm test
-pnpm --filter convex-auth test -- src/convex-runtime/native/magicLink.test.ts
+pnpm --filter @vortex-api/convex-auth test -- src/convex-runtime/native/magicLink.test.ts
 ```
 
 ## Project structure

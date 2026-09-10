@@ -206,7 +206,7 @@ export function addNativeAuthHttpRoutes(
     path: "/.well-known/jwks.json",
     method: "GET",
     handler: httpActionGeneric(async () => {
-      return new Response(JSON.stringify(getJwks()), {
+      return new Response(JSON.stringify(await getJwks()), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
@@ -1071,7 +1071,7 @@ export function addNativeAuthHttpRoutes(
     path: "/api/auth/convex/jwks",
     method: "GET",
     handler: httpActionGeneric(async () => {
-      return new Response(JSON.stringify(getJwks()), {
+      return new Response(JSON.stringify(await getJwks()), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });

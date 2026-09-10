@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@convex-dev/static-hosting": "^0.2.0",
-    "blume": "^1.5.3",
+    "blume": "^1.6.4",
     "convex": "^1.37.0"
   }
 }

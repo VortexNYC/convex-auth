@@ -12,12 +12,19 @@ if (typeof globalThis.navigator === "undefined") {
 }
 
 export default defineConfig({
-  title: "Convex Better Auth 2.0",
-  description: "Full-stack auth for Convex and Better Auth.",
+  title: "Convex Auth",
+  description: "Vortex-native, full-stack authentication for Convex.",
+  logo: "/logo.svg",
   content: {
     root: "../docs",
   },
   deployment: {
-    site: "https://convex-auth.example.com",
+    site: "https://resilient-blackbird-58.convex.site",
+  },
+  theme: {
+    accent: {
+      light: "#000000",
+      dark: "#ffffff",
+    },
   },
 });

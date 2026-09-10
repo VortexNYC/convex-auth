@@ -73,7 +73,7 @@ Backfill the native OAuth runtime (GitHub and Google) so it matches the security
 - `pnpm exec vp check`
 - `pnpm run build`
 - `pnpm test`
-- `pnpm --filter convex-auth test -- src/convex-runtime/native/oauth.test.ts`
+- `pnpm --filter @vortex-api/convex-auth test -- src/convex-runtime/native/oauth.test.ts`
 
 ## Testing strategy
 
