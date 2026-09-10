@@ -17,4 +17,5 @@ export const service_principals = defineTable({
   .index("by_key", ["key"])
   .index("by_status", ["status"])
   .index("by_organization", ["organizationId"])
-  .index("by_organization_status", ["organizationId", "status"]);
+  .index("by_organization_status", ["organizationId", "status"])
+  .index("by_createdBy", ["createdBy"]);
