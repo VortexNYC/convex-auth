@@ -1,39 +1,32 @@
 import { type JWTPayload, type JSONWebKeySet, SignJWT, importJWK } from "jose";
 import { base64urlToBytes } from "./password.js";
 
-let cachedPrivateKey: CryptoKey | undefined;
-let cachedJwtKeyId: string | undefined;
-let cachedJwks: JSONWebKeySet | undefined;
-
-export async function getJwtPrivateKey(): Promise<CryptoKey> {
-  if (cachedPrivateKey) return cachedPrivateKey;
+export async function getJwtPrivateKey(): Promise<{ key: CryptoKey; kid?: string }> {
   const raw = process.env.JWT_PRIVATE_KEY;
   if (!raw) {
     throw new Error("JWT_PRIVATE_KEY environment variable is not set");
   }
   const jwk = JSON.parse(raw) as JsonWebKey & { kid?: string };
-  cachedJwtKeyId = jwk.kid;
   const keyLike = await importJWK(jwk, "RS256");
   if (keyLike instanceof Uint8Array) {
     throw new Error("JWT_PRIVATE_KEY must be an asymmetric key, not a symmetric secret");
   }
-  cachedPrivateKey = keyLike;
-  return cachedPrivateKey;
+  return { key: keyLike, kid: jwk.kid };
 }
 
 export function getJwks(): JSONWebKeySet {
-  if (cachedJwks) return cachedJwks;
   const raw = process.env.JWKS;
   if (!raw) {
     throw new Error("JWKS environment variable is not set");
   }
-  cachedJwks = JSON.parse(raw) as JSONWebKeySet;
-  return cachedJwks;
+  return JSON.parse(raw) as JSONWebKeySet;
 }
 
 const DEFAULT_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 const DEFAULT_AUDIENCE = "convex";
+
+const CLOCK_SKEW_LEEWAY_SECONDS = 300;
 
 function resolveIssuer(): string {
   const issuer = process.env.CONVEX_SITE_URL;
@@ -49,14 +42,14 @@ export async function mintToken(
   extra: Record<string, unknown> = {},
   options: { expiresInSeconds?: number; audience?: string; issuer?: string } = {},
 ): Promise<string> {
-  const key = await getJwtPrivateKey();
+  const { key, kid } = await getJwtPrivateKey();
   const expiresInSeconds = options.expiresInSeconds ?? DEFAULT_TOKEN_TTL_SECONDS;
   const exp = new Date(Date.now() + expiresInSeconds * 1000);
   const issuer = options.issuer ?? resolveIssuer();
   const audience = options.audience ?? DEFAULT_AUDIENCE;
   const header: { alg: "RS256"; typ: "JWT"; kid?: string } = { alg: "RS256", typ: "JWT" };
-  if (cachedJwtKeyId) {
-    header.kid = cachedJwtKeyId;
+  if (kid) {
+    header.kid = kid;
   }
   return await new SignJWT({ sessionId, ...extra })
     .setProtectedHeader(header)
@@ -148,7 +141,11 @@ export async function verifyToken(token: string): Promise<JWTPayload> {
   if (payload.nbf !== undefined && typeof payload.nbf === "number" && now < payload.nbf) {
     throw new Error("Invalid JWT: token not yet valid");
   }
-  if (payload.iat !== undefined && typeof payload.iat === "number" && now < payload.iat - 60) {
+  if (
+    payload.iat !== undefined &&
+    typeof payload.iat === "number" &&
+    now < payload.iat - CLOCK_SKEW_LEEWAY_SECONDS
+  ) {
     throw new Error("Invalid JWT: issued in the future");
   }
 

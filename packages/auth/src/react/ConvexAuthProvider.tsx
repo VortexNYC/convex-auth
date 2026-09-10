@@ -401,6 +401,8 @@ type ConvexAuthContextValue = NativeAuthActions & {
   setRefreshToken: (refreshToken: string | null) => void;
   sessionId: string | null;
   setSessionId: (sessionId: string | null) => void;
+  twoFactorChallengeToken: string | null;
+  setTwoFactorChallengeToken: (token: string | null) => void;
 };
 
 const ConvexAuthContext = createContext<ConvexAuthContextValue | null>(null);
@@ -420,6 +422,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
   const [token, setToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState<string | null>(null);
   const [storage, setStorage] = useState<TokenStorage | null>(null);
   const isHydrating = useRef(true);
 
@@ -433,18 +436,22 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
 
     if (!initialToken && typeof window !== "undefined") {
       const searchParams = new URLSearchParams(window.location.search);
-      initialToken = searchParams.get("token");
-      initialRefresh = searchParams.get("refreshToken");
-      initialSessionId = searchParams.get("sessionId");
-      if (initialToken) {
-        searchParams.delete("token");
-        searchParams.delete("refreshToken");
-        searchParams.delete("sessionId");
-        const cleaned =
-          searchParams.toString() === ""
-            ? window.location.pathname
-            : `${window.location.pathname}?${searchParams.toString()}`;
-        window.history.replaceState(null, "", cleaned);
+      // If the URL carries a reset flag, the token is a password-reset
+      // token, not a session token. Leave it for the reset form to consume.
+      if (!searchParams.has("reset")) {
+        initialToken = searchParams.get("token");
+        initialRefresh = searchParams.get("refreshToken");
+        initialSessionId = searchParams.get("sessionId");
+        if (initialToken) {
+          searchParams.delete("token");
+          searchParams.delete("refreshToken");
+          searchParams.delete("sessionId");
+          const cleaned =
+            searchParams.toString() === ""
+              ? window.location.pathname
+              : `${window.location.pathname}?${searchParams.toString()}`;
+          window.history.replaceState(null, "", cleaned);
+        }
       }
     }
 
@@ -543,7 +550,16 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
   }, [token, refreshToken, updateSessionAction]);
 
   const value = useMemo(() => {
-    const state = { token, setToken, refreshToken, setRefreshToken, sessionId, setSessionId };
+    const state = {
+      token,
+      setToken,
+      refreshToken,
+      setRefreshToken,
+      sessionId,
+      setSessionId,
+      twoFactorChallengeToken,
+      setTwoFactorChallengeToken,
+    };
     return new Proxy(props.actions, {
       get(target, prop, receiver) {
         if (typeof prop === "string" && prop in state) {
@@ -552,7 +568,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
         return Reflect.get(target, prop, receiver);
       },
     }) as unknown as ConvexAuthContextValue;
-  }, [props.actions, token, refreshToken, sessionId]);
+  }, [props.actions, token, refreshToken, sessionId, twoFactorChallengeToken]);
   return <ConvexAuthContext.Provider value={value}>{props.children}</ConvexAuthContext.Provider>;
 }
 
@@ -893,12 +909,24 @@ export function useAuthActions() {
         : notAvailable,
       verifyTotp: twoFactorVerifyTOTPAction
         ? async (args: NativeAuthTwoFactorVerifyArgs) => {
-            return await twoFactorVerifyTOTPAction(args);
+            const session = await twoFactorVerifyTOTPAction(args);
+            if (session.token) {
+              ctx.setToken(session.token);
+              ctx.setRefreshToken(session.refreshToken ?? null);
+              ctx.setSessionId(session.sessionId ?? null);
+            }
+            return session;
           }
         : notAvailable,
       verifyBackupCode: twoFactorVerifyBackupCodeAction
         ? async (args: NativeAuthTwoFactorVerifyArgs) => {
-            return await twoFactorVerifyBackupCodeAction(args);
+            const session = await twoFactorVerifyBackupCodeAction(args);
+            if (session.token) {
+              ctx.setToken(session.token);
+              ctx.setRefreshToken(session.refreshToken ?? null);
+              ctx.setSessionId(session.sessionId ?? null);
+            }
+            return session;
           }
         : notAvailable,
       disable: twoFactorDisableAction
@@ -991,6 +1019,8 @@ export function useAuthActions() {
     setToken: ctx.setToken,
     refreshToken: ctx.refreshToken,
     setRefreshToken: ctx.setRefreshToken,
+    twoFactorChallengeToken: ctx.twoFactorChallengeToken,
+    setTwoFactorChallengeToken: ctx.setTwoFactorChallengeToken,
     user,
     sessionId,
     setSessionId: ctx.setSessionId,

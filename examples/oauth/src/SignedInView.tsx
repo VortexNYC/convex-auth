@@ -11,7 +11,6 @@ import {
   ConvexSessionList,
   ConvexUserButton,
   ConvexUserProfile,
-  ConvexVerifyEmailScreen,
   ConvexWebhookCreateForm,
   ConvexWebhookDeliveryList,
   ConvexWebhookEndpointList,
@@ -214,17 +213,18 @@ export function SignedInView() {
 
 function EmailVerificationPanel({
   email,
-  onMessage,
+  onMessage: _onMessage,
 }: {
   email: string;
   onMessage: (msg: string) => void;
 }) {
   const authClient = useConvexAuthClient();
-  const [token, setToken] = useState("");
+  const [emailId, setEmailId] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
   const send = async () => {
     setStatus("Sending…");
+    setEmailId(null);
     const result = await authClient.sendVerificationEmail({
       email,
       callbackURL: window.location.origin,
@@ -238,9 +238,8 @@ function EmailVerificationPanel({
       setStatus(result.error?.message ?? "Could not send verification email");
       return;
     }
-    const t = (result.data as { emailId?: string }).emailId ?? "";
-    setToken(t);
-    setStatus("Verification token issued.");
+    setEmailId((result.data as { emailId?: string }).emailId ?? null);
+    setStatus("Verification email sent. Click the link in your inbox.");
   };
 
   return (
@@ -256,16 +255,10 @@ function EmailVerificationPanel({
           </Button>
           {status ? <p className="text-muted-foreground text-sm">{status}</p> : null}
         </div>
-        {token ? (
+        {emailId ? (
           <>
             <Separator />
-            <div className="bg-muted rounded p-2 break-all font-mono text-xs">{token}</div>
-            <ConvexVerifyEmailScreen
-              token={token}
-              userEmail={email}
-              resendCallbackUrl={window.location.origin}
-              onVerified={() => onMessage("Email verified.")}
-            />
+            <div className="bg-muted rounded p-2 break-all font-mono text-xs">{emailId}</div>
           </>
         ) : null}
       </CardContent>

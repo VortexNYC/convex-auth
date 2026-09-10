@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AuthSignInForm,
   AuthSignUpForm,
@@ -17,7 +17,6 @@ import {
   CardTitle,
   Input,
   Label,
-  Separator,
 } from "convex-auth/ui";
 
 type ViewMode =
@@ -46,6 +45,16 @@ export function SignInView() {
   const [otpCode, setOtpCode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reset = params.get("reset");
+    const token = params.get("token");
+    if (reset !== null && token) {
+      setResetToken(token);
+      setMode("reset");
+    }
+  }, []);
 
   const isResendEmailId = (id: string) =>
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -230,17 +239,17 @@ export function SignInView() {
               resetPasswordUrl={`${window.location.origin}/?reset`}
               onRequested={() => setStatus("If an account exists, a reset email was queued.")}
             />
-            <DevResetTokenCard
-              onToken={(token) => {
-                setResetToken(token);
-                setMode("reset");
-              }}
-            />
             <div className="text-center">{footerLink("Back to sign in", "signIn")}</div>
           </>
         ) : mode === "reset" ? (
           <>
-            <ConvexResetPasswordForm token={resetToken} onReset={() => setMode("signIn")} />
+            <ConvexResetPasswordForm
+              token={resetToken}
+              onReset={() => {
+                setMode("signIn");
+                window.history.replaceState(null, "", window.location.pathname);
+              }}
+            />
             <div className="text-center">{footerLink("Back to sign in", "signIn")}</div>
           </>
         ) : mode === "signUp" ? (
@@ -380,68 +389,5 @@ export function SignInView() {
         )}
       </div>
     </ConvexAuthSurface>
-  );
-}
-
-function DevResetTokenCard({ onToken }: { onToken: (token: string) => void }) {
-  const authClient = useConvexAuthClient();
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus("Requesting…");
-    setToken(null);
-    const result = await authClient.forgetPassword({ email, redirectTo: window.location.origin });
-    if (
-      result.error ||
-      typeof result.data !== "object" ||
-      result.data === null ||
-      !("emailId" in result.data)
-    ) {
-      setStatus(result.error?.message ?? "Could not request reset token");
-      return;
-    }
-    const t = (result.data as { emailId?: string }).emailId ?? "";
-    setToken(t);
-    setStatus("Token issued — click Use to pre-fill reset form.");
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Dev: retrieve reset token</CardTitle>
-        <CardDescription>Get the token the server would put in a reset email.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <form onSubmit={onSubmit} className="space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="dev-reset-email">Email</Label>
-            <Input
-              id="dev-reset-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-          <Button type="submit" variant="outline" className="w-full">
-            Request reset token
-          </Button>
-        </form>
-        {token ? (
-          <>
-            <Separator />
-            <div className="bg-muted rounded p-2 break-all font-mono text-xs">{token}</div>
-            <Button type="button" onClick={() => onToken(token)} className="w-full">
-              Use this token
-            </Button>
-          </>
-        ) : null}
-        {status ? <p className="text-muted-foreground text-sm">{status}</p> : null}
-      </CardContent>
-    </Card>
   );
 }
