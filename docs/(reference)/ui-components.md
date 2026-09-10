@@ -368,7 +368,7 @@ No props.
 
 | Name                 | Type                                  | Optional | Description                                                           |
 | -------------------- | ------------------------------------- | -------- | --------------------------------------------------------------------- |
-| `authClient`         | `ConvexBetterAuthClient \| None`      | Yes      |                                                                       |
+| `authClient`         | `ConvexAuthClient \| None`            | Yes      |                                                                       |
 | `classNames`         | `AuthFormClassNames`                  | Yes      |                                                                       |
 | `description`        | `string`                              | Yes      |                                                                       |
 | `forceRedirectUrl`   | `string`                              | No       |                                                                       |
@@ -404,7 +404,7 @@ No props.
 
 | Name               | Type                                  | Optional | Description |
 | ------------------ | ------------------------------------- | -------- | ----------- |
-| `authClient`       | `ConvexBetterAuthClient \| None`      | Yes      |             |
+| `authClient`       | `ConvexAuthClient \| None`            | Yes      |             |
 | `classNames`       | `AuthFormClassNames`                  | Yes      |             |
 | `description`      | `string`                              | Yes      |             |
 | `forceRedirectUrl` | `string`                              | No       |             |
@@ -1137,12 +1137,12 @@ No props.
 
 | Name                | Type                              | Optional | Description                                                              |
 | ------------------- | --------------------------------- | -------- | ------------------------------------------------------------------------ |
-| `authClient`        | `ConvexBetterAuthClient \| None`  | Yes      |                                                                          |
+| `authClient`        | `ConvexAuthClient \| None`        | Yes      |                                                                          |
 | `classNames`        | `ConvexChangeEmailFormClassNames` | Yes      |                                                                          |
 | `copy`              | `ConvexChangeEmailFormCopy`       | Yes      |                                                                          |
 | `currentEmail`      | `string \| None`                  | Yes      | The user's current email, displayed read-only above the new-email field. |
 | `onRequested`       | `(newEmail: string) => void`      | Yes      |                                                                          |
-| `verifyCallbackUrl` | `string`                          | Yes      | Absolute URL of the verify-email page on this app. Better-Auth           |
+| `verifyCallbackUrl` | `string`                          | Yes      | Absolute URL of the verify-email page on this app. The app               |
 | appends             |
 
 **classNames keys**
@@ -1179,7 +1179,7 @@ No props.
 
 | Name         | Type                                  | Optional | Description                                                       |
 | ------------ | ------------------------------------- | -------- | ----------------------------------------------------------------- |
-| `authClient` | `ConvexBetterAuthClient \| None`      | Yes      |                                                                   |
+| `authClient` | `ConvexAuthClient \| None`            | Yes      |                                                                   |
 | `classNames` | `ConvexEnableTwoFactorFormClassNames` | Yes      |                                                                   |
 | `copy`       | `ConvexEnableTwoFactorFormCopy`       | Yes      |                                                                   |
 | `issuer`     | `string`                              | Yes      | Authenticator label shown alongside the account (e.g. "Pile").    |
@@ -1228,13 +1228,13 @@ No props.
 
 **Props**
 
-| Name               | Type                                 | Optional | Description                                                      |
-| ------------------ | ------------------------------------ | -------- | ---------------------------------------------------------------- |
-| `authClient`       | `ConvexBetterAuthClient \| None`     | Yes      |                                                                  |
-| `classNames`       | `ConvexForgotPasswordFormClassNames` | Yes      |                                                                  |
-| `copy`             | `ConvexForgotPasswordFormCopy`       | Yes      |                                                                  |
-| `onRequested`      | `(email: string) => void`            | Yes      |                                                                  |
-| `resetPasswordUrl` | `string`                             | No       | Absolute URL of the reset-password page on this app. Better-Auth |
+| Name               | Type                                 | Optional | Description                                                  |
+| ------------------ | ------------------------------------ | -------- | ------------------------------------------------------------ |
+| `authClient`       | `ConvexAuthClient \| None`           | Yes      |                                                              |
+| `classNames`       | `ConvexForgotPasswordFormClassNames` | Yes      |                                                              |
+| `copy`             | `ConvexForgotPasswordFormCopy`       | Yes      |                                                              |
+| `onRequested`      | `(email: string) => void`            | Yes      |                                                              |
+| `resetPasswordUrl` | `string`                             | No       | Absolute URL of the reset-password page on this app. The app |
 | appends            |
 
 **classNames keys**
@@ -1269,7 +1269,7 @@ No props.
 
 | Name                                                   | Type                              | Optional | Description                                                   |
 | ------------------------------------------------------ | --------------------------------- | -------- | ------------------------------------------------------------- |
-| `authClient`                                           | `ConvexBetterAuthClient \| None`  | Yes      |                                                               |
+| `authClient`                                           | `ConvexAuthClient \| None`        | Yes      |                                                               |
 | `classNames`                                           | `ConvexProfileEditFormClassNames` | Yes      |                                                               |
 | `copy`                                                 | `ConvexProfileEditFormCopy`       | Yes      |                                                               |
 | `initialImage`                                         | `string`                          | Yes      |                                                               |
@@ -1311,7 +1311,7 @@ No props.
 | Name           | Type                                        | Optional | Description                                                    |
 | -------------- | ------------------------------------------- | -------- | -------------------------------------------------------------- |
 | `accept`       | `string`                                    | Yes      | File-input                                                     |
-| `authClient`   | `ConvexBetterAuthClient \| None`            | Yes      |                                                                |
+| `authClient`   | `ConvexAuthClient \| None`                  | Yes      |                                                                |
 | `classNames`   | `ConvexProfileImageUploaderClassNames`      | Yes      |                                                                |
 | `copy`         | `ConvexProfileImageUploaderCopy`            | Yes      |                                                                |
 | `initialImage` | `string \| None`                            | Yes      |                                                                |
@@ -1348,7 +1348,7 @@ No props.
 
 | Name                                  | Type                                | Optional | Description                                                     |
 | ------------------------------------- | ----------------------------------- | -------- | --------------------------------------------------------------- |
-| `authClient`                          | `ConvexBetterAuthClient \| None`    | Yes      |                                                                 |
+| `authClient`                          | `ConvexAuthClient \| None`          | Yes      |                                                                 |
 | `classNames`                          | `ConvexResetPasswordFormClassNames` | Yes      |                                                                 |
 | `copy`                                | `ConvexResetPasswordFormCopy`       | Yes      |                                                                 |
 | `minPasswordLength`                   | `number`                            | Yes      | Minimum new-password length to enforce client-side. Defaults to |
@@ -1389,12 +1389,12 @@ No props.
 
 **Props**
 
-| Name                  | Type                             | Optional | Description                                                   |
-| --------------------- | -------------------------------- | -------- | ------------------------------------------------------------- |
-| `authClient`          | `ConvexBetterAuthClient \| None` | Yes      |                                                               |
-| `classNames`          | `ConvexSessionListClassNames`    | Yes      |                                                               |
-| `copy`                | `ConvexSessionListCopy`          | Yes      |                                                               |
-| `currentSessionToken` | `string \| None`                 | Yes      | Token of the session currently powering this browser. Used to |
+| Name                  | Type                          | Optional | Description                                                   |
+| --------------------- | ----------------------------- | -------- | ------------------------------------------------------------- |
+| `authClient`          | `ConvexAuthClient \| None`    | Yes      |                                                               |
+| `classNames`          | `ConvexSessionListClassNames` | Yes      |                                                               |
+| `copy`                | `ConvexSessionListCopy`       | Yes      |                                                               |
+| `currentSessionToken` | `string \| None`              | Yes      | Token of the session currently powering this browser. Used to |
 
 mark the row as the active session and to suppress the
 "revoke" button on it (revoking your own session is sign-out,
@@ -1557,11 +1557,11 @@ Defaults to true. Hides when no other sessions exist. |
 
 | Name                | Type                                | Optional | Description                                                           |
 | ------------------- | ----------------------------------- | -------- | --------------------------------------------------------------------- |
-| `authClient`        | `ConvexBetterAuthClient \| None`    | Yes      |                                                                       |
+| `authClient`        | `ConvexAuthClient \| None`          | Yes      |                                                                       |
 | `classNames`        | `ConvexVerifyEmailScreenClassNames` | Yes      |                                                                       |
 | `copy`              | `ConvexVerifyEmailScreenCopy`       | Yes      |                                                                       |
 | `onVerified`        | `() => void`                        | Yes      | Called on successful verification (after the verify call returns ok). |
-| `resendCallbackUrl` | `string`                            | Yes      | Absolute URL of this verify-email page on this app. Better-Auth       |
+| `resendCallbackUrl` | `string`                            | Yes      | Absolute URL of this verify-email page on this app. The app           |
 | appends a fresh     |
 | `token`             | `string`                            | No       | Token from the verification email's                                   |
 | `userEmail`         | `string \| None`                    | Yes      | The current user's email, if signed in. Required to enable the        |
@@ -1601,7 +1601,7 @@ hidden (no way to know which email to resend to). |
 
 | Name                                          | Type                                  | Optional | Description                                                         |
 | --------------------------------------------- | ------------------------------------- | -------- | ------------------------------------------------------------------- |
-| `authClient`                                  | `ConvexBetterAuthClient \| None`      | Yes      |                                                                     |
+| `authClient`                                  | `ConvexAuthClient \| None`            | Yes      |                                                                     |
 | `classNames`                                  | `ConvexVerifyTwoFactorFormClassNames` | Yes      |                                                                     |
 | `copy`                                        | `ConvexVerifyTwoFactorFormCopy`       | Yes      |                                                                     |
 | `onVerified`                                  | `() => void`                          | Yes      | Fired once the second factor is satisfied and the session is live.  |

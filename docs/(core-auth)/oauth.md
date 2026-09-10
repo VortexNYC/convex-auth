@@ -1,6 +1,6 @@
 # OAuth
 
-`convex-auth` supports Google, GitHub, and Discord OAuth out of the box. These are the initial built-in examples; the longer-term goal is parity with every provider Better Auth supports. The flow uses server-side state and PKCE.
+`convex-auth` supports Google, GitHub, and Discord OAuth out of the box. These are the initial built-in providers; more will be added over time. The flow uses server-side state and PKCE.
 
 1. The client calls `signInWithRedirect({ provider, callbackURL, errorURL })`.
 2. `convex-auth` returns a provider authorization URL.

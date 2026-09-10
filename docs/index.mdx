@@ -1,6 +1,6 @@
 ---
 title: Convex Auth
-description: Convex-native auth with a one-time Better Auth migration bridge.
+description: Convex-native auth for production apps.
 ---
 
 Convex-native auth for production apps. Users, sessions, identities, organizations, API keys, webhooks, and MCP auth live in your Convex database. No external auth service required.
@@ -8,8 +8,8 @@ Convex-native auth for production apps. Users, sessions, identities, organizatio
 If you are new here, follow this order:
 
 <Steps>
-  <Step title="Read the motivation" href="./motivation">
-    Why `convex-auth` exists and how it relates to Better Auth and Convex Auth 2.0.
+  <Step title="Read the story" href="./how-we-got-here">
+    Why `convex-auth` exists and how we got here.
   </Step>
   <Step title="Understand the concepts" href="./concepts">
     The five building blocks: component, config, actions, HTTP routes, and React client.
@@ -34,15 +34,12 @@ If you are new here, follow this order:
   <Card title="Concepts" href="./concepts" icon="book-open">
     Component, config, actions, HTTP routes, and React client.
   </Card>
-  <Card title="React client" href="./client" icon="monitor">
-    Hooks and the Better-Auth-shaped client.
-  </Card>
-  <Card title="React Native" href="./react-native" icon="smartphone">
-    Expo and React Native setup.
+  <Card title="How we got here" href="./how-we-got-here" icon="history">
+    The story behind the project.
   </Card>
 </CardGroup>
 
-## Features
+## Core auth
 
 <CardGroup cols={2}>
   <Card title="Email and password" href="./email-password" icon="mail">
@@ -60,6 +57,11 @@ If you are new here, follow this order:
   <Card title="Email OTP" href="./email-otp" icon="shield-check">
     One-time email passcodes.
   </Card>
+</CardGroup>
+
+## Application features
+
+<CardGroup cols={2}>
   <Card title="Organizations" href="./organizations" icon="building">
     Multi-tenant workspaces, members, and roles.
   </Card>
@@ -69,22 +71,28 @@ If you are new here, follow this order:
   <Card title="Webhooks" href="./webhooks" icon="webhook">
     Signed webhook events.
   </Card>
+  <Card title="Theming" href="./theming" icon="palette">
+    Light, dark, system mode, design tokens, and per-component styling.
+  </Card>
 </CardGroup>
 
-## Tooling
+## Operations
 
 <CardGroup cols={2}>
+  <Card title="Security" href="./security" icon="shield">
+    2FA, CAPTCHA, breach checks, rate limits, and keys.
+  </Card>
+  <Card title="Production" href="./production" icon="rocket">
+    Deploy, monitor, and rotate.
+  </Card>
   <Card title="Testing" href="./testing" icon="test-tube">
     Test helpers, the conformance consumer, and CI setup.
   </Card>
   <Card title="Preflight" href="./preflight" icon="plane">
     Validate your auth setup before deploying.
   </Card>
-  <Card title="Examples" href="./examples" icon="book">
-    Runnable React, Hono, React Native, and OAuth consumers.
-  </Card>
-  <Card title="Compatibility" href="./compatibility" icon="scale">
-    Supported versions of Better Auth, Convex, React, Node, and pnpm.
+  <Card title="Troubleshooting" href="./troubleshooting" icon="life-buoy">
+    Diagnostics, bug reports, and common mistakes.
   </Card>
 </CardGroup>
 
@@ -97,47 +105,26 @@ If you are new here, follow this order:
   <Card title="Server API" href="./server-api" icon="terminal">
     Actions, queries, and HTTP routes.
   </Card>
-  <Card title="Security" href="./security" icon="shield">
-    2FA, CAPTCHA, breach checks, rate limits, and keys.
+  <Card title="React client" href="./client" icon="monitor">
+    Hooks and the drop-in client.
   </Card>
-  <Card title="Production" href="./production" icon="rocket">
-    Deploy, monitor, and rotate.
+  <Card title="UI components" href="./ui-components" icon="layout">
+    Complete React component reference.
   </Card>
-  <Card title="Theming" href="./theming" icon="palette">
-    Light, dark, system mode, design tokens, and per-component styling.
-  </Card>
-  <Card title="Better Auth alternatives" href="./better-auth-alternatives" icon="book-open">
-    Map Better Auth docs to `convex-auth` pages.
-  </Card>
-  <Card title="Better Auth to Convex" href="./better-auth-to-convex" icon="arrow-right-left">
-    Terminology and behavior mapping between Better Auth and the native runtime.
-  </Card>
-  <Card title="Troubleshooting" href="./troubleshooting" icon="life-buoy">
-    Diagnostics, bug reports, and common mistakes.
-  </Card>
-</CardGroup>
-
-## Architecture
-
-<CardGroup cols={2}>
-  <Card title="Motivation" href="./motivation" icon="lightbulb">
-    Why `convex-auth` exists and how it relates to Convex Auth 2.0.
-  </Card>
-  <Card title="How we got here" href="./how-we-got-here" icon="history">
-    The journey from Better Auth to a native Convex auth runtime.
-  </Card>
-  <Card title="Convex-native auth strategy" href="./convex-native-auth-strategy" icon="compass">
-    The recommended runtime and roadmap.
+  <Card title="Architecture" href="./architecture" icon="compass">
+    How `convex-auth` is designed around Convex's runtime.
   </Card>
   <Card title="Feature-gated components" href="./feature-gated-components" icon="layers">
     How to mount and compose the `convexAuth` component.
+  </Card>
+  <Card title="Compatibility" href="./compatibility" icon="scale">
+    Supported versions of Convex, React, Node, and pnpm.
   </Card>
 </CardGroup>
 
 ## Migration
 
-If you already have a Better Auth integration:
+If you already have an auth integration:
 
 - [Migrating from Better Auth](./migrating-from-better-auth)
-- [Migrating from `@convex-dev/better-auth`](./migrating-from-convex-dev-better-auth)
-- [Migrating from the full component](./migrating-from-full-component)
+- [Migrating from the full `convexAuth` component](./migrating-from-full-component)

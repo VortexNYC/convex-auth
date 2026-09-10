@@ -1,6 +1,9 @@
-# How we got here
+---
+title: How we got here
+description: The story of why convex-auth exists and how we got here.
+---
 
-This is the short history of `convex-auth`: why we started on Better Auth rails, why that stopped being enough, and how Convex Auth 2.0 gave us the signal to build a native Convex auth runtime.
+This is the short history of `convex-auth`: why we started on another auth runtime, why that stopped being enough, and how we landed on a native Convex auth runtime.
 
 ## Level 1 — Better Auth as the pragmatic first rail
 

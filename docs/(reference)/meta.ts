@@ -7,12 +7,11 @@ export default defineMeta({
   icon: "book-open",
   pages: [
     "server-api",
-    "client",
     "ui-components",
-    "convex-native-auth-strategy",
+    "architecture",
     "feature-gated-components",
     "examples",
-    "entire",
+    "compatibility",
     "changelog",
   ],
 });

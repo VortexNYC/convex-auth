@@ -5,8 +5,6 @@ sidebar:
   order: 2
 ---
 
-# Concepts
-
 If you have never built auth in Convex, start here. `convex-auth` is not an external service. It is a set of Convex components, actions, and React hooks that keep users, sessions, and identities in your Convex database.
 
 ## The five building blocks
@@ -33,12 +31,12 @@ If you have never built auth in Convex, start here. `convex-auth` is not an exte
 
 `convex-auth` stores everything in your Convex database:
 
-| Better Auth concept | Convex table          | Notes                                     |
-| ------------------- | --------------------- | ----------------------------------------- |
-| `user`              | `users`               | One row per person.                       |
-| `account`           | `auth_identities`     | Email, OAuth, TOTP, and backup-code data. |
-| `session`           | `auth_sessions`       | JWT + refresh token sessions.             |
-| `refreshToken`      | `auth_refresh_tokens` | Long-lived refresh tokens.                |
+| Auth concept   | Convex table          | Notes                                     |
+| -------------- | --------------------- | ----------------------------------------- |
+| `user`         | `users`               | One row per person.                       |
+| `account`      | `auth_identities`     | Email, OAuth, TOTP, and backup-code data. |
+| `session`      | `auth_sessions`       | JWT + refresh token sessions.             |
+| `refreshToken` | `auth_refresh_tokens` | Long-lived refresh tokens.                |
 
 Because the data is Convex data, you can query it with `ctx.db` and write `rules`/`authz` against the same tables as the rest of your app. There is no external API to sync.
 

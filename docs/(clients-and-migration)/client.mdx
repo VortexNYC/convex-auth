@@ -84,12 +84,12 @@ export function SignIn() {
 
 ## useConvexAuthClient
 
-`useConvexAuthClient` wraps `useAuthActions` in a Better-Auth-compatible client shape. Use this if you are porting existing Better Auth forms and hooks.
+`useConvexAuthClient` wraps `useAuthActions` in a drop-in client shape. Use this if you are porting an existing auth client.
 
 ```tsx
 import { useConvexAuthClient } from "@vortex-api/convex-auth/react";
 
-export function BetterAuthSignIn() {
+export function SignInPage() {
   const client = useConvexAuthClient();
 
   async function handleSubmit(email: string, password: string) {

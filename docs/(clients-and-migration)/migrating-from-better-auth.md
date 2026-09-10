@@ -1,4 +1,7 @@
-# Migrating from Better Auth to `convex-auth`
+---
+title: Migrating from Better Auth
+description: One-time cutover from Better Auth to the native convex-auth runtime.
+---
 
 This is a one-time cutover, not a long-term bridge. The `convex-better-auth-adapter` and `convex-better-auth` packages are only used during the migration. Once the data is moved and the client/runtime is cut over, you remove them.
 
@@ -294,3 +297,138 @@ The migration ran accounts/sessions before users, or a user was added after the 
 ### Sessions are not preserved
 
 Migrated sessions are rows in the native `authSessions` table, but the tokens are not migrated. Users must sign in again and obtain new `convex-auth` tokens.
+
+## Better Auth to convex-auth mapping
+
+This document maps Better Auth concepts to the native `convex-auth` runtime. It is useful if you are migrating from Better Auth or comparing the two systems.
+
+## What changed
+
+`convex-auth` is now a fully native Convex auth runtime. It does not import or depend on `better-auth` at runtime. The `convex-better-auth-adapter` and `convex-better-auth` packages are used only for the one-time data and client migration.
+
+## Mapping Better Auth plugins to `convex-auth`
+
+| Better Auth plugin | `convex-auth` replacement                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------- |
+| `organization`     | `packages/auth/src/component/organizations.ts` — orgs, members, invitations                       |
+| `admin`            | `packages/auth/src/component/scopes.ts` and `servicePrincipals.ts` — roles and permissions        |
+| `api-key`          | `packages/auth/src/component/apiKeys.ts` — API key issuance, rotation, and verification           |
+| `two-factor`       | `packages/auth/src/component/identity.ts` — TOTP and backup codes                                 |
+| `oauth-provider`   | `packages/auth/src/mcp.ts` and `agent-auth-protocol/` — MCP and agent auth flows                  |
+| `webhooks`         | `packages/auth/src/component/webhooks.ts` — webhook fan-out and security                          |
+| Authentication     | `convex-auth` native email/password, OAuth, session minting, JWT/JWKS, and password reset actions |
+
+The data that used to live in Better Auth's adapter tables is now stored directly in the `convexAuth` component tables (`users`, `auth_identities`, `authAccounts`, `authSessions`, etc.).
+
+## Migration terminology
+
+| Better Auth term | `convex-auth` term                 | Notes                                                                                              |
+| ---------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `user`           | `users`                            | Stored in the `convexAuth` component.                                                              |
+| `account`        | `authAccounts` + `auth_identities` | Password and OAuth accounts are both identities.                                                   |
+| `session`        | `authSessions`                     | Native JWT sessions, not Better Auth opaque sessions.                                              |
+| `organization`   | `organizations` / `members`        | Convex-native B2B control plane.                                                                   |
+| `apiKey`         | `authApiKeys`                      | API keys and service sessions.                                                                     |
+| `twoFactor`      | `auth_identities.totp`             | TOTP secret and backup codes per identity.                                                         |
+| `jwt`            | `JWT_PRIVATE_KEY` / `JWKS` env     | Convex signs and verifies tokens with `crypto.subtle` and `jose`.                                  |
+| `oauth`          | Provider metadata + HTTP actions   | Google, GitHub, and Discord are built in; provider metadata is pure data, not a runtime framework. |
+
+## What happens to the bridge packages after migration
+
+Once the one-time migration finishes and the consumer cuts over to the native runtime, `convex-better-auth` and `convex-better-auth-adapter` are removed from `package.json`. They should not be used for new features or kept as a runtime dependency.
+
+## Migrating from `@convex-dev/better-auth`
+
+If you were using `@convex-dev/better-auth`, the move to this workspace is mostly a package-name change. The runtime semantics are the same; the adapter was vendored to keep it on the Better Auth 1.7 line and in the same repo as the higher-level Convex primitives.
+
+## 1. Install the new package
+
+```bash
+pnpm remove @convex-dev/better-auth
+pnpm add convex-better-auth-adapter
+```
+
+## 2. Update imports
+
+Replace any imports from `@convex-dev/better-auth` with the same path under `convex-better-auth-adapter`:
+
+```ts
+// Before
+import { convexClient } from "@convex-dev/better-auth/client/plugins";
+
+// After
+import { convexClient } from "convex-better-auth-adapter/client/plugins";
+```
+
+React / React Native provider imports also move:
+
+```tsx
+// Before
+import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+
+// After
+import { ConvexBetterAuthProvider } from "convex-better-auth-adapter/react";
+```
+
+## 3. Bump Better Auth to 1.7.x
+
+Update your `package.json` to require `better-auth` in the `>=1.7.1 <1.8.0` range:
+
+```json
+{
+  "dependencies": {
+    "better-auth": "^1.7.2"
+  }
+}
+```
+
+The adapter is not compatible with Better Auth 1.6.x or earlier.
+
+## 4. Account issuer migration
+
+Better Auth 1.7 changed how the `account` table stores the provider issuer. The adapter includes a backfill path for existing data, but you should read the migration notes in the upstream PR that landed this work:
+
+- [`get-convex/better-auth#430`](https://github.com/get-convex/better-auth/pull/430)
+
+If you are starting a new project, no migration is needed — the 1.7 schema is used from the beginning.
+
+## 5. React Native / Expo storage
+
+If you use the Expo client, `convex-auth/react-native` now wires the `expoClient` storage with both sync and async `SecureStore` methods. You should still pass a `SecureStore`-compatible object as `storage`, but the package no longer needs a custom sync-only wrapper.
+
+## 6. Update your `convex` version
+
+The rest of the workspace currently requires `convex >=1.39.0`. Make sure your app is on at least that version.
+
+## 7. Run the full local proof
+
+After the rename and bump, run:
+
+```bash
+pnpm install
+pnpm run typecheck
+pnpm run build
+pnpm run test
+```
+
+If you were previously on Better Auth 1.6, read the [Better Auth 1.7 release notes](https://www.better-auth.com/changelog) first — there may be auth-options or plugin changes outside the adapter.
+
+## Better Auth feature parity
+
+Use this table to find the `convex-auth` equivalent for each Better Auth doc page. The implementation is different because auth state lives in Convex, but the feature surface is the same.
+
+| Better Auth page                                                               | Convex Auth 2.0 equivalent                                                | `convex-auth` alternative                   |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------- |
+| [Installation](https://www.better-auth.com/docs/installation)                  | [Setup](https://labs.convex.dev/auth/setup)                               | [`Quickstart`](./quickstart)                |
+| [Basic usage / email & password](https://www.better-auth.com/docs/basic-usage) | [Passwords](https://labs.convex.dev/auth/config/passwords)                | [`Email and password`](./email-password)    |
+| [Basic usage / social sign-on](https://www.better-auth.com/docs/basic-usage)   | [OAuth](https://labs.convex.dev/auth/config/oauth)                        | [`OAuth`](./oauth)                          |
+| [Basic usage / session](https://www.better-auth.com/docs/basic-usage)          | [React client](https://labs.convex.dev/auth/api_reference/react)          | [`React client`](./client)                  |
+| [Two-factor](https://www.better-auth.com/docs/plugins/two-factor)              | —                                                                         | [`Two-factor authentication`](./two-factor) |
+| [Organizations](https://www.better-auth.com/docs/plugins/organization)         | —                                                                         | [`Organizations`](./organizations)          |
+| [API keys](https://www.better-auth.com/docs/plugins/api-key)                   | —                                                                         | [`API keys`](./api-keys)                    |
+| [Magic link](https://www.better-auth.com/docs/plugins/magic-link)              | [Magic links](https://labs.convex.dev/auth/config/email)                  | [`Magic links`](./magic-links)              |
+| [Email OTP](https://www.better-auth.com/docs/plugins/email-otp)                | [OTPs](https://labs.convex.dev/auth/config/otps)                          | [`Email OTP`](./email-otp)                  |
+| [Webhooks](https://www.better-auth.com/docs/concepts/webhooks)                 | —                                                                         | [`Webhooks`](./webhooks)                    |
+| [Configuration / options](https://www.better-auth.com/docs/reference/options)  | [Server API reference](https://labs.convex.dev/auth/api_reference/server) | [`Configuration`](./configuration)          |
+
+If a page is marked “coming next,” it has not been written yet. Open an issue or PR if you need it first.
