@@ -6,8 +6,10 @@ import {
   ConvexCreateOrganization,
   ConvexEnableTwoFactorForm,
   ConvexOrganizationList,
+  ConvexOrganizationSwitcher,
   ConvexSecurityAuditList,
   ConvexSessionList,
+  ConvexUserButton,
   ConvexUserProfile,
   ConvexVerifyEmailScreen,
   ConvexWebhookCreateForm,
@@ -46,6 +48,10 @@ export function SignedInView() {
 
   const user = actions.user;
   const token = actions.token;
+  const organizations = useQuery(
+    api.organizations.list,
+    user ? { userId: user.id } : "skip",
+  );
 
   if (user === null) {
     return (
@@ -75,9 +81,31 @@ export function SignedInView() {
             <h1 className="text-2xl font-semibold tracking-tight">convex-auth demo</h1>
             <p className="text-muted-foreground text-sm">{user.email}</p>
           </div>
-          <Button variant="outline" onClick={() => void handleSignOut()}>
-            Sign out
-          </Button>
+          <div className="flex items-center gap-3">
+            <ConvexOrganizationSwitcher
+              organizations={organizations?.map((org) => ({
+                _id: org._id,
+                name: org.name,
+                slug: org.slug,
+                imageUrl: org.imageUrl,
+              })) ?? []}
+              currentOrganizationId={selectedOrganizationId}
+              onSelectOrganization={(orgId) => setSelectedOrganizationId(orgId)}
+              onSelectPersonalAccount={() => setSelectedOrganizationId(null)}
+              onCreateOrganization={() => setActiveTab("organizations")}
+              showPersonalAccount
+            />
+            <ConvexUserButton
+              user={{
+                id: user.id,
+                email: user.email ?? "",
+                name: user.name,
+                imageUrl: user.image,
+              }}
+              onSignOut={handleSignOut}
+              onManageAccount={() => setActiveTab("profile")}
+            />
+          </div>
         </div>
 
         {message ? (
