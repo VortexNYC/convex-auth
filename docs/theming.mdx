@@ -1,0 +1,119 @@
+---
+title: Theming
+description: How to theme and customize the appearance of @vortex-api/convex-auth React components.
+sidebar:
+  order: 6
+---
+
+# Theming
+
+`@vortex-api/convex-auth/react` ships with an uncontrolled component set that is designed to blend into your design system. Theming has two layers:
+
+1. **Global appearance** — light, dark, or system mode via `ConvexAuthAppearanceProvider`.
+2. **Per-component styling** — `classNames` and `copy` props on every component.
+
+## Appearance provider
+
+Wrap your app with `ConvexAuthAppearanceProvider` to opt into theme management. It stores the user's preference in `localStorage`, resolves `"system"` against `prefers-color-scheme`, and applies the `.dark` class and `data-convex-auth-theme` attribute to the document element.
+
+```tsx
+import { ConvexAuthAppearanceProvider } from "@vortex-api/convex-auth/react";
+
+export function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ConvexAuthAppearanceProvider defaultTheme="system" storageKey="convex-auth-theme">
+      {children}
+    </ConvexAuthAppearanceProvider>
+  );
+}
+```
+
+### Props
+
+| Prop           | Type                            | Default               | Description                                                          |
+| -------------- | ------------------------------- | --------------------- | -------------------------------------------------------------------- |
+| `defaultTheme` | `"light" \| "dark" \| "system"` | `"system"`            | The theme to use before the user makes a choice.                     |
+| `enableSystem` | `boolean`                       | `true`                | Whether to follow `prefers-color-scheme` when `theme` is `"system"`. |
+| `storageKey`   | `string`                        | `"convex-auth-theme"` | `localStorage` key for the user's theme preference.                  |
+
+### Hook
+
+Use `useConvexAuthAppearance` to read or change the theme from anywhere inside the provider.
+
+```tsx
+import { useConvexAuthAppearance } from "@vortex-api/convex-auth/react";
+
+export function ThemeToggle() {
+  const { theme, setTheme } = useConvexAuthAppearance();
+  return (
+    <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+      Current theme: {theme}
+    </button>
+  );
+}
+```
+
+The hook returns:
+
+| Value           | Type                               | Description                                                              |
+| --------------- | ---------------------------------- | ------------------------------------------------------------------------ |
+| `theme`         | `"light" \| "dark" \| "system"`    | The currently stored theme.                                              |
+| `resolvedTheme` | `"light" \| "dark"`                | The resolved theme, with `"system"` evaluated against the OS preference. |
+| `setTheme`      | `(theme: ConvexAuthTheme) => void` | Updates the stored theme.                                                |
+
+## Design tokens
+
+The components reference Tailwind CSS v4 tokens. A default token set is available from `@vortex-api/convex-auth/ui/styles.css` (or `convex-auth-ui/styles.css`).
+
+```css
+@import "tailwindcss";
+@import "@vortex-api/convex-auth/ui/styles.css";
+@source "../node_modules/@vortex-api/convex-auth/ui/dist";
+```
+
+You can override the CSS variables to match your brand:
+
+```css
+:root {
+  --primary: oklch(0.55 0.18 260);
+  --primary-foreground: oklch(0.98 0 0);
+  --radius: 0.75rem;
+}
+
+.dark {
+  --primary: oklch(0.75 0.18 260);
+  --primary-foreground: oklch(0.15 0 0);
+}
+```
+
+The provider applies the `.dark` class to `document.documentElement`, so `dark:` Tailwind variants work automatically.
+
+## Per-component styling
+
+Every component accepts a `classNames` object that maps to internal elements. Use it to tweak spacing, borders, or typography without overriding the whole component.
+
+```tsx
+<ConvexOrganizationSwitcher
+  classNames={{
+    trigger: "h-9 px-3",
+    dropdown: "w-72",
+  }}
+/>
+```
+
+Use the `copy` prop to override labels and placeholder text for localization or tone:
+
+```tsx
+<ConvexCreateOrganization
+  copy={{
+    title: "Create workspace",
+    nameLabel: "Workspace name",
+  }}
+/>
+```
+
+See the [UI components reference](./ui-components) for the full `classNames` and `copy` keys for each component.
+
+## Custom theme without the provider
+
+If you already have your own theme solution, you do not need `ConvexAuthAppearanceProvider`. Apply the `.dark` class yourself and pass `classNames` as needed. The components only depend on the Tailwind token names (`bg-background`, `text-foreground`, etc.), not on the provider.
