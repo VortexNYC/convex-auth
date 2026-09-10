@@ -48,10 +48,9 @@ export function SignedInView() {
 
   const user = actions.user;
   const token = actions.token;
-  const organizations = useQuery(
-    api.organizations.list,
-    user ? { userId: user.id } : "skip",
-  );
+  const organizations = useQuery(api.organizations.list, {
+    userId: user?.id ?? "",
+  });
 
   if (user === null) {
     return (
@@ -102,8 +101,18 @@ export function SignedInView() {
                 name: user.name,
                 imageUrl: user.image,
               }}
+              organizations={organizations?.map((org) => ({
+                _id: org._id,
+                name: org.name,
+                imageUrl: org.imageUrl,
+                roleKey: "owner",
+              })) ?? []}
+              currentOrganizationId={selectedOrganizationId}
+              onSelectOrganization={(orgId) => setSelectedOrganizationId(orgId)}
+              onCreateOrganization={() => setActiveTab("organizations")}
               onSignOut={handleSignOut}
               onManageAccount={() => setActiveTab("profile")}
+              onManageOrganization={() => setActiveTab("organizations")}
             />
           </div>
         </div>
