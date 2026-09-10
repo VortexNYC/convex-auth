@@ -19,6 +19,7 @@ import {
   useConvexAuthClient,
 } from "convex-auth/react";
 import {
+  Badge,
   Button,
   Card,
   CardContent,
@@ -92,6 +93,7 @@ export function SignedInView() {
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="organizations">Organizations</TabsTrigger>
             <TabsTrigger value="apiKeys">API keys</TabsTrigger>
+            <TabsTrigger value="servicePrincipals">Service principals</TabsTrigger>
             <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
             <TabsTrigger value="securityAudit">Audit</TabsTrigger>
           </TabsList>
@@ -136,6 +138,14 @@ export function SignedInView() {
 
           <TabsContent value="apiKeys" className="space-y-4">
             <ApiKeysPanel
+              userId={user.id}
+              organizationId={selectedOrganizationId}
+              onMessage={setMessage}
+            />
+          </TabsContent>
+
+          <TabsContent value="servicePrincipals" className="space-y-4">
+            <ServicePrincipalsPanel
               userId={user.id}
               organizationId={selectedOrganizationId}
               onMessage={setMessage}
@@ -707,5 +717,159 @@ function SecurityAuditPanel({ organizationId }: { organizationId: string | null 
         />
       </CardContent>
     </Card>
+  );
+}
+
+function ServicePrincipalsPanel({
+  userId,
+  organizationId,
+  onMessage,
+}: {
+  userId: string;
+  organizationId: string | null;
+  onMessage: (msg: string) => void;
+}) {
+  const servicePrincipals = useQuery(
+    api.servicePrincipals.list,
+    organizationId ? { organizationId } : "skip",
+  );
+  const create = useMutation(api.servicePrincipals.create);
+  const [creating, setCreating] = useState(false);
+  const [state, setState] = useState({
+    name: "",
+    key: "",
+    description: "",
+    permissions: "",
+  });
+
+  if (organizationId === null) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Service principals</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground text-sm">
+            Select an organization in the Organizations tab to manage service principals.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const handleCreate = async () => {
+    setCreating(true);
+    try {
+      const key =
+        state.key.trim() ||
+        `sp-${state.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now().toString(36)}`;
+      const permissions = state.permissions
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean);
+      await create({
+        organizationId,
+        userId,
+        key,
+        name: state.name,
+        description: state.description || undefined,
+        permissions: permissions.length > 0 ? permissions : ["data:read"],
+      });
+      onMessage("Service principal created.");
+      setState({ name: "", key: "", description: "", permissions: "" });
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : "Could not create service principal");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Create service principal</CardTitle>
+          <CardDescription>
+            Register a machine principal for the selected organization.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="sp-name">Name</Label>
+            <Input
+              id="sp-name"
+              value={state.name}
+              onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
+              placeholder="e.g. billing-worker"
+            />
+          </div>
+          <div>
+            <Label htmlFor="sp-key">Key (optional)</Label>
+            <Input
+              id="sp-key"
+              value={state.key}
+              onChange={(e) => setState((s) => ({ ...s, key: e.target.value }))}
+              placeholder="generated if empty"
+            />
+          </div>
+          <div>
+            <Label htmlFor="sp-description">Description</Label>
+            <Input
+              id="sp-description"
+              value={state.description}
+              onChange={(e) => setState((s) => ({ ...s, description: e.target.value }))}
+              placeholder="what this principal does"
+            />
+          </div>
+          <div>
+            <Label htmlFor="sp-permissions">Permissions (comma-separated)</Label>
+            <Input
+              id="sp-permissions"
+              value={state.permissions}
+              onChange={(e) => setState((s) => ({ ...s, permissions: e.target.value }))}
+              placeholder="data:read, data:write"
+            />
+          </div>
+          <Button onClick={handleCreate} disabled={creating || !state.name.trim()}>
+            {creating ? "Creating…" : "Create service principal"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Active service principals</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {servicePrincipals === undefined ? (
+            <p className="text-muted-foreground text-sm">Loading…</p>
+          ) : servicePrincipals.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No service principals for this organization.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {servicePrincipals.map((sp) => (
+                <div key={sp._id} className="bg-muted rounded p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium">{sp.name}</div>
+                    <Badge variant={sp.status === "active" ? "success" : "neutral"}>
+                      {sp.status}
+                    </Badge>
+                  </div>
+                  <div className="text-muted-foreground font-mono text-xs">{sp.key}</div>
+                  {sp.description ? (
+                    <p className="text-muted-foreground text-sm mt-1">{sp.description}</p>
+                  ) : null}
+                  <div className="text-muted-foreground text-xs mt-1">
+                    {sp.permissions.length > 0 ? sp.permissions.join(", ") : "no permissions"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
