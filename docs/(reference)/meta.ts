@@ -1,0 +1,30 @@
+import { defineMeta } from "blume";
+
+export default defineMeta({
+  title: "Reference",
+  order: 3,
+  display: "group",
+  icon: "book-open",
+  pages: [
+    "server-api",
+    "ui-components",
+    "theming",
+    "webhooks",
+    "security",
+    "production",
+    "troubleshooting",
+    "compatibility",
+    "better-auth-alternatives",
+    "better-auth-to-convex",
+    "migrating-from-better-auth",
+    "migrating-from-convex-dev-better-auth",
+    "migrating-from-full-component",
+    "convex-native-auth-strategy",
+    "feature-gated-components",
+    "entire",
+    "examples",
+    "preflight",
+    "testing",
+    "changelog",
+  ],
+});

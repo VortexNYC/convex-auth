@@ -5,8 +5,6 @@ sidebar:
   order: 7
 ---
 
-# UI components
-
 The `@vortex-api/convex-auth/react` package ships uncontrolled React components for auth, organizations, profile management, security, webhooks, and theming. Most components accept `classNames` and `copy` objects so you can override styling and text without ejecting from the component.
 
 ```ts
