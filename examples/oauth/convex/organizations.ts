@@ -1,10 +1,12 @@
 import { query, mutation } from "./_generated/server";
 import { components } from "./_generated/api";
 import { v } from "convex/values";
+import { requireMatchingUserId } from "./authz";
 
 export const list = query({
   args: { userId: v.string() },
   handler: async (ctx, args) => {
+    await requireMatchingUserId(ctx, args.userId);
     const memberships = await ctx.runQuery(
       components.convexAuth.organizations.listMembershipsByUser,
       { userId: args.userId },
@@ -27,6 +29,7 @@ export const create = mutation({
     slug: v.string(),
   },
   handler: async (ctx, args) => {
+    const callerId = await requireMatchingUserId(ctx, args.userId);
     const now = Date.now();
 
     const { organizationId } = await ctx.runMutation(
@@ -34,13 +37,13 @@ export const create = mutation({
       {
         name: args.name,
         slug: args.slug,
-        createdBy: args.userId,
+        createdBy: callerId,
       },
     );
 
     await ctx.runMutation(components.convexAuth.organizations.seedDefaultRoles, {
       organizationId,
-      createdBy: args.userId,
+      createdBy: callerId,
     });
 
     const ownerRole = await ctx.runQuery(components.convexAuth.organizations.getRoleByKey, {
@@ -51,10 +54,10 @@ export const create = mutation({
 
     await ctx.runMutation(components.convexAuth.organizations.upsertMember, {
       organizationId,
-      userId: args.userId,
+      userId: callerId,
       roleId: ownerRole._id,
       status: "active",
-      assignedBy: args.userId,
+      assignedBy: callerId,
       acceptedAt: now,
     });
 
