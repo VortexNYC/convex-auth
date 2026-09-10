@@ -20,7 +20,7 @@ import {
   Separator,
 } from "convex-auth/ui";
 
-type ViewMode = "signIn" | "signUp" | "forgot" | "reset" | "verifyTwoFactor" | "magicLink";
+type ViewMode = "signIn" | "signUp" | "forgot" | "reset" | "verifyTwoFactor" | "magicLink" | "emailOtp";
 
 const providers = [
   { id: "google", label: "Google" },
@@ -35,6 +35,9 @@ export function SignInView() {
   const [resetToken, setResetToken] = useState("");
   const [magicEmail, setMagicEmail] = useState("");
   const [magicLinkUrl, setMagicLinkUrl] = useState<string | null>(null);
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const startOAuth = async (provider: string) => {
@@ -119,6 +122,56 @@ export function SignInView() {
     }
   };
 
+  const handleSendOtp = async () => {
+    setIsSubmitting(true);
+    setStatus(null);
+    setOtpSent(false);
+    try {
+      const result = await authClient.signInWithEmailOtp?.({ email: otpEmail, type: "sign-in" });
+      if (result?.error) {
+        setStatus(result.error.message ?? "Could not send email OTP");
+        return;
+      }
+      if (result?.data?.status === "queued" && result.data.emailId) {
+        setOtpSent(true);
+        setOtpCode("");
+        setStatus(`Email OTP queued: ${result.data.emailId}`);
+      } else {
+        setStatus(result?.data?.reason ?? "Email OTP not sent");
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not send email OTP");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!authClient.verifyEmailOtp) return;
+    setIsSubmitting(true);
+    setStatus(null);
+    try {
+      const result = await authClient.verifyEmailOtp({
+        email: otpEmail,
+        otp: otpCode,
+        type: "sign-in",
+      });
+      if (result.error) {
+        setStatus(result.error.message ?? "Could not verify email OTP");
+        return;
+      }
+      if (result.data && typeof result.data === "object" && "token" in result.data) {
+        setStatus("Signed in with email OTP.");
+      } else {
+        setStatus("Email OTP verification failed.");
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not verify email OTP");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const footerLink = (label: string, next: ViewMode) => (
     <button
       type="button"
@@ -187,6 +240,52 @@ export function SignInView() {
               }
             />
           </>
+        ) : mode === "emailOtp" ? (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Email OTP sign-in</CardTitle>
+                <CardDescription>Enter your email, get the queued code, then enter it.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="otp-email">Email</Label>
+                  <Input
+                    id="otp-email"
+                    type="email"
+                    value={otpEmail}
+                    onChange={(e) => setOtpEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    disabled={isSubmitting || otpSent}
+                  />
+                </div>
+                {otpSent ? (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="otp-code">One-time code</Label>
+                      <Input
+                        id="otp-code"
+                        type="text"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        placeholder="123456"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <Button onClick={() => void handleVerifyOtp()} disabled={isSubmitting || !otpCode.trim()}>
+                      {isSubmitting ? "Verifying…" : "Verify OTP"}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button onClick={() => void handleSendOtp()} disabled={isSubmitting || !otpEmail.trim()}>
+                    {isSubmitting ? "Sending…" : "Send email OTP"}
+                  </Button>
+                )}
+                {status ? <p className="text-muted-foreground text-sm">{status}</p> : null}
+              </CardContent>
+            </Card>
+            <div className="text-center">{footerLink("Back to sign in", "signIn")}</div>
+          </>
         ) : mode === "magicLink" ? (
           <>
             <Card>
@@ -238,6 +337,7 @@ export function SignInView() {
               footer={
                 <div className="flex flex-col gap-2 text-center">
                   {footerLink("Forgot password?", "forgot")}
+                  {footerLink("Sign in with email OTP", "emailOtp")}
                   {footerLink("Sign in with magic link", "magicLink")}
                   {footerLink("Create account", "signUp")}
                 </div>

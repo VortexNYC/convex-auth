@@ -61,6 +61,22 @@ export type ConvexBetterAuthClient = {
     data?: { status: string; reason?: string | null; emailId?: string | null } | null;
     error: { message?: string | null } | null;
   }>;
+  signInWithEmailOtp?: (args: {
+    email: string;
+    type?: string;
+    name?: string;
+  }) => Promise<{
+    data?: { status: string; reason?: string | null; emailId?: string | null } | null;
+    error: { message?: string | null } | null;
+  }>;
+  verifyEmailOtp?: (args: {
+    email: string;
+    otp: string;
+    type?: string;
+  }) => Promise<{
+    data?: unknown | null;
+    error: { message?: string | null } | null;
+  }>;
   signUp: {
     email(args: {
       name: string;

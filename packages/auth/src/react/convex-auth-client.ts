@@ -88,6 +88,30 @@ export function useConvexAuthClient() {
       }
     },
 
+    signInWithEmailOtp: async (args) => {
+      if (actions.sendVerificationOtp === undefined) {
+        return { data: null, error: toError("Email OTP is not available") };
+      }
+      try {
+        const result = await actions.sendVerificationOtp({ ...args, type: args.type ?? "sign-in" });
+        return { data: result, error: null };
+      } catch (err) {
+        return { data: null, error: toError(err) };
+      }
+    },
+
+    verifyEmailOtp: async (args) => {
+      if (actions.verifyEmailOtp === undefined) {
+        return { data: null, error: toError("Email OTP verification is not available") };
+      }
+      try {
+        const result = await actions.verifyEmailOtp({ ...args, type: args.type ?? "sign-in" });
+        return { data: result, error: null };
+      } catch (err) {
+        return { data: null, error: toError(err) };
+      }
+    },
+
     signUp: {
       email: async (args) => {
         try {

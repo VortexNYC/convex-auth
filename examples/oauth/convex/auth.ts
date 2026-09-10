@@ -59,6 +59,13 @@ export const auth = convexAuth({
       return token;
     },
   },
+  emailOtp: {
+    enabled: true,
+    sendVerificationOTP: async ({ otp }) => {
+      // In a real app, send the OTP via email/SMS. For the demo, return it.
+      return otp;
+    },
+  },
 });
 
 export const {
@@ -86,4 +93,6 @@ export const {
   callback,
   signInMagicLink,
   verifyMagicLink,
+  sendVerificationOtp,
+  verifyEmailOtp,
 } = auth;
