@@ -12,13 +12,9 @@ if (typeof globalThis.navigator === "undefined") {
 }
 
 export default defineConfig({
-  title: "@vortex-api/convex-auth",
+  title: "Convex Auth",
   description: "Vortex-native, full-stack authentication for Convex.",
-  logo: {
-    href: "/",
-    image: "/logo.svg",
-    text: "Convex Auth",
-  },
+  logo: "/logo.svg",
   content: {
     root: "../docs",
   },
