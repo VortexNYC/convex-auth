@@ -82,12 +82,14 @@ export function SignedInView() {
           </div>
           <div className="flex items-center gap-3">
             <ConvexOrganizationSwitcher
-              organizations={organizations?.map((org) => ({
-                _id: org._id,
-                name: org.name,
-                slug: org.slug,
-                imageUrl: org.imageUrl,
-              })) ?? []}
+              organizations={
+                organizations?.map((org) => ({
+                  _id: org._id,
+                  name: org.name,
+                  slug: org.slug,
+                  imageUrl: org.imageUrl,
+                })) ?? []
+              }
               currentOrganizationId={selectedOrganizationId}
               onSelectOrganization={(orgId) => setSelectedOrganizationId(orgId)}
               onSelectPersonalAccount={() => setSelectedOrganizationId(null)}
@@ -101,12 +103,14 @@ export function SignedInView() {
                 name: user.name,
                 imageUrl: user.image,
               }}
-              organizations={organizations?.map((org) => ({
-                _id: org._id,
-                name: org.name,
-                imageUrl: org.imageUrl,
-                roleKey: "owner",
-              })) ?? []}
+              organizations={
+                organizations?.map((org) => ({
+                  _id: org._id,
+                  name: org.name,
+                  imageUrl: org.imageUrl,
+                  roleKey: "owner",
+                })) ?? []
+              }
               currentOrganizationId={selectedOrganizationId}
               onSelectOrganization={(orgId) => setSelectedOrganizationId(orgId)}
               onCreateOrganization={() => setActiveTab("organizations")}
@@ -781,7 +785,9 @@ function ServicePrincipalsPanel({
     permissions: "",
   });
   const [newServiceKeys, setNewServiceKeys] = useState<Record<string, string | null>>({});
-  const [serviceKeyVerifications, setServiceKeyVerifications] = useState<Record<string, string | null>>({});
+  const [serviceKeyVerifications, setServiceKeyVerifications] = useState<
+    Record<string, string | null>
+  >({});
 
   if (organizationId === null) {
     return (
@@ -855,7 +861,10 @@ function ServicePrincipalsPanel({
         const msg = `Session: ${principal.type} principal ${principal.id ?? "none"} in org ${result.organizationId ?? "none"}; env ${result.environment ?? "any"}; scopes ${result.scopes.join(", ")}; remaining ${result.remaining ?? "unlimited"}`;
         setServiceKeyVerifications((prev) => ({ ...prev, [servicePrincipalId]: msg }));
       } else {
-        setServiceKeyVerifications((prev) => ({ ...prev, [servicePrincipalId]: `Invalid: ${result.reason}` }));
+        setServiceKeyVerifications((prev) => ({
+          ...prev,
+          [servicePrincipalId]: `Invalid: ${result.reason}`,
+        }));
       }
     } catch (error) {
       onMessage(error instanceof Error ? error.message : "Could not verify API key");

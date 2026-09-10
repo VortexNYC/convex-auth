@@ -20,7 +20,14 @@ import {
   Separator,
 } from "convex-auth/ui";
 
-type ViewMode = "signIn" | "signUp" | "forgot" | "reset" | "verifyTwoFactor" | "magicLink" | "emailOtp";
+type ViewMode =
+  | "signIn"
+  | "signUp"
+  | "forgot"
+  | "reset"
+  | "verifyTwoFactor"
+  | "magicLink"
+  | "emailOtp";
 
 const providers = [
   { id: "google", label: "Google" },
@@ -258,7 +265,9 @@ export function SignInView() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Email OTP sign-in</CardTitle>
-                <CardDescription>Enter your email, get the queued code, then enter it.</CardDescription>
+                <CardDescription>
+                  Enter your email, get the queued code, then enter it.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -285,12 +294,18 @@ export function SignInView() {
                         disabled={isSubmitting}
                       />
                     </div>
-                    <Button onClick={() => void handleVerifyOtp()} disabled={isSubmitting || !otpCode.trim()}>
+                    <Button
+                      onClick={() => void handleVerifyOtp()}
+                      disabled={isSubmitting || !otpCode.trim()}
+                    >
                       {isSubmitting ? "Verifying…" : "Verify OTP"}
                     </Button>
                   </div>
                 ) : (
-                  <Button onClick={() => void handleSendOtp()} disabled={isSubmitting || !otpEmail.trim()}>
+                  <Button
+                    onClick={() => void handleSendOtp()}
+                    disabled={isSubmitting || !otpEmail.trim()}
+                  >
                     {isSubmitting ? "Sending…" : "Send email OTP"}
                   </Button>
                 )}
@@ -318,12 +333,17 @@ export function SignInView() {
                     disabled={isSubmitting}
                   />
                 </div>
-                <Button onClick={() => void handleSendMagicLink()} disabled={isSubmitting || !magicEmail.trim()}>
+                <Button
+                  onClick={() => void handleSendMagicLink()}
+                  disabled={isSubmitting || !magicEmail.trim()}
+                >
                   {isSubmitting ? "Sending…" : "Send magic link"}
                 </Button>
                 {magicLinkUrl ? (
                   <div className="space-y-2">
-                    <p className="text-muted-foreground text-sm">Click the link to finish signing in:</p>
+                    <p className="text-muted-foreground text-sm">
+                      Click the link to finish signing in:
+                    </p>
                     <a
                       href={magicLinkUrl}
                       className="text-foreground break-all font-mono text-xs underline"
