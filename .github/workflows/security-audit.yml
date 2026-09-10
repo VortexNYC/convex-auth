@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   deps-and-secrets:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 15
     permissions:
       contents: read
@@ -39,7 +39,7 @@ jobs:
         run: pnpm run scan:secrets
 
   sast:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 15
     container:
       image: semgrep/semgrep:1.169.0
@@ -53,7 +53,7 @@ jobs:
         run: semgrep scan --config=auto --severity=ERROR --error .
 
   leaks:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 15
     permissions:
       contents: read
