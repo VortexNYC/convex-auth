@@ -108,3 +108,34 @@ export const issueApiKey = mutation({
     return result;
   },
 });
+
+export const verifyApiKey = mutation({
+  args: {
+    key: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      valid: v.literal(true),
+      apiKeyId: v.string(),
+      organizationId: v.optional(v.string()),
+      userId: v.optional(v.string()),
+      environment: v.optional(v.union(v.literal("sandbox"), v.literal("production"))),
+      scopes: v.array(v.string()),
+      remaining: v.optional(v.number()),
+      principal: v.object({
+        type: v.union(v.literal("human"), v.literal("service")),
+        id: v.optional(v.string()),
+        rateLimitKey: v.string(),
+      }),
+    }),
+    v.object({
+      valid: v.literal(false),
+      reason: v.string(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    return await ctx.runMutation(components.convexAuth.apiKeys.verifyApiKey, {
+      presentedKey: args.key,
+    });
+  },
+});

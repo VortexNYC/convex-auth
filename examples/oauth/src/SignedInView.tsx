@@ -735,6 +735,7 @@ function ServicePrincipalsPanel({
   );
   const create = useMutation(api.servicePrincipals.create);
   const issue = useMutation(api.servicePrincipals.issueApiKey);
+  const verify = useMutation(api.servicePrincipals.verifyApiKey);
   const [creating, setCreating] = useState(false);
   const [state, setState] = useState({
     name: "",
@@ -743,6 +744,7 @@ function ServicePrincipalsPanel({
     permissions: "",
   });
   const [newServiceKeys, setNewServiceKeys] = useState<Record<string, string | null>>({});
+  const [serviceKeyVerifications, setServiceKeyVerifications] = useState<Record<string, string | null>>({});
 
   if (organizationId === null) {
     return (
@@ -788,6 +790,7 @@ function ServicePrincipalsPanel({
 
   const handleIssueApiKey = async (servicePrincipalId: string, permissions: string[]) => {
     setNewServiceKeys((prev) => ({ ...prev, [servicePrincipalId]: null }));
+    setServiceKeyVerifications((prev) => ({ ...prev, [servicePrincipalId]: null }));
     try {
       const result = await issue({
         organizationId,
@@ -801,6 +804,24 @@ function ServicePrincipalsPanel({
       onMessage("Service API key issued. Save it now — it will not be shown again.");
     } catch (error) {
       onMessage(error instanceof Error ? error.message : "Could not issue service API key");
+    }
+  };
+
+  const handleVerifyApiKey = async (servicePrincipalId: string) => {
+    const key = newServiceKeys[servicePrincipalId];
+    if (!key) return;
+    setServiceKeyVerifications((prev) => ({ ...prev, [servicePrincipalId]: null }));
+    try {
+      const result = await verify({ key });
+      if (result.valid) {
+        const { principal } = result;
+        const msg = `Session: ${principal.type} principal ${principal.id ?? "none"} in org ${result.organizationId ?? "none"}; env ${result.environment ?? "any"}; scopes ${result.scopes.join(", ")}; remaining ${result.remaining ?? "unlimited"}`;
+        setServiceKeyVerifications((prev) => ({ ...prev, [servicePrincipalId]: msg }));
+      } else {
+        setServiceKeyVerifications((prev) => ({ ...prev, [servicePrincipalId]: `Invalid: ${result.reason}` }));
+      }
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : "Could not verify API key");
     }
   };
 
@@ -898,6 +919,24 @@ function ServicePrincipalsPanel({
                       role="status"
                     >
                       {newServiceKeys[sp._id]}
+                    </div>
+                  ) : null}
+                  {typeof newServiceKeys[sp._id] === "string" ? (
+                    <Button
+                      className="mt-2"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void handleVerifyApiKey(sp._id)}
+                    >
+                      Verify as session
+                    </Button>
+                  ) : null}
+                  {serviceKeyVerifications[sp._id] ? (
+                    <div
+                      className="bg-background mt-2 rounded p-2 break-words text-xs"
+                      role="status"
+                    >
+                      {serviceKeyVerifications[sp._id]}
                     </div>
                   ) : null}
                 </div>
