@@ -4,7 +4,7 @@
 
 # @vortex-api/convex-auth
 
-A public, Convex-native auth platform for [Convex](https://convex.dev), with a [Better Auth](https://www.better-auth.com) compatibility bridge.
+A public, Convex-native auth platform for [Convex](https://convex.dev). New projects use the native runtime; a one-time [Better Auth](https://www.better-auth.com) migration bridge is available for existing users.
 
 Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 
@@ -17,7 +17,7 @@ Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 [![Node][node-badge]][node]
 [![pnpm][pnpm-badge]][pnpm]
 
-**[Demo](https://perfect-dragon-698.convex.site)** · **[Docs](https://resilient-blackbird-58.convex.site)** · **[Why this exists](#why-this-exists)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth-recommended)**
+**[Docs](https://resilient-blackbird-58.convex.site)** · **[How we got here](#how-we-got-here)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth-recommended)** · **[Architecture](<docs/(reference)/architecture.md>)**
 
 </div>
 
@@ -25,7 +25,7 @@ Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 
 ## Status
 
-Public — `@vortex-api/convex-auth` is at `2.1.2` on npm. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, MCP auth, agent auth, and waitlists) is passing full conformance. The Better Auth data migration helper is in `packages/auth/scripts/migrate-better-auth.ts` for one-time use.
+Public — `@vortex-api/convex-auth` is at `2.1.2` on npm. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, MCP auth, and agent auth) is passing full conformance. A one-time Better Auth data migration helper is in `packages/auth/scripts/migrate-better-auth.ts` for existing users.
 
 ## How we got here
 
@@ -43,7 +43,7 @@ Convex Auth 2.0 announced the architecture this codebase was waiting for: auth a
 
 `convex-auth` is now a fully native Convex auth runtime. It implements email/password, OAuth, 2FA, sessions, organizations, API keys, webhooks, MCP, and agent auth inside the Convex isolate. No Better Auth runtime is used. The `convex-better-auth-adapter` and `convex-better-auth` packages remain only as a one-time migration bridge for existing Better Auth users.
 
-Read the full rationale in [`docs/motivation.md`](docs/motivation.md) and the mapping in [`docs/better-auth-to-convex.md`](docs/better-auth-to-convex.md).
+Read the full rationale in [`docs/(get-started)/how-we-got-here.md`](<docs/(get-started)/how-we-got-here.md>) and the migration guide in [`docs/(clients-and-migration)/migrating-from-better-auth.md`](<docs/(clients-and-migration)/migrating-from-better-auth.md>).
 
 ## Packages
 
@@ -290,7 +290,7 @@ pnpm dlx @vortex-api/convex-auth preflight
 
 Email verification and password reset are one-click via the `/api/auth/verify-email` and `/api/auth/reset-password/:token` HTTP routes. The user clicks the link, the route validates the token, and the browser is redirected to `callbackURL` with the token (reset only) or success state (verification). In production `sendEmail` should call Resend/Postmark/SES/etc.
 
-See `packages/conformance-consumer` for a working deployment with email capture and OAuth stubs, and [`docs/convex-native-auth-strategy.md`](docs/convex-native-auth-strategy.md) for the long-term roadmap.
+See [`examples/`](examples/) for working consumers and the [`Architecture`](<docs/(reference)/architecture.md>) page for the long-term design.
 
 ## Better Auth bridge (for migration)
 
@@ -298,7 +298,7 @@ If you are already using Better Auth and want to migrate to Convex tables and th
 
 ### Convex component
 
-During the migration, mount the legacy `betterAuth` adapter component and the native `convexAuth` component together. The exact `convex/convex.config.ts` wiring is in [`docs/migrating-from-better-auth.md`](docs/migrating-from-better-auth.md). After the cutover, you remove the legacy adapter and keep only the `convex-auth` component shown in the native section above.
+During the migration, mount the legacy `betterAuth` adapter component and the native `convexAuth` component together. The exact `convex/convex.config.ts` wiring is in [`docs/(clients-and-migration)/migrating-from-better-auth.md`](<docs/(clients-and-migration)/migrating-from-better-auth.md>). After the cutover, you remove the legacy adapter and keep only the `convex-auth` component shown in the native section above.
 
 ### React client
 
@@ -334,9 +334,8 @@ After the cutover to the native runtime, remove the provider and use the `convex
 
 ## Compatibility and migration
 
-- See [`docs/compatibility.md`](docs/compatibility.md) for the current supported versions of Better Auth, Convex, React, React Native / Expo, Node, and pnpm.
-- See [`docs/migrating-from-better-auth.md`](docs/migrating-from-better-auth.md) for the one-time migration from a Better Auth setup to the native `convex-auth` runtime.
-- See [`docs/migrating-from-convex-dev-better-auth.md`](docs/migrating-from-convex-dev-better-auth.md) if you are moving from `@convex-dev/better-auth` to `convex-better-auth-adapter`.
+- See [`docs/(get-started)/installation.mdx`](<docs/(get-started)/installation.mdx>) for supported versions of Convex, React, React Native / Expo, Node, and pnpm.
+- See [`docs/(clients-and-migration)/migrating-from-better-auth.md`](<docs/(clients-and-migration)/migrating-from-better-auth.md>) for the one-time migration from a Better Auth setup to the native `convex-auth` runtime.
 
 ## Development
 
