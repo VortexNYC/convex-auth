@@ -8,15 +8,15 @@
     "convex",
     "typescript"
   ],
-  "homepage": "https://github.com/shlomokabareti/convex-better-auth-2.0",
+  "homepage": "https://github.com/VortexNYC/convex-better-auth-2.0",
   "bugs": {
-    "url": "https://github.com/shlomokabareti/convex-better-auth-2.0/issues"
+    "url": "https://github.com/VortexNYC/convex-better-auth-2.0/issues"
   },
   "license": "Apache-2.0",
-  "author": "Shlomo Kabareti",
+  "author": "Shlomo Kabareti <shlomo@vortex.nyc>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/shlomokabareti/convex-better-auth-2.0.git"
+    "url": "https://github.com/VortexNYC/convex-better-auth-2.0.git"
   },
   "scripts": {
     "build": "vp run -r build",

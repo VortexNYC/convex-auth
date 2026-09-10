@@ -3,9 +3,10 @@
   "version": "2.1.1",
   "description": "Convex-native auth server, component, and integration.",
   "license": "Apache-2.0",
+  "author": "Shlomo Kabareti <shlomo@vortex.nyc>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/shlomokabareti/convex-better-auth-2.0.git",
+    "url": "https://github.com/VortexNYC/convex-better-auth-2.0.git",
     "directory": "packages/auth"
   },
   "bin": {

@@ -385,10 +385,10 @@ Apache-2.0 — see `LICENSE`.
 
 <!-- badges -->
 
-[ci-badge]: https://img.shields.io/github/actions/workflow/status/shlomokabareti/convex-better-auth-2.0/ci.yml?branch=main&style=for-the-badge&label=CI
-[ci]: https://github.com/shlomokabareti/convex-better-auth-2.0/actions/workflows/ci.yml
+[ci-badge]: https://img.shields.io/github/actions/workflow/status/VortexNYC/convex-better-auth-2.0/ci.yml?branch=main&style=for-the-badge&label=CI
+[ci]: https://github.com/VortexNYC/convex-better-auth-2.0/actions/workflows/ci.yml
 [docs-badge]: https://img.shields.io/badge/docs-online-292a44?style=for-the-badge
-[docs]: https://<your-site>.convex.site
+[docs]: https://perfect-dragon-698.convex.site
 [license-badge]: https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=for-the-badge
 [license]: LICENSE
 [status-badge]: https://img.shields.io/badge/status-public-blueviolet.svg?style=for-the-badge

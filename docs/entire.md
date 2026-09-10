@@ -17,8 +17,8 @@ Entire is enabled in `.entire/settings.json`:
 }
 ```
 
-- GitHub App is installed for `shlomokabareti/convex-better-auth-2.0`.
-- Repo is mirrored to `entire://aws-us-east-2.entire.io/gh/shlomokabareti/convex-better-auth-2.0`.
+- GitHub App is installed for `VortexNYC/convex-better-auth-2.0`.
+- Repo is mirrored to `entire://aws-us-east-2.entire.io/gh/VortexNYC/convex-better-auth-2.0`.
 - Agent hooks are configured for Claude Code and Codex (Cursor passively discovers `entire agent-help`).
 
 ## Commands we use
