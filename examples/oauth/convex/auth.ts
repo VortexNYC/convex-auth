@@ -22,8 +22,10 @@ const resendOtpSender = useResend
   : null;
 
 // In a real app, sendEmail should call Resend/Postmark/SES/etc.
-// This implementation returns the verification/reset token so the
-// conformance suite can drive email flows without a real inbox.
+// In local development without an email provider, you may set
+// ALLOW_EMAIL_TOKEN_FALLBACK=true to return the raw token so the UI can
+// display it. This is intentionally off by default so a missing provider
+// never leaks tokens in production.
 function extractTokenFromEmailDraft(draft: EmailDraft): string | null {
   const source = draft.text || draft.html;
   const match = source.match(/https?:\/\/[^\s<>"]+/);
@@ -32,6 +34,15 @@ function extractTokenFromEmailDraft(draft: EmailDraft): string | null {
   const pathToken = url.pathname.split("/").pop();
   if (pathToken && pathToken !== "verify-email") return pathToken;
   return url.searchParams.get("token");
+}
+
+function fallbackTokenOrThrow(token: string | null, label: string): string {
+  if (process.env.ALLOW_EMAIL_TOKEN_FALLBACK === "true" && token != null) {
+    return token;
+  }
+  throw new Error(
+    `${label} not sent: configure RESEND_API_KEY or set ALLOW_EMAIL_TOKEN_FALLBACK=true for local testing.`,
+  );
 }
 
 export const auth = convexAuth({
@@ -48,7 +59,7 @@ export const auth = convexAuth({
           return resendEmailSender(draft);
         }
         const token = extractTokenFromEmailDraft(draft);
-        return token ?? "no-token";
+        return fallbackTokenOrThrow(token, "Verification email");
       },
       sendOnSignUp: false,
       sendOnSignIn: false,
@@ -81,9 +92,7 @@ export const auth = convexAuth({
           text: `Sign in to the convex-auth OAuth example: ${url}`,
         });
       }
-      // In a real app, send the URL via email. For the demo, return the
-      // token so the user can click the verification link manually.
-      return token;
+      return fallbackTokenOrThrow(token, "Magic link");
     },
   },
   emailOtp: {
@@ -92,8 +101,7 @@ export const auth = convexAuth({
       if (resendOtpSender) {
         return resendOtpSender({ email, otp, type });
       }
-      // In a real app, send the OTP via email/SMS. For the demo, return it.
-      return otp;
+      return fallbackTokenOrThrow(otp, "Verification OTP");
     },
   },
 });

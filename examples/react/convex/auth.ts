@@ -7,8 +7,10 @@ const siteUrl =
   "http://localhost:3000";
 
 // In a real app, sendEmail should call Resend/Postmark/SES/etc.
-// This implementation returns the verification/reset token so the
-// conformance suite can drive email flows without a real inbox.
+// In local development without an email provider, you may set
+// ALLOW_EMAIL_TOKEN_FALLBACK=true to return the raw token so the UI can
+// display it. This is intentionally off by default so a missing provider
+// never leaks tokens in production.
 function extractTokenFromEmailDraft(draft: EmailDraft): string | null {
   const source = draft.text || draft.html;
   const match = source.match(/https?:\/\/[^\s<>"]+/);
@@ -17,6 +19,15 @@ function extractTokenFromEmailDraft(draft: EmailDraft): string | null {
   const pathToken = url.pathname.split("/").pop();
   if (pathToken && pathToken !== "verify-email") return pathToken;
   return url.searchParams.get("token");
+}
+
+function fallbackTokenOrThrow(token: string | null, label: string): string {
+  if (process.env.ALLOW_EMAIL_TOKEN_FALLBACK === "true" && token != null) {
+    return token;
+  }
+  throw new Error(
+    `${label} not sent: configure an email provider or set ALLOW_EMAIL_TOKEN_FALLBACK=true for local testing.`,
+  );
 }
 
 export const auth = convexAuth({
@@ -35,7 +46,7 @@ export const auth = convexAuth({
       appOrigin: siteUrl,
       sendEmail: async (draft) => {
         const token = extractTokenFromEmailDraft(draft);
-        return token ?? "no-token";
+        return fallbackTokenOrThrow(token, "Verification email");
       },
       sendOnSignUp: false,
       sendOnSignIn: false,
