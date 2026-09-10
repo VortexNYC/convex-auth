@@ -10,6 +10,5 @@ export default defineMeta({
     "clients-and-migration",
     "operations",
     "reference",
-    "decisions",
   ],
 });

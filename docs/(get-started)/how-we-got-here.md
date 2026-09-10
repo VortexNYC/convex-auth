@@ -1,35 +1,63 @@
 ---
 title: How we got here
-description: The story of why convex-auth exists and how we got here.
+description: Why convex-auth exists and the path that led to the current architecture.
 ---
 
-This is the short history of `convex-auth`: why we started on another auth runtime, why that stopped being enough, and how we landed on a native Convex auth runtime.
+`convex-auth` is a full-stack, open-source auth solution for [Convex](https://convex.dev). It gives Convex developers an out-of-the-box auth layer that covers the same surface area as Clerk or WorkOS, while keeping auth state in the same database as the rest of the app.
 
-## Level 1 — Better Auth as the pragmatic first rail
+## Why this exists
 
-When we started, Convex did not have a first-party auth product that covered the full Clerk/WorkOS surface: email/password, OAuth, 2FA, organizations, API keys, service sessions, webhooks, and MCP auth. Better Auth did. It was the best available auth framework for the feature set we needed.
+### 1. Convex needed a production auth layer now
 
-So we built `convex-auth` as a **Better Auth integration for Convex**. The idea was to let Better Auth own the auth primitives and wire them into Convex's database and component model.
+Convex has a richer built-in auth system on the roadmap, but apps need production-grade auth today. Existing auth frameworks were built for long-lived Node or Edge runtimes, not for Convex's stateless V8 isolates, deterministic queries, and component model.
+
+### 2. Auth state should live in Convex
+
+Hosted auth platforms own your users, sessions, and organization data. That creates two problems for a Convex app:
+
+1. **Data gravity.** Auth state lives outside Convex, so every auth check and organization lookup is a network call, and audit logs become a sync problem.
+2. **Lock-in.** The longer you stay on a hosted platform, the deeper your schema and UI depend on its shapes and availability.
+
+`convex-auth` keeps users, sessions, identities, organizations, API keys, webhooks, and MCP auth in **your Convex database**. You own the domain. The auth provider is a component inside your backend, not a separate service.
+
+## What this repo does about it
+
+`convex-auth` ships as a single public package with subpaths for the runtime, React client, React Native client, MCP helpers, preflight checks, and test utilities:
+
+| Subpath                    | What it is today                          |
+| -------------------------- | ----------------------------------------- |
+| `convex-auth`              | Convex-native auth runtime and component. |
+| `convex-auth/react`        | React UI and hooks.                       |
+| `convex-auth/react-native` | Expo / React Native client.               |
+| `convex-auth/mcp`          | MCP OAuth helpers.                        |
+| `convex-auth/preflight`    | Deployment readiness checks.              |
+| `convex-auth/testing`      | Test helpers.                             |
+
+For new projects there is no external auth runtime dependency. A one-time migration bridge exists only for consumers moving from another auth setup.
+
+## The first rail: another auth runtime
+
+When we started, Convex did not have a first-party auth product that covered the full Clerk/WorkOS surface. An existing open-source auth framework covered the feature set we needed, so we built `convex-auth` as an integration that wired that framework into Convex's database and component model.
 
 ### What worked
 
-- Better Auth gave us battle-tested password hashing, session issuance, OAuth, 2FA, and email flows on day one.
-- The community `@convex-dev/better-auth` adapter showed that Better Auth could run inside the Convex isolate.
-- We could ship a working auth stack for Convex apps before Convex Auth existed.
+- It gave us battle-tested password hashing, session issuance, OAuth, 2FA, and email flows on day one.
+- It showed that a full auth framework could run inside the Convex isolate.
+- We could ship a working auth stack for Convex apps before a native solution existed.
 
 ### What broke down
 
-Better Auth is designed for a long-lived Node.js/Edge runtime. Convex functions are stateless V8 isolates. The mismatch showed up quickly:
+The framework was designed for a long-lived Node.js/Edge runtime. Convex functions are stateless V8 isolates. The mismatch showed up quickly:
 
-- **Bundle size.** Better Auth's barrel imports and plugin instantiation pushed the `convex/` bundle toward the 32 MiB source-code limit. Consumers had to use subpath imports and lazy route registration to stay under it.
-- **Memory.** Better Auth keeps plugin state and crypto in memory. Convex functions have a 64 MB heap and cannot afford that.
-- **Determinism.** Better Auth's middleware and session machine assume a request/response lifecycle. Convex queries and mutations must be deterministic and fast.
-- **Lock-in.** Better Auth wants to own the tables for organizations, members, invitations, API keys, and webhooks. If those became the source of truth, we would inherit Better Auth's data model and future migrations would be painful.
-- **Performance.** The adapter sometimes showed slow queries on empty tables, missing session indexes, and async JWT claim handling that did not fit the Convex query model.
+- **Bundle size.** Barrel imports and plugin instantiation pushed the `convex/` bundle toward the 32 MiB source-code limit. Consumers had to use subpath imports and lazy route registration to stay under it.
+- **Memory.** Plugin state and crypto in memory did not fit Convex's 64 MB heap.
+- **Determinism.** Middleware and session machines assumed a request/response lifecycle. Convex queries and mutations must be deterministic and fast.
+- **Lock-in.** The framework wanted to own the tables for organizations, members, invitations, API keys, and webhooks. If those became the source of truth, we would inherit another framework's data model and future migrations would be painful.
+- **Performance.** Slow queries on empty tables, missing session indexes, and async JWT claim handling did not fit the Convex query model.
 
-The conclusion was clear: Better Auth was a great starting point, but its plugin model and runtime assumptions could not be the long-term foundation for a Convex-native auth platform. We needed to keep the auth **state** in Convex tables and rebuild the B2B control plane as Convex components, even if Better Auth still handled the low-level authentication primitives for a while.
+The conclusion was clear: the framework was a great starting point, but its plugin model and runtime assumptions could not be the long-term foundation for a Convex-native auth platform. We needed to keep the auth **state** in Convex tables and rebuild the B2B control plane as Convex components.
 
-## Level 2 — Convex Auth 2.0 showed the way
+## Convex Auth 2.0 showed the way
 
 Convex Auth 2.0 was announced with a clear architectural direction:
 
@@ -40,26 +68,13 @@ Convex Auth 2.0 was announced with a clear architectural direction:
 - Providers are metadata, not a runtime framework.
 - The public API is a single `convexAuth({ providers })` helper that returns typed action refs.
 
-This was the signal we were waiting for. It validated that the native path was viable and gave us the design vocabulary for the next phase: moving authentication itself into Convex, not just the B2B control plane.
-
-### What we did next
-
-We used Convex Auth 2.0's architecture as a reference, not as a dependency. We rebuilt `convex-auth` as an independent, native Convex auth runtime:
-
-- Email/password sign-up, sign-in, password reset, and email verification inside Convex actions.
-- OAuth for Google, GitHub, and Discord as Convex HTTP actions with vendored provider metadata.
-- JWT/JWKS minting and verification with `crypto.subtle` and `jose`.
-- Session and refresh token tables in the `convexAuth` component.
-- TOTP, backup codes, email OTP, and magic links using Web Crypto and Convex tables.
-- Organizations, members, invitations, roles, permissions, API keys, webhooks, MCP, and agent auth already lived in the `convexAuth` component from the earlier work.
-
-`convex-auth` no longer imports or depends on `better-auth` at runtime.
+This validated that the native path was viable and gave us the design vocabulary for the next phase: moving authentication itself into Convex, not just the B2B control plane.
 
 ## Where we are now
 
-- `convex-auth` is the native Convex auth runtime. New projects should start here.
-- `convex-better-auth-adapter` and `convex-better-auth` exist only as a one-time migration bridge for existing Better Auth consumers.
-- The bridge copies users, accounts, and sessions once, then the consumer removes Better Auth and the bridge packages.
+- `convex-auth` is the native Convex auth runtime. New projects start here.
+- The migration bridge exists only as a one-time data copy for existing consumers of another auth setup.
+- The bridge copies users, accounts, and sessions once, then the consumer removes it.
 - The B2B control plane (orgs, members, invitations, permissions, API keys, webhooks, MCP, agent auth) is already Convex-native.
 
-Better Auth was the right first rail. Convex Auth 2.0 showed us the second rail. `convex-auth` is the result: a Convex-native auth platform that keeps the feature surface and gets the architecture right.
+`convex-auth` is an independent implementation. It learns from Convex Auth 2.0's design constraints but ships its own B2B surface. It does not copy Convex Auth 2.0 and does not depend on it. The table layout and public API are intentionally close so migration is straightforward when Convex Auth 2.0 is ready.
