@@ -1307,7 +1307,12 @@ describe("addNativeOAuthHttpRoutes", () => {
     )) as Response;
 
     expect(callbackResponse.status).toBe(302);
-    expect(callbackResponse.headers.get("Location")).toBe("https://app.example.com/home");
+    const callbackLocation = callbackResponse.headers.get("Location")!;
+    const callbackUrl = new URL(callbackLocation);
+    expect(callbackUrl.origin + callbackUrl.pathname).toBe("https://app.example.com/home");
+    expect(callbackUrl.searchParams.get("token")).toBeTruthy();
+    expect(callbackUrl.searchParams.get("refreshToken")).toBeTruthy();
+    expect(callbackUrl.searchParams.get("sessionId")).toBeTruthy();
     const setCookie = callbackResponse.headers.get("Set-Cookie");
     expect(setCookie).toMatch(/convex-auth-token=/);
     expect(setCookie).toMatch(/convex-auth-refresh-token=/);
