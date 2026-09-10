@@ -25,6 +25,7 @@ import type * as native_sessions from "../native/sessions.js";
 import type * as native_users from "../native/users.js";
 import type * as native_verifiers from "../native/verifiers.js";
 import type * as organizations from "../organizations.js";
+import type * as passkeys from "../passkeys.js";
 import type * as schema_agents from "../schema/agents.js";
 import type * as schema_apiKeys from "../schema/apiKeys.js";
 import type * as schema_authMd from "../schema/authMd.js";
@@ -65,6 +66,7 @@ const fullApi: ApiFromModules<{
   "native/users": typeof native_users;
   "native/verifiers": typeof native_verifiers;
   organizations: typeof organizations;
+  passkeys: typeof passkeys;
   "schema/agents": typeof schema_agents;
   "schema/apiKeys": typeof schema_apiKeys;
   "schema/authMd": typeof schema_authMd;
