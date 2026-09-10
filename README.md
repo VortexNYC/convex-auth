@@ -21,7 +21,7 @@ A public, Convex-native auth platform for [Convex](https://convex.dev), with a [
 
 ## Status
 
-Public — `convex-auth` is at `2.0.3` on npm. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, MCP auth, agent auth, and waitlists) is passing full conformance. The Better Auth data migration helper is in `packages/auth/scripts/migrate-better-auth.ts` for one-time use.
+Public — `convex-auth` is at `2.0.5` on npm. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, MCP auth, agent auth, and waitlists) is passing full conformance. The Better Auth data migration helper is in `packages/auth/scripts/migrate-better-auth.ts` for one-time use.
 
 ## How we got here
 
@@ -162,9 +162,9 @@ export const auth = convexAuth({
       appOrigin: siteUrl,
       sendEmail: async (draft: EmailDraft) => {
         // Send via Resend/Postmark/SES in production.
-        // For local dev you can log and return a dummy id.
-        console.log("Email draft", draft);
-        return "email-id";
+        // For local dev without a provider, set ALLOW_EMAIL_TOKEN_FALLBACK=true
+        // so the demo can display the token; otherwise throw here.
+        throw new Error("Email provider not configured");
       },
       sendOnSignUp: true,
       sendOnSignIn: false,
@@ -349,9 +349,17 @@ pnpm run check       # Format + lint check
 pnpm run fix         # Auto-fix lint and formatting
 ```
 
-## CI
+## CI and security scanning
 
 A GitHub Actions workflow is defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). It runs the full proof (`typecheck`, `check`, `build`, `test`) on Node 20.12+ and Node 22.
+
+The repo also includes repeatable security scanning:
+
+```bash
+pnpm run scan:security
+```
+
+This runs Semgrep, TruffleHog, Secretlint, and a dependency audit. The OAuth demo additionally validates authorization with live browser probes against the deployed demo.
 
 ## Releasing
 
