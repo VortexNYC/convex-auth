@@ -1,10 +1,22 @@
-import { useRef } from "react";
-
 import { useAuthActions } from "./ConvexAuthProvider";
 import type { ConvexAuthSessionListItem, ConvexBetterAuthClient } from "./auth-client-types";
 
 function toError(err: unknown): { message: string } {
-  return { message: err instanceof Error ? err.message : "Unknown error" };
+  if (err instanceof Error) {
+    return { message: err.message };
+  }
+  if (typeof err === "string") {
+    return { message: err };
+  }
+  if (
+    err !== null &&
+    typeof err === "object" &&
+    "message" in err &&
+    typeof err.message === "string"
+  ) {
+    return { message: err.message };
+  }
+  return { message: "Unknown error" };
 }
 
 /**
@@ -18,7 +30,6 @@ function toError(err: unknown): { message: string } {
  */
 export function useConvexAuthClient() {
   const actions = useAuthActions();
-  const twoFactorTokenRef = useRef<string | null>(null);
 
   const session = {
     data:
@@ -44,7 +55,7 @@ export function useConvexAuthClient() {
 
   const currentToken = () => actions.token;
 
-  const resolveTwoFactorToken = () => twoFactorTokenRef.current ?? actions.token;
+  const resolveTwoFactorToken = () => actions.twoFactorChallengeToken ?? actions.token;
 
   return {
     useSession: () => session,
@@ -57,7 +68,7 @@ export function useConvexAuthClient() {
       email: async (args) => {
         try {
           const data = await actions.signIn({ ...args, rememberMe: args.rememberMe ?? false });
-          twoFactorTokenRef.current = data.twoFactorChallengeToken ?? null;
+          actions.setTwoFactorChallengeToken(data.twoFactorChallengeToken ?? null);
           return { data, error: null };
         } catch (err) {
           return { data: null, error: toError(err) };
@@ -76,11 +87,47 @@ export function useConvexAuthClient() {
       },
     },
 
+    signInWithMagicLink: async (args) => {
+      if (actions.signInWithMagicLink === undefined) {
+        return { data: null, error: toError("Magic link is not available") };
+      }
+      try {
+        const result = await actions.signInWithMagicLink(args);
+        return { data: result, error: null };
+      } catch (err) {
+        return { data: null, error: toError(err) };
+      }
+    },
+
+    signInWithEmailOtp: async (args) => {
+      if (actions.sendVerificationOtp === undefined) {
+        return { data: null, error: toError("Email OTP is not available") };
+      }
+      try {
+        const result = await actions.sendVerificationOtp({ ...args, type: args.type ?? "sign-in" });
+        return { data: result, error: null };
+      } catch (err) {
+        return { data: null, error: toError(err) };
+      }
+    },
+
+    verifyEmailOtp: async (args) => {
+      if (actions.verifyEmailOtp === undefined) {
+        return { data: null, error: toError("Email OTP verification is not available") };
+      }
+      try {
+        const result = await actions.verifyEmailOtp({ ...args, type: args.type ?? "sign-in" });
+        return { data: result, error: null };
+      } catch (err) {
+        return { data: null, error: toError(err) };
+      }
+    },
+
     signUp: {
       email: async (args) => {
         try {
           const data = await actions.signUp({ ...args, rememberMe: args.rememberMe ?? false });
-          twoFactorTokenRef.current = data.twoFactorChallengeToken ?? null;
+          actions.setTwoFactorChallengeToken(data.twoFactorChallengeToken ?? null);
           return { data, error: null };
         } catch (err) {
           return { data: null, error: toError(err) };
@@ -214,7 +261,7 @@ export function useConvexAuthClient() {
             return { data: null, error: toError(result.error) };
           }
           // The enable action returns the session token so verification can proceed.
-          twoFactorTokenRef.current = result.token ?? token;
+          actions.setTwoFactorChallengeToken(result.token ?? token);
           return {
             data: {
               totpURI: result.totpURI ?? "",

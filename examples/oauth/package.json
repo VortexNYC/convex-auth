@@ -1,13 +1,15 @@
 {
   "name": "examples-oauth",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "check:contract": "convex-auth check --convex-dir ./convex",
+    "preflight": "convex-auth preflight --repo-root . --convex-dir ./convex --test-env .env.local --skip-backend-setup"
   },
   "dependencies": {
     "@convex-dev/static-hosting": "^0.2.1",

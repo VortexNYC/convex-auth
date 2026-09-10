@@ -806,6 +806,7 @@ export const issueApiKey = mutation({
     /** Brand segment, e.g. "vb" produces vb_test_… / vb_live_… */
     keyBrand: v.optional(v.string()),
     scopes: v.optional(v.array(v.string())),
+    allowedIpRanges: v.optional(v.union(v.array(v.string()), v.null())),
     expiresAt: v.optional(v.number()),
     rateLimitEnabled: v.optional(v.boolean()),
     rateLimitTimeWindowMs: v.optional(v.number()),
@@ -848,6 +849,7 @@ export const issueApiKey = mutation({
       fixedOrganizationId: args.organizationId,
       scopes: normalizeStringArray(args.scopes ?? []),
       status: "active" as const,
+      allowedIpRanges: normalizeAllowedIpRanges(args.allowedIpRanges),
       expiresAt: args.expiresAt,
       rateLimitEnabled: args.rateLimitEnabled,
       rateLimitTimeWindowMs: args.rateLimitTimeWindowMs,
@@ -911,6 +913,7 @@ export const issueServiceOwnedApiKey = mutation({
     /** Brand segment, e.g. "vb" produces vb_test_… / vb_live_… */
     keyBrand: v.optional(v.string()),
     scopes: v.optional(v.array(v.string())),
+    allowedIpRanges: v.optional(v.union(v.array(v.string()), v.null())),
     permissions: v.optional(v.union(v.array(v.string()), v.null())),
     expiresAt: v.optional(v.number()),
     rateLimitEnabled: v.optional(v.boolean()),
@@ -968,6 +971,7 @@ export const issueServiceOwnedApiKey = mutation({
       permissions,
       scopes: normalizeStringArray(args.scopes ?? []),
       status: "active" as const,
+      allowedIpRanges: normalizeAllowedIpRanges(args.allowedIpRanges),
       expiresAt: args.expiresAt,
       rateLimitEnabled: args.rateLimitEnabled,
       rateLimitTimeWindowMs: args.rateLimitTimeWindowMs,

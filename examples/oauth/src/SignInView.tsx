@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AuthSignInForm,
   AuthSignUpForm,
@@ -17,10 +17,16 @@ import {
   CardTitle,
   Input,
   Label,
-  Separator,
 } from "convex-auth/ui";
 
-type ViewMode = "signIn" | "signUp" | "forgot" | "reset" | "verifyTwoFactor";
+type ViewMode =
+  | "signIn"
+  | "signUp"
+  | "forgot"
+  | "reset"
+  | "verifyTwoFactor"
+  | "magicLink"
+  | "emailOtp";
 
 const providers = [
   { id: "google", label: "Google" },
@@ -33,7 +39,25 @@ export function SignInView() {
   const [mode, setMode] = useState<ViewMode>("signIn");
   const [status, setStatus] = useState<string | null>(null);
   const [resetToken, setResetToken] = useState("");
+  const [magicEmail, setMagicEmail] = useState("");
+  const [magicLinkUrl, setMagicLinkUrl] = useState<string | null>(null);
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reset = params.get("reset");
+    const token = params.get("token");
+    if (reset !== null && token) {
+      setResetToken(token);
+      setMode("reset");
+    }
+  }, []);
+
+  const isResendEmailId = (id: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
   const startOAuth = async (provider: string) => {
     const result = await authClient.signIn.social({
@@ -88,6 +112,95 @@ export function SignInView() {
     setMode("signIn");
   };
 
+  const handleSendMagicLink = async () => {
+    setIsSubmitting(true);
+    setStatus(null);
+    setMagicLinkUrl(null);
+    try {
+      const result = await authClient.signInWithMagicLink({
+        email: magicEmail,
+        callbackURL: window.location.origin,
+      });
+      if (result.error) {
+        setStatus(result.error.message ?? "Could not send magic link");
+        return;
+      }
+      if (result.data?.status === "queued" && result.data.emailId) {
+        const id = result.data.emailId;
+        if (isResendEmailId(id)) {
+          setMagicLinkUrl(null);
+          setStatus(`Magic link sent to ${magicEmail}. Check your inbox. (Resend: ${id})`);
+        } else {
+          const siteUrl = import.meta.env.VITE_CONVEX_SITE_URL ?? window.location.origin;
+          const url = `${siteUrl}/api/auth/magic-link/verify?token=${encodeURIComponent(id)}&callbackURL=${encodeURIComponent(window.location.origin)}`;
+          setMagicLinkUrl(url);
+          setStatus("Magic link queued. Click the link to sign in.");
+        }
+      } else {
+        setStatus(result.data?.reason ?? "Magic link not sent");
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not send magic link");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSendOtp = async () => {
+    setIsSubmitting(true);
+    setStatus(null);
+    setOtpSent(false);
+    try {
+      const result = await authClient.signInWithEmailOtp?.({ email: otpEmail, type: "sign-in" });
+      if (result?.error) {
+        setStatus(result.error.message ?? "Could not send email OTP");
+        return;
+      }
+      if (result?.data?.status === "queued" && result.data.emailId) {
+        const id = result.data.emailId;
+        setOtpSent(true);
+        setOtpCode("");
+        setStatus(
+          isResendEmailId(id)
+            ? `Email OTP sent to ${otpEmail}. Check your inbox for the code. (Resend: ${id})`
+            : `Email OTP queued: ${id}`,
+        );
+      } else {
+        setStatus(result?.data?.reason ?? "Email OTP not sent");
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not send email OTP");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!authClient.verifyEmailOtp) return;
+    setIsSubmitting(true);
+    setStatus(null);
+    try {
+      const result = await authClient.verifyEmailOtp({
+        email: otpEmail,
+        otp: otpCode,
+        type: "sign-in",
+      });
+      if (result.error) {
+        setStatus(result.error.message ?? "Could not verify email OTP");
+        return;
+      }
+      if (result.data && typeof result.data === "object" && "token" in result.data) {
+        setStatus("Signed in with email OTP.");
+      } else {
+        setStatus("Email OTP verification failed.");
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not verify email OTP");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const footerLink = (label: string, next: ViewMode) => (
     <button
       type="button"
@@ -126,17 +239,17 @@ export function SignInView() {
               resetPasswordUrl={`${window.location.origin}/?reset`}
               onRequested={() => setStatus("If an account exists, a reset email was queued.")}
             />
-            <DevResetTokenCard
-              onToken={(token) => {
-                setResetToken(token);
-                setMode("reset");
-              }}
-            />
             <div className="text-center">{footerLink("Back to sign in", "signIn")}</div>
           </>
         ) : mode === "reset" ? (
           <>
-            <ConvexResetPasswordForm token={resetToken} onReset={() => setMode("signIn")} />
+            <ConvexResetPasswordForm
+              token={resetToken}
+              onReset={() => {
+                setMode("signIn");
+                window.history.replaceState(null, "", window.location.pathname);
+              }}
+            />
             <div className="text-center">{footerLink("Back to sign in", "signIn")}</div>
           </>
         ) : mode === "signUp" ? (
@@ -156,6 +269,103 @@ export function SignInView() {
               }
             />
           </>
+        ) : mode === "emailOtp" ? (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Email OTP sign-in</CardTitle>
+                <CardDescription>
+                  Enter your email, get the queued code, then enter it.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="otp-email">Email</Label>
+                  <Input
+                    id="otp-email"
+                    type="email"
+                    value={otpEmail}
+                    onChange={(e) => setOtpEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    disabled={isSubmitting || otpSent}
+                  />
+                </div>
+                {otpSent ? (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="otp-code">One-time code</Label>
+                      <Input
+                        id="otp-code"
+                        type="text"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        placeholder="123456"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <Button
+                      onClick={() => void handleVerifyOtp()}
+                      disabled={isSubmitting || !otpCode.trim()}
+                    >
+                      {isSubmitting ? "Verifying…" : "Verify OTP"}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => void handleSendOtp()}
+                    disabled={isSubmitting || !otpEmail.trim()}
+                  >
+                    {isSubmitting ? "Sending…" : "Send email OTP"}
+                  </Button>
+                )}
+                {status ? <p className="text-muted-foreground text-sm">{status}</p> : null}
+              </CardContent>
+            </Card>
+            <div className="text-center">{footerLink("Back to sign in", "signIn")}</div>
+          </>
+        ) : mode === "magicLink" ? (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Magic link sign-in</CardTitle>
+                <CardDescription>Enter your email and click the link we queue.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="magic-email">Email</Label>
+                  <Input
+                    id="magic-email"
+                    type="email"
+                    value={magicEmail}
+                    onChange={(e) => setMagicEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <Button
+                  onClick={() => void handleSendMagicLink()}
+                  disabled={isSubmitting || !magicEmail.trim()}
+                >
+                  {isSubmitting ? "Sending…" : "Send magic link"}
+                </Button>
+                {magicLinkUrl ? (
+                  <div className="space-y-2">
+                    <p className="text-muted-foreground text-sm">
+                      Click the link to finish signing in:
+                    </p>
+                    <a
+                      href={magicLinkUrl}
+                      className="text-foreground break-all font-mono text-xs underline"
+                    >
+                      {magicLinkUrl}
+                    </a>
+                  </div>
+                ) : null}
+                {status ? <p className="text-muted-foreground text-sm">{status}</p> : null}
+              </CardContent>
+            </Card>
+            <div className="text-center">{footerLink("Back to sign in", "signIn")}</div>
+          </>
         ) : (
           <>
             <AuthSignInForm
@@ -169,6 +379,8 @@ export function SignInView() {
               footer={
                 <div className="flex flex-col gap-2 text-center">
                   {footerLink("Forgot password?", "forgot")}
+                  {footerLink("Sign in with email OTP", "emailOtp")}
+                  {footerLink("Sign in with magic link", "magicLink")}
                   {footerLink("Create account", "signUp")}
                 </div>
               }
@@ -177,68 +389,5 @@ export function SignInView() {
         )}
       </div>
     </ConvexAuthSurface>
-  );
-}
-
-function DevResetTokenCard({ onToken }: { onToken: (token: string) => void }) {
-  const authClient = useConvexAuthClient();
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus("Requesting…");
-    setToken(null);
-    const result = await authClient.forgetPassword({ email, redirectTo: window.location.origin });
-    if (
-      result.error ||
-      typeof result.data !== "object" ||
-      result.data === null ||
-      !("emailId" in result.data)
-    ) {
-      setStatus(result.error?.message ?? "Could not request reset token");
-      return;
-    }
-    const t = (result.data as { emailId?: string }).emailId ?? "";
-    setToken(t);
-    setStatus("Token issued — click Use to pre-fill reset form.");
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Dev: retrieve reset token</CardTitle>
-        <CardDescription>Get the token the server would put in a reset email.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <form onSubmit={onSubmit} className="space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="dev-reset-email">Email</Label>
-            <Input
-              id="dev-reset-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-          <Button type="submit" variant="outline" className="w-full">
-            Request reset token
-          </Button>
-        </form>
-        {token ? (
-          <>
-            <Separator />
-            <div className="bg-muted rounded p-2 break-all font-mono text-xs">{token}</div>
-            <Button type="button" onClick={() => onToken(token)} className="w-full">
-              Use this token
-            </Button>
-          </>
-        ) : null}
-        {status ? <p className="text-muted-foreground text-sm">{status}</p> : null}
-      </CardContent>
-    </Card>
   );
 }

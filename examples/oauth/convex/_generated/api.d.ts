@@ -8,10 +8,14 @@
  * @module
  */
 
+import type * as apiKeys from "../apiKeys.js";
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as organizations from "../organizations.js";
+import type * as securityAudit from "../securityAudit.js";
+import type * as servicePrincipals from "../servicePrincipals.js";
 import type * as sessions from "../sessions.js";
+import type * as webhooks from "../webhooks.js";
 
 import type {
   ApiFromModules,
@@ -20,10 +24,14 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  apiKeys: typeof apiKeys;
   auth: typeof auth;
   http: typeof http;
   organizations: typeof organizations;
+  securityAudit: typeof securityAudit;
+  servicePrincipals: typeof servicePrincipals;
   sessions: typeof sessions;
+  webhooks: typeof webhooks;
 }>;
 
 /**

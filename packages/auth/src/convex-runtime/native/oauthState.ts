@@ -22,9 +22,9 @@ export async function generateCodeChallenge(verifier: string): Promise<string> {
 }
 
 export async function mintOAuthState(payload: OAuthStatePayload): Promise<string> {
-  const key = await getJwtPrivateKey();
+  const { key, kid } = await getJwtPrivateKey();
   return await new SignJWT({ state: true, ...payload })
-    .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+    .setProtectedHeader({ alg: "RS256", typ: "JWT", kid })
     .setSubject(payload.provider)
     .setIssuedAt()
     .setExpirationTime("5m")

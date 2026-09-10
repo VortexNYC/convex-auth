@@ -232,6 +232,18 @@ export function useConvexAuthForgotPassword(
           const msg = result.error instanceof Error ? result.error.message : "Reset request failed";
           return { ok: false, error: msg };
         }
+        if (
+          typeof result.data === "object" &&
+          result.data !== null &&
+          "status" in result.data &&
+          result.data.status !== "queued"
+        ) {
+          return {
+            ok: false,
+            error:
+              (result.data as { reason?: string }).reason ?? "Reset request could not be queued",
+          };
+        }
         return { ok: true, error: null };
       } catch (err) {
         return {
@@ -279,6 +291,17 @@ export function useConvexAuthResetPassword(
         if (result.error) {
           const msg = result.error instanceof Error ? result.error.message : "Reset failed";
           return { ok: false, error: msg };
+        }
+        if (
+          typeof result.data === "object" &&
+          result.data !== null &&
+          "status" in result.data &&
+          result.data.status !== true
+        ) {
+          return {
+            ok: false,
+            error: (result.data as { reason?: string }).reason ?? "Password reset failed",
+          };
         }
         return { ok: true, error: null };
       } catch (err) {
@@ -328,6 +351,17 @@ export function useConvexAuthVerifyEmail(
         });
         if (result.error) {
           const msg = result.error instanceof Error ? result.error.message : "Verification failed";
+          setStatus("error");
+          setError(msg);
+          return { ok: false, error: msg };
+        }
+        if (
+          typeof result.data === "object" &&
+          result.data !== null &&
+          "success" in result.data &&
+          result.data.success !== true
+        ) {
+          const msg = (result.data as { reason?: string }).reason ?? "Verification failed";
           setStatus("error");
           setError(msg);
           return { ok: false, error: msg };
