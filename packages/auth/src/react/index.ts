@@ -48,5 +48,6 @@ export * from "./convex-verify-email-screen";
 export * from "./convex-verify-two-factor-form";
 export * from "./webhooks";
 export * from "./passkey-manager";
+export * from "./usePasskeys";
 
 export const reactPackagePlaceholder = "convex-auth-react";

@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server.js";
+import { mutation, query } from "./_generated/server.js";
 import { v } from "convex/values";
 import {
   generateAuthenticationOptions,
@@ -181,7 +181,7 @@ export const verifyPasskeyRegistration = mutation({
   },
 });
 
-export const listPasskeys = mutation({
+export const listPasskeys = query({
   args: {
     userId: v.id("users"),
   },

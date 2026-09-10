@@ -71,7 +71,7 @@ describe("passkeys", () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
 
-    const list = await t.mutation(api.passkeys.listPasskeys, { userId });
+    const list = await t.query(api.passkeys.listPasskeys, { userId });
     expect(list).toHaveLength(0);
 
     const revoked = await t.mutation(api.passkeys.revokePasskey, {
