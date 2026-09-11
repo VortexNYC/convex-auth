@@ -62,7 +62,7 @@ app.post("/auth/sign-in", async (c) => {
 
 ## React Native / Expo
 
-`examples/react-native` is a minimal Expo app using `convex-auth/react-native`. See [React Native](./react-native) for setup details.
+`examples/react-native-web` is a React Native **web** example using `react-native-web` and Vite. It is useful for trying the `@vortex-api/convex-auth/react-native` client in a browser before adapting `src/App.tsx` to Expo.
 
 ## OAuth
 

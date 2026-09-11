@@ -171,7 +171,7 @@ importers:
         specifier: ^6.0.0
         version: 6.4.3(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0)
 
-  examples/react-native:
+  examples/react-native-web:
     dependencies:
       '@vortex-api/convex-auth':
         specifier: workspace:*
