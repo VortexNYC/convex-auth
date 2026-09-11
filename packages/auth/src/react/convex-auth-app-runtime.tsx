@@ -23,7 +23,7 @@ import {
   ConvexAuthSignOutButton,
   ConvexAuthSignUpButton,
 } from "./auth-triggers";
-import { AuthRuntimeProvider } from "./AuthRuntimeProvider";
+
 import { AuthSignedInBoundary, AuthSignedOutBoundary } from "./auth-client-boundaries";
 import type {
   ConvexAuthCaptureException,
@@ -37,8 +37,7 @@ import {
   ConvexAuthClientProvider,
   useConvexAuthClientContext,
 } from "./convex-auth-client-provider";
-import type { NativeAuthActions } from "./ConvexAuthProvider";
-import { DEFAULT_AUTH_RUNTIME_STATUS } from "./types";
+import { type NativeAuthActions } from "./ConvexAuthProvider";
 import { getAfterSignUpPath } from "./invite-sign-up";
 import { useGuardedProtectedWrite } from "./protected-writes";
 import {
@@ -298,10 +297,8 @@ function createConvexAuthProviderComponents(
   function RuntimeProvider(props: { children: ReactNode; identityProvisioner?: ReactNode }) {
     return (
       <ConvexAuthClientProvider actions={args.actions} storage={args.storage}>
-        <AuthRuntimeProvider status={DEFAULT_AUTH_RUNTIME_STATUS}>
-          {props.identityProvisioner}
-          {props.children}
-        </AuthRuntimeProvider>
+        {props.identityProvisioner}
+        {props.children}
       </ConvexAuthClientProvider>
     );
   }

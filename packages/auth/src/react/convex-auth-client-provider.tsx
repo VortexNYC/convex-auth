@@ -1,8 +1,11 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 
-import { ConvexAuthProvider, type ConvexAuthProviderProps } from "./ConvexAuthProvider";
+import type { AuthRuntimeStatus } from "../core";
+import { AuthRuntimeProvider } from "./AuthRuntimeProvider";
+import { ConvexAuthProvider, useSession, type ConvexAuthProviderProps } from "./ConvexAuthProvider";
 import type { ConvexBetterAuthClient } from "./auth-client-types";
 import { useConvexAuthClient } from "./convex-auth-client";
+import { DEFAULT_AUTH_RUNTIME_STATUS } from "./types";
 
 const ConvexAuthClientContext = createContext<ConvexBetterAuthClient | null>(null);
 
@@ -40,11 +43,36 @@ export function useConvexAuthClientContext(): ConvexBetterAuthClient | null {
  *
  * Render this inside a `ConvexProvider` from `convex/react`.
  */
+function ConvexAuthClientRuntimeProvider(props: { children: ReactNode }) {
+  const { isAuthenticated, isLoading } = useSession();
+  const status = useMemo<AuthRuntimeStatus>(() => {
+    if (isAuthenticated) {
+      return {
+        ...DEFAULT_AUTH_RUNTIME_STATUS,
+        state: "convexReady",
+        providerAuthenticated: true,
+        tokenAvailable: true,
+        convexAuthenticated: true,
+      };
+    }
+    if (isLoading) {
+      return { ...DEFAULT_AUTH_RUNTIME_STATUS, state: "convexConnecting" };
+    }
+    return DEFAULT_AUTH_RUNTIME_STATUS;
+  }, [isAuthenticated, isLoading]);
+
+  return (
+    <AuthRuntimeProvider status={status}>
+      <ConvexAuthClientContextProvider>{props.children}</ConvexAuthClientContextProvider>
+    </AuthRuntimeProvider>
+  );
+}
+
 export function ConvexAuthClientProvider(args: ConvexAuthProviderProps) {
   const { children, ...providerProps } = args;
   return (
     <ConvexAuthProvider {...providerProps}>
-      <ConvexAuthClientContextProvider>{children}</ConvexAuthClientContextProvider>
+      <ConvexAuthClientRuntimeProvider>{children}</ConvexAuthClientRuntimeProvider>
     </ConvexAuthProvider>
   );
 }
