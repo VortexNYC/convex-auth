@@ -454,9 +454,10 @@ export const createOrganization = mutation({
   args: {
     name: v.string(),
     slug: v.optional(v.string()),
+    imageUrl: v.optional(v.union(v.string(), v.null())),
   },
   returns: organizationSummaryValidator,
-  handler: async (ctx, { name, slug: slugInput }) => {
+  handler: async (ctx, { name, slug: slugInput, imageUrl }) => {
     const slug = slugInput || slugify(name);
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("UNAUTHORIZED");
@@ -464,7 +465,7 @@ export const createOrganization = mutation({
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
     const { organizationId } = await ctx.runMutation(
       components.convexAuth.organizations.upsertOrganization,
-      { name, slug, createdBy: userId },
+      { name, slug, createdBy: userId, imageUrl },
     );
     await ctx.runMutation(components.convexAuth.organizations.seedDefaultRoles, { organizationId });
     const ownerRole = await ctx.runQuery(components.convexAuth.organizations.getRoleByKey, {
