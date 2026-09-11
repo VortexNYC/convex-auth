@@ -48,7 +48,9 @@ type MockComponent = {
 function createMockComponent(): MockComponent {
   return {
     anonymous: {
-      createAnonymousUser: vi.fn().mockResolvedValue({ userId: "user_1", identityId: "identity_1" }),
+      createAnonymousUser: vi
+        .fn()
+        .mockResolvedValue({ userId: "user_1", identityId: "identity_1" }),
       linkAnonymousUser: vi.fn().mockResolvedValue({ success: true }),
     },
     sessions: {
@@ -95,7 +97,9 @@ beforeAll(async () => {
 describe("nativeAnonymous", () => {
   it("signs in an anonymous user and returns a session", async () => {
     const component = createMockComponent();
-    const auth = nativeAnonymous(component as unknown as NativeAnonymousComponentHandle, { emailDomain: "test.anonymous" });
+    const auth = nativeAnonymous(component as unknown as NativeAnonymousComponentHandle, {
+      emailDomain: "test.anonymous",
+    });
     const { handler } = exec(auth.signInAnonymous);
     const ctx = createContext();
 
@@ -151,8 +155,11 @@ describe("nativeAnonymous", () => {
   });
 
   it("throws if anonymous is not configured", () => {
-    expect(() => nativeAnonymous(createMockComponent() as unknown as NativeAnonymousComponentHandle, undefined)).toThrow(
-      "nativeAnonymous called without config",
-    );
+    expect(() =>
+      nativeAnonymous(
+        createMockComponent() as unknown as NativeAnonymousComponentHandle,
+        undefined,
+      ),
+    ).toThrow("nativeAnonymous called without config");
   });
 });

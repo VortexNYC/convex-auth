@@ -17,6 +17,7 @@ import type { GenericDataModel } from "convex/server";
 
 const DEFAULT_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 const DEFAULT_REFRESH_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const DONT_REMEMBER_SESSION_TTL_MS = 1000 * 60 * 60 * 24;
 
 export type AnonymousOnLinkAccountData = {
   anonymousUser: NativeAuthUser;
@@ -162,15 +163,17 @@ export function nativeAnonymous(
     const now = Date.now();
     const sessionTtlMs = resolvedConfig.sessionTtlMs ?? DEFAULT_SESSION_TTL_MS;
     const refreshTokenTtlMs = resolvedConfig.refreshTokenTtlMs ?? DEFAULT_REFRESH_TOKEN_TTL_MS;
+    const effectiveSessionTtlMs =
+      rememberMe === false ? DONT_REMEMBER_SESSION_TTL_MS : sessionTtlMs;
     const sessionId = crypto.randomUUID();
     const refreshToken = generateVerificationToken();
     const refreshTokenHash = await hashToken(refreshToken);
-    const expiresAt = now + sessionTtlMs;
+    const expiresAt = now + effectiveSessionTtlMs;
     const token = await mintToken(
       userId,
       sessionId,
       { identityId },
-      { expiresInSeconds: Math.floor(sessionTtlMs / 1000) },
+      { expiresInSeconds: Math.floor(effectiveSessionTtlMs / 1000) },
     );
     await ctx.runMutation(component.sessions.createSessionAndRefreshToken, {
       sessionId,
@@ -187,17 +190,20 @@ export function nativeAnonymous(
     args: { rememberMe: v.optional(v.boolean()) },
     returns: v.any(),
     handler: async (ctx, args): Promise<NativeAuthSession> => {
-      const now = Date.now();
       const anonymousId = crypto.randomUUID();
       const email = `${anonymousId}@${emailDomain}`.toLowerCase();
       const name =
-        (await Promise.resolve(resolvedConfig.generateName ? resolvedConfig.generateName() : undefined)) ??
-        `Guest ${anonymousId.slice(0, 8)}`;
+        (await Promise.resolve(
+          resolvedConfig.generateName ? resolvedConfig.generateName() : undefined,
+        )) ?? `Guest ${anonymousId.slice(0, 8)}`;
 
-      const { userId, identityId } = await ctx.runMutation(component.anonymous.createAnonymousUser, {
-        email,
-        name,
-      });
+      const { userId, identityId } = await ctx.runMutation(
+        component.anonymous.createAnonymousUser,
+        {
+          email,
+          name,
+        },
+      );
 
       const { sessionId, token, refreshToken } = await createSession(
         ctx,
@@ -236,7 +242,9 @@ export function nativeAnonymous(
         throw new Error("UNAUTHORIZED");
       }
 
-      const anonymousUser = await ctx.runQuery(component.users.getUserById, { userId: identity.subject });
+      const anonymousUser = await ctx.runQuery(component.users.getUserById, {
+        userId: identity.subject,
+      });
       if (!anonymousUser) {
         throw new Error("Anonymous user not found");
       }
@@ -246,7 +254,9 @@ export function nativeAnonymous(
       }
 
       const normalizedEmail = args.email.toLowerCase().trim();
-      const existing = await ctx.runQuery(component.users.getUserByEmail, { email: normalizedEmail });
+      const existing = await ctx.runQuery(component.users.getUserByEmail, {
+        email: normalizedEmail,
+      });
       if (existing) {
         throw new Error("An account with this email already exists");
       }
@@ -289,7 +299,12 @@ export function nativeAnonymous(
         sessionId: null,
       });
 
-      const { sessionId, token, refreshToken } = await createSession(ctx, userId, newIdentityId, undefined);
+      const { sessionId, token, refreshToken } = await createSession(
+        ctx,
+        userId,
+        newIdentityId,
+        undefined,
+      );
 
       const newUser = await ctx.runQuery(component.users.getUserById, { userId });
 

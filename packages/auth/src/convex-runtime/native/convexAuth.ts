@@ -70,7 +70,9 @@ type ConfigActions<TConfig extends ConvexAuthConfig> = NativeEmailAndPasswordAct
     ? { signInWithRedirect: NativeOAuthActions["signIn"]; callback: NativeOAuthActions["callback"] }
     : {}) &
   (TConfig extends { passkey: NativePasskeyConfig } ? NativePasskeyActions : {}) &
-  (TConfig extends { anonymous: NativeAnonymousConfig } ? ReturnType<typeof nativeAnonymous> : {}) & {
+  (TConfig extends { anonymous: NativeAnonymousConfig }
+    ? ReturnType<typeof nativeAnonymous>
+    : {}) & {
     addHttpRoutes(http: HttpRouter): void;
   };
 
@@ -100,8 +102,12 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
       ? nativePasskey(component.passkeys, config.passkey)
       : undefined;
 
-  const anonymousActions =
-    config.anonymous ? nativeAnonymous(component as unknown as Parameters<typeof nativeAnonymous>[0], config.anonymous) : undefined;
+  const anonymousActions = config.anonymous
+    ? nativeAnonymous(
+        component as unknown as Parameters<typeof nativeAnonymous>[0],
+        config.anonymous,
+      )
+    : undefined;
 
   const auth = {
     ...emailAndPasswordActions,
