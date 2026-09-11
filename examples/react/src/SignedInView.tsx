@@ -1,7 +1,10 @@
 import { useState } from "react";
 import {
   ConvexAuthSignOutButton,
+  ConvexCreateOrganization,
   ConvexEnableTwoFactorForm,
+  ConvexOrganizationList,
+  ConvexOrganizationSwitcher,
   ConvexSessionList,
   ConvexUserProfile,
   ConvexVerifyEmailScreen,
@@ -10,6 +13,8 @@ import {
   useConvexAuthClient,
   usePasskeys,
 } from "@vortex-api/convex-auth/react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../convex/_generated/api";
 import {
   Button,
   Card,
@@ -84,6 +89,7 @@ export function SignedInView() {
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="passkeys">Passkeys</TabsTrigger>
+            <TabsTrigger value="organizations">Workspaces</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
@@ -120,6 +126,10 @@ export function SignedInView() {
 
           <TabsContent value="passkeys">
             <PasskeysPanel userId={user.id} email={user.email ?? ""} />
+          </TabsContent>
+
+          <TabsContent value="organizations" className="space-y-4">
+            <OrganizationsPanel />
           </TabsContent>
         </Tabs>
       </div>
@@ -189,6 +199,76 @@ function PasskeysPanel({ userId, email }: { userId: string; email: string }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function OrganizationsPanel() {
+  const [message, setMessage] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const organizations = useQuery(api.organizations.listMyOrganizations) ?? [];
+  const invitations = useQuery(api.organizations.listMyInvitations) ?? [];
+  const activeOrg = useQuery(api.organizations.getActiveOrganization);
+  const setActive = useMutation(api.organizations.setActiveOrganization);
+  const create = useMutation(api.organizations.createOrganization);
+
+  const currentOrganizationId = activeOrg?._id ?? null;
+
+  return (
+    <div className="space-y-4">
+      {message ? (
+        <div className="bg-muted text-foreground rounded-lg p-3 text-sm" role="status">
+          {message}
+        </div>
+      ) : null}
+
+      <ConvexOrganizationSwitcher
+        organizations={organizations}
+        currentOrganizationId={currentOrganizationId}
+        currentOrganization={activeOrg ?? null}
+        onSelectOrganization={async (id) => {
+          await setActive({ organizationId: id });
+          setMessage("Active workspace updated.");
+        }}
+        onInPlaceCreateOrganization={async (name) => {
+          try {
+            await create({ name });
+            setMessage("Workspace created.");
+          } catch (err) {
+            setMessage(err instanceof Error ? err.message : "Could not create workspace");
+          }
+        }}
+      />
+
+      <ConvexOrganizationList
+        organizations={organizations}
+        invitations={invitations}
+        currentOrganizationId={currentOrganizationId}
+        onSelectOrganization={async (id) => {
+          await setActive({ organizationId: id });
+          setMessage("Active workspace updated.");
+        }}
+        onCreateOrganization={() => setCreating(true)}
+      />
+
+      {creating ? (
+        <Card>
+          <CardContent className="pt-6">
+            <ConvexCreateOrganization
+              onCreate={async (input) => {
+                try {
+                  await create(input);
+                  setCreating(false);
+                  setMessage("Workspace created.");
+                } catch (err) {
+                  setMessage(err instanceof Error ? err.message : "Could not create workspace");
+                }
+              }}
+              onCancel={() => setCreating(false)}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
   );
 }
 
