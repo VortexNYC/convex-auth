@@ -32,6 +32,7 @@ import type * as schema_authMd from "../schema/authMd.js";
 import type * as schema_mcp from "../schema/mcp.js";
 import type * as schema_native from "../schema/native.js";
 import type * as schema_organizations from "../schema/organizations.js";
+import type * as schema_passkeys from "../schema/passkeys.js";
 import type * as schema_servicePrincipals from "../schema/servicePrincipals.js";
 import type * as schema_users from "../schema/users.js";
 import type * as schema_validators from "../schema/validators.js";
@@ -73,6 +74,7 @@ const fullApi: ApiFromModules<{
   "schema/mcp": typeof schema_mcp;
   "schema/native": typeof schema_native;
   "schema/organizations": typeof schema_organizations;
+  "schema/passkeys": typeof schema_passkeys;
   "schema/servicePrincipals": typeof schema_servicePrincipals;
   "schema/users": typeof schema_users;
   "schema/validators": typeof schema_validators;
