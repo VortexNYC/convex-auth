@@ -10,7 +10,7 @@ This is a one-time cutover, not a long-term bridge. The `convex-better-auth-adap
 1. Mount the legacy `convex-better-auth-adapter` (`betterAuth`) component and the native `convex-auth` (`convexAuth`) component in the same Convex app.
 2. Run the one-time data migration.
 3. Cut over `convex/convex.config.ts` and `convex/http.ts` to native `convex-auth`.
-4. Swap the React client to `convex-auth/react`.
+4. Swap the React client to `@vortex-api/convex-auth/react`.
 5. Remove `convex-better-auth` and `convex-better-auth-adapter` from `package.json`.
 
 ## What is and is not migrated
@@ -227,7 +227,7 @@ export const {
 
 ## Step 5 — Swap the React client
 
-Replace Better Auth’s client with `convex-auth/react`:
+Replace Better Auth’s client with `@vortex-api/convex-auth/react`:
 
 ```tsx
 // src/main.tsx
@@ -249,7 +249,7 @@ function Root() {
 }
 ```
 
-Components use `useAuthActions` from `convex-auth/react`:
+Components use `useAuthActions` from `@vortex-api/convex-auth/react`:
 
 ```tsx
 import { useAuthActions } from "@vortex-api/convex-auth/react";
@@ -394,7 +394,7 @@ If you are starting a new project, no migration is needed — the 1.7 schema is 
 
 ## 5. React Native / Expo storage
 
-If you use the Expo client, `convex-auth/react-native` now wires the `expoClient` storage with both sync and async `SecureStore` methods. You should still pass a `SecureStore`-compatible object as `storage`, but the package no longer needs a custom sync-only wrapper.
+If you use the Expo client, `@vortex-api/convex-auth/react-native` now wires the `expoClient` storage with both sync and async `SecureStore` methods. You should still pass a `SecureStore`-compatible object as `storage`, but the package no longer needs a custom sync-only wrapper.
 
 ## 6. Update your `convex` version
 

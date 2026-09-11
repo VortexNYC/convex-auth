@@ -1,12 +1,12 @@
 # Migrating from the full `convexAuth` component
 
-The full `convex-auth/convex.config` component still works and is the safest starting point for existing consumers. Migration to feature-gated components is optional and driven by which auth features you actually use.
+The full `@vortex-api/convex-auth/convex.config` component still works and is the safest starting point for existing consumers. Migration to feature-gated components is optional and driven by which auth features you actually use.
 
 ## When to migrate
 
-- **Core only:** If your app only needs email/password, magic links, email OTP, OAuth, sessions, and user/identity tables, use `convex-auth/convex.config/core`.
-- **Core + organizations:** If you need organizations, members, roles, and invitations, add `convex-auth/convex.config/organizations`.
-- **Core + organizations + API keys:** If you also need machine API keys and audit events, add `convex-auth/convex.config/apiKeys`.
+- **Core only:** If your app only needs email/password, magic links, email OTP, OAuth, sessions, and user/identity tables, use `@vortex-api/convex-auth/convex.config/core`.
+- **Core + organizations:** If you need organizations, members, roles, and invitations, add `@vortex-api/convex-auth/convex.config/organizations`.
+- **Core + organizations + API keys:** If you also need machine API keys and audit events, add `@vortex-api/convex-auth/convex.config/apiKeys`.
 - **Other add-ons:** Mount `servicePrincipals`, `agentAuth`, `authMd`, `webhooks`, or `mcpOauth` only when you use those features.
 
 ## Migration steps

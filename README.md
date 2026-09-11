@@ -330,7 +330,7 @@ export function App() {
 }
 ```
 
-After the cutover to the native runtime, remove the provider and use the `convex-auth/react` client and `ConvexAuthClientProvider` shown in the [Convex-native auth section](#convex-native-auth).
+After the cutover to the native runtime, remove the provider and use the `@vortex-api/convex-auth/react` client and `ConvexAuthClientProvider` shown in the [Convex-native auth section](#convex-native-auth).
 
 ## Compatibility and migration
 

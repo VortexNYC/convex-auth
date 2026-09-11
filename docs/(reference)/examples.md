@@ -19,7 +19,7 @@ pnpm install
 pnpm run dev
 ```
 
-The app uses `ConvexAuthClientProvider` and `useAuthActions` from `convex-auth/react`:
+The app uses `ConvexAuthClientProvider` and `useAuthActions` from `@vortex-api/convex-auth/react`:
 
 ```tsx
 import { ConvexReactClient, ConvexProvider } from "convex/react";

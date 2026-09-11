@@ -5,7 +5,7 @@ sidebar:
   order: 9
 ---
 
-`convex-auth` supports multi-tenant organizations natively in Convex. Users, organizations, memberships, invitations, and roles all live in the `convexAuth` component tables. The `convex-auth/react` package ships uncontrolled UI components that you wire to your own Convex queries and mutations.
+`convex-auth` supports multi-tenant organizations natively in Convex. Users, organizations, memberships, invitations, and roles all live in the `convexAuth` component tables. The `@vortex-api/convex-auth/react` package ships uncontrolled UI components that you wire to your own Convex queries and mutations.
 
 ## How it works
 
@@ -188,7 +188,7 @@ Then sign up, create a workspace, invite a second account, and switch members/ro
 
 The `convex-auth` component exposes the organization tables, but the public helpers are low-level. For a working consumer, see `examples/react/convex/organizations.ts`.
 
-If you are building your own server surface, import `createConvexAuthOrganizationOperations` from `convex-auth/convex` and pass it:
+If you are building your own server surface, import `createConvexAuthOrganizationOperations` from `@vortex-api/convex-auth/convex` and pass it:
 
 - `component` — the `components.convexAuthOrganizations` handle.
 - `resolveLocalOrganizationId` and `resolveLocalUserId` — bridge lookup callbacks.

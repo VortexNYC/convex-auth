@@ -67,11 +67,11 @@ export function WebhooksSettings() {
 }
 ```
 
-`refs` is the contract between the React UI and your Convex mutations/actions. You write the server functions using the `convex-auth/convex` webhook helpers; the UI above calls them by reference.
+`refs` is the contract between the React UI and your Convex mutations/actions. You write the server functions using the `@vortex-api/convex-auth/convex` webhook helpers; the UI above calls them by reference.
 
 ## Server helpers
 
-`convex-auth/convex` re-exports the webhook runtime helpers:
+`@vortex-api/convex-auth/convex` re-exports the webhook runtime helpers:
 
 - `createConvexWebhookSecret` — generate a new endpoint secret.
 - `createConvexWebhookHeaders` — produce the signed headers for an outbound request.

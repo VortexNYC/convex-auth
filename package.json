@@ -37,6 +37,8 @@
     "scan:leaks": "trufflehog filesystem . -x .trufflehogignore --only-verified --fail",
     "scan:secrets": "secretlint . --no-gitignore --secretlintignore .secretlintignore",
     "scan:security": "pnpm run scan:deps && pnpm run scan:secrets && pnpm run scan:sast && pnpm run scan:leaks",
+    "docs:smoke": "node scripts/docs-smoke.mjs",
+    "test:coverage": "pnpm -F @vortex-api/convex-auth test:coverage",
     "knip": "knip",
     "entire:review": "entire review",
     "entire:investigate": "entire investigate",
