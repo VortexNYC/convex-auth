@@ -245,4 +245,391 @@ describe("createOidcProviderHttpHandlers", () => {
     expect(body.email_verified).toBe(true);
     expect(body.name).toBe("Test User");
   });
+
+  it("rejects an authorize request with missing PKCE", async () => {
+    const handlers = createOidcProviderHttpHandlers({
+      issuer: "https://example.com",
+      clients: [testClient],
+      storage: {
+        getSessionByToken: async () => ({ userId: "user_123" }),
+        getUserById: async () => ({ _id: "user_123" }),
+        createAuthorizationCode: async () => {},
+        consumeAuthorizationCode: async () => null,
+        issueRefreshToken: async () => ({ refreshToken: "refresh-123" }),
+        redeemRefreshToken: async () => ({
+          ok: false as const,
+          status: 400,
+          body: { error: "invalid_grant" },
+          reason: "not_refresh_token",
+        }),
+        getSigningKey: async () => null,
+        upsertSigningKey: async () => {},
+      },
+    });
+
+    const request = new Request(
+      "https://example.com/oauth/authorize?response_type=code&client_id=client-123&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback&scope=openid",
+      {
+        headers: { cookie: "convex-auth.session_token=session-token" },
+      },
+    );
+
+    const response = await handlers.handleAuthorizeRequest(request);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("PKCE");
+  });
+
+  it("rejects an authorize request with an unregistered redirect URI", async () => {
+    const handlers = createOidcProviderHttpHandlers({
+      issuer: "https://example.com",
+      clients: [testClient],
+      storage: {
+        getSessionByToken: async () => ({ userId: "user_123" }),
+        getUserById: async () => ({ _id: "user_123" }),
+        createAuthorizationCode: async () => {},
+        consumeAuthorizationCode: async () => null,
+        issueRefreshToken: async () => ({ refreshToken: "refresh-123" }),
+        redeemRefreshToken: async () => ({
+          ok: false as const,
+          status: 400,
+          body: { error: "invalid_grant" },
+          reason: "not_refresh_token",
+        }),
+        getSigningKey: async () => null,
+        upsertSigningKey: async () => {},
+      },
+    });
+
+    const request = new Request(
+      "https://example.com/oauth/authorize?response_type=code&client_id=client-123&redirect_uri=https%3A%2F%2Fevil.example.com%2Fcallback&scope=openid&code_challenge=challenge&code_challenge_method=S256",
+      {
+        headers: { cookie: "convex-auth.session_token=session-token" },
+      },
+    );
+
+    const response = await handlers.handleAuthorizeRequest(request);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_request");
+    expect(body.error_description).toContain("invalid_redirect_uri");
+  });
+
+  it("rejects an authorize request with a scope not allowed for the client", async () => {
+    const handlers = createOidcProviderHttpHandlers({
+      issuer: "https://example.com",
+      clients: [{ ...testClient, allowedScopes: ["openid", "email"] }],
+      supportedScopes: ["openid", "email", "profile"],
+      storage: {
+        getSessionByToken: async () => ({ userId: "user_123" }),
+        getUserById: async () => ({ _id: "user_123" }),
+        createAuthorizationCode: async () => {},
+        consumeAuthorizationCode: async () => null,
+        issueRefreshToken: async () => ({ refreshToken: "refresh-123" }),
+        redeemRefreshToken: async () => ({
+          ok: false as const,
+          status: 400,
+          body: { error: "invalid_grant" },
+          reason: "not_refresh_token",
+        }),
+        getSigningKey: async () => null,
+        upsertSigningKey: async () => {},
+      },
+    });
+
+    const request = new Request(
+      "https://example.com/oauth/authorize?response_type=code&client_id=client-123&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback&scope=openid%20profile&code_challenge=challenge&code_challenge_method=S256",
+      {
+        headers: { cookie: "convex-auth.session_token=session-token" },
+      },
+    );
+
+    const response = await handlers.handleAuthorizeRequest(request);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_scope");
+  });
+
+  it("rejects a token exchange with an unknown client", async () => {
+    const pair = await createPkcePair();
+
+    const handlers = createOidcProviderHttpHandlers({
+      issuer: "https://example.com",
+      clients: [testClient],
+      storage: {
+        getSessionByToken: async () => null,
+        getUserById: async () => null,
+        createAuthorizationCode: async () => {},
+        consumeAuthorizationCode: async () => null,
+        issueRefreshToken: async () => ({ refreshToken: "refresh-123" }),
+        redeemRefreshToken: async () => ({
+          ok: false as const,
+          status: 400,
+          body: { error: "invalid_grant" },
+          reason: "not_refresh_token",
+        }),
+        getSigningKey: async () => null,
+        upsertSigningKey: async () => {},
+      },
+    });
+
+    const request = new Request("https://example.com/oauth/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code: "code-123",
+        client_id: "unknown-client",
+        redirect_uri: "https://app.example.com/callback",
+        code_verifier: pair.verifier,
+      }),
+    });
+
+    const response = await handlers.handleTokenRequest(request);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_client");
+  });
+
+  it("rejects a token exchange with an unregistered redirect URI", async () => {
+    const pair = await createPkcePair();
+
+    const handlers = createOidcProviderHttpHandlers({
+      issuer: "https://example.com",
+      clients: [testClient],
+      storage: {
+        getSessionByToken: async () => null,
+        getUserById: async () => null,
+        createAuthorizationCode: async () => {},
+        consumeAuthorizationCode: async () => null,
+        issueRefreshToken: async () => ({ refreshToken: "refresh-123" }),
+        redeemRefreshToken: async () => ({
+          ok: false as const,
+          status: 400,
+          body: { error: "invalid_grant" },
+          reason: "not_refresh_token",
+        }),
+        getSigningKey: async () => null,
+        upsertSigningKey: async () => {},
+      },
+    });
+
+    const request = new Request("https://example.com/oauth/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code: "code-123",
+        client_id: "client-123",
+        redirect_uri: "https://evil.example.com/callback",
+        code_verifier: pair.verifier,
+      }),
+    });
+
+    const response = await handlers.handleTokenRequest(request);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("redirect URI");
+  });
+
+  it("rejects a token exchange with a mismatched PKCE verifier", async () => {
+    const handlers = createOidcProviderHttpHandlers({
+      issuer: "https://example.com",
+      clients: [testClient],
+      storage: {
+        getSessionByToken: async () => null,
+        getUserById: async () => null,
+        createAuthorizationCode: async () => {},
+        consumeAuthorizationCode: async () => ({
+          clientId: "client-123",
+          subjectId: "user_123",
+          organizationId: "",
+          scopes: ["openid", "email"],
+          codeChallenge: "challenge-123",
+          codeChallengeMethod: "S256" as const,
+          audience: "https://example.com",
+          resourceId: "https://example.com",
+          expiresAt: Date.now() + 5 * 60 * 1000,
+        }),
+        issueRefreshToken: async () => ({ refreshToken: "refresh-123" }),
+        redeemRefreshToken: async () => ({
+          ok: false as const,
+          status: 400,
+          body: { error: "invalid_grant" },
+          reason: "not_refresh_token",
+        }),
+        getSigningKey: async () => null,
+        upsertSigningKey: async () => {},
+      },
+    });
+
+    const request = new Request("https://example.com/oauth/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code: "code-123",
+        client_id: "client-123",
+        redirect_uri: "https://app.example.com/callback",
+        code_verifier: "wrong-verifier",
+      }),
+    });
+
+    const response = await handlers.handleTokenRequest(request);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("PKCE");
+  });
+
+  it("rejects a token exchange with an expired authorization code", async () => {
+    const pair = await createPkcePair();
+
+    const handlers = createOidcProviderHttpHandlers({
+      issuer: "https://example.com",
+      clients: [testClient],
+      storage: {
+        getSessionByToken: async () => null,
+        getUserById: async () => null,
+        createAuthorizationCode: async () => {},
+        consumeAuthorizationCode: async () => ({
+          clientId: "client-123",
+          subjectId: "user_123",
+          organizationId: "",
+          scopes: ["openid", "email"],
+          codeChallenge: pair.challenge,
+          codeChallengeMethod: "S256" as const,
+          audience: "https://example.com",
+          resourceId: "https://example.com",
+          expiresAt: Date.now() - 1000,
+        }),
+        issueRefreshToken: async () => ({ refreshToken: "refresh-123" }),
+        redeemRefreshToken: async () => ({
+          ok: false as const,
+          status: 400,
+          body: { error: "invalid_grant" },
+          reason: "not_refresh_token",
+        }),
+        getSigningKey: async () => null,
+        upsertSigningKey: async () => {},
+      },
+    });
+
+    const request = new Request("https://example.com/oauth/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code: "code-123",
+        client_id: "client-123",
+        redirect_uri: "https://app.example.com/callback",
+        code_verifier: pair.verifier,
+      }),
+    });
+
+    const response = await handlers.handleTokenRequest(request);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("expired");
+  });
+
+  it("rejects a token exchange when the authorization code is reused", async () => {
+    const pair = await createPkcePair();
+    let consumed = false;
+
+    const handlers = createOidcProviderHttpHandlers({
+      issuer: "https://example.com",
+      clients: [testClient],
+      storage: {
+        getSessionByToken: async () => null,
+        getUserById: async () => null,
+        createAuthorizationCode: async () => {},
+        consumeAuthorizationCode: async () => {
+          if (consumed) return null;
+          consumed = true;
+          return {
+            clientId: "client-123",
+            subjectId: "user_123",
+            organizationId: "",
+            scopes: ["openid", "email"],
+            codeChallenge: pair.challenge,
+            codeChallengeMethod: "S256" as const,
+            audience: "https://example.com",
+            resourceId: "https://example.com",
+            expiresAt: Date.now() + 5 * 60 * 1000,
+          };
+        },
+        issueRefreshToken: async () => ({ refreshToken: "refresh-123" }),
+        redeemRefreshToken: async () => ({
+          ok: false as const,
+          status: 400,
+          body: { error: "invalid_grant" },
+          reason: "not_refresh_token",
+        }),
+        getSigningKey: async () => null,
+        upsertSigningKey: async () => {},
+      },
+    });
+
+    const request = new Request("https://example.com/oauth/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code: "code-123",
+        client_id: "client-123",
+        redirect_uri: "https://app.example.com/callback",
+        code_verifier: pair.verifier,
+      }),
+    });
+
+    const first = await handlers.handleTokenRequest(request.clone());
+    expect(first.status).toBe(200);
+
+    const second = await handlers.handleTokenRequest(request.clone());
+    expect(second.status).toBe(400);
+    const body = await second.json();
+    expect(body.error).toBe("invalid_grant");
+    expect(body.error_description).toContain("not found or already consumed");
+  });
+
+  it("rejects userinfo requests without a bearer token", async () => {
+    const handlers = createOidcProviderHttpHandlers({
+      issuer: "https://example.com",
+      clients: [testClient],
+      storage: {
+        getSessionByToken: async () => null,
+        getUserById: async () => null,
+        createAuthorizationCode: async () => {},
+        consumeAuthorizationCode: async () => null,
+        issueRefreshToken: async () => ({ refreshToken: "refresh-123" }),
+        redeemRefreshToken: async () => ({
+          ok: false as const,
+          status: 400,
+          body: { error: "invalid_grant" },
+          reason: "not_refresh_token",
+        }),
+        getSigningKey: async () => null,
+        upsertSigningKey: async () => {},
+      },
+    });
+
+    const response = await handlers.handleUserInfoRequest(
+      new Request("https://example.com/oauth/userinfo"),
+    );
+
+    expect(response.status).toBe(401);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_token");
+  });
 });
