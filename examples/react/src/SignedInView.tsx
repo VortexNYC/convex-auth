@@ -1,5 +1,8 @@
 import { useState } from "react";
 import {
+  ConvexApiKeyCreated,
+  ConvexApiKeyCreateForm,
+  ConvexApiKeyList,
   ConvexAuthSignOutButton,
   ConvexCreateOrganization,
   ConvexEnableTwoFactorForm,
@@ -11,6 +14,7 @@ import {
   ConvexUserProfile,
   ConvexVerifyEmailScreen,
   useAuthActions,
+  useConvexApiKeys,
   useConvexAuthAppearance,
   useConvexAuthClient,
   useConvexOrganizationRefs,
@@ -93,6 +97,7 @@ export function SignedInView() {
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="passkeys">Passkeys</TabsTrigger>
             <TabsTrigger value="organizations">Workspaces</TabsTrigger>
+            <TabsTrigger value="api-keys">API Keys</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
@@ -133,6 +138,10 @@ export function SignedInView() {
 
           <TabsContent value="organizations" className="space-y-4">
             <OrganizationsPanel />
+          </TabsContent>
+
+          <TabsContent value="api-keys" className="space-y-4">
+            <ApiKeysPanel />
           </TabsContent>
         </Tabs>
       </div>
@@ -292,6 +301,42 @@ function OrganizationsPanel() {
           <ConvexOrganizationRoleManagerSurface canCreateRoles refs={refs.roles} />
         </>
       ) : null}
+    </div>
+  );
+}
+
+function ApiKeysPanel() {
+  const { formProps, listProps, created, clearCreated } = useConvexApiKeys(api, {
+    scopeOptions: ["read", "write", "delete"],
+  });
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Create API key</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ConvexApiKeyCreateForm {...formProps} />
+        </CardContent>
+      </Card>
+
+      {created ? (
+        <Card>
+          <CardContent className="pt-6">
+            <ConvexApiKeyCreated apiKey={created.apiKey} onClose={clearCreated} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">API keys</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ConvexApiKeyList {...listProps} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
