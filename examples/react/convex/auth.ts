@@ -65,6 +65,18 @@ export const auth = convexAuth({
       clientId: process.env.DISCORD_CLIENT_ID ?? "",
       clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
     },
+    providers: process.env.OAUTH_OIDC_CLIENT_ID
+      ? {
+          oidc: {
+            clientId: process.env.OAUTH_OIDC_CLIENT_ID,
+            clientSecret: process.env.OAUTH_OIDC_CLIENT_SECRET ?? "",
+            issuer: process.env.OAUTH_OIDC_ISSUER ?? "",
+            discovery: process.env.OAUTH_OIDC_DISCOVERY === "true",
+            useIdToken: process.env.OAUTH_OIDC_USE_ID_TOKEN === "true",
+            scopes: (process.env.OAUTH_OIDC_SCOPES ?? "openid,email,profile").split(","),
+          },
+        }
+      : undefined,
   },
   passkey: {
     rpID: "localhost",

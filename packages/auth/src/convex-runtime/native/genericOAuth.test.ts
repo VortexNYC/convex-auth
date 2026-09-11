@@ -1,7 +1,49 @@
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
+import type { GenericActionCtx } from "convex/server";
+import { handleCallback, type NativeOAuthConfig } from "./oauthHandlers.js";
+import { handleSignIn } from "./oauthHandlers.js";
 import { createGenericOAuthProvider, type GenericOAuthProviderConfig } from "./oauth.js";
+import type { NativeOAuthComponentHandle } from "./types.js";
+import type { DataModel } from "../../component/_generated/dataModel.js";
+
+function dispatch(ref: unknown, args: Record<string, unknown>) {
+  if (typeof ref === "function") {
+    return (ref as (args: Record<string, unknown>) => unknown)(args);
+  }
+  return undefined;
+}
+
+function createMockComponent(): NativeOAuthComponentHandle {
+  return {
+    identity: {
+      provisionFromIdentity: vi.fn(),
+    },
+    native: {
+      accounts: {
+        createAccount: vi.fn(),
+        updateAccountTokens: vi.fn(),
+        getAccountBySubject: vi.fn().mockResolvedValue(null),
+      },
+      sessions: {
+        createSessionAndRefreshToken: vi.fn(),
+      },
+      users: {
+        getUserByEmail: vi.fn().mockResolvedValue(null),
+        getUserById: vi.fn(),
+      },
+    },
+  } as unknown as NativeOAuthComponentHandle;
+}
+
+function createContext(): GenericActionCtx<DataModel> {
+  return {
+    runQuery: vi.fn((ref, args) => dispatch(ref, args as Record<string, unknown>)),
+    runMutation: vi.fn((ref, args) => dispatch(ref, args as Record<string, unknown>)),
+    runAction: vi.fn(),
+  } as unknown as GenericActionCtx<DataModel>;
+}
 
 beforeAll(async () => {
   const { publicKey, privateKey } = await generateKeyPair("RS256", { extractable: true });
@@ -9,6 +51,14 @@ beforeAll(async () => {
   const publicJwk = await exportJWK(publicKey);
   process.env.JWT_PRIVATE_KEY = JSON.stringify(privateJwk);
   process.env.JWKS = JSON.stringify({ keys: [publicJwk] });
+  process.env.CONVEX_SITE_URL = "https://test.convex.site";
+
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(32));
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  process.env.OAUTH_TOKEN_ENCRYPTION_KEY = btoa(binary);
 });
 
 const config: GenericOAuthProviderConfig = {
@@ -212,5 +262,80 @@ describe("createGenericOAuthProvider", () => {
       image: "https://example.com/pic.png",
       emailVerified: true,
     });
+  });
+
+  it("handleCallback provisions a new user from a generic OIDC provider", async () => {
+    const privateJwk = JSON.parse(process.env.JWT_PRIVATE_KEY!);
+    const idToken = await new SignJWT({
+      sub: "generic-oidc-123",
+      name: "Generic OIDC User",
+      email: "generic@example.com",
+      email_verified: true,
+      picture: "https://example.com/avatar.png",
+    })
+      .setProtectedHeader({ alg: "RS256" })
+      .setAudience("test-client")
+      .setIssuer("https://example.com")
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(await importJWK(privateJwk, "RS256"));
+
+    const jwksResponse = new Response(JSON.stringify(JSON.parse(process.env.JWKS!)), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+    const tokenResponse = new Response(
+      JSON.stringify({
+        access_token: "access",
+        token_type: "Bearer",
+        id_token: idToken,
+        expires_in: 3600,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+
+    const fetchImpl = vi.fn().mockImplementation((url: string) => {
+      if (url === "https://example.com/.well-known/jwks.json") {
+        return Promise.resolve(jwksResponse);
+      }
+      if (url.startsWith("https://example.com/oauth/token")) {
+        return Promise.resolve(tokenResponse);
+      }
+      return Promise.resolve(new Response(JSON.stringify({}), { status: 404 }));
+    });
+
+    const oauthConfig: NativeOAuthConfig = {
+      redirectURI: "https://test.convex.site/api/auth/callback/example",
+      providers: {
+        example: {
+          ...config,
+          jwksUri: "https://example.com/.well-known/jwks.json",
+          useIdToken: true,
+          fetchImpl,
+        },
+      },
+    };
+
+    const { url } = await handleSignIn(oauthConfig, { provider: "example" });
+    const state = new URL(url).searchParams.get("state")!;
+
+    const component = createMockComponent();
+    component.identity.provisionFromIdentity.mockResolvedValue({
+      userId: "user_1",
+      identityId: "identity_1",
+      createdUser: true,
+      linkedExistingIdentity: false,
+    });
+    component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_doc_1");
+
+    const result = await handleCallback(
+      createContext(),
+      component as unknown as NativeOAuthComponentHandle,
+      oauthConfig,
+      { provider: "example", code: "code-123", state },
+    );
+
+    expect(result.createdUser).toBe(true);
+    expect(result.userId).toBe("user_1");
   });
 });
