@@ -13,6 +13,7 @@ import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as organizations from "../organizations.js";
 import type * as servicePrincipals from "../servicePrincipals.js";
+import type * as webhooks from "../webhooks.js";
 
 import type {
   ApiFromModules,
@@ -26,6 +27,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   organizations: typeof organizations;
   servicePrincipals: typeof servicePrincipals;
+  webhooks: typeof webhooks;
 }>;
 
 /**
