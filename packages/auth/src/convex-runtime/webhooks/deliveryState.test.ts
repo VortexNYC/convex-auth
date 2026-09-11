@@ -72,6 +72,35 @@ describe("webhook delivery state updates", () => {
     });
   });
 
+  it("clears stale failure and exhaustion fields when a retry later succeeds", () => {
+    const now = 1_700_000_000_000;
+    const update = buildConvexWebhookDeliveryResultUpdate({
+      delivery: {
+        attemptCount: 1,
+        deliveredAt: undefined,
+      },
+      deliveryKey: "endpoint:event:delivery",
+      now,
+      outcome: {
+        status: "delivered",
+        responseStatus: 204,
+        responseBody: "",
+      },
+    });
+
+    assert.deepEqual(update, {
+      status: "delivered",
+      attemptCount: 2,
+      nextAttemptAt: null,
+      responseStatus: 204,
+      responseBody: "",
+      failureKind: null,
+      deliveredAt: now,
+      exhaustedAt: null,
+      updatedAt: now,
+    });
+  });
+
   it("preserves prior delivery time when a forced retry later fails", () => {
     const now = 1_700_000_000_000;
     const deliveredAt = now - 60_000;
