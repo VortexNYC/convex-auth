@@ -40,13 +40,16 @@ Each generic provider accepts:
 
 - `clientId`
 - `clientSecret`
-- `authorizationEndpoint`
-- `tokenEndpoint`
-- `userInfoEndpoint`
+- `issuer` — issuer string; required for OIDC discovery and ID-token validation
+- `discovery` — when `true`, fetch endpoints from `/.well-known/openid-configuration`
+- `authorizationEndpoint` — explicit or discovered authorization endpoint
+- `tokenEndpoint` — explicit or discovered token endpoint
+- `userInfoEndpoint` — explicit or discovered userinfo endpoint
+- `jwksUri` — explicit or discovered JWKS URI
+- `useIdToken` — verify and extract the user from the ID token instead of calling userinfo
 - `scopes` (defaults to `[]`)
-- `userInfo` — optional mapping of standard userinfo fields to response keys
+- `userInfo` — optional mapping of standard userinfo or ID-token fields to response keys
 - `profile` — optional function for full control over profile extraction
-- `issuer` — optional issuer string; defaults to the `authorizationEndpoint` origin
 
 ### Field mapping
 
@@ -98,6 +101,43 @@ providers: {
   },
 }
 ```
+
+## OIDC discovery
+
+Enable `discovery` and provide an `issuer`. The provider fetches `/.well-known/openid-configuration` and uses the returned endpoints:
+
+```ts
+providers: {
+  authentik: {
+    clientId: process.env.OAUTH_AUTHENTIK_CLIENT_ID!,
+    clientSecret: process.env.OAUTH_AUTHENTIK_CLIENT_SECRET!,
+    issuer: "https://authentik.example.com",
+    discovery: true,
+    scopes: ["openid", "email", "profile"],
+  },
+}
+```
+
+Explicit `authorizationEndpoint`, `tokenEndpoint`, `userInfoEndpoint`, or `jwksUri` override the discovered values.
+
+## ID-token verification
+
+For OIDC providers that return an ID token and no userinfo endpoint, set `useIdToken: true`:
+
+```ts
+providers: {
+  keycloak: {
+    clientId: process.env.OAUTH_KEYCLOAK_CLIENT_ID!,
+    clientSecret: process.env.OAUTH_KEYCLOAK_CLIENT_SECRET!,
+    issuer: "https://keycloak.example.com/realms/master",
+    discovery: true,
+    useIdToken: true,
+    scopes: ["openid", "email", "profile"],
+  },
+}
+```
+
+The ID token is verified against the JWKS, checked for the correct `iss` and `aud`, and then mapped through `userInfo` or `profile`.
 
 ## React sign-in
 
