@@ -111,7 +111,7 @@ function getProvider(config: NativeOAuthConfig, providerId: string): NativeOAuth
 
 function getRedirectURI(config: NativeOAuthConfig, provider: NativeOAuthProvider): string {
   if (config.redirectURI) return config.redirectURI;
-  const siteUrl = process.env.CONVEX_SITE_URL;
+  const siteUrl = process.env.AUTH_REDIRECT_URL ?? process.env.CONVEX_SITE_URL;
   if (!siteUrl) {
     throw new Error("Missing OAuth redirect URI: set CONVEX_SITE_URL or pass redirectURI");
   }
