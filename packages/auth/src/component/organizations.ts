@@ -12,6 +12,7 @@ import schema, {
   organizationStatusValidator,
 } from "./schema.js";
 import { fanOutConvexWebhookEvent } from "./webhooks.js";
+import { parseOrganizationSecurityPolicy } from "../convex-runtime/organization/organizationSecurityPolicy.js";
 
 type DbCtx = Pick<MutationCtx | QueryCtx, "db">;
 type OrganizationDetailsPatch = Partial<
@@ -35,37 +36,6 @@ function normalizeSessionTimeoutMinutes(value: number): number {
     );
   }
   return rounded;
-}
-
-function parseSecurityFromMetadataJson(metadataJson: string | undefined): {
-  requireMfa: boolean;
-  sessionTimeoutMinutes?: number;
-} {
-  if (!metadataJson || metadataJson.trim() === "") {
-    return { requireMfa: false };
-  }
-  try {
-    const parsed: unknown = JSON.parse(metadataJson);
-    if (!isMetadataRecord(parsed)) {
-      return { requireMfa: false };
-    }
-    const security = parsed[ORGANIZATION_SECURITY_METADATA_KEY];
-    if (!isMetadataRecord(security)) {
-      return { requireMfa: false };
-    }
-    const timeout =
-      typeof security.sessionTimeoutMinutes === "number"
-        ? Math.round(security.sessionTimeoutMinutes)
-        : undefined;
-    return {
-      requireMfa: security.requireMfa === true,
-      ...(timeout !== undefined && timeout >= SESSION_TIMEOUT_MIN && timeout <= SESSION_TIMEOUT_MAX
-        ? { sessionTimeoutMinutes: timeout }
-        : {}),
-    };
-  } catch {
-    return { requireMfa: false };
-  }
 }
 
 function mergeSecurityIntoMetadataJson(
@@ -531,7 +501,7 @@ export const setUserActiveOrganization = mutation({
       throw new Error("Active organization membership not found");
     }
 
-    const policy = parseSecurityFromMetadataJson(organization.metadataJson);
+    const policy = parseOrganizationSecurityPolicy(organization.metadataJson);
     if (policy.requireMfa && twoFactorEnabled !== true) {
       throw new Error(
         "This organization requires two-factor authentication. Enable TOTP on your account, then try again.",
