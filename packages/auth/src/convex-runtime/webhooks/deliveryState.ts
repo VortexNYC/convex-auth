@@ -11,7 +11,6 @@ export type ConvexWebhookDeliveryResultUpdate = {
   status: "pending" | "delivered" | "failed";
   attemptCount: number;
   nextAttemptAt?: number | null;
-  processingScheduledAt?: number | null;
   responseStatus?: number | null;
   responseBody?: string | null;
   failureKind?: ConvexWebhookFailureKind | null;
@@ -49,8 +48,6 @@ export function buildConvexWebhookDeliveryResultUpdate(args: {
     status: args.outcome.status,
     attemptCount,
     nextAttemptAt,
-    processingScheduledAt:
-      args.outcome.status === "pending" ? (args.delivery.processingScheduledAt ?? null) : null,
     responseStatus: args.outcome.responseStatus ?? null,
     responseBody: args.outcome.responseBody ?? null,
     failureKind: args.outcome.failureKind ?? null,
