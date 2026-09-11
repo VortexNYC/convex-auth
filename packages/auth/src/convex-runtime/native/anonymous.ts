@@ -38,106 +38,108 @@ export type NativeAnonymousConfig = {
 };
 
 export type NativeAnonymousComponentHandle = {
-  anonymous: {
-    createAnonymousUser: FunctionReference<
-      "mutation",
-      "public" | "internal",
-      { email: string; name?: string; image?: string },
-      { userId: string; identityId: string },
-      string
-    >;
-    linkAnonymousUser: FunctionReference<
-      "mutation",
-      "public" | "internal",
-      {
-        userId: string;
-        email: string;
-        name?: string;
-        image?: string;
-        emailVerified?: boolean;
-      },
-      { success: boolean },
-      string
-    >;
-  };
-  sessions: {
-    createSessionAndRefreshToken: FunctionReference<
-      "mutation",
-      "public" | "internal",
-      {
-        sessionId: string;
-        userId: string;
-        token: string;
-        sessionExpiresAt: number;
-        refreshTokenHash: string;
-        refreshTokenExpiresAt: number;
-      },
-      void,
-      string
-    >;
-  };
-  users: {
-    getUserById: FunctionReference<
-      "query",
-      "public" | "internal",
-      { userId: string },
-      NativeUserDoc | null,
-      string
-    >;
-    getUserByEmail: FunctionReference<
-      "query",
-      "public" | "internal",
-      { email: string },
-      NativeUserDoc | null,
-      string
-    >;
-  };
-  accounts: {
-    createAccount: FunctionReference<
-      "mutation",
-      "public" | "internal",
-      {
-        userId: string;
-        provider: string;
-        issuer: string;
-        subject: string;
-        credentialHash: string;
-      },
-      string,
-      string
-    >;
-    getAccountBySubject: FunctionReference<
-      "query",
-      "public" | "internal",
-      { provider: string; issuer: string; subject: string },
-      NativeAccountDoc | null,
-      string
-    >;
-  };
-  identities: {
-    createIdentity: FunctionReference<
-      "mutation",
-      "public" | "internal",
-      {
-        userId: string;
-        provider: string;
-        issuer: string;
-        subject: string;
-        tokenIdentifier: string;
-        email?: string;
-        emailVerified: boolean;
-        sessionId?: string | null;
-      },
-      string,
-      string
-    >;
-    getNativeIdentityByUser: FunctionReference<
-      "query",
-      "public" | "internal",
-      { userId: string; provider: string; issuer: string },
-      NativeIdentityDoc | null,
-      string
-    >;
+  native: {
+    anonymous: {
+      createAnonymousUser: FunctionReference<
+        "mutation",
+        "public" | "internal",
+        { email: string; name?: string; image?: string },
+        { userId: string; identityId: string },
+        string
+      >;
+      linkAnonymousUser: FunctionReference<
+        "mutation",
+        "public" | "internal",
+        {
+          userId: string;
+          email: string;
+          name?: string;
+          image?: string;
+          emailVerified?: boolean;
+        },
+        { success: boolean },
+        string
+      >;
+    };
+    sessions: {
+      createSessionAndRefreshToken: FunctionReference<
+        "mutation",
+        "public" | "internal",
+        {
+          sessionId: string;
+          userId: string;
+          token: string;
+          sessionExpiresAt: number;
+          refreshTokenHash: string;
+          refreshTokenExpiresAt: number;
+        },
+        void,
+        string
+      >;
+    };
+    users: {
+      getUserById: FunctionReference<
+        "query",
+        "public" | "internal",
+        { userId: string },
+        NativeUserDoc | null,
+        string
+      >;
+      getUserByEmail: FunctionReference<
+        "query",
+        "public" | "internal",
+        { email: string },
+        NativeUserDoc | null,
+        string
+      >;
+    };
+    accounts: {
+      createAccount: FunctionReference<
+        "mutation",
+        "public" | "internal",
+        {
+          userId: string;
+          provider: string;
+          issuer: string;
+          subject: string;
+          credentialHash: string;
+        },
+        string,
+        string
+      >;
+      getAccountBySubject: FunctionReference<
+        "query",
+        "public" | "internal",
+        { provider: string; issuer: string; subject: string },
+        NativeAccountDoc | null,
+        string
+      >;
+    };
+    identities: {
+      createIdentity: FunctionReference<
+        "mutation",
+        "public" | "internal",
+        {
+          userId: string;
+          provider: string;
+          issuer: string;
+          subject: string;
+          tokenIdentifier: string;
+          email?: string;
+          emailVerified: boolean;
+          sessionId?: string | null;
+        },
+        string,
+        string
+      >;
+      getNativeIdentityByUser: FunctionReference<
+        "query",
+        "public" | "internal",
+        { userId: string; provider: string; issuer: string },
+        NativeIdentityDoc | null,
+        string
+      >;
+    };
   };
 };
 
@@ -175,7 +177,7 @@ export function nativeAnonymous(
       { identityId },
       { expiresInSeconds: Math.floor(effectiveSessionTtlMs / 1000) },
     );
-    await ctx.runMutation(component.sessions.createSessionAndRefreshToken, {
+    await ctx.runMutation(component.native.sessions.createSessionAndRefreshToken, {
       sessionId,
       userId,
       token,
@@ -198,7 +200,7 @@ export function nativeAnonymous(
         )) ?? `Guest ${anonymousId.slice(0, 8)}`;
 
       const { userId, identityId } = await ctx.runMutation(
-        component.anonymous.createAnonymousUser,
+        component.native.anonymous.createAnonymousUser,
         {
           email,
           name,
@@ -212,7 +214,7 @@ export function nativeAnonymous(
         args.rememberMe,
       );
 
-      const user = await ctx.runQuery(component.users.getUserById, { userId });
+      const user = await ctx.runQuery(component.native.users.getUserById, { userId });
       if (!user) {
         throw new Error("Anonymous user was not created");
       }
@@ -242,7 +244,7 @@ export function nativeAnonymous(
         throw new Error("UNAUTHORIZED");
       }
 
-      const anonymousUser = await ctx.runQuery(component.users.getUserById, {
+      const anonymousUser = await ctx.runQuery(component.native.users.getUserById, {
         userId: identity.subject,
       });
       if (!anonymousUser) {
@@ -254,14 +256,14 @@ export function nativeAnonymous(
       }
 
       const normalizedEmail = args.email.toLowerCase().trim();
-      const existing = await ctx.runQuery(component.users.getUserByEmail, {
+      const existing = await ctx.runQuery(component.native.users.getUserByEmail, {
         email: normalizedEmail,
       });
       if (existing) {
         throw new Error("An account with this email already exists");
       }
 
-      const existingAccount = await ctx.runQuery(component.accounts.getAccountBySubject, {
+      const existingAccount = await ctx.runQuery(component.native.accounts.getAccountBySubject, {
         provider: "email",
         issuer: "native",
         subject: normalizedEmail,
@@ -273,14 +275,14 @@ export function nativeAnonymous(
       const userId = identity.subject;
       const passwordHash = await hashPassword(args.password);
 
-      await ctx.runMutation(component.anonymous.linkAnonymousUser, {
+      await ctx.runMutation(component.native.anonymous.linkAnonymousUser, {
         userId,
         email: normalizedEmail,
         name: args.name,
         image: args.image,
       });
 
-      await ctx.runMutation(component.accounts.createAccount, {
+      await ctx.runMutation(component.native.accounts.createAccount, {
         userId,
         provider: "email",
         issuer: "native",
@@ -288,7 +290,7 @@ export function nativeAnonymous(
         credentialHash: passwordHash,
       });
 
-      const newIdentityId = await ctx.runMutation(component.identities.createIdentity, {
+      const newIdentityId = await ctx.runMutation(component.native.identities.createIdentity, {
         userId,
         provider: "email",
         issuer: "native",
@@ -306,7 +308,7 @@ export function nativeAnonymous(
         undefined,
       );
 
-      const newUser = await ctx.runQuery(component.users.getUserById, { userId });
+      const newUser = await ctx.runQuery(component.native.users.getUserById, { userId });
 
       if (resolvedConfig.onLinkAccount) {
         await resolvedConfig.onLinkAccount(

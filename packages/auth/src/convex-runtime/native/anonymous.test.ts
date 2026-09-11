@@ -47,26 +47,28 @@ type MockComponent = {
 
 function createMockComponent(): MockComponent {
   return {
-    anonymous: {
-      createAnonymousUser: vi
-        .fn()
-        .mockResolvedValue({ userId: "user_1", identityId: "identity_1" }),
-      linkAnonymousUser: vi.fn().mockResolvedValue({ success: true }),
-    },
-    sessions: {
-      createSessionAndRefreshToken: vi.fn().mockResolvedValue(undefined),
-    },
-    users: {
-      getUserById: vi.fn().mockResolvedValue(makeUser()),
-      getUserByEmail: vi.fn().mockResolvedValue(null),
-    },
-    accounts: {
-      createAccount: vi.fn().mockResolvedValue("account_1"),
-      getAccountBySubject: vi.fn().mockResolvedValue(null),
-    },
-    identities: {
-      createIdentity: vi.fn().mockResolvedValue("identity_2"),
-      getNativeIdentityByUser: vi.fn().mockResolvedValue(null),
+    native: {
+      anonymous: {
+        createAnonymousUser: vi
+          .fn()
+          .mockResolvedValue({ userId: "user_1", identityId: "identity_1" }),
+        linkAnonymousUser: vi.fn().mockResolvedValue({ success: true }),
+      },
+      sessions: {
+        createSessionAndRefreshToken: vi.fn().mockResolvedValue(undefined),
+      },
+      users: {
+        getUserById: vi.fn().mockResolvedValue(makeUser()),
+        getUserByEmail: vi.fn().mockResolvedValue(null),
+      },
+      accounts: {
+        createAccount: vi.fn().mockResolvedValue("account_1"),
+        getAccountBySubject: vi.fn().mockResolvedValue(null),
+      },
+      identities: {
+        createIdentity: vi.fn().mockResolvedValue("identity_2"),
+        getNativeIdentityByUser: vi.fn().mockResolvedValue(null),
+      },
     },
   } as unknown as MockComponent;
 }
@@ -105,13 +107,13 @@ describe("nativeAnonymous", () => {
 
     const result = await handler(ctx, {});
 
-    expect(component.anonymous.createAnonymousUser).toHaveBeenCalledWith(
+    expect(component.native.anonymous.createAnonymousUser).toHaveBeenCalledWith(
       expect.objectContaining({
         email: expect.stringMatching(/@test\.anonymous$/),
         name: expect.stringMatching(/^Guest\s/),
       }),
     );
-    expect(component.sessions.createSessionAndRefreshToken).toHaveBeenCalledOnce();
+    expect(component.native.sessions.createSessionAndRefreshToken).toHaveBeenCalledOnce();
     expect(result).toMatchObject({
       token: expect.any(String),
       user: expect.objectContaining({
@@ -125,10 +127,10 @@ describe("nativeAnonymous", () => {
 
   it("links an anonymous user to an email/password account", async () => {
     const component = createMockComponent();
-    component.users.getUserById.mockResolvedValue(makeUser({ isAnonymous: true }));
-    component.users.getUserByEmail.mockResolvedValue(null);
-    component.accounts.getAccountBySubject.mockResolvedValue(null);
-    component.identities.createIdentity.mockResolvedValue("identity_2");
+    component.native.users.getUserById.mockResolvedValue(makeUser({ isAnonymous: true }));
+    component.native.users.getUserByEmail.mockResolvedValue(null);
+    component.native.accounts.getAccountBySubject.mockResolvedValue(null);
+    component.native.identities.createIdentity.mockResolvedValue("identity_2");
     const auth = nativeAnonymous(component as unknown as NativeAnonymousComponentHandle, {});
     const { handler } = exec(auth.linkAnonymousAccount);
     const ctx = createContext({ subject: "user_1" });
@@ -139,14 +141,14 @@ describe("nativeAnonymous", () => {
       name: "Shlomo",
     });
 
-    expect(component.anonymous.linkAnonymousUser).toHaveBeenCalledWith(
+    expect(component.native.anonymous.linkAnonymousUser).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "user_1",
         email: "shlomo@example.com",
         name: "Shlomo",
       }),
     );
-    expect(component.accounts.createAccount).toHaveBeenCalledOnce();
+    expect(component.native.accounts.createAccount).toHaveBeenCalledOnce();
     expect(result).toMatchObject({
       token: expect.any(String),
       userId: "user_1",
