@@ -22,6 +22,29 @@ export const getNativeIdentityByUser = query({
   },
 });
 
+export const createIdentity = mutation({
+  args: {
+    userId: v.id("users"),
+    provider: v.string(),
+    issuer: v.string(),
+    subject: v.string(),
+    tokenIdentifier: v.string(),
+    email: v.optional(v.string()),
+    emailVerified: v.boolean(),
+    sessionId: v.optional(v.union(v.string(), v.null())),
+  },
+  returns: v.id("auth_identities"),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    return await ctx.db.insert("auth_identities", {
+      identityId: crypto.randomUUID(),
+      ...args,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
 export const markEmailVerified = mutation({
   args: {
     identityId: v.id("auth_identities"),

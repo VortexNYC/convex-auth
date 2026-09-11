@@ -20,6 +20,7 @@ export const users = defineTable({
   activeOrganizationId: v.optional(v.id("organizations")),
   isActive: v.boolean(),
   isSuperAdmin: v.optional(v.boolean()),
+  isAnonymous: v.optional(v.boolean()),
   metadataJson: v.optional(v.string()),
   createdAt: v.number(),
   updatedAt: v.number(),
