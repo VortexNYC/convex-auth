@@ -125,8 +125,8 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
     returns: v.object({
       token: v.string(),
       refreshToken: v.string(),
-      userId: v.id("users"),
-      identityId: v.optional(v.id("auth_identities")),
+      userId: v.string(),
+      identityId: v.optional(v.string()),
       sessionId: v.string(),
       expiresAt: v.number(),
     }),
