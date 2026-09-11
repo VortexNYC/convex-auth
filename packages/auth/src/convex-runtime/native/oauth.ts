@@ -127,6 +127,35 @@ export type DiscordProviderConfig = OAuthProviderOptions & {
   fetchImpl?: typeof fetch;
 };
 
+export type GenericOAuthUserInfoMap = {
+  id?: string;
+  name?: string;
+  email?: string;
+  image?: string;
+  emailVerified?: string;
+};
+
+export type GenericOAuthProviderConfig = OAuthProviderOptions & {
+  clientId: string;
+  clientSecret: string;
+  /** Issuer string used for token bookkeeping. Defaults to the authorization endpoint origin. */
+  issuer?: string;
+  /** Full authorization endpoint URL. */
+  authorizationEndpoint: string;
+  /** Full token endpoint URL. */
+  tokenEndpoint: string;
+  /** Full userinfo endpoint URL. */
+  userInfoEndpoint: string;
+  /** @default [] */
+  scopes?: string[];
+  /** Map common userinfo fields to top-level response keys. Provide `profile` for full control. */
+  userInfo?: GenericOAuthUserInfoMap;
+  /** Override profile extraction. Takes the parsed userinfo response and returns {@link OAuthUserInfo}. */
+  profile?: (data: unknown) => OAuthUserInfo | Promise<OAuthUserInfo>;
+  /** Override fetch for testing. */
+  fetchImpl?: typeof fetch;
+};
+
 function getGitHubUrls(config: GitHubProviderConfig): {
   authorize: string;
   token: string;
@@ -546,6 +575,95 @@ export function createDiscordProvider(config: DiscordProviderConfig): NativeOAut
         },
         data: profile,
       };
+    },
+  };
+}
+
+function resolveBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value === "true" || value === "1";
+  if (typeof value === "number") return value === 1;
+  return Boolean(value);
+}
+
+function mapGenericUserInfo(
+  data: unknown,
+  map: GenericOAuthUserInfoMap | undefined,
+): OAuthUserInfo {
+  const record = typeof data === "object" && data !== null ? (data as Record<string, unknown>) : {};
+  const id = map?.id ? record[map.id] : (record.id ?? record.sub ?? record.user_id);
+  const name = map?.name ? record[map.name] : (record.name ?? record.username ?? record.login);
+  const email = map?.email ? record[map.email] : record.email;
+  const image = map?.image ? record[map.image] : (record.image ?? record.picture ?? record.avatar);
+  const verified = map?.emailVerified
+    ? record[map.emailVerified]
+    : (record.emailVerified ?? record.email_verified ?? record.verified);
+  return {
+    id: typeof id === "string" ? id : String(id ?? ""),
+    name: typeof name === "string" ? name : undefined,
+    email: typeof email === "string" ? email : undefined,
+    image: typeof image === "string" ? image : undefined,
+    emailVerified: resolveBoolean(verified),
+  };
+}
+
+export function createGenericOAuthProvider(
+  id: string,
+  config: GenericOAuthProviderConfig,
+): NativeOAuthProvider {
+  const fetchImpl = config.fetchImpl ?? globalThis.fetch;
+  const requestedScopes = [...(config.scopes ?? [])];
+  const issuer = config.issuer ?? new URL(config.authorizationEndpoint).origin;
+  const as = authorizationServer(issuer, {
+    authorize: config.authorizationEndpoint,
+    token: config.tokenEndpoint,
+  });
+  const client = makeClient(config.clientId);
+
+  const providerOptions: OAuthProviderOptions = {
+    disableSignUp: config.disableSignUp,
+    disableImplicitSignUp: config.disableImplicitSignUp,
+    requireEmailVerification: config.requireEmailVerification,
+    additionalParams: config.additionalParams,
+  };
+
+  return {
+    id,
+    name: id,
+    issuer: as.issuer,
+    options: providerOptions,
+
+    async createAuthorizationURL({ state, codeVerifier, redirectURI, scopes }) {
+      return buildAuthorizationURL(as, client, {
+        state,
+        codeVerifier,
+        redirectURI,
+        scopes: scopes?.length ? [...new Set([...requestedScopes, ...scopes])] : requestedScopes,
+        additionalParams: config.additionalParams,
+      });
+    },
+
+    async exchangeAuthorizationCode(args) {
+      return exchangeAuthorizationCode(as, client, config.clientSecret, { ...args, fetchImpl });
+    },
+
+    async getUserInfo({ accessToken }) {
+      const response = await fetchImpl(config.userInfoEndpoint, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Generic OAuth userinfo request failed: ${response.status}`);
+      }
+      const data = await response.json();
+
+      const user = config.profile
+        ? await config.profile(data)
+        : mapGenericUserInfo(data, config.userInfo);
+
+      return { user, data };
     },
   };
 }

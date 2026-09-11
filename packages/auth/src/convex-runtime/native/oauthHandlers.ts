@@ -1,8 +1,10 @@
 import type { GenericActionCtx, GenericDataModel } from "convex/server";
 import {
   createDiscordProvider,
+  createGenericOAuthProvider,
   createGitHubProvider,
   createGoogleProvider,
+  type GenericOAuthProviderConfig,
   type NativeOAuthProvider,
   type OAuthToken,
   type OAuthUserInfo,
@@ -35,6 +37,8 @@ export type NativeOAuthConfig = {
   github?: GitHubProviderConfig;
   google?: GoogleProviderConfig;
   discord?: DiscordProviderConfig;
+  /** Arbitrary generic OAuth providers by ID. */
+  providers?: Record<string, GenericOAuthProviderConfig>;
   /** Full callback URL registered with the OAuth provider. */
   redirectURI?: string;
   /**
@@ -98,6 +102,9 @@ function getProvider(config: NativeOAuthConfig, providerId: string): NativeOAuth
   }
   if (providerId === "discord" && config.discord) {
     return createDiscordProvider(config.discord);
+  }
+  if (config.providers?.[providerId]) {
+    return createGenericOAuthProvider(providerId, config.providers[providerId]);
   }
   throw new Error(`Unsupported OAuth provider: ${providerId}`);
 }

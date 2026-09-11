@@ -1,0 +1,122 @@
+---
+title: Generic OAuth
+description: Add arbitrary OAuth 2.0 providers to convex-auth.
+sidebar:
+  order: 9
+---
+
+`convex-auth` supports built-in OAuth providers (Google, GitHub, Discord) and arbitrary generic providers that follow the standard OAuth 2.0 Authorization Code flow with PKCE.
+
+## Enable
+
+```ts convex/auth.ts
+import { components } from "./_generated/api";
+import { convexAuth } from "@vortex-api/convex-auth/convex";
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+  oauth: {
+    providers: {
+      keycloak: {
+        clientId: process.env.OAUTH_KEYCLOAK_CLIENT_ID!,
+        clientSecret: process.env.OAUTH_KEYCLOAK_CLIENT_SECRET!,
+        authorizationEndpoint:
+          "https://keycloak.example.com/realms/master/protocol/openid-connect/auth",
+        tokenEndpoint: "https://keycloak.example.com/realms/master/protocol/openid-connect/token",
+        userInfoEndpoint:
+          "https://keycloak.example.com/realms/master/protocol/openid-connect/userinfo",
+        scopes: ["openid", "email", "profile"],
+      },
+    },
+  },
+});
+```
+
+`providers` is keyed by the provider ID. The same ID is used in the sign-in call and in the callback route (`/api/auth/callback/{provider}`).
+
+## Configuration
+
+Each generic provider accepts:
+
+- `clientId`
+- `clientSecret`
+- `authorizationEndpoint`
+- `tokenEndpoint`
+- `userInfoEndpoint`
+- `scopes` (defaults to `[]`)
+- `userInfo` — optional mapping of standard userinfo fields to response keys
+- `profile` — optional function for full control over profile extraction
+- `issuer` — optional issuer string; defaults to the `authorizationEndpoint` origin
+
+### Field mapping
+
+When a userinfo response uses non-standard field names, map them instead of providing a `profile` function:
+
+```ts
+providers: {
+  authentik: {
+    clientId: process.env.OAUTH_AUTHENTIK_CLIENT_ID!,
+    clientSecret: process.env.OAUTH_AUTHENTIK_CLIENT_SECRET!,
+    authorizationEndpoint: "https://authentik.example.com/application/o/authorize/",
+    tokenEndpoint: "https://authentik.example.com/application/o/token/",
+    userInfoEndpoint: "https://authentik.example.com/application/o/userinfo/",
+    scopes: ["openid", "email", "profile"],
+    userInfo: {
+      id: "sub",
+      name: "name",
+      email: "email",
+      image: "picture",
+      emailVerified: "email_verified",
+    },
+  },
+}
+```
+
+If `userInfo` is omitted, the provider tries the most common field names (`id`, `sub`, `user_id`, `name`, `username`, `login`, `email`, `image`, `picture`, `avatar`, `emailVerified`, `email_verified`, `verified`).
+
+### Custom `profile` function
+
+For providers that return nested or unusual data, provide a `profile` function:
+
+```ts
+providers: {
+  custom: {
+    clientId: process.env.OAUTH_CUSTOM_CLIENT_ID!,
+    clientSecret: process.env.OAUTH_CUSTOM_CLIENT_SECRET!,
+    authorizationEndpoint: "https://custom.example.com/oauth/authorize",
+    tokenEndpoint: "https://custom.example.com/oauth/token",
+    userInfoEndpoint: "https://custom.example.com/api/me",
+    scopes: ["read_profile"],
+    profile: (data) => {
+      const me = data as { account: { id: string; email: string } };
+      return {
+        id: me.account.id,
+        email: me.account.email,
+        emailVerified: true,
+      };
+    },
+  },
+}
+```
+
+## React sign-in
+
+Use the same `authClient.signIn.social` call as the built-in providers:
+
+```tsx
+await authClient.signIn.social({
+  provider: "keycloak",
+  callbackURL: window.location.origin,
+});
+```
+
+The redirect route is `/api/auth/callback/{provider}`. When `providers.keycloak` is configured, `convex-auth` routes the callback through the generic provider and mints a session.
+
+## Runtime actions
+
+When `oauth.providers` is configured, `auth` exposes:
+
+- `auth.signInWithRedirect`
+- `auth.callback`
+
+These are the same actions used by the built-in providers; the configured `provider` string selects the right metadata at runtime.
