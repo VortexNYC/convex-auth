@@ -85,12 +85,12 @@ export function useConvexAuthClient() {
           return { data: null, error: toError(err) };
         }
       },
-      anonymous: async (args) => {
+      anonymous: async (args = {}) => {
         if (actions.signInAnonymous === undefined) {
           return { data: null, error: toError("Anonymous sign-in is not configured") };
         }
         try {
-          const data = await actions.signInAnonymous(args ?? {});
+          const data = await actions.signInAnonymous(args);
           return { data, error: null };
         } catch (err) {
           return { data: null, error: toError(err) };

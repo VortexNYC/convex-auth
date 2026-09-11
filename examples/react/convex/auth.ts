@@ -83,6 +83,13 @@ export const auth = convexAuth({
     origin: "http://localhost:5174",
     rpName: "Convex Auth Demo",
   },
+  anonymous: {
+    emailDomain: "guest.convex-auth-demo.local",
+    generateName: () => `Guest ${Math.random().toString(36).slice(2, 10)}`,
+    onLinkAccount: async ({ anonymousUser, newUser }) => {
+      console.log("Linked anonymous user", anonymousUser.id, "to", newUser.id);
+    },
+  },
   oauthProvider: process.env.OAUTH_PROVIDER_CLIENT_ID
     ? {
         issuer: siteUrl,
@@ -134,4 +141,6 @@ export const {
   verifySession,
   signInWithRedirect,
   callback,
+  signInAnonymous,
+  linkAnonymousAccount,
 } = auth;

@@ -1450,6 +1450,28 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           Name
         >;
       };
+      anonymous: {
+        createAnonymousUser: FunctionReference<
+          "mutation",
+          "internal",
+          { email: string; image?: string; name?: string },
+          { identityId: string; userId: string },
+          Name
+        >;
+        linkAnonymousUser: FunctionReference<
+          "mutation",
+          "internal",
+          {
+            email: string;
+            emailVerified?: boolean;
+            image?: string;
+            name?: string;
+            userId: string;
+          },
+          { success: boolean },
+          Name
+        >;
+      };
       audit: {
         cleanupAuthAuditEvents: FunctionReference<
           "mutation",
@@ -1576,6 +1598,22 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         >;
       };
       identities: {
+        createIdentity: FunctionReference<
+          "mutation",
+          "internal",
+          {
+            email?: string;
+            emailVerified: boolean;
+            issuer: string;
+            provider: string;
+            sessionId?: string | null;
+            subject: string;
+            tokenIdentifier: string;
+            userId: string;
+          },
+          string,
+          Name
+        >;
         getNativeIdentityByUser: FunctionReference<
           "query",
           "internal",

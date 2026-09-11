@@ -121,6 +121,7 @@ export function SignedInView() {
               onManageTwoFactor={() => setActiveTab("security")}
             />
             <EmailVerificationPanel email={user.email ?? ""} onMessage={setMessage} />
+            {user.isAnonymous ? <LinkAnonymousAccountPanel onMessage={setMessage} /> : null}
           </TabsContent>
 
           <TabsContent value="security" className="space-y-4">
@@ -665,6 +666,79 @@ function RegenerateBackupCodesPanel({ onMessage }: { onMessage: (msg: string) =>
             </div>
           </>
         ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function LinkAnonymousAccountPanel({ onMessage }: { onMessage: (msg: string) => void }) {
+  const authClient = useConvexAuthClient();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    const result = await authClient.linkAccount!({
+      email,
+      password,
+      name: name || undefined,
+    });
+    setIsLoading(false);
+    if (result.error || !result.data?.token) {
+      onMessage(result.error?.message ?? "Could not link account");
+      return;
+    }
+    onMessage("Account linked.");
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Link account</CardTitle>
+        <CardDescription>
+          Convert your guest session to a permanent email and password account.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <form onSubmit={onSubmit} className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="link-name">Name</Label>
+            <Input
+              id="link-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="link-email">Email</Label>
+            <Input
+              id="link-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="link-password">Password</Label>
+            <Input
+              id="link-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Create a password"
+              required
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            Link account
+          </Button>
+        </form>
       </CardContent>
     </Card>
   );
