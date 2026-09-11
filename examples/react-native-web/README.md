@@ -1,6 +1,6 @@
-# `examples/react-native`
+# `examples/react-native-web`
 
-A runnable React Native example that builds and runs in the browser via `react-native-web` and Vite. The same `src/App.tsx` code can be dropped into an Expo or React Native CLI project.
+A React Native **web** example that builds and runs in the browser via `react-native-web` and Vite. The same `src/App.tsx` code can be adapted for an Expo or React Native CLI project, but this workspace is browser-only and uses `localStorage` and `window.location.origin`.
 
 This example demonstrates:
 
@@ -34,4 +34,4 @@ pnpm install
 pnpm dev
 ```
 
-For a native iOS/Android build, create an Expo project with `pnpm create expo`, add `@vortex-api/convex-auth/react-native`, and copy `src/App.tsx` into your app root.
+For a native iOS/Android build, create an Expo project with `pnpm create expo`, add `@vortex-api/convex-auth/react-native`, and adapt `src/App.tsx` to use `expo-secure-store`, `expo-linking`, and `expo-web-browser` instead of `localStorage` and `window`.
