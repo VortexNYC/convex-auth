@@ -256,7 +256,7 @@ export async function validateMcpOAuthAuthorizationCodeTokenExchange<
   }
 
   if (!client.redirectUris.includes(parsed.redirectUri)) {
-    return invalidGrantFailure("Invalid redirect URI");
+    return invalidGrantFailure(`Invalid redirect URI: ${parsed.redirectUri}`);
   }
 
   const authorizationCode = await args.consumeAuthorizationCode({
@@ -265,7 +265,7 @@ export async function validateMcpOAuthAuthorizationCodeTokenExchange<
     redirectUri: parsed.redirectUri,
   });
   if (authorizationCode === null) {
-    return invalidGrantFailure();
+    return invalidGrantFailure("Authorization code not found or already consumed");
   }
 
   const disallowedScope = findMcpOAuthClientDisallowedScope(client, authorizationCode.scopes);

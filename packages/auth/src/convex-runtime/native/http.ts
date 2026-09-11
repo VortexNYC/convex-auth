@@ -213,31 +213,6 @@ export function addNativeAuthHttpRoutes(
     }),
   });
 
-  http.route({
-    path: "/.well-known/openid-configuration",
-    method: "GET",
-    handler: httpActionGeneric(async (_ctx, request) => {
-      const origin = new URL(request.url).origin;
-      const config = {
-        issuer: `${origin}/`,
-        authorization_endpoint: `${origin}/api/auth/signin`,
-        token_endpoint: `${origin}/api/auth/token`,
-        userinfo_endpoint: `${origin}/api/auth/userinfo`,
-        jwks_uri: `${origin}/.well-known/jwks.json`,
-        response_types_supported: ["code"],
-        grant_types_supported: ["authorization_code", "refresh_token"],
-        subject_types_supported: ["public"],
-        id_token_signing_alg_values_supported: ["RS256"],
-        token_endpoint_auth_methods_supported: ["client_secret_post", "none"],
-        scopes_supported: ["openid", "profile", "email"],
-      };
-      return new Response(JSON.stringify(config), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }),
-  });
-
   if (actions) {
     const signUpAction = httpActionGeneric(async (ctx, request) => {
       const csrf = checkCsrf(request, options);

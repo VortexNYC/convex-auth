@@ -24,12 +24,14 @@ import type { NativePasskeyActions, NativePasskeyConfig, PasskeyComponentApi } f
 import type { ComponentApi as FullComponentApi } from "../../component/_generated/component.js";
 import type { ComponentApi as CoreComponentApi } from "../../component/core/_generated/component.js";
 import type { ComponentApi as OrganizationsComponentApi } from "../../component/organizations/_generated/component.js";
+import { addOidcProviderHttpRoutes, type OidcProviderConfig } from "../oauth-provider/http.js";
 import type { NativeEmailAndPasswordComponentHandle } from "./types.js";
 
 type ConvexAuthConfigBase = {
   emailAndPassword?: NativeEmailAndPasswordConfig;
   captcha?: CaptchaConfig;
   oauth?: NativeOAuthConfig;
+  oauthProvider?: OidcProviderConfig;
   magicLink?: NativeMagicLinkConfig;
   emailOtp?: NativeEmailOtpConfig;
   passkey?: NativePasskeyConfig;
@@ -106,12 +108,22 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
     ...passkeyActions,
     addHttpRoutes(http: HttpRouter) {
       const emailConfig = config.emailAndPassword ?? {};
+      const oauthProviderLoginOrigin = (() => {
+        const loginUrl = config.oauthProvider?.loginUrl;
+        if (!loginUrl) return [];
+        try {
+          return [new URL(loginUrl).origin];
+        } catch {
+          return [];
+        }
+      })();
       const trustedOrigins = [
         ...(emailConfig.trustedOrigins ?? []),
         ...(emailConfig.email?.appOrigin ? [emailConfig.email.appOrigin] : []),
         ...(config.oauth?.trustedOrigins ?? []),
         ...(process.env.SITE_URL ? [process.env.SITE_URL] : []),
         ...(process.env.CONVEX_SITE_URL ? [process.env.CONVEX_SITE_URL] : []),
+        ...oauthProviderLoginOrigin,
       ];
       const httpActions = magicLinkActions
         ? ({
@@ -127,6 +139,13 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
         addNativeOAuthHttpRoutes(http, {
           component,
           oauth: config.oauth,
+          trustedOrigins,
+        });
+      }
+      if (config.oauthProvider) {
+        addOidcProviderHttpRoutes(http, {
+          component: component as FullComponentApi<"convexAuth">,
+          oauthProvider: config.oauthProvider,
           trustedOrigins,
         });
       }
