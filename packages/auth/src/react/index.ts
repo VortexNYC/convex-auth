@@ -33,6 +33,7 @@ export * from "./types";
 export * from "./ui";
 export * from "./useAuthRuntimeStatus";
 export * from "./useAuthStateMatches";
+export * from "./use-organization-refs";
 export * from "./useProtectedConvexReady";
 export * from "./useReauthRequired";
 export * from "./user-button";
@@ -49,5 +50,8 @@ export * from "./convex-verify-two-factor-form";
 export * from "./webhooks";
 export * from "./passkey-manager";
 export * from "./usePasskeys";
+export * from "./use-api-keys";
+export * from "./api-key-created";
+export * from "./use-service-principals";
 
 export const reactPackagePlaceholder = "convex-auth-react";

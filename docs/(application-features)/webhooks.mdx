@@ -49,13 +49,15 @@ export function WebhooksSettings() {
       eventOptions={EVENT_OPTIONS}
       refs={{
         listEndpoints: api.webhooks.listEndpoints,
+        listExhaustedDeliveries: api.webhooks.listExhaustedDeliveries,
+        listRecentDeliveries: api.webhooks.listRecentDeliveries,
         createEndpoint: api.webhooks.createEndpoint,
         updateEndpoint: api.webhooks.updateEndpoint,
-        deleteEndpoint: api.webhooks.deleteEndpoint,
         rotateEndpointSecret: api.webhooks.rotateEndpointSecret,
-        sendTestEvent: api.webhooks.sendTestEvent,
-        listDeliveries: api.webhooks.listDeliveries,
-        listExhaustedDeliveries: api.webhooks.listExhaustedDeliveries,
+        disableEndpoint: api.webhooks.disableEndpoint,
+        archiveEndpoint: api.webhooks.archiveEndpoint,
+        removeEndpoint: api.webhooks.removeEndpoint,
+        sendTest: api.webhooks.sendTest,
         retryDelivery: api.webhooks.retryDelivery,
         triggerProcessing: api.webhooks.triggerProcessing,
       }}

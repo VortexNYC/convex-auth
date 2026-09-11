@@ -34,12 +34,11 @@ describe("webhook delivery state updates", () => {
       status: "pending",
       attemptCount: 1,
       nextAttemptAt: now + 1_000,
-      processingScheduledAt: now,
       responseStatus: 503,
       responseBody: "down",
       failureKind: "server_error",
-      deliveredAt: undefined,
-      exhaustedAt: undefined,
+      deliveredAt: null,
+      exhaustedAt: null,
       updatedAt: now,
     });
   });
@@ -63,13 +62,41 @@ describe("webhook delivery state updates", () => {
     assert.deepEqual(update, {
       status: "delivered",
       attemptCount: 2,
-      nextAttemptAt: undefined,
-      processingScheduledAt: undefined,
+      nextAttemptAt: null,
       responseStatus: 204,
       responseBody: "",
-      failureKind: undefined,
+      failureKind: null,
       deliveredAt: now,
-      exhaustedAt: undefined,
+      exhaustedAt: null,
+      updatedAt: now,
+    });
+  });
+
+  it("clears stale failure and exhaustion fields when a retry later succeeds", () => {
+    const now = 1_700_000_000_000;
+    const update = buildConvexWebhookDeliveryResultUpdate({
+      delivery: {
+        attemptCount: 1,
+        deliveredAt: undefined,
+      },
+      deliveryKey: "endpoint:event:delivery",
+      now,
+      outcome: {
+        status: "delivered",
+        responseStatus: 204,
+        responseBody: "",
+      },
+    });
+
+    assert.deepEqual(update, {
+      status: "delivered",
+      attemptCount: 2,
+      nextAttemptAt: null,
+      responseStatus: 204,
+      responseBody: "",
+      failureKind: null,
+      deliveredAt: now,
+      exhaustedAt: null,
       updatedAt: now,
     });
   });
@@ -95,8 +122,7 @@ describe("webhook delivery state updates", () => {
     assert.deepEqual(update, {
       status: "failed",
       attemptCount: 4,
-      nextAttemptAt: undefined,
-      processingScheduledAt: undefined,
+      nextAttemptAt: null,
       responseStatus: 400,
       responseBody: "bad request",
       failureKind: "client_error",
@@ -121,7 +147,10 @@ describe("webhook delivery state updates", () => {
         recoveredAt: now,
         recoveryCount: 3,
         responseBody: "Recovered stale processing delivery for retry",
-        failureKind: undefined,
+        failureKind: null,
+        responseStatus: null,
+        deliveredAt: null,
+        exhaustedAt: null,
       },
     );
   });

@@ -10,13 +10,12 @@ export type ConvexWebhookDeliveryResultDelivery = {
 export type ConvexWebhookDeliveryResultUpdate = {
   status: "pending" | "delivered" | "failed";
   attemptCount: number;
-  nextAttemptAt?: number;
-  processingScheduledAt?: number;
-  responseStatus?: number;
-  responseBody?: string;
-  failureKind?: ConvexWebhookFailureKind;
-  deliveredAt?: number;
-  exhaustedAt?: number;
+  nextAttemptAt?: number | null;
+  responseStatus?: number | null;
+  responseBody?: string | null;
+  failureKind?: ConvexWebhookFailureKind | null;
+  deliveredAt?: number | null;
+  exhaustedAt?: number | null;
   updatedAt: number;
 };
 
@@ -43,19 +42,18 @@ export function buildConvexWebhookDeliveryResultUpdate(args: {
           deliveryKey: args.deliveryKey,
           options: args.retryOptions,
         })
-      : undefined;
+      : null;
 
   return {
     status: args.outcome.status,
     attemptCount,
     nextAttemptAt,
-    processingScheduledAt:
-      args.outcome.status === "pending" ? args.delivery.processingScheduledAt : undefined,
-    responseStatus: args.outcome.responseStatus,
-    responseBody: args.outcome.responseBody,
-    failureKind: args.outcome.failureKind,
-    deliveredAt: args.outcome.status === "delivered" ? args.now : args.delivery.deliveredAt,
-    exhaustedAt: args.outcome.status === "failed" ? args.now : undefined,
+    responseStatus: args.outcome.responseStatus ?? null,
+    responseBody: args.outcome.responseBody ?? null,
+    failureKind: args.outcome.failureKind ?? null,
+    deliveredAt:
+      args.outcome.status === "delivered" ? args.now : (args.delivery.deliveredAt ?? null),
+    exhaustedAt: args.outcome.status === "failed" ? args.now : null,
     updatedAt: args.now,
   };
 }
@@ -71,7 +69,10 @@ export type ConvexWebhookStaleDeliveryUpdate = {
   recoveredAt: number;
   recoveryCount: number;
   responseBody: string;
-  failureKind?: ConvexWebhookFailureKind;
+  failureKind?: ConvexWebhookFailureKind | null;
+  responseStatus?: number | null;
+  deliveredAt?: number | null;
+  exhaustedAt?: number | null;
 };
 
 export function buildConvexWebhookStaleDeliveryUpdate(args: {
@@ -86,6 +87,9 @@ export function buildConvexWebhookStaleDeliveryUpdate(args: {
     recoveredAt: args.now,
     recoveryCount: (args.delivery.recoveryCount ?? 0) + 1,
     responseBody: args.responseBody ?? "Recovered stale processing delivery for retry",
-    failureKind: undefined,
+    failureKind: null,
+    responseStatus: null,
+    deliveredAt: null,
+    exhaustedAt: null,
   };
 }

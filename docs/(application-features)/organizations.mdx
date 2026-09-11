@@ -89,12 +89,12 @@ import { useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 
 export function CreateOrganization() {
-  const create = useMutation(api.myOrganizations.create);
+  const create = useMutation(api.organizations.createOrganization);
 
   return (
     <ConvexCreateOrganization
       onCreate={async ({ name, slug, imageUrl }) => {
-        await create({ name, slug, imageUrl });
+        await create({ name, slug });
       }}
       defaultName="Acme"
       defaultSlug="acme"
@@ -103,41 +103,92 @@ export function CreateOrganization() {
 }
 ```
 
-`ConvexCreateOrganization` calls `onCreate` with `{ name, string, slug, imageUrl? }`. The component validates the slug format and required fields. Your `create` mutation is responsible for:
+`ConvexCreateOrganization` calls `onCreate` with `{ name, slug, imageUrl? }`. The component validates the slug format and required fields. Your `createOrganization` mutation is responsible for:
 
 1. Calling the component writer to insert the org.
-2. Creating the local anchor row.
-3. Backfilling the bridge id.
+2. Creating or ensuring default roles.
+3. Creating an owner membership and setting the active organization.
 
 ## Switch workspaces
 
 ```tsx src/WorkspaceSwitcher.tsx
 import { ConvexOrganizationSwitcher } from "@vortex-api/convex-auth/react";
-import { useAction } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 
-export function WorkspaceSwitcher(props: {
-  organizations: { _id: string; name: string; slug?: string; imageUrl?: string }[];
-  currentOrganizationId: string | null;
-}) {
-  const setActive = useAction(api.myOrganizations.setActive);
+export function WorkspaceSwitcher() {
+  const organizations = useQuery(api.organizations.listMyOrganizations) ?? [];
+  const active = useQuery(api.organizations.getActiveOrganization);
+  const setActive = useMutation(api.organizations.setActiveOrganization);
+  const createOrganization = useMutation(api.organizations.createOrganization);
 
   return (
     <ConvexOrganizationSwitcher
-      organizations={props.organizations}
-      currentOrganizationId={props.currentOrganizationId}
-      onSelectOrganization={async (id) => setActive({ organizationId: id })}
-      onCreateOrganization={() => {
-        /* open create modal */
+      organizations={organizations}
+      currentOrganizationId={active?._id ?? null}
+      currentOrganization={active ?? null}
+      onSelectOrganization={async (id) => await setActive({ organizationId: id })}
+      onInPlaceCreateOrganization={async (name) => {
+        await createOrganization({ name });
       }}
     />
   );
 }
 ```
 
+## Members and roles
+
+```tsx src/WorkspaceSettings.tsx
+import {
+  ConvexOrganizationMembersSurface,
+  ConvexOrganizationRoleManagerSurface,
+  useConvexOrganizationRefs,
+} from "@vortex-api/convex-auth/react";
+import { useQuery } from "convex/react";
+import { api } from "../convex/_generated/api";
+
+export function WorkspaceSettings() {
+  const active = useQuery(api.organizations.getActiveOrganization);
+  const refs = useConvexOrganizationRefs(api);
+
+  if (!active) return null;
+
+  return (
+    <>
+      <ConvexOrganizationMembersSurface
+        organizationId={active._id}
+        roleOptions={["owner", "admin", "manager", "member", "viewer"]}
+        refs={refs.members}
+      />
+      <ConvexOrganizationRoleManagerSurface canCreateRoles refs={refs.roles} />
+    </>
+  );
+}
+```
+
+`useConvexOrganizationRefs(api)` maps the consumer's `api.organizations.*` functions to the `refs` the presentational components expect. The consumer functions must match the names and shapes used in the React demo:
+
+- `listMembers`, `inviteMember`, `reactivateMember`, `setMemberRole`, `suspendMember`
+- `listRoles`, `listPermissions`, `createRole`
+
+See `examples/react/convex/organizations.ts` for a working reference implementation.
+
+## Run the example
+
+The React demo lives in `examples/react`. To see the full workspace flow locally:
+
+```bash
+pnpm dlx convex dev
+pnpm --filter examples/react dev
+```
+
+Then sign up, create a workspace, invite a second account, and switch members/roles.
+
 ## Server-side operations
 
-The `convex-auth` component exposes the organization tables, but the public helpers are low-level. Import `createConvexAuthOrganizationOperations` from `convex-auth/convex` and pass it:
+The `convex-auth` component exposes the organization tables, but the public helpers are low-level. For a working consumer, see `examples/react/convex/organizations.ts`.
+
+If you are building your own server surface, import `createConvexAuthOrganizationOperations` from `convex-auth/convex` and pass it:
 
 - `component` — the `components.convexAuthOrganizations` handle.
 - `resolveLocalOrganizationId` and `resolveLocalUserId` — bridge lookup callbacks.

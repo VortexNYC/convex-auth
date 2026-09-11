@@ -1,15 +1,29 @@
 import { useState } from "react";
 import {
+  ConvexApiKeyCreated,
+  ConvexApiKeyCreateForm,
+  ConvexApiKeyList,
   ConvexAuthSignOutButton,
+  ConvexCreateOrganization,
   ConvexEnableTwoFactorForm,
+  ConvexOrganizationList,
+  ConvexOrganizationMembersSurface,
+  ConvexOrganizationRoleManagerSurface,
+  ConvexOrganizationSwitcher,
   ConvexSessionList,
   ConvexUserProfile,
   ConvexVerifyEmailScreen,
+  ConvexWebhookSettingsSurface,
   useAuthActions,
+  useConvexApiKeys,
   useConvexAuthAppearance,
+  useConvexServicePrincipals,
   useConvexAuthClient,
+  useConvexOrganizationRefs,
   usePasskeys,
 } from "@vortex-api/convex-auth/react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../convex/_generated/api";
 import {
   Button,
   Card,
@@ -84,6 +98,10 @@ export function SignedInView() {
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="passkeys">Passkeys</TabsTrigger>
+            <TabsTrigger value="organizations">Workspaces</TabsTrigger>
+            <TabsTrigger value="api-keys">API Keys</TabsTrigger>
+            <TabsTrigger value="service-principals">Service Principals</TabsTrigger>
+            <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
@@ -120,6 +138,22 @@ export function SignedInView() {
 
           <TabsContent value="passkeys">
             <PasskeysPanel userId={user.id} email={user.email ?? ""} />
+          </TabsContent>
+
+          <TabsContent value="organizations" className="space-y-4">
+            <OrganizationsPanel />
+          </TabsContent>
+
+          <TabsContent value="api-keys" className="space-y-4">
+            <ApiKeysPanel />
+          </TabsContent>
+
+          <TabsContent value="service-principals" className="space-y-4">
+            <ServicePrincipalsPanel />
+          </TabsContent>
+
+          <TabsContent value="webhooks" className="space-y-4">
+            <WebhooksPanel />
           </TabsContent>
         </Tabs>
       </div>
@@ -189,6 +223,289 @@ function PasskeysPanel({ userId, email }: { userId: string; email: string }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function OrganizationsPanel() {
+  const [message, setMessage] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const organizations = useQuery(api.organizations.listMyOrganizations) ?? [];
+  const invitations = useQuery(api.organizations.listMyInvitations) ?? [];
+  const activeOrg = useQuery(api.organizations.getActiveOrganization);
+  const setActive = useMutation(api.organizations.setActiveOrganization);
+  const create = useMutation(api.organizations.createOrganization);
+  const redeem = useMutation(api.organizations.redeemInvitation);
+  const refs = useConvexOrganizationRefs(api);
+
+  const currentOrganizationId = activeOrg?._id ?? null;
+
+  return (
+    <div className="space-y-4">
+      {message ? (
+        <div className="bg-muted text-foreground rounded-lg p-3 text-sm" role="status">
+          {message}
+        </div>
+      ) : null}
+
+      <ConvexOrganizationSwitcher
+        organizations={organizations}
+        currentOrganizationId={currentOrganizationId}
+        currentOrganization={activeOrg ?? null}
+        onSelectOrganization={async (id) => {
+          await setActive({ organizationId: id });
+          setMessage("Active workspace updated.");
+        }}
+        onInPlaceCreateOrganization={async (name) => {
+          try {
+            await create({ name });
+            setMessage("Workspace created.");
+          } catch (err) {
+            setMessage(err instanceof Error ? err.message : "Could not create workspace");
+          }
+        }}
+      />
+
+      <ConvexOrganizationList
+        organizations={organizations}
+        invitations={invitations}
+        currentOrganizationId={currentOrganizationId}
+        onSelectOrganization={async (id) => {
+          await setActive({ organizationId: id });
+          setMessage("Active workspace updated.");
+        }}
+        onAcceptInvitation={async (id) => {
+          try {
+            await redeem({ invitationId: id });
+            setMessage("Invitation accepted.");
+          } catch (err) {
+            setMessage(err instanceof Error ? err.message : "Could not accept invitation");
+          }
+        }}
+        onCreateOrganization={() => setCreating(true)}
+      />
+
+      {creating ? (
+        <Card>
+          <CardContent className="pt-6">
+            <ConvexCreateOrganization
+              onCreate={async (input) => {
+                try {
+                  await create(input);
+                  setCreating(false);
+                  setMessage("Workspace created.");
+                } catch (err) {
+                  setMessage(err instanceof Error ? err.message : "Could not create workspace");
+                }
+              }}
+              onCancel={() => setCreating(false)}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {currentOrganizationId ? (
+        <>
+          <ConvexOrganizationMembersSurface
+            organizationId={currentOrganizationId}
+            roleOptions={["owner", "admin", "manager", "member", "viewer"]}
+            refs={refs.members}
+          />
+          <ConvexOrganizationRoleManagerSurface canCreateRoles refs={refs.roles} />
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function ApiKeysPanel() {
+  const { formProps, listProps, created, clearCreated } = useConvexApiKeys(api, {
+    scopeOptions: ["read", "write", "delete"],
+  });
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Create API key</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ConvexApiKeyCreateForm {...formProps} />
+        </CardContent>
+      </Card>
+
+      {created ? (
+        <Card>
+          <CardContent className="pt-6">
+            <ConvexApiKeyCreated apiKey={created.apiKey} onClose={clearCreated} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">API keys</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ConvexApiKeyList {...listProps} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ServicePrincipalsPanel() {
+  const {
+    servicePrincipals,
+    state,
+    creating,
+    onKeyChange,
+    onNameChange,
+    onDescriptionChange,
+    onPermissionsChange,
+    onSubmit,
+    onStatusChange,
+  } = useConvexServicePrincipals(api, { permissionOptions: ["read", "write", "delete"] });
+
+  const togglePermission = (permission: string) => {
+    const next = state.permissions.includes(permission)
+      ? state.permissions.filter((p) => p !== permission)
+      : [...state.permissions, permission];
+    onPermissionsChange(next);
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Create service principal</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="sp-key">Key</Label>
+              <Input
+                id="sp-key"
+                value={state.key}
+                onChange={(e) => onKeyChange(e.target.value)}
+                placeholder="payments-worker"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sp-name">Name</Label>
+              <Input
+                id="sp-name"
+                value={state.name}
+                onChange={(e) => onNameChange(e.target.value)}
+                placeholder="Payments worker"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="sp-description">Description</Label>
+            <Input
+              id="sp-description"
+              value={state.description}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+              placeholder="Background worker for payment webhooks"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {["read", "write", "delete"].map((permission) => {
+              const selected = state.permissions.includes(permission);
+              return (
+                <button
+                  key={permission}
+                  type="button"
+                  onClick={() => togglePermission(permission)}
+                  className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+                    selected
+                      ? "border-info/50 bg-info/10 text-info"
+                      : "border-foreground/10 bg-foreground/5 text-foreground/60 hover:bg-foreground/10"
+                  }`}
+                >
+                  {permission}
+                </button>
+              );
+            })}
+          </div>
+          <Button
+            onClick={() => void onSubmit()}
+            disabled={!state.key || !state.name || state.permissions.length === 0 || creating}
+          >
+            {creating ? "Creating..." : "Create service principal"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Service principals</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {servicePrincipals === undefined ? (
+            <p className="text-muted-foreground text-sm">Loading...</p>
+          ) : servicePrincipals.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No service principals yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {servicePrincipals.map((sp) => (
+                <div
+                  key={sp._id}
+                  className="border-foreground/10 bg-background/20 rounded-lg border p-4"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="font-medium">{sp.name}</p>
+                      <p className="text-foreground/45 text-xs">{sp.key}</p>
+                      {sp.description ? (
+                        <p className="text-foreground/60 text-xs">{sp.description}</p>
+                      ) : null}
+                      <p className="text-foreground/45 text-xs font-medium uppercase">
+                        {sp.status}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {sp.permissions.map((p) => (
+                          <span
+                            key={p}
+                            className="border-foreground/10 text-foreground/70 inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium"
+                          >
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        void onStatusChange(sp._id, sp.status === "active" ? "disabled" : "active")
+                      }
+                    >
+                      {sp.status === "active" ? "Disable" : "Enable"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function WebhooksPanel() {
+  const activeOrg = useQuery(api.organizations.getActiveOrganization);
+  const organizationId = activeOrg?._id;
+  const createRequestId = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
+
+  return (
+    <ConvexWebhookSettingsSurface
+      refs={api.webhooks}
+      enabled={!!organizationId}
+      organizationId={organizationId}
+      eventOptions={["user.created", "user.updated", "payment.received"]}
+      createRequestId={createRequestId}
+    />
   );
 }
 

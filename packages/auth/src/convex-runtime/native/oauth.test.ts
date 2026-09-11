@@ -538,6 +538,18 @@ describe("OAuth handlers", () => {
     );
   });
 
+  it("handleSignIn prefers AUTH_REDIRECT_URL over CONVEX_SITE_URL", async () => {
+    const config = createOAuthConfig({ redirectURI: undefined });
+    process.env.AUTH_REDIRECT_URL = "https://auth.example.com";
+    process.env.CONVEX_SITE_URL = "https://app.example.com";
+
+    const { url } = await handleSignIn(config, { provider: "github" });
+    const parsed = new URL(url);
+    expect(parsed.searchParams.get("redirect_uri")).toBe(
+      "https://auth.example.com/api/auth/callback/github",
+    );
+  });
+
   it("handleCallback provisions a new user and creates a session", async () => {
     const config = createOAuthConfig();
     const component = createMockComponent();

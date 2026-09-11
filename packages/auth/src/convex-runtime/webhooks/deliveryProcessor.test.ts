@@ -67,7 +67,7 @@ describe("processConvexWebhookDelivery", () => {
     assert.equal(result.update.status, "delivered");
     assert.equal(result.update.attemptCount, 1);
     assert.equal(result.update.deliveredAt, NOW);
-    assert.equal(result.update.nextAttemptAt, undefined);
+    assert.equal(result.update.nextAttemptAt, null);
 
     assert.equal(capturedBody, '{"id":"evt_1"}');
     const expectedSignature = await signConvexWebhookPayload(
@@ -89,8 +89,8 @@ describe("processConvexWebhookDelivery", () => {
 
     assert.equal(result.update.status, "pending");
     assert.equal(result.update.failureKind, "server_error");
-    assert.ok(result.update.nextAttemptAt !== undefined && result.update.nextAttemptAt > NOW);
-    assert.equal(result.update.exhaustedAt, undefined);
+    assert.ok(result.update.nextAttemptAt !== null && result.update.nextAttemptAt > NOW);
+    assert.equal(result.update.exhaustedAt, null);
   });
 
   it("marks a 4xx client error as terminally failed without retry", async () => {
@@ -104,7 +104,7 @@ describe("processConvexWebhookDelivery", () => {
     assert.equal(result.update.status, "failed");
     assert.equal(result.update.failureKind, "client_error");
     assert.equal(result.update.exhaustedAt, NOW);
-    assert.equal(result.update.nextAttemptAt, undefined);
+    assert.equal(result.update.nextAttemptAt, null);
   });
 
   it("exhausts a retryable failure once max attempts is reached", async () => {
