@@ -5,9 +5,12 @@ packages:
   - site
 
 auditConfig:
+  # These CVEs are in `image-size` (transitive of `blume`, the docs-site builder).
+  # They are DoS via malformed ICNS/JXL/HEIF image parsing and only affect
+  # build-time asset handling in the docs site, not the published auth package.
   ignoreCves:
-    - "1138808"
-    - "1138809"
+    - "1138808" # image-size ICNS parser infinite loop (CVE-2025-71330)
+    - "1138809" # image-size JXL/HEIF parser infinite loop (CVE-2025-71329)
 
 onlyBuiltDependencies:
   - argon2

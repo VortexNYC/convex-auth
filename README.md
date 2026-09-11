@@ -17,7 +17,7 @@ Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 [![Node][node-badge]][node]
 [![pnpm][pnpm-badge]][pnpm]
 
-**[Docs](https://resilient-blackbird-58.convex.site)** · **[How we got here](#how-we-got-here)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth)** · **[Architecture](<docs/(reference)/architecture.md>)**
+**[Docs](https://your-deployment.convex.site)** · **[How we got here](#how-we-got-here)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth)** · **[Architecture](<docs/(reference)/architecture.md>)**
 
 </div>
 
@@ -25,7 +25,7 @@ Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 
 ## Status
 
-Public — `@vortex-api/convex-auth` is at `2.1.2` on npm. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, MCP auth, and agent auth) is passing full conformance. A one-time Better Auth data migration helper is in `packages/auth/scripts/migrate-better-auth.ts` for existing users.
+Public — `@vortex-api/convex-auth` is at `2.2.0` on npm. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, MCP auth, and agent auth) is passing full conformance. A one-time Better Auth data migration helper is in `packages/auth/scripts/migrate-better-auth.ts` for existing users.
 
 ## How we got here
 
@@ -391,7 +391,7 @@ Apache-2.0 — see `LICENSE`.
 [ci-badge]: https://img.shields.io/github/actions/workflow/status/VortexNYC/convex-auth/ci.yml?branch=main&style=for-the-badge&label=CI
 [ci]: https://github.com/VortexNYC/convex-auth/actions/workflows/ci.yml
 [docs-badge]: https://img.shields.io/badge/docs-online-292a44?style=for-the-badge
-[docs]: https://resilient-blackbird-58.convex.site
+[docs]: https://your-deployment.convex.site
 [license-badge]: https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=for-the-badge
 [license]: LICENSE
 [status-badge]: https://img.shields.io/badge/status-public-blueviolet.svg?style=for-the-badge
