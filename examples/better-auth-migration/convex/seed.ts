@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { hashPassword } from "better-auth/crypto";
 import { internalMutation } from "./_generated/server";
 import { components } from "./_generated/api";
 
@@ -10,14 +11,22 @@ export const all = internalMutation({
     seeded: v.boolean(),
     userId: v.string(),
     accountId: v.string(),
+    accountIdField: v.string(),
+    passwordHash: v.string(),
   }),
   handler: async (ctx) => {
+    const password = "hunter2";
+    const passwordHash = await hashPassword(password);
+    const email = "demo-credential@example.com";
+    const accountIdField = crypto.randomUUID();
+    const sessionToken = crypto.randomUUID();
+
     const user = await ctx.runMutation(components.betterAuth.adapter.create, {
       input: {
         model: "user",
         data: {
           name: "Demo User",
-          email: "demo@example.com",
+          email,
           emailVerified: true,
           image: null,
           createdAt: now,
@@ -33,9 +42,9 @@ export const all = internalMutation({
         model: "account",
         data: {
           userId,
-          accountId: crypto.randomUUID(),
-          providerId: "email",
-          password: "better-auth-scrypt-placeholder",
+          accountId: accountIdField,
+          providerId: "credential",
+          password: passwordHash,
           createdAt: now,
           updatedAt: now,
         },
@@ -47,7 +56,7 @@ export const all = internalMutation({
         model: "session",
         data: {
           userId,
-          token: crypto.randomUUID(),
+          token: sessionToken,
           expiresAt: now + 24 * 60 * 60 * 1000,
           createdAt: now,
           updatedAt: now,
@@ -59,6 +68,8 @@ export const all = internalMutation({
       seeded: true,
       userId,
       accountId: (account as { _id: string })._id,
+      accountIdField,
+      passwordHash,
     };
   },
 });
