@@ -38,8 +38,8 @@ describe("webhook delivery state updates", () => {
       responseStatus: 503,
       responseBody: "down",
       failureKind: "server_error",
-      deliveredAt: undefined,
-      exhaustedAt: undefined,
+      deliveredAt: null,
+      exhaustedAt: null,
       updatedAt: now,
     });
   });
@@ -63,13 +63,13 @@ describe("webhook delivery state updates", () => {
     assert.deepEqual(update, {
       status: "delivered",
       attemptCount: 2,
-      nextAttemptAt: undefined,
-      processingScheduledAt: undefined,
+      nextAttemptAt: null,
+      processingScheduledAt: null,
       responseStatus: 204,
       responseBody: "",
-      failureKind: undefined,
+      failureKind: null,
       deliveredAt: now,
-      exhaustedAt: undefined,
+      exhaustedAt: null,
       updatedAt: now,
     });
   });
@@ -95,8 +95,8 @@ describe("webhook delivery state updates", () => {
     assert.deepEqual(update, {
       status: "failed",
       attemptCount: 4,
-      nextAttemptAt: undefined,
-      processingScheduledAt: undefined,
+      nextAttemptAt: null,
+      processingScheduledAt: null,
       responseStatus: 400,
       responseBody: "bad request",
       failureKind: "client_error",
@@ -121,7 +121,10 @@ describe("webhook delivery state updates", () => {
         recoveredAt: now,
         recoveryCount: 3,
         responseBody: "Recovered stale processing delivery for retry",
-        failureKind: undefined,
+        failureKind: null,
+        responseStatus: null,
+        deliveredAt: null,
+        exhaustedAt: null,
       },
     );
   });

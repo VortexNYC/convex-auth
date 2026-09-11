@@ -422,6 +422,11 @@ export const retryDelivery = mutation({
       attemptCount: 0,
       nextAttemptAt: now,
       updatedAt: now,
+      responseStatus: null,
+      responseBody: null,
+      failureKind: null,
+      deliveredAt: null,
+      exhaustedAt: null,
     });
     return { ok: true as const };
   },
