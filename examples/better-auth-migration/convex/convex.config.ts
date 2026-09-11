@@ -1,6 +1,6 @@
 import { defineApp } from "convex/server";
 import { v } from "convex/values";
-import betterAuth from "@convex-dev/better-auth/convex.config";
+import betterAuth from "convex-better-auth-adapter/convex.config";
 import convexAuth from "@vortex-api/convex-auth/convex.config";
 
 const app = defineApp({
@@ -12,7 +12,7 @@ const app = defineApp({
   },
 });
 
-app.use(betterAuth, { env: app.env });
+app.use(betterAuth, { name: "betterAuth" });
 app.use(convexAuth, { env: { JWT_PRIVATE_KEY: app.env.JWT_PRIVATE_KEY, JWKS: app.env.JWKS } });
 
 export default app;
