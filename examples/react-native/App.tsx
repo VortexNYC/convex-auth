@@ -14,13 +14,14 @@ import {
   type ExpoSessionListStyles,
   type NativeAuthActions,
 } from "@vortex-api/convex-auth/react-native";
-import { api } from "./convex/_generated/api";
+import { auth } from "./convex/auth";
 
 type Screen = "signIn" | "signUp" | "signedIn";
 
 const TOKEN_KEYS = ["convex-auth-token", "convex-auth-refresh-token", "convex-auth-session-id"];
 
-const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
+const convexUrl = (process as { env: Record<string, string | undefined> }).env
+  .EXPO_PUBLIC_CONVEX_URL;
 if (typeof convexUrl !== "string" || convexUrl.length === 0) {
   throw new Error("EXPO_PUBLIC_CONVEX_URL is not set");
 }
@@ -88,7 +89,7 @@ function AuthProviders({ children }: { children: React.ReactNode }) {
   return (
     <ConvexProvider client={convex}>
       <ExpoConvexAuthClientProvider
-        actions={api.auth as unknown as NativeAuthActions}
+        actions={auth as unknown as NativeAuthActions}
         storage={storage}
         initialUrl={Linking.createURL("/")}
         subscribeToUrl={(handler) => {
