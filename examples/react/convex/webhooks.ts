@@ -1,5 +1,4 @@
 import { action, mutation, query, type QueryCtx } from "./_generated/server";
-import { type Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { processConvexWebhookDelivery } from "@vortex-api/convex-auth/convex";
 import { api, components } from "./_generated/api";
@@ -432,11 +431,7 @@ export const triggerProcessing = mutation({
   args: { limit: v.optional(v.number()) },
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, { limit }) => {
-    const organizationId = await getActiveOrganizationId(ctx);
-    if (!organizationId) throw new Error("No active workspace");
-
     await ctx.scheduler.runAfter(0, api.webhooks.processWebhookQueue, {
-      organizationId: organizationId as Id<"organizations">,
       limit: limit ?? 10,
     });
     return { ok: true as const };
@@ -444,49 +439,27 @@ export const triggerProcessing = mutation({
 });
 
 export const processWebhookQueue = action({
-  args: {
-    organizationId: v.id("organizations"),
-    limit: v.number(),
-  },
+  args: { limit: v.number() },
   returns: v.object({ ok: v.literal(true) }),
-  handler: async (ctx, { organizationId, limit }) => {
-    const endpoints = await ctx.runQuery(
-      components.convexAuth.webhooks.listWebhookEndpointsByOrganization,
-      { organizationId, limit: 100 },
+  handler: async (ctx, { limit }) => {
+    const now = Date.now();
+    const deliveries = await ctx.runQuery(
+      components.convexAuth.webhooks.listPendingWebhookDeliveries,
+      { limit, beforeNextAttemptAt: now },
     );
 
-    type Delivery = { _id: string; [key: string]: unknown };
-    const pending: { delivery: Delivery; endpointId: string }[] = [];
-    for (const endpoint of endpoints) {
-      if (pending.length >= limit) break;
-      const remaining = limit - pending.length;
-      const deliveries = (await ctx.runQuery(
-        components.convexAuth.webhooks.listWebhookDeliveriesByEndpoint,
-        { endpointId: endpoint._id, status: "pending", limit: remaining },
-      )) as Delivery[];
-      for (const delivery of deliveries) {
-        pending.push({ delivery, endpointId: endpoint._id });
-      }
-    }
-
-    for (const { delivery, endpointId } of pending) {
+    for (const delivery of deliveries) {
       const { claimed } = await ctx.runMutation(
         components.convexAuth.webhooks.claimWebhookDelivery,
         { deliveryId: delivery._id },
       );
       if (!claimed) continue;
 
-      const [deliveryDoc, endpoint] = await Promise.all([
-        ctx.runQuery(components.convexAuth.webhooks.getWebhookDelivery, {
-          deliveryId: delivery._id,
-        }),
-        ctx.runQuery(components.convexAuth.webhooks.getWebhookEndpointWithSecret, {
-          endpointId,
-        }),
-      ]);
-      if (!deliveryDoc) continue;
+      const endpoint = await ctx.runQuery(
+        components.convexAuth.webhooks.getWebhookEndpointWithSecret,
+        { endpointId: delivery.endpointId },
+      );
 
-      const now = Date.now();
       const result = await processConvexWebhookDelivery({
         endpoint: endpoint
           ? {
@@ -497,13 +470,13 @@ export const processWebhookQueue = action({
             }
           : null,
         delivery: {
-          _id: deliveryDoc._id,
-          endpointId: deliveryDoc.endpointId,
-          eventId: deliveryDoc.eventId,
-          eventType: deliveryDoc.eventType,
-          payloadJson: deliveryDoc.payloadJson,
-          attemptCount: deliveryDoc.attemptCount,
-          deliveredAt: deliveryDoc.deliveredAt ?? undefined,
+          _id: delivery._id,
+          endpointId: delivery.endpointId,
+          eventId: delivery.eventId,
+          eventType: delivery.eventType,
+          payloadJson: delivery.payloadJson,
+          attemptCount: delivery.attemptCount,
+          deliveredAt: delivery.deliveredAt ?? undefined,
         },
         fetch: async (url, init) => {
           const response = await fetch(url, init);
@@ -513,7 +486,7 @@ export const processWebhookQueue = action({
       });
 
       await ctx.runMutation(components.convexAuth.webhooks.updateWebhookDelivery, {
-        deliveryId: deliveryDoc._id,
+        deliveryId: delivery._id,
         ...result.update,
       });
     }
