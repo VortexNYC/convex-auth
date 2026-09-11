@@ -138,19 +138,25 @@ export type GenericOAuthUserInfoMap = {
 export type GenericOAuthProviderConfig = OAuthProviderOptions & {
   clientId: string;
   clientSecret: string;
-  /** Issuer string used for token bookkeeping. Defaults to the authorization endpoint origin. */
+  /** Issuer string used for token bookkeeping and OIDC validation. */
   issuer?: string;
-  /** Full authorization endpoint URL. */
-  authorizationEndpoint: string;
-  /** Full token endpoint URL. */
-  tokenEndpoint: string;
-  /** Full userinfo endpoint URL. */
-  userInfoEndpoint: string;
+  /** Discover endpoints from `/.well-known/openid-configuration`. Requires `issuer` or derived from `authorizationEndpoint`. */
+  discovery?: boolean;
+  /** Full authorization endpoint URL. Discovered if `discovery` is enabled. */
+  authorizationEndpoint?: string;
+  /** Full token endpoint URL. Discovered if `discovery` is enabled. */
+  tokenEndpoint?: string;
+  /** Full userinfo endpoint URL. Discovered if `discovery` is enabled. */
+  userInfoEndpoint?: string;
+  /** JWKS URI for verifying ID tokens. Discovered if `discovery` is enabled. */
+  jwksUri?: string;
+  /** @default false */
+  useIdToken?: boolean;
   /** @default [] */
   scopes?: string[];
-  /** Map common userinfo fields to top-level response keys. Provide `profile` for full control. */
+  /** Map common userinfo/ID-token fields to top-level keys. Provide `profile` for full control. */
   userInfo?: GenericOAuthUserInfoMap;
-  /** Override profile extraction. Takes the parsed userinfo response and returns {@link OAuthUserInfo}. */
+  /** Override profile extraction. Takes the parsed userinfo or ID-token payload and returns {@link OAuthUserInfo}. */
   profile?: (data: unknown) => OAuthUserInfo | Promise<OAuthUserInfo>;
   /** Override fetch for testing. */
   fetchImpl?: typeof fetch;
@@ -607,18 +613,84 @@ function mapGenericUserInfo(
   };
 }
 
+type GenericOAuthDiscoveryDocument = {
+  issuer?: string;
+  authorization_endpoint?: string;
+  token_endpoint?: string;
+  userinfo_endpoint?: string;
+  jwks_uri?: string;
+};
+
+type ResolvedGenericOAuthEndpoints = {
+  as: oauth.AuthorizationServer;
+  jwksUri?: string;
+  userInfoEndpoint?: string;
+};
+
 export function createGenericOAuthProvider(
   id: string,
   config: GenericOAuthProviderConfig,
 ): NativeOAuthProvider {
   const fetchImpl = config.fetchImpl ?? globalThis.fetch;
   const requestedScopes = [...(config.scopes ?? [])];
-  const issuer = config.issuer ?? new URL(config.authorizationEndpoint).origin;
-  const as = authorizationServer(issuer, {
-    authorize: config.authorizationEndpoint,
-    token: config.tokenEndpoint,
-  });
   const client = makeClient(config.clientId);
+  const baseIssuer =
+    config.issuer ??
+    (config.authorizationEndpoint ? new URL(config.authorizationEndpoint).origin : undefined);
+
+  let resolved: ResolvedGenericOAuthEndpoints | undefined;
+  let resolving: Promise<ResolvedGenericOAuthEndpoints> | undefined;
+
+  async function resolveEndpoints(): Promise<ResolvedGenericOAuthEndpoints> {
+    if (resolved) return resolved;
+    if (resolving) return resolving;
+
+    resolving = (async () => {
+      if (config.discovery) {
+        if (!baseIssuer) {
+          throw new Error(
+            "Generic OAuth provider with discovery requires an issuer or authorizationEndpoint",
+          );
+        }
+        const discoveryUrl = `${baseIssuer.replace(/\/$/, "")}/.well-known/openid-configuration`;
+        const response = await fetchImpl(discoveryUrl);
+        if (!response.ok) {
+          throw new Error(`Generic OAuth discovery failed: ${response.status}`);
+        }
+        const doc = (await response.json()) as GenericOAuthDiscoveryDocument;
+        const authorize = doc.authorization_endpoint ?? config.authorizationEndpoint;
+        const token = doc.token_endpoint ?? config.tokenEndpoint;
+        if (!authorize || !token) {
+          throw new Error(
+            "Generic OAuth discovery document missing authorization or token endpoint",
+          );
+        }
+        resolved = {
+          as: authorizationServer(doc.issuer ?? baseIssuer, { authorize, token }),
+          jwksUri: config.jwksUri ?? doc.jwks_uri,
+          userInfoEndpoint: config.userInfoEndpoint ?? doc.userinfo_endpoint,
+        };
+      } else {
+        if (!config.authorizationEndpoint || !config.tokenEndpoint) {
+          throw new Error(
+            "Generic OAuth provider requires authorizationEndpoint and tokenEndpoint, or discovery",
+          );
+        }
+        resolved = {
+          as: authorizationServer(baseIssuer ?? config.authorizationEndpoint, {
+            authorize: config.authorizationEndpoint,
+            token: config.tokenEndpoint,
+          }),
+          jwksUri: config.jwksUri,
+          userInfoEndpoint: config.userInfoEndpoint,
+        };
+      }
+
+      return resolved;
+    })();
+
+    return resolving;
+  }
 
   const providerOptions: OAuthProviderOptions = {
     disableSignUp: config.disableSignUp,
@@ -630,10 +702,11 @@ export function createGenericOAuthProvider(
   return {
     id,
     name: id,
-    issuer: as.issuer,
+    issuer: baseIssuer ?? "",
     options: providerOptions,
 
     async createAuthorizationURL({ state, codeVerifier, redirectURI, scopes }) {
+      const { as } = await resolveEndpoints();
       return buildAuthorizationURL(as, client, {
         state,
         codeVerifier,
@@ -644,11 +717,40 @@ export function createGenericOAuthProvider(
     },
 
     async exchangeAuthorizationCode(args) {
+      const { as } = await resolveEndpoints();
       return exchangeAuthorizationCode(as, client, config.clientSecret, { ...args, fetchImpl });
     },
 
-    async getUserInfo({ accessToken }) {
-      const response = await fetchImpl(config.userInfoEndpoint, {
+    async getUserInfo({ accessToken, idToken }) {
+      const { as, jwksUri, userInfoEndpoint } = await resolveEndpoints();
+
+      if ((config.useIdToken || !userInfoEndpoint) && idToken && jwksUri) {
+        const jwksResponse = await fetchImpl(jwksUri);
+        if (!jwksResponse.ok) {
+          throw new Error(`Generic OAuth JWKS request failed: ${jwksResponse.status}`);
+        }
+        const jwks = (await jwksResponse.json()) as JSONWebKeySet;
+        const jwksSet = createLocalJWKSet(jwks);
+        const { payload } = await jwtVerify(idToken, jwksSet, {
+          algorithms: ["RS256"],
+          issuer: as.issuer,
+          audience: config.clientId,
+        });
+
+        const data = payload as Record<string, unknown>;
+        const user = config.profile
+          ? await config.profile(data)
+          : mapGenericUserInfo(data, config.userInfo);
+        return { user, data };
+      }
+
+      if (!userInfoEndpoint) {
+        throw new Error(
+          "Generic OAuth provider has no userinfo endpoint; set one, enable discovery, or set useIdToken with a jwksUri",
+        );
+      }
+
+      const response = await fetchImpl(userInfoEndpoint, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           Accept: "application/json",

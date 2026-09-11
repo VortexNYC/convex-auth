@@ -1,6 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
+import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createGenericOAuthProvider, type GenericOAuthProviderConfig } from "./oauth.js";
+
+beforeAll(async () => {
+  const { publicKey, privateKey } = await generateKeyPair("RS256", { extractable: true });
+  const privateJwk = await exportJWK(privateKey);
+  const publicJwk = await exportJWK(publicKey);
+  process.env.JWT_PRIVATE_KEY = JSON.stringify(privateJwk);
+  process.env.JWKS = JSON.stringify({ keys: [publicJwk] });
+});
 
 const config: GenericOAuthProviderConfig = {
   clientId: "test-client",
@@ -115,6 +124,92 @@ describe("createGenericOAuthProvider", () => {
       name: "External",
       email: "external@example.com",
       image: undefined,
+      emailVerified: true,
+    });
+  });
+
+  it("fetches endpoints from an OIDC discovery document", async () => {
+    const fetchImpl = vi.fn().mockImplementation((url: string) => {
+      if (url === "https://example.com/.well-known/openid-configuration") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            issuer: "https://example.com",
+            authorization_endpoint: "https://example.com/oidc/authorize",
+            token_endpoint: "https://example.com/oidc/token",
+            userinfo_endpoint: "https://example.com/oidc/userinfo",
+          }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    const provider = createGenericOAuthProvider("example", {
+      clientId: "test-client",
+      clientSecret: "test-secret",
+      issuer: "https://example.com",
+      discovery: true,
+      scopes: ["openid", "email", "profile"],
+      fetchImpl,
+    });
+    const url = await provider.createAuthorizationURL({
+      state: "state-123",
+      codeVerifier: "verifier",
+      redirectURI: "http://localhost:5174/api/auth/callback/example",
+    });
+
+    expect(url.hostname).toBe("example.com");
+    expect(url.pathname).toBe("/oidc/authorize");
+    expect(url.searchParams.get("client_id")).toBe("test-client");
+  });
+
+  it("verifies an ID token when useIdToken is enabled", async () => {
+    const privateJwk = JSON.parse(process.env.JWT_PRIVATE_KEY!);
+    const idToken = await new SignJWT({
+      sub: "id-token-user",
+      name: "Id Token User",
+      email: "idtoken@example.com",
+      email_verified: true,
+      picture: "https://example.com/pic.png",
+    })
+      .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+      .setAudience("test-client")
+      .setIssuer("https://example.com")
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(await importJWK(privateJwk, "RS256"));
+
+    const fetchImpl = vi.fn().mockImplementation((url: string) => {
+      if (url === "https://example.com/.well-known/jwks.json") {
+        return Promise.resolve({
+          ok: true,
+          json: async () => JSON.parse(process.env.JWKS!),
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+
+    const provider = createGenericOAuthProvider("example", {
+      clientId: "test-client",
+      clientSecret: "test-secret",
+      issuer: "https://example.com",
+      authorizationEndpoint: "https://example.com/oauth/authorize",
+      tokenEndpoint: "https://example.com/oauth/token",
+      jwksUri: "https://example.com/.well-known/jwks.json",
+      useIdToken: true,
+      scopes: ["openid", "email", "profile"],
+      fetchImpl,
+    });
+    const result = await provider.getUserInfo({
+      accessToken: "token",
+      idToken,
+    });
+
+    expect(result.user).toEqual({
+      id: "id-token-user",
+      name: "Id Token User",
+      email: "idtoken@example.com",
+      image: "https://example.com/pic.png",
       emailVerified: true,
     });
   });
