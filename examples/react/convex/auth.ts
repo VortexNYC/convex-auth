@@ -66,6 +66,11 @@ export const auth = convexAuth({
       clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
     },
   },
+  passkey: {
+    rpID: "localhost",
+    origin: "http://localhost:5174",
+    rpName: "Convex Auth Demo",
+  },
 });
 
 export const {
@@ -88,6 +93,12 @@ export const {
   revokeSession,
   revokeOtherSessions,
   isAuthenticated,
+  getPasskeyRegistrationOptions,
+  verifyPasskeyRegistration,
+  getPasskeyAuthenticationOptions,
+  verifyPasskeyAuthentication,
+  listPasskeys,
+  revokePasskey,
   verifySession,
   signInWithRedirect,
   callback,

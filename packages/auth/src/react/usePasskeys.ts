@@ -5,14 +5,15 @@ import {
   startRegistration,
 } from "@simplewebauthn/browser";
 import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simplewebauthn/browser";
-import { useMutation, useQuery } from "convex/react";
-import type { GenericId } from "convex/values";
+import { useAction, useMutation, useQuery } from "convex/react";
+import type { FunctionReference } from "convex/server";
+import { useContext } from "react";
 
-import { api } from "../component/_generated/api.js";
+import { ConvexAuthContext } from "./ConvexAuthProvider.js";
 import type { PasskeyListItem } from "./passkey-manager.js";
 
 export interface UsePasskeysArgs {
-  userId: GenericId<"users">;
+  userId: string;
   identifier: string;
   rpName: string;
   rpID: string;
@@ -20,14 +21,36 @@ export interface UsePasskeysArgs {
 }
 
 export function usePasskeys(args: UsePasskeysArgs) {
-  const generateRegistrationOptions = useMutation(api.passkeys.generatePasskeyRegistrationOptions);
-  const verifyRegistration = useMutation(api.passkeys.verifyPasskeyRegistration);
-  const generateAuthenticationOptions = useMutation(
-    api.passkeys.generatePasskeyAuthenticationOptions,
+  const ctx = useContext(ConvexAuthContext);
+  if (ctx === null) {
+    throw new Error("usePasskeys must be used within a ConvexAuthProvider");
+  }
+  if (
+    !ctx.getPasskeyRegistrationOptions ||
+    !ctx.verifyPasskeyRegistration ||
+    !ctx.getPasskeyAuthenticationOptions ||
+    !ctx.verifyPasskeyAuthentication ||
+    !ctx.listPasskeys ||
+    !ctx.revokePasskey
+  ) {
+    throw new Error("Passkeys are not configured in convexAuth.");
+  }
+  const generateRegistrationOptions = useAction(
+    ctx.getPasskeyRegistrationOptions as unknown as FunctionReference<"action">,
   );
-  const verifyAuthentication = useMutation(api.passkeys.verifyPasskeyAuthentication);
-  const revokePasskey = useMutation(api.passkeys.revokePasskey);
-  const passkeys = useQuery(api.passkeys.listPasskeys, { userId: args.userId });
+  const verifyRegistration = useAction(
+    ctx.verifyPasskeyRegistration as unknown as FunctionReference<"action">,
+  );
+  const generateAuthenticationOptions = useAction(
+    ctx.getPasskeyAuthenticationOptions as unknown as FunctionReference<"action">,
+  );
+  const verifyAuthentication = useAction(
+    ctx.verifyPasskeyAuthentication as unknown as FunctionReference<"action">,
+  );
+  const revokePasskey = useMutation(ctx.revokePasskey as unknown as FunctionReference<"mutation">);
+  const passkeys = useQuery(ctx.listPasskeys as unknown as FunctionReference<"query">, {
+    userId: args.userId,
+  });
 
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
