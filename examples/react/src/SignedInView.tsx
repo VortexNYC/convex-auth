@@ -1,5 +1,8 @@
 import { useState } from "react";
 import {
+  ConvexApiKeyCreated,
+  ConvexApiKeyCreateForm,
+  ConvexApiKeyList,
   ConvexAuthSignOutButton,
   ConvexCreateOrganization,
   ConvexEnableTwoFactorForm,
@@ -11,7 +14,9 @@ import {
   ConvexUserProfile,
   ConvexVerifyEmailScreen,
   useAuthActions,
+  useConvexApiKeys,
   useConvexAuthAppearance,
+  useConvexServicePrincipals,
   useConvexAuthClient,
   useConvexOrganizationRefs,
   usePasskeys,
@@ -93,6 +98,8 @@ export function SignedInView() {
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
             <TabsTrigger value="passkeys">Passkeys</TabsTrigger>
             <TabsTrigger value="organizations">Workspaces</TabsTrigger>
+            <TabsTrigger value="api-keys">API Keys</TabsTrigger>
+            <TabsTrigger value="service-principals">Service Principals</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
@@ -133,6 +140,14 @@ export function SignedInView() {
 
           <TabsContent value="organizations" className="space-y-4">
             <OrganizationsPanel />
+          </TabsContent>
+
+          <TabsContent value="api-keys" className="space-y-4">
+            <ApiKeysPanel />
+          </TabsContent>
+
+          <TabsContent value="service-principals" className="space-y-4">
+            <ServicePrincipalsPanel />
           </TabsContent>
         </Tabs>
       </div>
@@ -292,6 +307,182 @@ function OrganizationsPanel() {
           <ConvexOrganizationRoleManagerSurface canCreateRoles refs={refs.roles} />
         </>
       ) : null}
+    </div>
+  );
+}
+
+function ApiKeysPanel() {
+  const { formProps, listProps, created, clearCreated } = useConvexApiKeys(api, {
+    scopeOptions: ["read", "write", "delete"],
+  });
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Create API key</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ConvexApiKeyCreateForm {...formProps} />
+        </CardContent>
+      </Card>
+
+      {created ? (
+        <Card>
+          <CardContent className="pt-6">
+            <ConvexApiKeyCreated apiKey={created.apiKey} onClose={clearCreated} />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">API keys</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ConvexApiKeyList {...listProps} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ServicePrincipalsPanel() {
+  const {
+    servicePrincipals,
+    state,
+    creating,
+    onKeyChange,
+    onNameChange,
+    onDescriptionChange,
+    onPermissionsChange,
+    onSubmit,
+    onStatusChange,
+  } = useConvexServicePrincipals(api, { permissionOptions: ["read", "write", "delete"] });
+
+  const togglePermission = (permission: string) => {
+    const next = state.permissions.includes(permission)
+      ? state.permissions.filter((p) => p !== permission)
+      : [...state.permissions, permission];
+    onPermissionsChange(next);
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Create service principal</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="sp-key">Key</Label>
+              <Input
+                id="sp-key"
+                value={state.key}
+                onChange={(e) => onKeyChange(e.target.value)}
+                placeholder="payments-worker"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sp-name">Name</Label>
+              <Input
+                id="sp-name"
+                value={state.name}
+                onChange={(e) => onNameChange(e.target.value)}
+                placeholder="Payments worker"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="sp-description">Description</Label>
+            <Input
+              id="sp-description"
+              value={state.description}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+              placeholder="Background worker for payment webhooks"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {["read", "write", "delete"].map((permission) => {
+              const selected = state.permissions.includes(permission);
+              return (
+                <button
+                  key={permission}
+                  type="button"
+                  onClick={() => togglePermission(permission)}
+                  className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+                    selected
+                      ? "border-info/50 bg-info/10 text-info"
+                      : "border-foreground/10 bg-foreground/5 text-foreground/60 hover:bg-foreground/10"
+                  }`}
+                >
+                  {permission}
+                </button>
+              );
+            })}
+          </div>
+          <Button
+            onClick={() => void onSubmit()}
+            disabled={!state.key || !state.name || state.permissions.length === 0 || creating}
+          >
+            {creating ? "Creating..." : "Create service principal"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Service principals</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {servicePrincipals === undefined ? (
+            <p className="text-muted-foreground text-sm">Loading...</p>
+          ) : servicePrincipals.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No service principals yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {servicePrincipals.map((sp) => (
+                <div
+                  key={sp._id}
+                  className="border-foreground/10 bg-background/20 rounded-lg border p-4"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="font-medium">{sp.name}</p>
+                      <p className="text-foreground/45 text-xs">{sp.key}</p>
+                      {sp.description ? (
+                        <p className="text-foreground/60 text-xs">{sp.description}</p>
+                      ) : null}
+                      <p className="text-foreground/45 text-xs font-medium uppercase">
+                        {sp.status}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {sp.permissions.map((p) => (
+                          <span
+                            key={p}
+                            className="border-foreground/10 text-foreground/70 inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium"
+                          >
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        void onStatusChange(sp._id, sp.status === "active" ? "disabled" : "active")
+                      }
+                    >
+                      {sp.status === "active" ? "Disable" : "Enable"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
