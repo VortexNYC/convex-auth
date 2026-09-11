@@ -5,5 +5,5 @@ export default defineMeta({
   order: 2,
   display: "group",
   icon: "shield",
-  pages: ["email-password", "oauth", "two-factor", "magic-links", "email-otp"],
+  pages: ["email-password", "oauth", "two-factor", "magic-links", "email-otp", "passkeys"],
 });

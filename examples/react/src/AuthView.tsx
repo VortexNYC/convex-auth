@@ -7,6 +7,7 @@ import {
   ConvexResetPasswordForm,
   ConvexVerifyTwoFactorForm,
   useConvexAuthClient,
+  usePasskeys,
 } from "@vortex-api/convex-auth/react";
 import {
   Button,
@@ -175,10 +176,43 @@ export function AuthView() {
                 </div>
               }
             />
+            <PasskeySignIn />
           </>
         )}
       </div>
     </ConvexAuthSurface>
+  );
+}
+
+function PasskeySignIn() {
+  const { signIn, loading, error, supported } = usePasskeys({
+    rpName: "Convex Auth Demo",
+    rpID: "localhost",
+    origin: "http://localhost:5174",
+  });
+
+  if (!supported) {
+    return null;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Passkey</CardTitle>
+        <CardDescription>Sign in with a saved passkey.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {error ? <p className="text-destructive text-sm">{error}</p> : null}
+        <Button
+          variant="outline"
+          onClick={() => void signIn()}
+          disabled={loading}
+          className="w-full"
+        >
+          Sign in with passkey
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

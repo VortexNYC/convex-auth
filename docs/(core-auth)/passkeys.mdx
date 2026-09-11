@@ -1,0 +1,111 @@
+---
+title: Passkeys
+description: WebAuthn passkey sign-in and registration with convex-auth.
+sidebar:
+  order: 13
+---
+
+`convex-auth` supports WebAuthn passkeys for passwordless sign-in and registration.
+
+## Enable
+
+```ts convex/auth.ts
+import { components } from "./_generated/api";
+import { convexAuth } from "@vortex-api/convex-auth/convex";
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+  passkey: {
+    rpID: "example.com",
+    origin: "https://example.com",
+    rpName: "Example",
+  },
+});
+```
+
+`rpID` must match the registrable domain users authenticate from. `origin` must be the exact origin the browser sees.
+
+## React
+
+Use the `usePasskeys` hook or the `PasskeyManager` component.
+
+### `usePasskeys`
+
+```tsx src/Passkeys.tsx
+import { usePasskeys, PasskeyManager } from "@vortex-api/convex-auth/react";
+import { useAuth } from "@vortex-api/convex-auth/react";
+
+export function Passkeys() {
+  const { user } = useAuth();
+  const passkeys = usePasskeys({
+    userId: user.id,
+    identifier: user.email ?? "",
+    rpName: "Example",
+    rpID: "example.com",
+    origin: "https://example.com",
+  });
+
+  return (
+    <PasskeyManager
+      rpName="Example"
+      passkeys={passkeys.passkeys}
+      loading={passkeys.loading}
+      onRegister={({ name }) => passkeys.register(name)}
+      onVerifyRegistration={({ name, response }) => passkeys.register(name)}
+      onAuthenticate={() => passkeys.signIn()}
+      onVerifyAuthentication={({ response }) => passkeys.signIn()}
+      onRevoke={({ credentialId }) => passkeys.revoke(credentialId)}
+    />
+  );
+}
+```
+
+`usePasskeys` handles the WebAuthn browser calls (`startRegistration` / `startAuthentication`) and the Convex mutations.
+
+### `PasskeyManager`
+
+```tsx src/Passkeys.tsx
+import { PasskeyManager } from "@vortex-api/convex-auth/react";
+import { useAuth } from "@vortex-api/convex-auth/react";
+
+export function Passkeys() {
+  const { user } = useAuth();
+
+  return (
+    <PasskeyManager
+      rpName="Example"
+      passkeys={[]}
+      onRegister={async ({ name }) => {
+        // generate and return options from your own wiring
+      }}
+      onVerifyRegistration={async ({ name, response }) => {
+        // verify with your own wiring
+      }}
+      onAuthenticate={async () => {
+        // generate and return auth options
+      }}
+      onVerifyAuthentication={async ({ response }) => {
+        // verify with your own wiring
+      }}
+      onRevoke={async ({ credentialId }) => {
+        // revoke the credential
+      }}
+    />
+  );
+}
+```
+
+`PasskeyManager` is presentational: it prompts the browser for WebAuthn and invokes the callbacks you provide.
+
+## Runtime actions
+
+When `passkey` is configured, `auth` exposes:
+
+- `auth.getPasskeyRegistrationOptions`
+- `auth.verifyPasskeyRegistration`
+- `auth.getPasskeyAuthenticationOptions`
+- `auth.verifyPasskeyAuthentication`
+- `auth.listPasskeys`
+- `auth.revokePasskey`
+
+Use `useAuthActions()` to call them from React.

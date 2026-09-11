@@ -6,6 +6,7 @@ import {
   auth_md_registrations,
 } from "./schema/authMd.js";
 import { auth_identities, users } from "./schema/users.js";
+import { auth_passkeys, auth_passkey_challenges } from "./schema/passkeys.js";
 import {
   organization_invitations,
   organization_members,
@@ -90,4 +91,7 @@ export default defineSchema({
   authVerificationCodes,
   authVerifiers,
   authMagicLinkTokens,
+
+  auth_passkeys,
+  auth_passkey_challenges,
 });

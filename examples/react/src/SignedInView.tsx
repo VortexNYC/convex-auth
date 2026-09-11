@@ -6,6 +6,7 @@ import {
   ConvexVerifyEmailScreen,
   useAuthActions,
   useConvexAuthClient,
+  usePasskeys,
 } from "@vortex-api/convex-auth/react";
 import {
   Button,
@@ -73,6 +74,7 @@ export function SignedInView() {
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
+            <TabsTrigger value="passkeys">Passkeys</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
@@ -106,9 +108,78 @@ export function SignedInView() {
           <TabsContent value="sessions">
             <ConvexSessionList currentSessionToken={token} />
           </TabsContent>
+
+          <TabsContent value="passkeys">
+            <PasskeysPanel userId={user.id} email={user.email ?? ""} />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
+  );
+}
+
+function PasskeysPanel({ userId, email }: { userId: string; email: string }) {
+  const [name, setName] = useState("");
+  const { passkeys, register, signIn, revoke, loading, error, supported } = usePasskeys({
+    userId,
+    identifier: email,
+    rpName: "Convex Auth Demo",
+    rpID: "localhost",
+    origin: "http://localhost:5174",
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Passkeys</CardTitle>
+        <CardDescription>
+          {supported ? "WebAuthn is supported." : "WebAuthn is not supported in this browser."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex gap-2">
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Passkey name"
+            className="flex-1"
+          />
+          <Button onClick={() => void register(name)} disabled={!name || loading || !supported}>
+            Register
+          </Button>
+        </div>
+        {error ? <p className="text-destructive text-sm">{error}</p> : null}
+        <Button
+          variant="outline"
+          onClick={() => void signIn()}
+          disabled={loading || !supported}
+          className="w-full"
+        >
+          Sign in with passkey
+        </Button>
+        <div className="space-y-2">
+          {passkeys.map((pk) => (
+            <div
+              key={pk.credentialId}
+              className="flex items-center justify-between rounded-md border p-2"
+            >
+              <div className="text-sm">
+                <p className="font-medium">{pk.name || "Unnamed"}</p>
+                <p className="text-muted-foreground text-xs">{pk.revoked ? "Revoked" : "Active"}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void revoke(pk.credentialId)}
+                disabled={pk.revoked}
+              >
+                Revoke
+              </Button>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

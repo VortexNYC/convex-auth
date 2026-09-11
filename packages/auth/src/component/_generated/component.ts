@@ -2597,6 +2597,115 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         Name
       >;
     };
+    passkeys: {
+      generatePasskeyAuthenticationOptions: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          credentialId?: string;
+          rpID: string;
+          userId?: string;
+          userVerification?: "required" | "preferred" | "discouraged";
+        },
+        Record<string, any>,
+        Name
+      >;
+      generatePasskeyRegistrationOptions: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          authenticatorAttachment?: "platform" | "cross-platform";
+          displayName?: string;
+          identifier: string;
+          rpID: string;
+          rpName: string;
+          userId: string;
+          userVerification?: "required" | "preferred" | "discouraged";
+        },
+        any,
+        Name
+      >;
+      listPasskeys: FunctionReference<
+        "query",
+        "internal",
+        { userId?: string },
+        Array<{
+          createdAt: number;
+          credentialId: string;
+          lastUsedAt: number;
+          name?: string;
+          revoked: boolean;
+        }>,
+        Name
+      >;
+      revokePasskey: FunctionReference<
+        "mutation",
+        "internal",
+        { credentialId: string },
+        boolean,
+        Name
+      >;
+      verifyPasskeyAuthentication: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          challenge: string;
+          origin: string;
+          response: {
+            authenticatorAttachment?: string;
+            clientExtensionResults?: Record<string, any>;
+            id: string;
+            rawId: string;
+            response: {
+              authenticatorData: string;
+              clientDataJSON: string;
+              signature: string;
+              userHandle?: string;
+            };
+            type?: string;
+          };
+          rpID: string;
+        },
+        {
+          expiresAt: number;
+          identityId?: string;
+          refreshToken: string;
+          sessionId: string;
+          token: string;
+          userId: string;
+        },
+        Name
+      >;
+      verifyPasskeyRegistration: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          challenge: string;
+          identifier: string;
+          name?: string;
+          origin: string;
+          response: {
+            authenticatorAttachment?: string;
+            clientExtensionResults?: Record<string, any>;
+            id: string;
+            rawId: string;
+            response: {
+              attestationObject: string;
+              authenticatorData?: string;
+              clientDataJSON: string;
+              publicKey?: string;
+              publicKeyAlgorithm?: number;
+              transports?: Array<string>;
+            };
+            type?: string;
+          };
+          rpID: string;
+          userId: string;
+        },
+        { credentialId: string; userId: string },
+        Name
+      >;
+    };
     servicePrincipals: {
       getServicePrincipal: FunctionReference<
         "query",

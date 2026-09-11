@@ -392,6 +392,15 @@ export type NativeAuthActions = {
     { token: string },
     { success: boolean }
   >;
+} & Partial<NativePasskeyFunctionReferences>;
+
+type NativePasskeyFunctionReferences = {
+  getPasskeyRegistrationOptions: FunctionReference<"action">;
+  verifyPasskeyRegistration: FunctionReference<"action">;
+  getPasskeyAuthenticationOptions: FunctionReference<"action">;
+  verifyPasskeyAuthentication: FunctionReference<"action">;
+  listPasskeys: FunctionReference<"query">;
+  revokePasskey: FunctionReference<"mutation">;
 };
 
 type ConvexAuthContextValue = NativeAuthActions & {
@@ -406,7 +415,7 @@ type ConvexAuthContextValue = NativeAuthActions & {
   isAuthReady: boolean;
 };
 
-const ConvexAuthContext = createContext<ConvexAuthContextValue | null>(null);
+export const ConvexAuthContext = createContext<ConvexAuthContextValue | null>(null);
 
 export type ConvexAuthProviderProps = {
   actions: NativeAuthActions;

@@ -19,6 +19,8 @@ import type {
 } from "./magicLink.js";
 import { nativeEmailOtp } from "./emailOtp.js";
 import type { NativeEmailOtpActions, NativeEmailOtpConfig } from "./emailOtp.js";
+import { nativePasskey } from "./passkeys.js";
+import type { NativePasskeyActions, NativePasskeyConfig, PasskeyComponentApi } from "./passkeys.js";
 import type { ComponentApi as FullComponentApi } from "../../component/_generated/component.js";
 import type { ComponentApi as CoreComponentApi } from "../../component/core/_generated/component.js";
 import type { ComponentApi as OrganizationsComponentApi } from "../../component/organizations/_generated/component.js";
@@ -30,6 +32,7 @@ type ConvexAuthConfigBase = {
   oauth?: NativeOAuthConfig;
   magicLink?: NativeMagicLinkConfig;
   emailOtp?: NativeEmailOtpConfig;
+  passkey?: NativePasskeyConfig;
 };
 
 /**
@@ -38,10 +41,10 @@ type ConvexAuthConfigBase = {
  * `convexAuthCore` component, and the `convexAuthOrganizations` component.
  */
 export type ConvexAuthComponentHandle =
-  | NativeEmailAndPasswordComponentHandle
-  | FullComponentApi<"convexAuth">
-  | CoreComponentApi<"convexAuthCore">
-  | OrganizationsComponentApi<"convexAuthOrganizations">;
+  | (NativeEmailAndPasswordComponentHandle & { passkeys?: PasskeyComponentApi })
+  | (FullComponentApi<"convexAuth"> & { passkeys?: PasskeyComponentApi })
+  | (CoreComponentApi<"convexAuthCore"> & { passkeys?: PasskeyComponentApi })
+  | (OrganizationsComponentApi<"convexAuthOrganizations"> & { passkeys?: PasskeyComponentApi });
 
 export type ConvexAuthConfig =
   | (ConvexAuthConfigBase & {
@@ -61,7 +64,8 @@ type ConfigActions<TConfig extends ConvexAuthConfig> = NativeEmailAndPasswordAct
   (TConfig extends { emailOtp: NativeEmailOtpConfig } ? NativeEmailOtpActions : {}) &
   (TConfig extends { oauth: NativeOAuthConfig }
     ? { signInWithRedirect: NativeOAuthActions["signIn"]; callback: NativeOAuthActions["callback"] }
-    : {}) & {
+    : {}) &
+  (TConfig extends { passkey: NativePasskeyConfig } ? NativePasskeyActions : {}) & {
     addHttpRoutes(http: HttpRouter): void;
   };
 
@@ -86,6 +90,11 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
 
   const oauthActions = config.oauth ? nativeOAuth(component, config.oauth) : undefined;
 
+  const passkeyActions =
+    config.passkey && component.passkeys
+      ? nativePasskey(component.passkeys, config.passkey)
+      : undefined;
+
   const auth = {
     ...emailAndPasswordActions,
     ...magicLinkActions,
@@ -94,6 +103,7 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
     ...(oauthActions
       ? { signInWithRedirect: oauthActions.signIn, callback: oauthActions.callback }
       : {}),
+    ...passkeyActions,
     addHttpRoutes(http: HttpRouter) {
       const emailConfig = config.emailAndPassword ?? {};
       const trustedOrigins = [
