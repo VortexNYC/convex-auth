@@ -132,6 +132,16 @@ export function usePasskeys(args: UsePasskeysArgs) {
           origin,
           name,
         });
+        // Refresh registration options so another passkey can be registered.
+        setRegistrationOptions(
+          await generateRegistrationOptions({
+            userId,
+            identifier,
+            displayName: identifier,
+            rpName,
+            rpID,
+          }),
+        );
       } catch (err) {
         const message = err instanceof Error ? err.message : "Registration failed";
         setError(message);
@@ -140,7 +150,16 @@ export function usePasskeys(args: UsePasskeysArgs) {
         setLoading(false);
       }
     },
-    [registrationOptions, verifyRegistration, userId, identifier, rpID, origin],
+    [
+      registrationOptions,
+      verifyRegistration,
+      userId,
+      identifier,
+      rpID,
+      origin,
+      rpName,
+      generateRegistrationOptions,
+    ],
   );
 
   const signIn = React.useCallback(
@@ -152,12 +171,16 @@ export function usePasskeys(args: UsePasskeysArgs) {
       setError(null);
       try {
         const response = await startAuthentication({ optionsJSON: authenticationOptions });
-        return await verifyAuthentication({
+        const result = await verifyAuthentication({
           challenge: authenticationOptions.challenge as string,
           response,
           rpID,
           origin,
         });
+        ctx.setToken(result.token);
+        ctx.setRefreshToken(result.refreshToken);
+        ctx.setSessionId(result.sessionId);
+        return result;
       } catch (err) {
         const message = err instanceof Error ? err.message : "Authentication failed";
         setError(message);
@@ -166,7 +189,7 @@ export function usePasskeys(args: UsePasskeysArgs) {
         setLoading(false);
       }
     },
-    [authenticationOptions, verifyAuthentication, rpID, origin],
+    [authenticationOptions, verifyAuthentication, rpID, origin, ctx],
   );
 
   const revoke = React.useCallback(

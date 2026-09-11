@@ -242,6 +242,7 @@ const authenticationResponseValidator = v.object({
   }),
   clientExtensionResults: v.optional(v.record(v.string(), v.any())),
   type: v.optional(v.string()),
+  authenticatorAttachment: v.optional(v.string()),
 });
 
 export const generatePasskeyAuthenticationOptions = mutation({
