@@ -1,0 +1,43 @@
+---
+title: Consumer contract
+description: Public entrypoints and rules for using convex-auth in your own Convex project.
+---
+
+# Consumer contract
+
+`convex-auth` exposes a set of supported package entrypoints and Convex component mounts. The consumer contract guardrail enforces these boundaries so that upgrades stay safe and internal tables are not accidentally mirrored.
+
+## Supported package entrypoints
+
+Import from these subpaths only:
+
+- `@vortex-api/convex-auth` — top-level server and client types
+- `@vortex-api/convex-auth/convex` — Convex runtime helpers and `convexAuth`
+- `@vortex-api/convex-auth/react` — React hooks and providers
+- `@vortex-api/convex-auth/react-native` — Expo / React Native clients
+- `@vortex-api/convex-auth/ui` — optional UI components
+- `@vortex-api/convex-auth/testing` — test helpers
+
+Other deep imports are not covered by the public API guarantee and may break between minor versions.
+
+## Convex component mounts
+
+Use the component configs exported under `@vortex-api/convex-auth/convex.config` and its subpaths. See [Feature-gated components](./feature-gated-components) for the full matrix.
+
+## What you must not mirror
+
+Do not recreate these tables in your own `convex/schema.ts`:
+
+- `organization_members`, `organization_roles`, `organization_invitations`
+- `api_keys`, `agent_*` tables
+- `auth_md_registrations`, `auth_md_assertions`, `auth_md_credentials`
+
+These tables are owned by the `convex-auth` component. Consumers keep only an anchor table (e.g., `organizations` or `users`) with bridge columns like `convexAuthOrganizationId`.
+
+## CI guardrail
+
+Run the bundled consumer-contract checker against your `convex/` directory to catch accidental mirrors and forbidden table redefinitions:
+
+```bash
+pnpm dlx @vortex-api/convex-auth check-consumer-contract convex/
+```

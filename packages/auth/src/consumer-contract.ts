@@ -168,7 +168,7 @@ const INTERNAL_FUNCTION_KINDS: ReadonlySet<string> = new Set([
   "internalAction",
 ]);
 
-const CONTRACT_DOC = "docs/architecture/consumer-contract.md";
+const CONTRACT_DOC = "docs/(reference)/consumer-contract.mdx";
 
 function isExcluded(relPath: string): boolean {
   // Skip generated code, tests, and node_modules.

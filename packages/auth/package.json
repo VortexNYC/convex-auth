@@ -14,7 +14,6 @@
   },
   "files": [
     "dist",
-    "test.ts",
     "src/ui/styles.css",
     "src/convex-runtime/native/index.ts",
     "src/convex-runtime/native/http.ts",
@@ -112,10 +111,6 @@
       "import": "./dist/waitlist.js",
       "default": "./dist/waitlist.js"
     },
-    "./test": {
-      "types": "./test.ts",
-      "default": "./test.ts"
-    },
     "./convex/http": {
       "convex": "./src/convex-runtime/native/http.ts",
       "types": "./dist/convex.d.ts",
@@ -202,10 +197,14 @@
       "types": "./dist/component/mcpOauth/_generated/component.d.ts"
     }
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "vp pack --filter lib && vp pack --filter scripts && tsc -p tsconfig.component.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

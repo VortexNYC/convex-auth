@@ -19,7 +19,7 @@ export default defineConfig({
     root: "../docs",
   },
   deployment: {
-    site: "https://resilient-blackbird-58.convex.site",
+    site: "https://your-deployment.convex.site",
   },
   theme: {
     accent: {

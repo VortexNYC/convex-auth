@@ -227,10 +227,15 @@ function AnonymousSignIn({
 }
 
 function PasskeySignIn() {
+  const rpID = import.meta.env.VITE_PASSKEY_RP_ID ?? "localhost";
+  const origin =
+    (typeof window !== "undefined" ? window.location.origin : undefined) ??
+    import.meta.env.VITE_PASSKEY_ORIGIN ??
+    "http://localhost:5174";
   const { signIn, loading, error, supported } = usePasskeys({
     rpName: "Convex Auth Demo",
-    rpID: "localhost",
-    origin: "http://localhost:5174",
+    rpID,
+    origin,
   });
 
   if (!supported) {
