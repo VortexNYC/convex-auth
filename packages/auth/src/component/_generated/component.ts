@@ -2684,6 +2684,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           name?: string;
           origin: string;
           response: {
+            authenticatorAttachment?: string;
             clientExtensionResults?: Record<string, any>;
             id: string;
             rawId: string;

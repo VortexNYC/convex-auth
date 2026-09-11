@@ -120,7 +120,7 @@ export function SignedInView() {
 
 function PasskeysPanel({ userId, email }: { userId: string; email: string }) {
   const [name, setName] = useState("");
-  const { passkeys, register, signIn, revoke, loading, supported } = usePasskeys({
+  const { passkeys, register, signIn, revoke, loading, error, supported } = usePasskeys({
     userId,
     identifier: email,
     rpName: "Convex Auth Demo",
@@ -148,6 +148,7 @@ function PasskeysPanel({ userId, email }: { userId: string; email: string }) {
             Register
           </Button>
         </div>
+        {error ? <p className="text-destructive text-sm">{error}</p> : null}
         <Button
           variant="outline"
           onClick={() => void signIn()}
