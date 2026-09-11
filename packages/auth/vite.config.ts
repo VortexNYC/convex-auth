@@ -47,7 +47,7 @@ export default defineConfig({
       dts: true,
       clean: true,
       fixedExtension: false,
-      hash: false,
+      hash: true,
       outDir: "dist",
       deps: {
         alwaysBundle: [/^convex-auth-(core|react|react-native|ui)$/],
