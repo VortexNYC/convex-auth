@@ -1,11 +1,18 @@
 ---
 title: API keys
-description: Create, list, and verify machine-scoped API keys with convex-auth.
+description: Create, list, rotate, and revoke machine-scoped API keys with convex-auth.
 sidebar:
   order: 10
 ---
 
-`convex-auth` has a native `authApiKeys` table and a set of helpers for creating, hashing, verifying, and rotating API keys. The `convex-auth/react` package gives you controlled forms and lists; the `convex-auth` package gives you the low-level `machine` helpers.
+`convex-auth` has a native `api_keys` table and a set of helpers for creating, hashing, verifying, and rotating API keys. The `convex-auth/react` package ships `useConvexApiKeys`, `ConvexApiKeyCreated`, and the lower-level `ConvexApiKeyCreateForm` and `ConvexApiKeyList` components.
+
+## How it works
+
+- API keys are scoped to a user and an active organization.
+- The full token is returned once on creation or rotation. Only a hash and prefix are stored.
+- Keys carry scopes, an optional expiration, and optional IP allowlist ranges.
+- The `useConvexApiKeys` hook wires a consumer Convex API to the presentational components.
 
 ## Mount the API keys component
 
@@ -41,96 +48,60 @@ app.use(authApiKeys, {
 export default app;
 ```
 
-## React components
+## Consumer functions
 
-<CardGroup cols={2}>
-  <Card title="ConvexApiKeyCreateForm" icon="key" href="/docs/api-keys">
-    Controlled form for name, scopes, expiration, and IP allowlist.
-  </Card>
-  <Card title="ConvexApiKeyList" icon="list" href="/docs/api-keys">
-    Lists, rotates, and revokes API keys.
-  </Card>
-</CardGroup>
+Add queries and mutations in your own `convex/` directory that call the component and map to public client shapes. The example app uses:
 
-## Create an API key
+- `api.apiKeys.listMyApiKeys` — list active keys for the active organization.
+- `api.apiKeys.createApiKey` — issue a new key and return the one-time token.
+- `api.apiKeys.revokeApiKey` — revoke a key.
+- `api.apiKeys.rotateApiKey` — issue a replacement and revoke the old key.
+
+## React hooks and components
+
+### `useConvexApiKeys`
 
 ```tsx src/ApiKeys.tsx
-import { useState } from "react";
-import { useMutation } from "convex/react";
-import { ConvexApiKeyCreateForm } from "@vortex-api/convex-auth/react";
+import { useConvexApiKeys, ConvexApiKeyCreated } from "@vortex-api/convex-auth/react";
 import { api } from "../convex/_generated/api";
 
-const SCOPES = ["read:users", "write:users"] as const;
+const SCOPES = ["read", "write", "delete"] as const;
 
-export function CreateApiKey() {
-  const create = useMutation(api.apiKeys.create);
-  const [creating, setCreating] = useState(false);
-  const [state, setState] = useState({
-    name: "",
-    scopes: [],
-    ipAllowlist: "",
-    expiresInDays: "30",
+export function ApiKeys() {
+  const { formProps, listProps, created, clearCreated } = useConvexApiKeys(api, {
+    scopeOptions: SCOPES,
   });
 
   return (
-    <ConvexApiKeyCreateForm
-      apiEnabled
-      scopeOptions={SCOPES}
-      state={state}
-      creating={creating}
-      onNameChange={(name) => setState((s) => ({ ...s, name }))}
-      onScopesChange={(scopes) => setState((s) => ({ ...s, scopes }))}
-      onIpAllowlistChange={(ipAllowlist) => setState((s) => ({ ...s, ipAllowlist }))}
-      onExpiresInDaysChange={(expiresInDays) => setState((s) => ({ ...s, expiresInDays }))}
-      onSubmit={async () => {
-        setCreating(true);
-        try {
-          await create({
-            name: state.name,
-            scopes: state.scopes,
-            allowedIpRanges: state.ipAllowlist
-              .split(/\n|,/)
-              .map((s) => s.trim())
-              .filter(Boolean),
-            expiresInDays: state.expiresInDays === "none" ? null : Number(state.expiresInDays),
-          });
-        } finally {
-          setCreating(false);
-        }
-      }}
-    />
+    <>
+      <ConvexApiKeyCreateForm {...formProps} />
+      {created && <ConvexApiKeyCreated apiKey={created.apiKey} onClose={clearCreated} />}
+      <ConvexApiKeyList {...listProps} />
+    </>
   );
 }
 ```
 
-## List and revoke
+The hook returns:
+
+- `formProps` — ready for `ConvexApiKeyCreateForm`.
+- `listProps` — ready for `ConvexApiKeyList`.
+- `created` — the one-time `{ apiKey, apiKeyId, keyPrefix, keyStart }` after a successful create or rotate.
+- `clearCreated` — a callback to dismiss the created token display.
+
+### `ConvexApiKeyCreated`
+
+Render this once, immediately after `create` or `rotate`, so the user can copy the plaintext token. The full token is not recoverable after this step.
 
 ```tsx
-import { useMutation, useQuery } from "convex/react";
-import { ConvexApiKeyList } from "@vortex-api/convex-auth/react";
-import { api } from "../convex/_generated/api";
+import { ConvexApiKeyCreated } from "@vortex-api/convex-auth/react";
 
-export function ApiKeySettings() {
-  const keys = useQuery(api.apiKeys.list) ?? [];
-  const revoke = useMutation(api.apiKeys.revoke);
-  const rotate = useMutation(api.apiKeys.rotate);
-
-  return (
-    <ConvexApiKeyList
-      apiKeys={keys}
-      copy={{
-        emptyMessage: "No API keys yet.",
-      }}
-      onRevoke={async (id) => revoke({ id })}
-      onRotate={async (id) => rotate({ id })}
-    />
-  );
-}
+<ConvexApiKeyCreated apiKey={created.apiKey} onClose={() => setCreated(null)} />;
 ```
 
 ## Server-side helpers
 
-`convex-auth/convex` re-exports the `machine` helpers you need to build `apiKeys.create`, `apiKeys.list`, `apiKeys.revoke`, and `apiKeys.rotate` in your own Convex actions:
+`convex-auth/convex` re-exports the `machine` helpers you need to build `apiKeys` mutations and actions:
 
 - `normalizeConvexApiKeyCreateInput` — turn a user payload into a validated create shape.
 - `createConvexApiKeyCreateArgsValidator` — build the validator for your mutation.
@@ -138,10 +109,10 @@ export function ApiKeySettings() {
 - `requireActiveApiKeyRecord` — resolve an API key from a secret in a request.
 - `resolveApiKeyRecordStatus` — check active, expired, revoked, or disabled status.
 
-These run inside Convex actions because they need `crypto.subtle` and other non-deterministic work. The component's `authApiKeys` table stores only the hash, prefix, scopes, and metadata.
+These run inside Convex actions because they need `crypto.subtle` and other non-deterministic work. The component's `api_keys` table stores only the hash, prefix, scopes, and metadata.
 
 <Callout type="warning">
-  The detailed server-side API for API keys is still in `increment 3`. The React components above
-  are the stable, public surface. If you need a step-by-step action reference, open an issue and we
-  will expand this page.
+  Treat the plaintext `apiKey` returned from `createApiKey` and `rotateApiKey` as a secret. Show it
+  once, copy it to the user's clipboard, and do not persist it in logs, local storage, or URL
+  parameters.
 </Callout>

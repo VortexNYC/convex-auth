@@ -1,0 +1,116 @@
+---
+title: Service principals
+description: Create and manage machine identities and service-owned API keys with convex-auth.
+sidebar:
+  order: 11
+---
+
+`convex-auth` supports service principals: machine identities with their own permissions that can own API keys and act on your backend. The `convex-auth/react` package ships `useConvexServicePrincipals`, which wires a consumer Convex API to a create form and list.
+
+## How it works
+
+- Service principals live in the `service_principals` component table.
+- Each principal has a `key`, `name`, `description`, `status` (`active` or `disabled`), and `permissions`.
+- A principal is scoped to an organization.
+- You can associate service-owned API keys with a principal so the principal's permissions can be enforced at request time.
+
+## Mount the service principals component
+
+Mount the `servicePrincipals` component alongside the core and `apiKeys` components:
+
+```ts convex/convex.config.ts
+import { defineApp } from "convex/server";
+import { v } from "convex/values";
+import authCore from "@vortex-api/convex-auth/convex.config/core";
+import authServicePrincipals from "@vortex-api/convex-auth/convex.config/servicePrincipals";
+
+const app = defineApp({
+  env: {
+    JWT_PRIVATE_KEY: v.string(),
+    JWKS: v.string(),
+  },
+});
+
+app.use(authCore, {
+  env: {
+    JWT_PRIVATE_KEY: app.env.JWT_PRIVATE_KEY,
+    JWKS: app.env.JWKS,
+  },
+});
+
+app.use(authServicePrincipals, {
+  env: {
+    JWT_PRIVATE_KEY: app.env.JWT_PRIVATE_KEY,
+    JWKS: app.env.JWKS,
+  },
+});
+
+export default app;
+```
+
+## Consumer functions
+
+Add queries and mutations in your own `convex/` directory. The example app uses:
+
+- `api.servicePrincipals.listMyServicePrincipals` — list principals for the active organization.
+- `api.servicePrincipals.createServicePrincipal` — create a new principal.
+- `api.servicePrincipals.updateServicePrincipal` — update name, description, or permissions.
+- `api.servicePrincipals.setServicePrincipalStatus` — enable or disable a principal.
+
+## React hook
+
+### `useConvexServicePrincipals`
+
+```tsx src/ServicePrincipals.tsx
+import { useConvexServicePrincipals } from "@vortex-api/convex-auth/react";
+import { api } from "../convex/_generated/api";
+
+const PERMISSIONS = ["read", "write", "delete"] as const;
+
+export function ServicePrincipals() {
+  const {
+    servicePrincipals,
+    state,
+    creating,
+    onKeyChange,
+    onNameChange,
+    onDescriptionChange,
+    onPermissionsChange,
+    onSubmit,
+    onStatusChange,
+  } = useConvexServicePrincipals(api, { permissionOptions: PERMISSIONS });
+
+  return (
+    <>
+      <ServicePrincipalCreateForm
+        state={state}
+        creating={creating}
+        onKeyChange={onKeyChange}
+        onNameChange={onNameChange}
+        onDescriptionChange={onDescriptionChange}
+        onPermissionsChange={onPermissionsChange}
+        onSubmit={onSubmit}
+      />
+      <ServicePrincipalList servicePrincipals={servicePrincipals} onStatusChange={onStatusChange} />
+    </>
+  );
+}
+```
+
+The hook returns:
+
+- `servicePrincipals` — the list from `api.servicePrincipals.listMyServicePrincipals`.
+- `state` — the current create-form state.
+- `creating` — whether a create is in flight.
+- `onKeyChange`, `onNameChange`, `onDescriptionChange`, `onPermissionsChange` — form change handlers.
+- `onSubmit` — creates a principal from the form state.
+- `onStatusChange(servicePrincipalId, status)` — enables or disables a principal.
+
+## Service-owned API keys
+
+Once a service principal is created, you can issue API keys owned by that principal. The consumer `createApiKey` can set the principal as the owner by passing `servicePrincipalId` (or letting the component's `issueServiceOwnedApiKey` path handle it). A principal's `permissions` are checked when the service-owned key is used to authorize a request.
+
+<Callout type="warning">
+  Keep the service principal `key` stable and unique in your app. It is the public machine
+  identifier. Only the API key token is a secret, and it is shown once at creation.
+</Callout>

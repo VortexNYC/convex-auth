@@ -58,6 +58,15 @@ export type ConvexServicePrincipalCreateFormState<Permission extends string = st
   permissions: Permission[];
 };
 
+export function canSubmitConvexServicePrincipalCreateForm<
+  Permission extends string = string,
+>(state: { key: string; name: string; permissions: Permission[]; creating?: boolean }): boolean {
+  if (state.creating) return false;
+  if (!state.key.trim() || !state.name.trim()) return false;
+  if (state.permissions.length === 0) return false;
+  return true;
+}
+
 export type UseConvexServicePrincipalsOptions<Permission extends string = string> = {
   permissionOptions: readonly Permission[];
 };
@@ -109,7 +118,7 @@ export function useConvexServicePrincipals<
     setState((prev) => ({ ...prev, permissions: value }));
 
   const onSubmit = async () => {
-    if (!state.key || !state.name || state.permissions.length === 0) return;
+    if (!canSubmitConvexServicePrincipalCreateForm({ ...state, creating })) return;
     setCreating(true);
     try {
       await create({
