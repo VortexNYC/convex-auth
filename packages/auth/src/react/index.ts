@@ -52,5 +52,6 @@ export * from "./passkey-manager";
 export * from "./usePasskeys";
 export * from "./use-api-keys";
 export * from "./api-key-created";
+export * from "./use-service-principals";
 
 export const reactPackagePlaceholder = "convex-auth-react";
