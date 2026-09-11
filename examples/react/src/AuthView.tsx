@@ -23,11 +23,13 @@ import {
 
 type ViewMode = "signIn" | "signUp" | "forgot" | "reset" | "verifyTwoFactor";
 
+const oidcClientId = import.meta.env.VITE_OAUTH_OIDC_CLIENT_ID;
 const providers = [
   { id: "google", label: "Google" },
   { id: "github", label: "GitHub" },
   { id: "discord", label: "Discord" },
-] as const;
+  ...(oidcClientId ? [{ id: "oidc", label: "OIDC" }] : []),
+];
 
 export function AuthView() {
   const authClient = useConvexAuthClient();
