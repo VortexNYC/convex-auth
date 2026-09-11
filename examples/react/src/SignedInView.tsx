@@ -13,6 +13,7 @@ import {
   ConvexSessionList,
   ConvexUserProfile,
   ConvexVerifyEmailScreen,
+  ConvexWebhookSettingsSurface,
   useAuthActions,
   useConvexApiKeys,
   useConvexAuthAppearance,
@@ -100,6 +101,7 @@ export function SignedInView() {
             <TabsTrigger value="organizations">Workspaces</TabsTrigger>
             <TabsTrigger value="api-keys">API Keys</TabsTrigger>
             <TabsTrigger value="service-principals">Service Principals</TabsTrigger>
+            <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
@@ -148,6 +150,10 @@ export function SignedInView() {
 
           <TabsContent value="service-principals" className="space-y-4">
             <ServicePrincipalsPanel />
+          </TabsContent>
+
+          <TabsContent value="webhooks" className="space-y-4">
+            <WebhooksPanel />
           </TabsContent>
         </Tabs>
       </div>
@@ -484,6 +490,22 @@ function ServicePrincipalsPanel() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function WebhooksPanel() {
+  const activeOrg = useQuery(api.organizations.getActiveOrganization);
+  const organizationId = activeOrg?._id;
+  const createRequestId = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
+
+  return (
+    <ConvexWebhookSettingsSurface
+      refs={api.webhooks}
+      enabled={!!organizationId}
+      organizationId={organizationId}
+      eventOptions={["user.created", "user.updated", "payment.received"]}
+      createRequestId={createRequestId}
+    />
   );
 }
 
