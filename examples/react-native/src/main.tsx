@@ -1,11 +1,15 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexReactClient, ConvexProvider } from "convex/react";
-import { ExpoConvexAuthClientProvider } from "@vortex-api/convex-auth/react-native";
-import { api } from "../convex/_generated/api";
+import {
+  ExpoConvexAuthClientProvider,
+  type NativeAuthActions,
+} from "@vortex-api/convex-auth/react-native";
+import { auth } from "../convex/auth";
 import App from "./App";
 
-const convexUrl = import.meta.env.EXPO_PUBLIC_CONVEX_URL;
+const env = import.meta as unknown as { env: Record<string, string | undefined> };
+const convexUrl = env.env.EXPO_PUBLIC_CONVEX_URL;
 if (typeof convexUrl !== "string" || convexUrl.length === 0) {
   throw new Error("EXPO_PUBLIC_CONVEX_URL is not set");
 }
@@ -30,7 +34,10 @@ const storage = {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ConvexProvider client={convex}>
-      <ExpoConvexAuthClientProvider actions={api.auth} storage={storage}>
+      <ExpoConvexAuthClientProvider
+        actions={auth as unknown as NativeAuthActions}
+        storage={storage}
+      >
         <App />
       </ExpoConvexAuthClientProvider>
     </ConvexProvider>

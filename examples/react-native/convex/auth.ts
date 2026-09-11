@@ -35,6 +35,10 @@ export const auth = convexAuth({
       sendOnSignIn: false,
     },
   },
+  anonymous: {
+    emailDomain: "guest.convex-auth-demo.local",
+    generateName: () => `Guest ${Math.random().toString(36).slice(2, 10)}`,
+  },
   oauth: {
     github: {
       clientId: process.env.GITHUB_CLIENT_ID ?? "",
@@ -74,4 +78,6 @@ export const {
   verifySession,
   signInWithRedirect,
   callback,
+  signInAnonymous,
+  linkAnonymousAccount,
 } = auth;

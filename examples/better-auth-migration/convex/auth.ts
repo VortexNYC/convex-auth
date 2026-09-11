@@ -6,4 +6,4 @@ export const auth = convexAuth({
   emailAndPassword: { enabled: true },
 });
 
-export const { signUp, signIn, signOut, signInAnonymous, linkAnonymousAccount } = auth;
+export const { signUp, signIn, signOut } = auth;

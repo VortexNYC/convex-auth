@@ -411,7 +411,7 @@ export function nativeEmailAndPassword(
       }
 
       if (shouldSendVerificationEmail && verificationToken) {
-        await sendVerificationEmail(ctx, {
+        await sendVerificationEmail({
           user: result.user,
           token: verificationToken,
           type: "email_verification",
@@ -584,23 +584,20 @@ export function nativeEmailAndPassword(
     },
   });
 
-  async function sendVerificationEmail(
-    ctx: GenericActionCtx<DataModel>,
-    args: {
-      user: { _id: string; email?: string };
-      token: string;
-      type: VerificationCodeType;
-      urlBuilder: (token: string) => string | null;
-      draftBuilder: (params: {
-        from: string;
-        to: string;
-        url: string | null;
-        expiresAt: number;
-      }) => Promise<EmailDraft | { status: "not_configured"; reason: string }>;
+  async function sendVerificationEmail(args: {
+    user: { _id: string; email?: string };
+    token: string;
+    type: VerificationCodeType;
+    urlBuilder: (token: string) => string | null;
+    draftBuilder: (params: {
+      from: string;
+      to: string;
+      url: string | null;
       expiresAt: number;
-      fallbackEmail?: string;
-    },
-  ): Promise<EmailSendResult> {
+    }) => Promise<EmailDraft | { status: "not_configured"; reason: string }>;
+    expiresAt: number;
+    fallbackEmail?: string;
+  }): Promise<EmailSendResult> {
     const emailConfig = resolveEmailConfig(config);
 
     if (!emailConfig.from || !emailConfig.sendEmail) {
@@ -675,7 +672,7 @@ export function nativeEmailAndPassword(
       expiresAt,
     });
 
-    return sendVerificationEmail(ctx, {
+    return sendVerificationEmail({
       user,
       token,
       type: args.type,
@@ -1015,7 +1012,6 @@ export function nativeEmailAndPassword(
   }
 
   async function verifyTwoFactorCode(
-    ctx: GenericActionCtx<DataModel>,
     user: NativeUserDoc,
     code: string,
     method: "totp" | "backup_code",
@@ -1108,7 +1104,7 @@ export function nativeEmailAndPassword(
     handler: async (ctx, args) => {
       const resolved = await resolveTwoFactorChallengeToken(ctx, args.token);
       if (resolved) {
-        const valid = await verifyTwoFactorCode(ctx, resolved.user, args.code, "totp");
+        const valid = await verifyTwoFactorCode(resolved.user, args.code, "totp");
         if (!valid) throw new Error("Invalid two factor code");
         return await finishTwoFactorVerify(
           ctx,
