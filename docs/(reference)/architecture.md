@@ -36,12 +36,12 @@ Convex functions run in short-lived V8 isolates, not long-lived Node processes. 
 
 The package ships the full `convexAuth` component for backward compatibility and a set of smaller, feature-gated components for new projects:
 
-- `convex-auth/convex.config/core` — users, identities, sessions, accounts, verifiers, rate limits.
-- `convex-auth/convex.config/organizations` — core + organizations, roles, members, invitations.
-- `convex-auth/convex.config/apiKeys` — users, organizations, service principals, API keys, audit events.
-- `convex-auth/convex.config/webhooks` — webhook endpoints and deliveries.
-- `convex-auth/convex.config/agentAuth` — agent auth tables.
-- `convex-auth/convex.config/mcpOauth` — MCP OAuth clients and tokens.
+- `@vortex-api/convex-auth/convex.config/core` — users, identities, sessions, accounts, verifiers, rate limits.
+- `@vortex-api/convex-auth/convex.config/organizations` — core + organizations, roles, members, invitations.
+- `@vortex-api/convex-auth/convex.config/apiKeys` — users, organizations, service principals, API keys, audit events.
+- `@vortex-api/convex-auth/convex.config/webhooks` — webhook endpoints and deliveries.
+- `@vortex-api/convex-auth/convex.config/agentAuth` — agent auth tables.
+- `@vortex-api/convex-auth/convex.config/mcpOauth` — MCP OAuth clients and tokens.
 
 Each add-on includes its prerequisite tables. A consumer mounts only what they use.
 

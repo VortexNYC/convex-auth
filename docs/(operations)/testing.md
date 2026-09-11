@@ -1,6 +1,6 @@
 # Testing
 
-`convex-auth/testing` provides helpers for driving the native auth flow in Convex unit tests.
+`@vortex-api/convex-auth/testing` provides helpers for driving the native auth flow in Convex unit tests.
 
 ## Install
 
@@ -10,7 +10,7 @@ pnpm add -D convex-auth
 
 ## Exports
 
-The `convex-auth/testing` entry exposes test fixtures and factory functions. These are designed to be used from Convex's `convex-test` harness or from a Node test runner that sets up a `ConvexHttpClient`.
+The `@vortex-api/convex-auth/testing` entry exposes test fixtures and factory functions. These are designed to be used from Convex's `convex-test` harness or from a Node test runner that sets up a `ConvexHttpClient`.
 
 ## Example: email/password sign-up in a test
 

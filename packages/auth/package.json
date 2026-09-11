@@ -204,6 +204,7 @@
     "typecheck": "tsc --noEmit",
     "build": "vp pack --filter lib && vp pack --filter scripts && tsc -p tsconfig.component.json",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
@@ -228,6 +229,7 @@
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@vitest/coverage-v8": "4.1.10",
     "convex": "^1.45.0",
     "convex-test": "0.0.56",
     "typescript": "^5.7.0",

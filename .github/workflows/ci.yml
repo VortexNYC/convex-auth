@@ -49,6 +49,12 @@ jobs:
       - name: Run tests
         run: pnpm run test
 
+      - name: Run test coverage
+        run: pnpm run test:coverage
+
+      - name: Docs smoke check
+        run: pnpm run docs:smoke
+
       # Note: the bridge-consumer bundle-size test was removed when the
       # better-auth bridge packages were deleted. Add a new conformance or
       # bundle-size check here if you want one for the public package.

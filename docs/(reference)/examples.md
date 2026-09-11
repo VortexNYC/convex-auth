@@ -19,7 +19,7 @@ pnpm install
 pnpm run dev
 ```
 
-The app uses `ConvexAuthClientProvider` and `useAuthActions` from `convex-auth/react`:
+The app uses `ConvexAuthClientProvider` and `useAuthActions` from `@vortex-api/convex-auth/react`:
 
 ```tsx
 import { ConvexReactClient, ConvexProvider } from "convex/react";
@@ -62,7 +62,7 @@ app.post("/auth/sign-in", async (c) => {
 
 ## React Native / Expo
 
-`examples/react-native` is a minimal Expo app using `convex-auth/react-native`. See [React Native](./react-native) for setup details.
+`examples/react-native` is a minimal Expo app using `@vortex-api/convex-auth/react-native`. See [React Native](./react-native) for setup details.
 
 ## OAuth
 

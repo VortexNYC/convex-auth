@@ -4,17 +4,17 @@ The `convex-auth` package ships the auth tables as independently mountable Conve
 
 ## Available components
 
-| Subpath                                       | Component                     | Tables                                                                                                                |
-| --------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `convex-auth/convex.config`                   | `convexAuth` (full)           | All auth tables. Backward-compatible with the original single-component setup.                                        |
-| `convex-auth/convex.config/core`              | `convexAuthCore`              | Users, identities, sessions, refresh tokens, verification codes, verifiers, rate limits, magic-link tokens, accounts. |
-| `convex-auth/convex.config/organizations`     | `convexAuthOrganizations`     | Core tables + organizations, roles, members, invitations.                                                             |
-| `convex-auth/convex.config/servicePrincipals` | `convexAuthServicePrincipals` | Users, organizations, service principals.                                                                             |
-| `convex-auth/convex.config/apiKeys`           | `convexAuthApiKeys`           | Users, organizations, service principals, API keys, auth audit events.                                                |
-| `convex-auth/convex.config/agentAuth`         | `convexAuthAgentAuth`         | Users, organizations, agent auth tables.                                                                              |
-| `convex-auth/convex.config/authMd`            | `convexAuthAuthMd`            | Users, organizations, auth metadata tables.                                                                           |
-| `convex-auth/convex.config/webhooks`          | `convexAuthWebhooks`          | Users, organizations, webhook endpoints and deliveries.                                                               |
-| `convex-auth/convex.config/mcpOauth`          | `convexAuthMcpOauth`          | MCP OAuth clients, codes, signing keys, refresh tokens, revoked families.                                             |
+| Subpath                                                   | Component                     | Tables                                                                                                                |
+| --------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `@vortex-api/convex-auth/convex.config`                   | `convexAuth` (full)           | All auth tables. Backward-compatible with the original single-component setup.                                        |
+| `@vortex-api/convex-auth/convex.config/core`              | `convexAuthCore`              | Users, identities, sessions, refresh tokens, verification codes, verifiers, rate limits, magic-link tokens, accounts. |
+| `@vortex-api/convex-auth/convex.config/organizations`     | `convexAuthOrganizations`     | Core tables + organizations, roles, members, invitations.                                                             |
+| `@vortex-api/convex-auth/convex.config/servicePrincipals` | `convexAuthServicePrincipals` | Users, organizations, service principals.                                                                             |
+| `@vortex-api/convex-auth/convex.config/apiKeys`           | `convexAuthApiKeys`           | Users, organizations, service principals, API keys, auth audit events.                                                |
+| `@vortex-api/convex-auth/convex.config/agentAuth`         | `convexAuthAgentAuth`         | Users, organizations, agent auth tables.                                                                              |
+| `@vortex-api/convex-auth/convex.config/authMd`            | `convexAuthAuthMd`            | Users, organizations, auth metadata tables.                                                                           |
+| `@vortex-api/convex-auth/convex.config/webhooks`          | `convexAuthWebhooks`          | Users, organizations, webhook endpoints and deliveries.                                                               |
+| `@vortex-api/convex-auth/convex.config/mcpOauth`          | `convexAuthMcpOauth`          | MCP OAuth clients, codes, signing keys, refresh tokens, revoked families.                                             |
 
 Every add-on component includes its own prerequisite tables and is self-contained. You can `app.use()` each one independently.
 

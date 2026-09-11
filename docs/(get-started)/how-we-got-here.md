@@ -24,14 +24,14 @@ Hosted auth platforms own your users, sessions, and organization data. That crea
 
 `convex-auth` ships as a single public package with subpaths for the runtime, React client, React Native client, MCP helpers, preflight checks, and test utilities:
 
-| Subpath                    | What it is today                          |
-| -------------------------- | ----------------------------------------- |
-| `convex-auth`              | Convex-native auth runtime and component. |
-| `convex-auth/react`        | React UI and hooks.                       |
-| `convex-auth/react-native` | Expo / React Native client.               |
-| `convex-auth/mcp`          | MCP OAuth helpers.                        |
-| `convex-auth/preflight`    | Deployment readiness checks.              |
-| `convex-auth/testing`      | Test helpers.                             |
+| Subpath                                | What it is today                          |
+| -------------------------------------- | ----------------------------------------- |
+| `convex-auth`                          | Convex-native auth runtime and component. |
+| `@vortex-api/convex-auth/react`        | React UI and hooks.                       |
+| `@vortex-api/convex-auth/react-native` | Expo / React Native client.               |
+| `@vortex-api/convex-auth/mcp`          | MCP OAuth helpers.                        |
+| `@vortex-api/convex-auth/preflight`    | Deployment readiness checks.              |
+| `@vortex-api/convex-auth/testing`      | Test helpers.                             |
 
 For new projects there is no external auth runtime dependency. A one-time migration bridge exists only for consumers moving from another auth setup.
 

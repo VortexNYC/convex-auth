@@ -5,7 +5,7 @@ sidebar:
   order: 10
 ---
 
-`convex-auth` has a native `api_keys` table and a set of helpers for creating, hashing, verifying, and rotating API keys. The `convex-auth/react` package ships `useConvexApiKeys`, `ConvexApiKeyCreated`, and the lower-level `ConvexApiKeyCreateForm` and `ConvexApiKeyList` components.
+`convex-auth` has a native `api_keys` table and a set of helpers for creating, hashing, verifying, and rotating API keys. The `@vortex-api/convex-auth/react` package ships `useConvexApiKeys`, `ConvexApiKeyCreated`, and the lower-level `ConvexApiKeyCreateForm` and `ConvexApiKeyList` components.
 
 ## How it works
 
@@ -101,7 +101,7 @@ import { ConvexApiKeyCreated } from "@vortex-api/convex-auth/react";
 
 ## Server-side helpers
 
-`convex-auth/convex` re-exports the `machine` helpers you need to build `apiKeys` mutations and actions:
+`@vortex-api/convex-auth/convex` re-exports the `machine` helpers you need to build `apiKeys` mutations and actions:
 
 - `normalizeConvexApiKeyCreateInput` — turn a user payload into a validated create shape.
 - `createConvexApiKeyCreateArgsValidator` — build the validator for your mutation.
