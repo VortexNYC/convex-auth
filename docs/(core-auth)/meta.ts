@@ -13,5 +13,6 @@ export default defineMeta({
     "magic-links",
     "email-otp",
     "passkeys",
+    "anonymous",
   ],
 });

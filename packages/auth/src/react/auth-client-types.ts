@@ -49,7 +49,14 @@ export type ConvexBetterAuthClient = {
       rememberMe?: boolean;
     }): Promise<BetterAuthResponse>;
     social(args: { provider: string; callbackURL?: string }): Promise<BetterAuthResponse>;
+    anonymous(args?: { rememberMe?: boolean }): Promise<BetterAuthResponse>;
   };
+  linkAccount?: (args: {
+    email: string;
+    password: string;
+    name?: string;
+    image?: string;
+  }) => Promise<BetterAuthResponse>;
   signInWithMagicLink?: (args: {
     email: string;
     name?: string;

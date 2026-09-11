@@ -178,11 +178,51 @@ export function AuthView() {
                 </div>
               }
             />
+            <AnonymousSignIn setStatus={setStatus} setIsSubmitting={setIsSubmitting} />
             <PasskeySignIn />
           </>
         )}
       </div>
     </ConvexAuthSurface>
+  );
+}
+
+function AnonymousSignIn({
+  setStatus,
+  setIsSubmitting,
+}: {
+  setStatus: (value: string | null) => void;
+  setIsSubmitting: (value: boolean) => void;
+}) {
+  const authClient = useConvexAuthClient();
+
+  const handleClick = async () => {
+    setIsSubmitting(true);
+    setStatus(null);
+    try {
+      const result = await authClient.signIn.anonymous();
+      if (result.error) {
+        setStatus(result.error.message ?? "Guest sign-in failed");
+        return;
+      }
+      setStatus("Signed in as guest.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Guest</CardTitle>
+        <CardDescription>Try the demo without creating an account.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button variant="outline" onClick={() => void handleClick()} className="w-full">
+          Continue as guest
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

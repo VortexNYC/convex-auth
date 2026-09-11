@@ -16,6 +16,7 @@ import type * as identity from "../identity.js";
 import type * as mcp from "../mcp.js";
 import type * as migrate from "../migrate.js";
 import type * as native_accounts from "../native/accounts.js";
+import type * as native_anonymous from "../native/anonymous.js";
 import type * as native_audit from "../native/audit.js";
 import type * as native_codes from "../native/codes.js";
 import type * as native_identities from "../native/identities.js";
@@ -58,6 +59,7 @@ const fullApi: ApiFromModules<{
   mcp: typeof mcp;
   migrate: typeof migrate;
   "native/accounts": typeof native_accounts;
+  "native/anonymous": typeof native_anonymous;
   "native/audit": typeof native_audit;
   "native/codes": typeof native_codes;
   "native/identities": typeof native_identities;

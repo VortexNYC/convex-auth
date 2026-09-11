@@ -26,6 +26,7 @@ import type { ComponentApi as CoreComponentApi } from "../../component/core/_gen
 import type { ComponentApi as OrganizationsComponentApi } from "../../component/organizations/_generated/component.js";
 import { addOidcProviderHttpRoutes, type OidcProviderConfig } from "../oauth-provider/http.js";
 import type { NativeEmailAndPasswordComponentHandle } from "./types.js";
+import { nativeAnonymous, type NativeAnonymousConfig } from "./anonymous.js";
 
 type ConvexAuthConfigBase = {
   emailAndPassword?: NativeEmailAndPasswordConfig;
@@ -35,6 +36,7 @@ type ConvexAuthConfigBase = {
   magicLink?: NativeMagicLinkConfig;
   emailOtp?: NativeEmailOtpConfig;
   passkey?: NativePasskeyConfig;
+  anonymous?: NativeAnonymousConfig;
 };
 
 /**
@@ -67,7 +69,10 @@ type ConfigActions<TConfig extends ConvexAuthConfig> = NativeEmailAndPasswordAct
   (TConfig extends { oauth: NativeOAuthConfig }
     ? { signInWithRedirect: NativeOAuthActions["signIn"]; callback: NativeOAuthActions["callback"] }
     : {}) &
-  (TConfig extends { passkey: NativePasskeyConfig } ? NativePasskeyActions : {}) & {
+  (TConfig extends { passkey: NativePasskeyConfig } ? NativePasskeyActions : {}) &
+  (TConfig extends { anonymous: NativeAnonymousConfig }
+    ? ReturnType<typeof nativeAnonymous>
+    : {}) & {
     addHttpRoutes(http: HttpRouter): void;
   };
 
@@ -97,6 +102,13 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
       ? nativePasskey(component.passkeys, config.passkey)
       : undefined;
 
+  const anonymousActions = config.anonymous
+    ? nativeAnonymous(
+        component as unknown as Parameters<typeof nativeAnonymous>[0],
+        config.anonymous,
+      )
+    : undefined;
+
   const auth = {
     ...emailAndPasswordActions,
     ...magicLinkActions,
@@ -106,6 +118,7 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
       ? { signInWithRedirect: oauthActions.signIn, callback: oauthActions.callback }
       : {}),
     ...passkeyActions,
+    ...anonymousActions,
     addHttpRoutes(http: HttpRouter) {
       const emailConfig = config.emailAndPassword ?? {};
       const oauthProviderLoginOrigin = (() => {

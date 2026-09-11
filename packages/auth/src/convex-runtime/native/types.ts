@@ -25,6 +25,7 @@ export type NativeAuthUser = {
   activeOrganizationId?: string;
   isActive: boolean;
   isSuperAdmin?: boolean;
+  isAnonymous?: boolean;
   metadataJson?: string;
   createdAt: number;
   updatedAt: number;
@@ -60,6 +61,7 @@ export function toNativeAuthUser(user: NativeUserDoc): NativeAuthUser {
   if (user.activeOrganizationId !== undefined)
     nativeUser.activeOrganizationId = user.activeOrganizationId;
   if (user.isSuperAdmin !== undefined) nativeUser.isSuperAdmin = user.isSuperAdmin;
+  if (user.isAnonymous !== undefined) nativeUser.isAnonymous = user.isAnonymous;
   if (user.metadataJson !== undefined) nativeUser.metadataJson = user.metadataJson;
   return nativeUser;
 }
@@ -89,6 +91,7 @@ export const nativeAuthUserValidator = v.object({
   activeOrganizationId: v.optional(v.string()),
   isActive: v.boolean(),
   isSuperAdmin: v.optional(v.boolean()),
+  isAnonymous: v.optional(v.boolean()),
   metadataJson: v.optional(v.string()),
   createdAt: v.number(),
   updatedAt: v.number(),
@@ -159,6 +162,7 @@ export type NativeUserDoc = {
   activeOrganizationId?: string;
   isActive?: boolean;
   isSuperAdmin?: boolean;
+  isAnonymous?: boolean;
   metadataJson?: string;
   createdAt?: number;
   updatedAt?: number;

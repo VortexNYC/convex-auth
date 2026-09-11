@@ -85,6 +85,29 @@ export function useConvexAuthClient() {
           return { data: null, error: toError(err) };
         }
       },
+      anonymous: async (args = {}) => {
+        if (actions.signInAnonymous === undefined) {
+          return { data: null, error: toError("Anonymous sign-in is not configured") };
+        }
+        try {
+          const data = await actions.signInAnonymous(args);
+          return { data, error: null };
+        } catch (err) {
+          return { data: null, error: toError(err) };
+        }
+      },
+    },
+
+    linkAccount: async (args) => {
+      if (actions.linkAnonymousAccount === undefined) {
+        return { data: null, error: toError("Anonymous account linking is not configured") };
+      }
+      try {
+        const data = await actions.linkAnonymousAccount(args);
+        return { data, error: null };
+      } catch (err) {
+        return { data: null, error: toError(err) };
+      }
     },
 
     signInWithMagicLink: async (args) => {

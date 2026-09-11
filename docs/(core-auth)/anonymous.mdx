@@ -1,0 +1,61 @@
+---
+title: Anonymous
+description: Let users try your app without credentials, then link to a real account later.
+sidebar:
+  order: 7
+---
+
+`convex-auth` can create an authenticated guest session with no email, password, or OAuth provider. The user gets a real session and can be upgraded to a permanent account at any point.
+
+## Enable
+
+```ts
+// convex/auth.ts
+import { components } from "./_generated/api";
+import { convexAuth } from "@vortex-api/convex-auth/convex";
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+  anonymous: {
+    emailDomain: "guest.yourapp.com",
+    generateName: () => `Guest ${Math.random().toString(36).slice(2, 10)}`,
+    onLinkAccount: async ({ anonymousUser, newUser }, ctx) => {
+      // migrate domain data from the anonymous user to the linked user
+    },
+  },
+});
+```
+
+| Option          | Description                                                                         |
+| --------------- | ----------------------------------------------------------------------------------- |
+| `emailDomain`   | Synthetic email domain for the anonymous user. Defaults to `convex-auth.anonymous`. |
+| `generateName`  | Optional function returning a display name. Falls back to `Guest <shortId>`.        |
+| `onLinkAccount` | Optional callback for data migration during account linking.                        |
+
+## Sign in anonymously
+
+```tsx
+import { authClient } from "@vortex-api/convex-auth/react";
+
+const result = await authClient.signIn.anonymous();
+```
+
+The user is now signed in and `result.data.user.isAnonymous` is `true`.
+
+## Link to a permanent account
+
+```tsx
+const result = await authClient.linkAccount({
+  email: "shlomo@example.com",
+  password: "hunter2!",
+  name: "Shlomo",
+});
+```
+
+`linkAccount` requires an active anonymous session. It creates an email/password account for the same user, flips `isAnonymous` to `false`, mints a new session, and calls `onLinkAccount` if configured.
+
+## Security
+
+- Anonymous users are first-class users in the `users` table with `isAnonymous: true`.
+- Synthetic emails are random and unique to prevent collisions.
+- `linkAccount` rejects the request if the target email already belongs to another user.
