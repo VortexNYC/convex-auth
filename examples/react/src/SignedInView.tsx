@@ -1,10 +1,12 @@
 import { useState } from "react";
 import {
+  ConvexAuthSignOutButton,
   ConvexEnableTwoFactorForm,
   ConvexSessionList,
   ConvexUserProfile,
   ConvexVerifyEmailScreen,
   useAuthActions,
+  useConvexAuthAppearance,
   useConvexAuthClient,
   usePasskeys,
 } from "@vortex-api/convex-auth/react";
@@ -45,6 +47,10 @@ export function SignedInView() {
     await actions.signOut();
   };
 
+  const { theme, setTheme } = useConvexAuthAppearance();
+  const nextTheme = theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
+  const cycleTheme = () => setTheme(nextTheme);
+
   const profileUser = {
     id: user.id,
     email: user.email ?? "",
@@ -58,9 +64,12 @@ export function SignedInView() {
       <div className="mx-auto max-w-2xl space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">convex-auth example</h1>
-          <Button variant="outline" onClick={() => void handleSignOut()}>
-            Sign out
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => void cycleTheme()}>
+              Theme: {theme}
+            </Button>
+            <ConvexAuthSignOutButton signOut={() => void handleSignOut()} />
+          </div>
         </div>
 
         {message ? (
