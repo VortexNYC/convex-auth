@@ -457,7 +457,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
     let initialRefresh = props.initialRefreshToken ?? null;
     let initialSessionId = props.initialSessionId ?? null;
 
-    if (!initialToken && typeof window !== "undefined") {
+    if (!initialToken && typeof window !== "undefined" && window.location) {
       const searchParams = new URLSearchParams(window.location.search);
       // If the URL carries a reset flag, the token is a password-reset
       // token, not a session token. Leave it for the reset form to consume.
