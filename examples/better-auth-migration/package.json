@@ -1,0 +1,29 @@
+{
+  "name": "examples-better-auth-migration",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "convex dev --start 'vite'",
+    "build": "tsc && vite build",
+    "typecheck": "tsc --noEmit",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@convex-dev/better-auth": "^0.12.0",
+    "@vortex-api/convex-auth": "workspace:*",
+    "better-auth": "^1.7.2",
+    "convex": "^1.45.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react-swc": "^3.7.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}
