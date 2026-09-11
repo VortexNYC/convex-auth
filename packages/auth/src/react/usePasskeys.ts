@@ -13,8 +13,8 @@ import { ConvexAuthContext } from "./ConvexAuthProvider.js";
 import type { PasskeyListItem } from "./passkey-manager.js";
 
 export interface UsePasskeysArgs {
-  userId: string;
-  identifier: string;
+  userId?: string;
+  identifier?: string;
   rpName: string;
   rpID: string;
   origin: string;
@@ -75,14 +75,18 @@ export function usePasskeys(args: UsePasskeysArgs) {
     setError(null);
     void (async () => {
       try {
+        const regPromise =
+          userId && identifier
+            ? generateRegistrationOptions({
+                userId,
+                identifier,
+                displayName: identifier,
+                rpName,
+                rpID,
+              })
+            : Promise.resolve(null);
         const [regOpts, authOpts] = await Promise.all([
-          generateRegistrationOptions({
-            userId,
-            identifier,
-            displayName: identifier,
-            rpName,
-            rpID,
-          }),
+          regPromise,
           generateAuthenticationOptions({
             userId,
             rpID,
@@ -118,6 +122,9 @@ export function usePasskeys(args: UsePasskeysArgs) {
     async (name: string) => {
       if (!registrationOptions) {
         throw new Error("Passkey registration options are not ready");
+      }
+      if (!userId || !identifier) {
+        throw new Error("Passkey registration requires a user and identifier");
       }
       setLoading(true);
       setError(null);

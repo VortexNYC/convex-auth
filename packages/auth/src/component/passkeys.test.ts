@@ -132,4 +132,71 @@ describe("passkeys", () => {
       }),
     ).rejects.toThrow();
   });
+
+  it("rejects an invalid authentication verification", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    const options = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
+      userId,
+      rpID: RP_ID,
+    })) as { challenge: string };
+
+    await expect(
+      t.mutation(api.passkeys.verifyPasskeyAuthentication, {
+        challenge: options.challenge,
+        response: {
+          id: "fake-credential",
+          rawId: "fake-credential",
+          response: {
+            clientDataJSON: "fake",
+            authenticatorData: "fake",
+            signature: "fake",
+          },
+          type: "public-key",
+        },
+        rpID: RP_ID,
+        origin: ORIGIN,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("returns an empty list when no userId is provided", async () => {
+    const t = convexTest(schema, modules);
+    const list = await t.query(api.passkeys.listPasskeys, {});
+    expect(list).toHaveLength(0);
+  });
+
+  it("revokes an existing passkey", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    const credentialId = "credential-to-revoke";
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_passkeys", {
+        userId,
+        identityId: undefined,
+        credentialId,
+        publicKey: "fake-public-key",
+        counter: 0,
+        transports: [],
+        aaguid: "00000000-0000-0000-0000-000000000000",
+        deviceType: "singleDevice",
+        backedUp: false,
+        name: "Test key",
+        createdAt: 0,
+        lastUsedAt: 0,
+      }),
+    );
+
+    const listBefore = await t.query(api.passkeys.listPasskeys, { userId });
+    expect(listBefore).toHaveLength(1);
+    expect(listBefore[0]!.revoked).toBe(false);
+
+    const revoked = await t.mutation(api.passkeys.revokePasskey, { credentialId });
+    expect(revoked).toBe(true);
+
+    const listAfter = await t.query(api.passkeys.listPasskeys, { userId });
+    expect(listAfter[0]!.revoked).toBe(true);
+  });
 });

@@ -149,7 +149,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
   });
 
   const listPasskeys = query({
-    args: { userId: v.string() },
+    args: { userId: v.optional(v.string()) },
     returns: v.array(
       v.object({
         credentialId: v.string(),
@@ -159,9 +159,9 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
         revoked: v.boolean(),
       }),
     ),
-    handler: async (ctx: GenericQueryCtx<any>, args: { userId: string }) => {
+    handler: async (ctx: GenericQueryCtx<any>, args: { userId?: string }) => {
       return await ctx.runQuery(component.listPasskeys, {
-        userId: args.userId as unknown as GenericId<"users">,
+        userId: args.userId ? (args.userId as unknown as GenericId<"users">) : undefined,
       });
     },
   });

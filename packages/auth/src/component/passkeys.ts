@@ -184,7 +184,7 @@ export const verifyPasskeyRegistration = mutation({
 
 export const listPasskeys = query({
   args: {
-    userId: v.id("users"),
+    userId: v.optional(v.id("users")),
   },
   returns: v.array(
     v.object({
@@ -196,9 +196,13 @@ export const listPasskeys = query({
     }),
   ),
   handler: async (ctx, args) => {
+    if (!args.userId) {
+      return [];
+    }
+    const userId = args.userId;
     const passkeys = await ctx.db
       .query("auth_passkeys")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
       .take(100);
 
     return passkeys.map((pk) => ({

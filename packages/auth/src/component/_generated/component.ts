@@ -2628,7 +2628,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
       listPasskeys: FunctionReference<
         "query",
         "internal",
-        { userId: string },
+        { userId?: string },
         Array<{
           createdAt: number;
           credentialId: string;
