@@ -1,0 +1,134 @@
+---
+title: OIDC Provider
+description: Use convex-auth as an OAuth 2.1 / OpenID Connect provider.
+sidebar:
+  order: 10
+---
+
+`convex-auth` can act as a standards-compliant OAuth 2.1 / OpenID Connect provider. It exposes discovery, authorization, token, userinfo, and JWKS endpoints, and issues short-lived ES256-signed access tokens with refresh-token support.
+
+## Enable
+
+Add `oauthProvider` to the `convexAuth` configuration in `convex/auth.ts`:
+
+```ts convex/auth.ts
+import { components } from "./_generated/api";
+import { convexAuth } from "@vortex-api/convex-auth/convex";
+
+const siteUrl = process.env.CONVEX_SITE_URL ?? process.env.SITE_URL ?? "";
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+  oauthProvider: {
+    issuer: siteUrl,
+    loginUrl: `${siteUrl}/oauth/consent`,
+    clients: [
+      {
+        clientId: process.env.OAUTH_PROVIDER_CLIENT_ID!,
+        name: process.env.OAUTH_PROVIDER_CLIENT_NAME ?? "Demo OIDC Client",
+        redirectUris: (process.env.OAUTH_PROVIDER_REDIRECT_URIS ?? "")
+          .split(",")
+          .map((uri) => uri.trim())
+          .filter(Boolean),
+        allowedScopes: (process.env.OAUTH_PROVIDER_SCOPES ?? "openid,email,profile")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+      },
+    ],
+  },
+});
+```
+
+Make sure `http.ts` registers the auth HTTP routes:
+
+```ts convex/http.ts
+import { httpRouter } from "convex/server";
+import { auth } from "./auth";
+
+const http = httpRouter();
+auth.addHttpRoutes(http);
+
+export default http;
+```
+
+## Configuration
+
+The provider is configured through environment variables on your Convex deployment:
+
+| Variable                       | Purpose                                                                                |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| `OAUTH_PROVIDER_CLIENT_ID`     | Client ID of the only known client. Matches `client_id` in authorization requests.     |
+| `OAUTH_PROVIDER_CLIENT_NAME`   | Human-readable client name shown on the consent screen.                                |
+| `OAUTH_PROVIDER_REDIRECT_URIS` | Comma-separated allowed redirect URIs (e.g. `https://example.com/oauth/callback`).     |
+| `OAUTH_PROVIDER_SCOPES`        | Comma-separated scopes the client is allowed to request (e.g. `openid,email,profile`). |
+| `OAUTH_PROVIDER_LOGIN_URL`     | URL to redirect the user to for login/consent. Defaults to `${siteUrl}/oauth/consent`. |
+
+## HTTP endpoints
+
+`auth.addHttpRoutes(http)` wires the following routes:
+
+- `GET /.well-known/openid-configuration` — OIDC discovery metadata
+- `GET /oauth/jwks` — JWKS public keys (ES256)
+- `GET /oauth/authorize` — Authorization-code + PKCE authorization endpoint
+- `POST /oauth/token` — Token exchange and refresh-token grant
+- `GET /oauth/userinfo` — Userinfo endpoint (bearer access token)
+
+### Discovery
+
+The discovery document is served from `/.well-known/openid-configuration` at the configured `issuer` URL (usually your Convex site origin):
+
+```json
+{
+  "issuer": "https://your-deployment.convex.site",
+  "authorization_endpoint": "https://your-deployment.convex.site/oauth/authorize",
+  "token_endpoint": "https://your-deployment.convex.site/oauth/token",
+  "userinfo_endpoint": "https://your-deployment.convex.site/oauth/userinfo",
+  "jwks_uri": "https://your-deployment.convex.site/oauth/jwks",
+  "scopes_supported": ["openid", "email", "profile"],
+  "response_types_supported": ["code"],
+  "grant_types_supported": ["authorization_code", "refresh_token"],
+  "subject_types_supported": ["public"],
+  "id_token_signing_alg_values_supported": ["ES256"],
+  "token_endpoint_auth_methods_supported": ["none"],
+  "code_challenge_methods_supported": ["S256"]
+}
+```
+
+## Consent and callback UI
+
+The `/oauth/authorize` endpoint requires a signed-in Convex session. If `consent_approved=true` is not present, the provider redirects the user to `loginUrl` with a `redirect_to` query parameter pointing back to the original authorize request.
+
+A minimal consent page should:
+
+- Read `redirect_to` from the query string.
+- Display the client name and requested scopes.
+- On **Approve**, set the `convex-auth-token` cookie and redirect back to `redirect_to&consent_approved=true`.
+- On **Deny**, redirect to the client's `redirect_uri` with `error=access_denied` and the original `state`.
+
+`examples/react/src/ConsentView.tsx` and `examples/react/src/OAuthCallback.tsx` provide a working React reference implementation.
+
+## Tokens
+
+The provider mints the following tokens:
+
+- **Access tokens** — signed ES256 JWTs containing `sub`, `iss`, `aud`, `scope`, `azp`, and `email`/`profile` claims based on requested scopes. They are short-lived (15 minutes by default).
+- **Refresh tokens** — opaque, single-use tokens stored on the Convex backend. They are redeemed for a new access/refresh pair.
+- **ID tokens** — not currently issued.
+
+Signing keys are stored in Convex and can be rotated via `packages/auth/src/convex-runtime/mcp/signingRuntime.ts`.
+
+## Security
+
+The implementation supports the OAuth 2.1 authorization-code flow with the following invariants:
+
+- **PKCE S256** is required. Requests with a missing verifier, mismatched verifier, or an invalid `code_challenge` are rejected.
+- **Authorization codes** are single-use. Replaying a code returns `invalid_grant`.
+- **Redirect URI** must exactly match one of the configured `redirectUris`.
+- **Scope validation** rejects unsupported scopes with `invalid_scope`.
+- **Client validation** rejects unknown `client_id`.
+- **CORS** is handled on token, userinfo, and discovery endpoints. The allowed origins are controlled by the Convex HTTP CORS layer.
+
+## Testing
+
+`packages/auth/src/convex-runtime/oauth-provider/http.test.ts` covers the discovery, authorization, token, refresh, userinfo, JWKS, and negative-case flows. The `examples/react/oidc-provider-test` route provides a browser-based end-to-end test for the deployed provider.
