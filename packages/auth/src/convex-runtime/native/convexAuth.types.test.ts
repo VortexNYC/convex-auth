@@ -37,6 +37,20 @@ describe("convexAuth component handle types", () => {
     convexAuth({ components: { core: coreComponent } });
     convexAuth({ components: { core: organizationsComponent } });
 
+    const testOauthProvider = {
+      clients: [
+        {
+          clientId: "test-client",
+          name: "Test Client",
+          redirectUris: ["https://example.com/callback"],
+          allowedScopes: ["openid", "email"],
+        },
+      ],
+    };
+
+    // oauthProvider requires the full component (mcp namespace) at runtime.
+    convexAuth({ component: fullComponent, oauthProvider: testOauthProvider });
+
     const agentAuthComponent = {} as unknown as AgentAuthComponentApi<"convexAuthAgentAuth">;
     const apiKeysComponent = {} as unknown as ApiKeysComponentApi<"convexAuthApiKeys">;
     const authMdComponent = {} as unknown as AuthMdComponentApi<"convexAuthAuthMd">;

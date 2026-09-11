@@ -83,6 +83,26 @@ export const auth = convexAuth({
     origin: "http://localhost:5174",
     rpName: "Convex Auth Demo",
   },
+  oauthProvider: process.env.OAUTH_PROVIDER_CLIENT_ID
+    ? {
+        issuer: siteUrl,
+        loginUrl: process.env.OAUTH_PROVIDER_LOGIN_URL ?? `${siteUrl}/oauth/consent`,
+        clients: [
+          {
+            clientId: process.env.OAUTH_PROVIDER_CLIENT_ID,
+            name: process.env.OAUTH_PROVIDER_CLIENT_NAME ?? "Demo OIDC Client",
+            redirectUris: (process.env.OAUTH_PROVIDER_REDIRECT_URIS ?? "")
+              .split(",")
+              .map((uri) => uri.trim())
+              .filter(Boolean),
+            allowedScopes: (process.env.OAUTH_PROVIDER_SCOPES ?? "openid,email,profile")
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
+          },
+        ],
+      }
+    : undefined,
 });
 
 export const {

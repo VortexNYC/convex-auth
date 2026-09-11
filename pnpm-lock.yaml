@@ -90,6 +90,9 @@ importers:
 
   examples/react:
     dependencies:
+      '@convex-dev/static-hosting':
+        specifier: ^0.2.1
+        version: 0.2.1(convex@1.45.0(react@19.2.8))(react@19.2.8)
       '@vortex-api/convex-auth':
         specifier: workspace:*
         version: link:../../packages/auth

@@ -1,4 +1,4 @@
-import { getSessionCookie } from "../helpers/cookies.js";
+import { getCookie, getSessionCookie } from "../helpers/cookies.js";
 
 import { validateMcpOAuthDynamicClientRegistrationInput } from "./clientRegistration";
 import {
@@ -406,12 +406,24 @@ export function createMcpOAuthAccessRuntime(
 export function getMcpOAuthSessionTokenFromRequest(request: Request): string | null {
   const signedCookie = getSessionCookie(request.headers);
 
-  if (!signedCookie) {
-    return null;
+  if (signedCookie) {
+    const separatorIndex = signedCookie.indexOf(".");
+    return separatorIndex === -1 ? signedCookie : signedCookie.slice(0, separatorIndex);
   }
 
-  const separatorIndex = signedCookie.indexOf(".");
-  return separatorIndex === -1 ? signedCookie : signedCookie.slice(0, separatorIndex);
+  // Fallback to the native convex-auth access-token cookie.
+  const nativeCookie = getCookie(request.headers, "convex-auth-token");
+  if (nativeCookie) {
+    return nativeCookie;
+  }
+
+  // Fallback to an Authorization: Bearer header.
+  const authHeader = request.headers.get("authorization");
+  if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+    return authHeader.slice("bearer ".length).trim();
+  }
+
+  return null;
 }
 
 export async function handleMcpOAuthAuthorizeRequest<TClient extends McpOAuthClient>(args: {

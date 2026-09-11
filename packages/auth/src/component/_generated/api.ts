@@ -113,4 +113,5 @@ export const internal: FilterApi<
 
 export const components = componentsGeneric() as unknown as {
   rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
+  mcp: import("@vortex-api/convex-auth/_generated/component.js").ComponentApi<"mcp">;
 };

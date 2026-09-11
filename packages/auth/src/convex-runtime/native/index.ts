@@ -35,6 +35,12 @@ export {
 export { addNativeOAuthHttpRoutes, type NativeOAuthHttpConfig } from "./oauthHttp.js";
 export { addNativeAuthHttpRoutes } from "./http.js";
 export {
+  addOidcProviderHttpRoutes,
+  type OidcProviderClient,
+  type OidcProviderConfig,
+  type OidcProviderHttpHandlers,
+} from "../oauth-provider/http.js";
+export {
   createResendEmailOtpSender,
   createResendEmailSender,
   type ResendEmailOtpSenderOptions,

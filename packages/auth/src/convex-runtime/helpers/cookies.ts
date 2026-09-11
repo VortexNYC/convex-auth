@@ -32,3 +32,7 @@ export function getSessionCookie(
   const cookies = parseCookieHeader(headers);
   return cookies.get(cookieName(prefix)) ?? null;
 }
+
+export function getCookie(headers: Headers, name: string): string | null {
+  return parseCookieHeader(headers).get(name) ?? null;
+}
