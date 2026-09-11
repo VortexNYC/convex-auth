@@ -1,6 +1,7 @@
 import { defineApp } from "convex/server";
 import { v } from "convex/values";
 import auth from "@vortex-api/convex-auth/convex.config";
+import staticHosting from "@convex-dev/static-hosting/convex.config";
 
 const app = defineApp({
   env: {
@@ -15,5 +16,7 @@ app.use(auth, {
     JWKS: app.env.JWKS,
   },
 });
+
+app.use(staticHosting);
 
 export default app;

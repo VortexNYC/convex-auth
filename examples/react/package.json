@@ -7,9 +7,11 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "deploy:static": "pnpm dlx @convex-dev/static-hosting deploy"
   },
   "dependencies": {
+    "@convex-dev/static-hosting": "^0.2.1",
     "@vortex-api/convex-auth": "workspace:*",
     "convex": "^1.45.0",
     "react": "^19.0.0",
