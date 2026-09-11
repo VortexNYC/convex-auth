@@ -154,7 +154,11 @@ export function createOidcProviderHttpHandlers<TClient extends OidcProviderClien
   const resolveRequestedScopes = (scope: string): string[] => {
     const requested = scope.split(" ").filter((s) => s.length > 0);
     const withDefault = requested.length > 0 ? requested : ["openid"];
-    return withDefault.filter((s) => supportedScopes.has(s));
+    const unknownScope = withDefault.find((s) => !supportedScopes.has(s));
+    if (unknownScope) {
+      throw new Error(`invalid_scope: Unsupported scope: ${unknownScope}`);
+    }
+    return withDefault;
   };
 
   const authorize: OidcAuthorizeRequestArgs<TClient>["authorize"] =
@@ -205,9 +209,16 @@ export function createOidcProviderHttpHandlers<TClient extends OidcProviderClien
 
       return response;
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown authorize error";
+      if (message.startsWith("invalid_scope:")) {
+        return jsonResponse(400, {
+          error: "invalid_scope",
+          error_description: message.slice("invalid_scope:".length).trim(),
+        });
+      }
       return jsonResponse(400, {
         error: "invalid_request",
-        error_description: error instanceof Error ? error.message : "Unknown authorize error",
+        error_description: message,
       });
     }
   };

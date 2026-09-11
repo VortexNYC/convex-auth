@@ -354,6 +354,42 @@ describe("createOidcProviderHttpHandlers", () => {
     expect(body.error).toBe("invalid_scope");
   });
 
+  it("rejects an authorize request with an unsupported scope", async () => {
+    const handlers = createOidcProviderHttpHandlers({
+      issuer: "https://example.com",
+      clients: [testClient],
+      supportedScopes: ["openid", "email", "profile"],
+      storage: {
+        getSessionByToken: async () => ({ userId: "user_123" }),
+        getUserById: async () => ({ _id: "user_123" }),
+        createAuthorizationCode: async () => {},
+        consumeAuthorizationCode: async () => null,
+        issueRefreshToken: async () => ({ refreshToken: "refresh-123" }),
+        redeemRefreshToken: async () => ({
+          ok: false as const,
+          status: 400,
+          body: { error: "invalid_grant" },
+          reason: "not_refresh_token",
+        }),
+        getSigningKey: async () => null,
+        upsertSigningKey: async () => {},
+      },
+    });
+
+    const request = new Request(
+      "https://example.com/oauth/authorize?response_type=code&client_id=client-123&redirect_uri=https%3A%2F%2Fapp.example.com%2Fcallback&scope=openid%20admin&code_challenge=challenge&code_challenge_method=S256",
+      {
+        headers: { cookie: "convex-auth.session_token=session-token" },
+      },
+    );
+
+    const response = await handlers.handleAuthorizeRequest(request);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toBe("invalid_scope");
+  });
+
   it("rejects a token exchange with an unknown client", async () => {
     const pair = await createPkcePair();
 
