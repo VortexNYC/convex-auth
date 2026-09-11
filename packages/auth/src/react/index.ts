@@ -33,6 +33,7 @@ export * from "./types";
 export * from "./ui";
 export * from "./useAuthRuntimeStatus";
 export * from "./useAuthStateMatches";
+export * from "./use-organization-refs";
 export * from "./useProtectedConvexReady";
 export * from "./useReauthRequired";
 export * from "./user-button";

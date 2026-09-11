@@ -4,6 +4,8 @@ import {
   ConvexCreateOrganization,
   ConvexEnableTwoFactorForm,
   ConvexOrganizationList,
+  ConvexOrganizationMembersSurface,
+  ConvexOrganizationRoleManagerSurface,
   ConvexOrganizationSwitcher,
   ConvexSessionList,
   ConvexUserProfile,
@@ -11,6 +13,7 @@ import {
   useAuthActions,
   useConvexAuthAppearance,
   useConvexAuthClient,
+  useConvexOrganizationRefs,
   usePasskeys,
 } from "@vortex-api/convex-auth/react";
 import { useQuery, useMutation } from "convex/react";
@@ -210,6 +213,8 @@ function OrganizationsPanel() {
   const activeOrg = useQuery(api.organizations.getActiveOrganization);
   const setActive = useMutation(api.organizations.setActiveOrganization);
   const create = useMutation(api.organizations.createOrganization);
+  const redeem = useMutation(api.organizations.redeemInvitation);
+  const refs = useConvexOrganizationRefs(api);
 
   const currentOrganizationId = activeOrg?._id ?? null;
 
@@ -247,6 +252,14 @@ function OrganizationsPanel() {
           await setActive({ organizationId: id });
           setMessage("Active workspace updated.");
         }}
+        onAcceptInvitation={async (id) => {
+          try {
+            await redeem({ invitationId: id });
+            setMessage("Invitation accepted.");
+          } catch (err) {
+            setMessage(err instanceof Error ? err.message : "Could not accept invitation");
+          }
+        }}
         onCreateOrganization={() => setCreating(true)}
       />
 
@@ -267,6 +280,17 @@ function OrganizationsPanel() {
             />
           </CardContent>
         </Card>
+      ) : null}
+
+      {currentOrganizationId ? (
+        <>
+          <ConvexOrganizationMembersSurface
+            organizationId={currentOrganizationId}
+            roleOptions={["owner", "admin", "manager", "member", "viewer"]}
+            refs={refs.members}
+          />
+          <ConvexOrganizationRoleManagerSurface canCreateRoles refs={refs.roles} />
+        </>
       ) : null}
     </div>
   );
