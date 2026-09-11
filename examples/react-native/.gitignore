@@ -9,3 +9,5 @@ node_modules/
 *.p8
 ios/
 android/
+
+.env.local

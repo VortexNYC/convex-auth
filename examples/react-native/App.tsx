@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
 import { ConvexReactClient, ConvexProvider } from "convex/react";
@@ -20,7 +21,7 @@ type Screen = "signIn" | "signUp" | "signedIn";
 
 const TOKEN_KEYS = ["convex-auth-token", "convex-auth-refresh-token", "convex-auth-session-id"];
 
-const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
+const convexUrl = Constants.expoConfig?.extra?.convexUrl;
 if (typeof convexUrl !== "string" || convexUrl.length === 0) {
   throw new Error("EXPO_PUBLIC_CONVEX_URL is not set");
 }
