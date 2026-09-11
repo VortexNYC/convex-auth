@@ -392,6 +392,18 @@ export type NativeAuthActions = {
     { token: string },
     { success: boolean }
   >;
+  signInAnonymous?: FunctionReference<
+    "action",
+    "public",
+    { rememberMe?: boolean },
+    NativeAuthSession
+  >;
+  linkAnonymousAccount?: FunctionReference<
+    "action",
+    "public",
+    { email: string; password: string; name?: string; image?: string },
+    NativeAuthSession
+  >;
 } & Partial<NativePasskeyFunctionReferences>;
 
 type NativePasskeyFunctionReferences = {
@@ -601,6 +613,10 @@ export function useAuthActions() {
 
   const signUpAction = useAction(ctx.signUp);
   const signInAction = useAction(ctx.signIn);
+  const signInAnonymousAction = ctx.signInAnonymous ? useAction(ctx.signInAnonymous) : null;
+  const linkAnonymousAccountAction = ctx.linkAnonymousAccount
+    ? useAction(ctx.linkAnonymousAccount)
+    : null;
   const signInMagicLinkAction = ctx.signInMagicLink ? useAction(ctx.signInMagicLink) : null;
   const sendVerificationOtpAction = ctx.sendVerificationOtp
     ? useAction(ctx.sendVerificationOtp)
@@ -667,6 +683,48 @@ export function useAuthActions() {
       }
     },
     [signInAction, ctx],
+  );
+
+  const signInAnonymous = useCallback(
+    async (args: { rememberMe?: boolean } = {}) => {
+      if (!signInAnonymousAction) {
+        throw new Error("Anonymous sign-in is not configured");
+      }
+      setIsLoading(true);
+      try {
+        const session = await signInAnonymousAction(args);
+        ctx.setToken(session.token ?? null);
+        ctx.setSessionId(session.sessionId ?? null);
+        if (session.refreshToken) {
+          ctx.setRefreshToken(session.refreshToken);
+        }
+        return session;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [signInAnonymousAction, ctx],
+  );
+
+  const linkAnonymousAccount = useCallback(
+    async (args: { email: string; password: string; name?: string; image?: string }) => {
+      if (!linkAnonymousAccountAction) {
+        throw new Error("Anonymous account linking is not configured");
+      }
+      setIsLoading(true);
+      try {
+        const session = await linkAnonymousAccountAction(args);
+        ctx.setToken(session.token ?? null);
+        ctx.setSessionId(session.sessionId ?? null);
+        if (session.refreshToken) {
+          ctx.setRefreshToken(session.refreshToken);
+        }
+        return session;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [linkAnonymousAccountAction, ctx],
   );
 
   const signInWithMagicLink = useCallback(
@@ -1016,6 +1074,8 @@ export function useAuthActions() {
   return {
     signUp,
     signIn,
+    signInAnonymous,
+    linkAnonymousAccount,
     signInWithMagicLink,
     signInWithRedirect,
     oauthCallback,
