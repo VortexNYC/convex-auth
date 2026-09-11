@@ -72,6 +72,14 @@ export default function App() {
             styles={authScreenStyles}
             socialProviders={socialProviders}
           />
+          <Pressable
+            style={styles.guestButton}
+            onPress={async () => {
+              await authClient?.signIn.anonymous({});
+            }}
+          >
+            <Text style={styles.guestButtonText}>Continue as guest</Text>
+          </Pressable>
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don’t have an account? </Text>
             <Pressable onPress={() => setScreen("signUp")}>
@@ -147,6 +155,18 @@ const styles = StyleSheet.create({
   },
   sessions: {
     marginTop: 8,
+  },
+  guestButton: {
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    alignItems: "center",
+  },
+  guestButtonText: {
+    fontWeight: "500",
+    color: "#666666",
   },
   footer: {
     flexDirection: "row",
