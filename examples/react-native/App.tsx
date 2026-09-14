@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useColorScheme,
+  useWindowDimensions,
+} from "react-native";
 import { StatusBar } from "expo-status-bar";
+import * as ScreenOrientation from "expo-screen-orientation";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
 import { ConvexReactClient, ConvexProvider } from "convex/react";
@@ -37,6 +45,9 @@ const socialProviders = [
 function useTheme() {
   const colorScheme = useColorScheme() ?? "light";
   const isDark = colorScheme === "dark";
+  const { width } = useWindowDimensions();
+  const screenWidth = typeof width === "number" && width > 0 ? width : 390;
+  const formWidth = Math.min(screenWidth - 48, 460);
 
   const colors = useMemo(
     () =>
@@ -168,6 +179,7 @@ function useTheme() {
   const authScreenStyles: ExpoAuthClientScreenStyles = useMemo(
     () => ({
       root: {
+        width: formWidth,
         padding: 24,
         backgroundColor: colors.background,
       },
@@ -183,6 +195,7 @@ function useTheme() {
         marginBottom: 16,
       },
       input: {
+        width: formWidth - 48,
         borderWidth: 1,
         borderColor: colors.inputBorder,
         borderRadius: 8,
@@ -192,6 +205,7 @@ function useTheme() {
       },
       inputText: { color: colors.text },
       submitButton: {
+        width: formWidth - 48,
         backgroundColor: isDark ? colors.primary : "#0f172a",
         borderRadius: 8,
         padding: 12,
@@ -202,6 +216,7 @@ function useTheme() {
         fontWeight: "600",
       },
       providerButton: {
+        width: formWidth - 48,
         borderWidth: 1,
         borderColor: colors.surfaceBorder,
         borderRadius: 8,
@@ -212,7 +227,7 @@ function useTheme() {
       providerButtonText: { color: colors.text },
       error: { color: colors.danger, marginBottom: 8 },
     }),
-    [colors, isDark],
+    [colors, isDark, formWidth],
   );
 
   const sessionListStyles: ExpoSessionListStyles = useMemo(
@@ -351,6 +366,12 @@ function InnerApp() {
   const authClient = useConvexAuthClientContext();
   const session = authClient?.useSession();
   const { styles, authScreenStyles, sessionListStyles } = useTheme();
+
+  useEffect(() => {
+    ScreenOrientation.unlockAsync().catch(() => {
+      // Ignore if Expo Go build does not include the screen orientation module.
+    });
+  }, []);
 
   if (authClient === null || session === undefined || session.isPending) {
     return (
