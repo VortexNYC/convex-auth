@@ -6,7 +6,6 @@
 import { useState } from "react";
 import {
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -82,9 +81,13 @@ function OrganizationProfileHeader(props: {
   styles: ExpoOrgProfileStyles;
 }) {
   return (
-    <View style={[styles.header, props.styles.header]}>
-      <Text style={[styles.title, props.styles.title]}>{props.copy.title}</Text>
-      <Text style={[styles.description, props.styles.description]}>{props.copy.description}</Text>
+    <View className="px-4 pb-3" style={props.styles.header}>
+      <Text className="text-base font-semibold" style={props.styles.title}>
+        {props.copy.title}
+      </Text>
+      <Text className="text-sm text-muted-foreground mt-0.5" style={props.styles.description}>
+        {props.copy.description}
+      </Text>
     </View>
   );
 }
@@ -100,17 +103,19 @@ function OrganizationProfileDangerZone(props: {
   }
 
   return (
-    <View style={{ marginTop: 24, paddingHorizontal: 16 }}>
-      <Text style={[styles.label, props.styles.label]}>{props.copy.dangerZoneTitle}</Text>
+    <View className="mt-6 px-4">
+      <Text className="text-sm text-muted-foreground mb-1" style={props.styles.label}>
+        {props.copy.dangerZoneTitle}
+      </Text>
       <Pressable
         onPress={props.onDelete}
         disabled={props.deleting}
-        className="border-destructive"
-        style={[styles.dangerButton, props.styles.dangerButton]}
+        className="mt-2 px-3 py-2.5 rounded-md border border-destructive items-center"
+        style={props.styles.dangerButton}
       >
         <Text
-          className="text-destructive"
-          style={[styles.dangerButtonText, props.styles.dangerButtonText]}
+          className="text-destructive text-sm font-medium"
+          style={props.styles.dangerButtonText}
         >
           {props.deleting ? props.copy.deleting : props.copy.deleteButton}
         </Text>
@@ -173,37 +178,50 @@ export function ConvexOrganizationProfile(props: ExpoOrgProfileProps) {
   }
 
   return (
-    <View style={[styles.root, s.root]}>
+    <View className="w-full py-2" style={s.root}>
       <OrganizationProfileHeader copy={copy} styles={s} />
-      <View style={[styles.field, s.field]}>
-        <Text style={[styles.label, s.label]}>{copy.nameLabel}</Text>
-        <TextInput value={name} onChangeText={setName} style={[styles.input, s.input]} />
+      <View className="px-4 py-2" style={s.field}>
+        <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+          {copy.nameLabel}
+        </Text>
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+          style={s.input}
+        />
       </View>
       {showSlug ? (
-        <View style={[styles.field, s.field]}>
-          <Text style={[styles.label, s.label]}>{copy.slugLabel}</Text>
+        <View className="px-4 py-2" style={s.field}>
+          <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+            {copy.slugLabel}
+          </Text>
           <TextInput
             value={slug}
             onChangeText={setSlug}
             autoCapitalize="none"
-            style={[styles.input, s.input]}
+            className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+            style={s.input}
           />
         </View>
       ) : null}
       <Pressable
         onPress={() => void handleSubmit()}
         disabled={submitting}
-        style={[styles.submitButton, s.submitButton]}
+        className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input items-center"
+        style={s.submitButton}
       >
-        <Text style={[styles.submitButtonText, s.submitButtonText]}>
+        <Text className="text-sm font-medium" style={s.submitButtonText}>
           {submitting ? copy.submitting : copy.submit}
         </Text>
       </Pressable>
       {success !== null ? (
-        <Text style={[styles.successState, s.successState]}>{success}</Text>
+        <Text className="px-4 pt-2 text-sm" style={s.successState}>
+          {success}
+        </Text>
       ) : null}
       {error !== null ? (
-        <Text className="text-destructive" style={[styles.errorState, s.errorState]}>
+        <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
           {error}
         </Text>
       ) : null}
@@ -216,40 +234,3 @@ export function ConvexOrganizationProfile(props: ExpoOrgProfileProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { paddingVertical: 8 },
-  header: { paddingHorizontal: 16, paddingBottom: 12 },
-  title: { fontSize: 16, fontWeight: "600" },
-  description: { fontSize: 13, opacity: 0.6, marginTop: 2 },
-  field: { paddingHorizontal: 16, paddingVertical: 8 },
-  label: { fontSize: 13, opacity: 0.7, marginBottom: 4 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-  },
-  submitButton: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  submitButtonText: { fontSize: 14, fontWeight: "500" },
-  dangerButton: {
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  dangerButtonText: { fontSize: 14, fontWeight: "500" },
-  successState: { paddingHorizontal: 16, paddingTop: 8, fontSize: 13 },
-  errorState: { paddingHorizontal: 16, paddingTop: 8, fontSize: 13 },
-});

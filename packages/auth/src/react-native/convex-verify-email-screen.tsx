@@ -15,7 +15,6 @@
 import { useEffect, useState } from "react";
 import {
   Pressable,
-  StyleSheet,
   Text,
   View,
   type StyleProp,
@@ -124,59 +123,51 @@ export function ConvexVerifyEmailScreen(props: ExpoVerifyEmailScreenProps) {
   }
 
   return (
-    <View style={[styles.root, s.root]}>
-      <View style={[styles.header, s.header]}>
-        <Text style={[styles.title, s.title]}>{copy.title}</Text>
-        <Text style={[styles.description, s.description]}>{copy.description}</Text>
+    <View className="w-full py-2" style={s.root}>
+      <View className="px-4 pb-3" style={s.header}>
+        <Text className="text-base font-semibold" style={s.title}>
+          {copy.title}
+        </Text>
+        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+          {copy.description}
+        </Text>
       </View>
       {!hasToken ? (
-        <Text className="text-destructive" style={[styles.errorState, s.missingTokenState]}>
+        <Text className="text-destructive px-4 pt-2 text-sm" style={s.missingTokenState}>
           {copy.missingTokenMessage}
         </Text>
       ) : status === "verifying" || status === "idle" ? (
-        <Text style={[styles.successState, s.verifyingState]}>{copy.verifying}</Text>
+        <Text className="px-4 pt-2 text-sm" style={s.verifyingState}>
+          {copy.verifying}
+        </Text>
       ) : status === "verified" ? (
-        <Text style={[styles.successState, s.verifiedState]}>{copy.verified}</Text>
+        <Text className="px-4 pt-2 text-sm" style={s.verifiedState}>
+          {copy.verified}
+        </Text>
       ) : (
         <View>
-          <Text className="text-destructive" style={[styles.errorState, s.errorState]}>
+          <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
             {copy.errorPrefix} {error}
           </Text>
           {canResend ? (
             <Pressable
               onPress={() => void handleResend()}
               disabled={isResending}
-              style={[styles.resendButton, s.resendButton]}
+              className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input items-center"
+              style={s.resendButton}
             >
-              <Text style={[styles.resendButtonText, s.resendButtonText]}>
+              <Text className="text-sm font-medium" style={s.resendButtonText}>
                 {isResending ? copy.resending : copy.resend}
               </Text>
             </Pressable>
           ) : null}
           {resendResult !== null ? (
-            <Text style={[styles.successState, s.verifiedState]}>{resendResult}</Text>
+            <Text className="px-4 pt-2 text-sm" style={s.verifiedState}>
+              {resendResult}
+            </Text>
           ) : null}
         </View>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { paddingVertical: 8 },
-  header: { paddingHorizontal: 16, paddingBottom: 12 },
-  title: { fontSize: 16, fontWeight: "600" },
-  description: { fontSize: 13, opacity: 0.6, marginTop: 2 },
-  successState: { paddingHorizontal: 16, paddingTop: 8, fontSize: 13 },
-  errorState: { paddingHorizontal: 16, paddingTop: 8, fontSize: 13 },
-  resendButton: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  resendButtonText: { fontSize: 14, fontWeight: "500" },
-});

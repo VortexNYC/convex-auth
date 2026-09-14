@@ -130,7 +130,7 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
 
   if (twoFactorPending) {
     return (
-      <View className="p-4" style={s.root}>
+      <View style={s.root}>
         <ConvexVerifyTwoFactorForm
           onVerified={() => {
             void props.navigate?.({ to: props.forceRedirectUrl, replace: true });
@@ -141,37 +141,33 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
   }
 
   return (
-    <View className="p-4" style={s.root}>
-      <Text className="text-2xl font-bold" style={s.title}>
-        {copy.title}
-      </Text>
-      <Text className="text-muted-foreground" style={s.description}>
-        {copy.description}
-      </Text>
-      <TextInput
-        className="border p-2 mt-4 rounded"
-        style={[s.input, s.inputText]}
-        placeholder={copy.emailPlaceholder}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        className="border p-2 mt-2 rounded"
-        style={[s.input, s.inputText]}
-        placeholder={copy.passwordPlaceholder}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      {error !== null ? (
-        <Text className="text-destructive mt-2" style={s.error}>
-          {error}
-        </Text>
-      ) : null}
+    <View style={s.root}>
+      <Text style={s.title}>{copy.title}</Text>
+      <Text style={s.description}>{copy.description}</Text>
+      <View className="w-full" style={s.input}>
+        <TextInput
+          className="w-full"
+          style={s.inputText}
+          placeholder={copy.emailPlaceholder}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+      </View>
+      <View className="w-full" style={s.input}>
+        <TextInput
+          className="w-full"
+          style={s.inputText}
+          placeholder={copy.passwordPlaceholder}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+      </View>
+      {error !== null ? <Text style={s.error}>{error}</Text> : null}
       <Pressable
-        className="bg-primary p-3 mt-4 rounded"
+        className="w-full"
         style={s.submitButton}
         onPress={handleSubmit}
         disabled={isSubmitting}
@@ -179,20 +175,18 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
         {isSubmitting ? (
           <ActivityIndicator />
         ) : (
-          <Text className="text-primary-foreground text-center" style={s.submitButtonText}>
-            {copy.submitLabel}
-          </Text>
+          <Text style={s.submitButtonText}>{copy.submitLabel}</Text>
         )}
       </Pressable>
       {props.socialProviders?.map((provider) => (
         <Pressable
           key={provider.provider}
-          className="border p-3 mt-2 rounded"
+          className="w-full"
           style={s.providerButton}
           onPress={() => handleSocialSignIn(provider.provider)}
           disabled={provider.disabled}
         >
-          <Text className="text-center" style={s.providerButtonText}>
+          <Text style={s.providerButtonText}>
             Sign in with {provider.label ?? provider.provider}
           </Text>
         </Pressable>
@@ -273,7 +267,7 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
 
   if (twoFactorPending) {
     return (
-      <View className="p-4" style={s.root}>
+      <View style={s.root}>
         <ConvexVerifyTwoFactorForm
           onVerified={() => {
             void props.navigate?.({ to: props.forceRedirectUrl, replace: true });
@@ -284,44 +278,42 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
   }
 
   return (
-    <View className="p-4" style={s.root}>
-      <Text className="text-2xl font-bold" style={s.title}>
-        {copy.title}
-      </Text>
-      <Text className="text-muted-foreground" style={s.description}>
-        {copy.description}
-      </Text>
-      <TextInput
-        className="border p-2 mt-4 rounded"
-        style={[s.input, s.inputText]}
-        placeholder={copy.namePlaceholder}
-        value={name}
-        onChangeText={setName}
-      />
-      <TextInput
-        className="border p-2 mt-2 rounded"
-        style={[s.input, s.inputText]}
-        placeholder={copy.emailPlaceholder}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        className="border p-2 mt-2 rounded"
-        style={[s.input, s.inputText]}
-        placeholder={copy.passwordPlaceholder}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      {error !== null ? (
-        <Text className="text-destructive mt-2" style={s.error}>
-          {error}
-        </Text>
-      ) : null}
+    <View style={s.root}>
+      <Text style={s.title}>{copy.title}</Text>
+      <Text style={s.description}>{copy.description}</Text>
+      <View className="w-full" style={s.input}>
+        <TextInput
+          className="w-full"
+          style={s.inputText}
+          placeholder={copy.namePlaceholder}
+          value={name}
+          onChangeText={setName}
+        />
+      </View>
+      <View className="w-full" style={s.input}>
+        <TextInput
+          className="w-full"
+          style={s.inputText}
+          placeholder={copy.emailPlaceholder}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+      </View>
+      <View className="w-full" style={s.input}>
+        <TextInput
+          className="w-full"
+          style={s.inputText}
+          placeholder={copy.passwordPlaceholder}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+      </View>
+      {error !== null ? <Text style={s.error}>{error}</Text> : null}
       <Pressable
-        className="bg-primary p-3 mt-4 rounded"
+        className="w-full"
         style={s.submitButton}
         onPress={handleSubmit}
         disabled={isSubmitting}
@@ -329,9 +321,7 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
         {isSubmitting ? (
           <ActivityIndicator />
         ) : (
-          <Text className="text-primary-foreground text-center" style={s.submitButtonText}>
-            {copy.submitLabel}
-          </Text>
+          <Text style={s.submitButtonText}>{copy.submitLabel}</Text>
         )}
       </Pressable>
     </View>

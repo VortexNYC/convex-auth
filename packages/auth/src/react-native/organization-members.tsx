@@ -11,7 +11,6 @@ import {
   FlatList,
   Image,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -140,10 +139,14 @@ export function ConvexOrganizationMembers(props: ExpoOrgMembersProps) {
   }
 
   return (
-    <View style={[styles.root, s.root]}>
-      <View style={[styles.header, s.header]}>
-        <Text style={[styles.title, s.title]}>{copy.title}</Text>
-        <Text style={[styles.description, s.description]}>{copy.description}</Text>
+    <View className="w-full py-2" style={s.root}>
+      <View className="px-4 pb-3" style={s.header}>
+        <Text className="text-base font-semibold" style={s.title}>
+          {copy.title}
+        </Text>
+        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+          {copy.description}
+        </Text>
       </View>
 
       <ConvexOrganizationMembersInviteSection
@@ -159,7 +162,7 @@ export function ConvexOrganizationMembers(props: ExpoOrgMembersProps) {
         stylesOverride={s}
       />
 
-      <View className="bg-border" style={[styles.divider, s.divider]} />
+      <View className="bg-border h-px my-3" style={s.divider} />
       <ConvexOrganizationMembersList
         copy={copy}
         members={props.members}
@@ -203,16 +206,20 @@ function ConvexOrganizationMembersInviteSection({
 }) {
   return (
     <>
-      <Text style={[styles.sectionTitle, stylesOverride.sectionTitle]}>
+      <Text
+        className="text-xs text-muted-foreground px-4 mb-2 font-medium"
+        style={stylesOverride.sectionTitle}
+      >
         {copy.inviteSectionTitle}
       </Text>
-      <View style={[styles.inviteField, stylesOverride.inviteField]}>
+      <View className="px-4 gap-2" style={stylesOverride.inviteField}>
         <TextInput
           autoCapitalize="none"
           keyboardType="email-address"
           onChangeText={onEmailChange}
           placeholder={copy.emailPlaceholder}
-          style={[styles.input, stylesOverride.input]}
+          className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+          style={stylesOverride.input}
           value={email}
         />
         <ConvexOrganizationRolePicker
@@ -224,14 +231,15 @@ function ConvexOrganizationMembersInviteSection({
         <Pressable
           disabled={inviting || email.trim().length === 0}
           onPress={() => void onInvite()}
-          style={[styles.primaryButton, stylesOverride.primaryButton]}
+          className="w-full px-3 py-2.5 rounded-md border border-input items-center"
+          style={stylesOverride.primaryButton}
         >
-          <Text style={[styles.primaryButtonText, stylesOverride.primaryButtonText]}>
+          <Text className="text-sm font-medium" style={stylesOverride.primaryButtonText}>
             {inviting ? copy.inviting : copy.invite}
           </Text>
         </Pressable>
         {error !== null ? (
-          <Text className="text-destructive" style={[styles.errorState, stylesOverride.errorState]}>
+          <Text className="text-destructive pt-2 text-sm" style={stylesOverride.errorState}>
             {error}
           </Text>
         ) : null}
@@ -252,21 +260,24 @@ function ConvexOrganizationRolePicker({
   stylesOverride: ExpoOrgMembersStyles;
 }) {
   return (
-    <View style={[styles.rolePicker, stylesOverride.rolePicker]}>
+    <View className="flex-row gap-2 flex-wrap" style={stylesOverride.rolePicker}>
       {roles.map((role) => {
         const active = role.key === roleKey;
         return (
           <Pressable
             key={role.key}
             onPress={() => onRoleChange(role.key)}
+            className={
+              active
+                ? "px-3 py-1.5 rounded-md border border-input opacity-60"
+                : "px-3 py-1.5 rounded-md border border-input"
+            }
             style={[
-              styles.rolePickerItem,
               stylesOverride.rolePickerItem,
-              active ? styles.rolePickerItemActive : undefined,
               active ? stylesOverride.rolePickerItemActive : undefined,
             ]}
           >
-            <Text style={[styles.rolePickerItemText, stylesOverride.rolePickerItemText]}>
+            <Text className="text-sm" style={stylesOverride.rolePickerItemText}>
               {role.label}
             </Text>
           </Pressable>
@@ -291,11 +302,16 @@ function ConvexOrganizationMembersList({
 }) {
   return (
     <>
-      <Text style={[styles.sectionTitle, stylesOverride.sectionTitle]}>
+      <Text
+        className="text-xs text-muted-foreground px-4 mb-2 font-medium"
+        style={stylesOverride.sectionTitle}
+      >
         {copy.membersSectionTitle}
       </Text>
       {members.length === 0 ? (
-        <Text style={[styles.emptyState, stylesOverride.emptyState]}>{copy.noMembersLabel}</Text>
+        <Text className="px-4 text-sm text-muted-foreground" style={stylesOverride.emptyState}>
+          {copy.noMembersLabel}
+        </Text>
       ) : (
         <FlatList
           data={members}
@@ -330,19 +346,22 @@ function ConvexOrganizationMemberRow({
   stylesOverride: ExpoOrgMembersStyles;
 }) {
   return (
-    <View style={[styles.memberItem, stylesOverride.memberItem]}>
+    <View className="flex-row items-center px-4 py-3 gap-3" style={stylesOverride.memberItem}>
       {member.imageUrl !== undefined && member.imageUrl.length > 0 ? (
         <Image
           source={{ uri: member.imageUrl }}
-          style={[styles.memberImage, stylesOverride.memberImage]}
+          className="w-7 h-7 rounded-full"
+          style={stylesOverride.memberImage}
         />
       ) : null}
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.memberName, stylesOverride.memberName]}>
+      <View className="flex-1">
+        <Text className="text-sm font-medium" style={stylesOverride.memberName}>
           {member.name ?? member.email ?? member.userId}
           {member.isViewer === true ? " (you)" : ""}
         </Text>
-        <Text style={[styles.memberMeta, stylesOverride.memberMeta]}>{member.roleKey}</Text>
+        <Text className="text-xs text-muted-foreground mt-0.5" style={stylesOverride.memberMeta}>
+          {member.roleKey}
+        </Text>
       </View>
       {onRemoveMember !== undefined && member.isViewer !== true ? (
         <Pressable
@@ -351,13 +370,10 @@ function ConvexOrganizationMemberRow({
             const result = await onRemoveMember(member._id);
             if (!result.ok) onError(result.error);
           }}
-          className="border-destructive"
-          style={[styles.dangerButton, stylesOverride.dangerButton]}
+          className="px-2.5 py-1.5 rounded-md border border-destructive"
+          style={stylesOverride.dangerButton}
         >
-          <Text
-            className="text-destructive"
-            style={[styles.dangerButtonText, stylesOverride.dangerButtonText]}
-          >
+          <Text className="text-destructive text-xs" style={stylesOverride.dangerButtonText}>
             {copy.remove}
           </Text>
         </Pressable>
@@ -385,8 +401,11 @@ function ConvexOrganizationInvitationsList({
 
   return (
     <View>
-      <View className="bg-border" style={[styles.divider, stylesOverride.divider]} />
-      <Text style={[styles.sectionTitle, stylesOverride.sectionTitle]}>
+      <View className="bg-border h-px my-3" style={stylesOverride.divider} />
+      <Text
+        className="text-xs text-muted-foreground px-4 mb-2 font-medium"
+        style={stylesOverride.sectionTitle}
+      >
         {copy.invitationsSectionTitle}
       </Text>
       {invitations.map((invitation) => (
@@ -417,10 +436,14 @@ function ConvexOrganizationInvitationRow({
   stylesOverride: ExpoOrgMembersStyles;
 }) {
   return (
-    <View style={[styles.memberItem, stylesOverride.memberItem]}>
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.memberName, stylesOverride.memberName]}>{invitation.email}</Text>
-        <Text style={[styles.memberMeta, stylesOverride.memberMeta]}>{invitation.roleKey}</Text>
+    <View className="flex-row items-center px-4 py-3 gap-3" style={stylesOverride.memberItem}>
+      <View className="flex-1">
+        <Text className="text-sm font-medium" style={stylesOverride.memberName}>
+          {invitation.email}
+        </Text>
+        <Text className="text-xs text-muted-foreground mt-0.5" style={stylesOverride.memberMeta}>
+          {invitation.roleKey}
+        </Text>
       </View>
       {onCancelInvitation !== undefined ? (
         <Pressable
@@ -429,13 +452,10 @@ function ConvexOrganizationInvitationRow({
             const result = await onCancelInvitation(invitation._id);
             if (!result.ok) onError(result.error);
           }}
-          className="border-destructive"
-          style={[styles.dangerButton, stylesOverride.dangerButton]}
+          className="px-2.5 py-1.5 rounded-md border border-destructive"
+          style={stylesOverride.dangerButton}
         >
-          <Text
-            className="text-destructive"
-            style={[styles.dangerButtonText, stylesOverride.dangerButtonText]}
-          >
+          <Text className="text-destructive text-xs" style={stylesOverride.dangerButtonText}>
             {copy.cancelInvite}
           </Text>
         </Pressable>
@@ -443,62 +463,3 @@ function ConvexOrganizationInvitationRow({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { paddingVertical: 8 },
-  header: { paddingHorizontal: 16, paddingBottom: 12 },
-  title: { fontSize: 16, fontWeight: "600" },
-  description: { fontSize: 13, opacity: 0.6, marginTop: 2 },
-  sectionTitle: {
-    fontSize: 12,
-    opacity: 0.6,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    fontWeight: "500",
-  },
-  inviteField: { paddingHorizontal: 16, gap: 8 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-  },
-  rolePicker: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  rolePickerItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  rolePickerItemActive: { opacity: 0.6 },
-  rolePickerItemText: { fontSize: 13 },
-  primaryButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  primaryButtonText: { fontSize: 14, fontWeight: "500" },
-  memberItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  memberImage: { width: 28, height: 28, borderRadius: 14 },
-  memberName: { fontSize: 14, fontWeight: "500" },
-  memberMeta: { fontSize: 12, opacity: 0.6, marginTop: 2 },
-  dangerButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  dangerButtonText: { fontSize: 12 },
-  emptyState: { paddingHorizontal: 16, fontSize: 13, opacity: 0.6 },
-  divider: { height: 1, marginVertical: 12 },
-  errorState: { paddingTop: 8, fontSize: 13 },
-});

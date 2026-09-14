@@ -12,8 +12,8 @@
  */
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
-  StyleSheet,
   Switch,
   Text,
   TextInput,
@@ -129,8 +129,8 @@ export function ConvexVerifyTwoFactorForm(props: ExpoVerifyTwoFactorFormProps) {
 
   if (!isAvailable) {
     return (
-      <View style={[styles.root, s.root]}>
-        <Text className="text-destructive" style={[styles.errorState, s.errorState]}>
+      <View className="w-full py-2" style={s.root}>
+        <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
           {copy.unavailable}
         </Text>
       </View>
@@ -138,14 +138,18 @@ export function ConvexVerifyTwoFactorForm(props: ExpoVerifyTwoFactorFormProps) {
   }
 
   return (
-    <View style={[styles.root, s.root]}>
-      <View style={[styles.header, s.header]}>
-        <Text style={[styles.title, s.title]}>{copy.title}</Text>
-        <Text style={[styles.description, s.description]}>{copy.description}</Text>
+    <View className="w-full py-2" style={s.root}>
+      <View className="px-4 pb-3" style={s.header}>
+        <Text className="text-base font-semibold" style={s.title}>
+          {copy.title}
+        </Text>
+        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+          {copy.description}
+        </Text>
       </View>
 
-      <View style={[styles.field, s.field]}>
-        <Text style={[styles.label, s.label]}>
+      <View className="px-4 py-2" style={s.field}>
+        <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
           {mode === "totp" ? copy.codeLabel : copy.backupCodeLabel}
         </Text>
         <TextInput
@@ -155,83 +159,50 @@ export function ConvexVerifyTwoFactorForm(props: ExpoVerifyTwoFactorFormProps) {
           autoCapitalize="none"
           autoComplete="one-time-code"
           keyboardType={mode === "totp" ? "number-pad" : "default"}
-          style={[styles.input, s.input]}
+          className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+          style={s.input}
         />
       </View>
 
       {showTrustDevice ? (
-        <View style={[styles.trustToggle, s.trustToggle]}>
+        <View className="flex-row items-center gap-2 px-4 py-2" style={s.trustToggle}>
           <Switch value={trustDevice} onValueChange={setTrustDevice} />
-          <Text style={[styles.trustToggleLabel, s.trustToggleLabel]}>{copy.trustDeviceLabel}</Text>
+          <Text className="text-sm text-muted-foreground" style={s.trustToggleLabel}>
+            {copy.trustDeviceLabel}
+          </Text>
         </View>
       ) : null}
 
       <Pressable
         onPress={() => void handleSubmit()}
         disabled={isVerifying}
-        style={[styles.submitButton, s.submitButton]}
+        className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input items-center"
+        style={s.submitButton}
       >
-        <Text style={[styles.submitButtonText, s.submitButtonText]}>
-          {isVerifying ? copy.submitting : copy.submit}
-        </Text>
+        {isVerifying ? (
+          <ActivityIndicator />
+        ) : (
+          <Text className="text-sm font-medium" style={s.submitButtonText}>
+            {copy.submit}
+          </Text>
+        )}
       </Pressable>
 
       <Pressable
         onPress={() => switchMode(mode === "totp" ? "backup" : "totp")}
-        style={[styles.toggleButton, s.toggleButton]}
+        className="mx-4 mt-2 py-2 items-center"
+        style={s.toggleButton}
       >
-        <Text style={[styles.toggleButtonText, s.toggleButtonText]}>
+        <Text className="text-sm text-muted-foreground" style={s.toggleButtonText}>
           {mode === "totp" ? copy.useBackupCode : copy.useAuthenticator}
         </Text>
       </Pressable>
 
       {error !== null ? (
-        <Text className="text-destructive" style={[styles.errorState, s.errorState]}>
+        <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
           {error}
         </Text>
       ) : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { paddingVertical: 8 },
-  header: { paddingHorizontal: 16, paddingBottom: 12 },
-  title: { fontSize: 16, fontWeight: "600" },
-  description: { fontSize: 13, opacity: 0.6, marginTop: 2 },
-  field: { paddingHorizontal: 16, paddingVertical: 8 },
-  label: { fontSize: 13, opacity: 0.7, marginBottom: 4 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-  },
-  trustToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  trustToggleLabel: { fontSize: 13, opacity: 0.8 },
-  submitButton: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  submitButtonText: { fontSize: 14, fontWeight: "500" },
-  toggleButton: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    paddingVertical: 8,
-    alignItems: "center",
-  },
-  toggleButtonText: { fontSize: 13, opacity: 0.7 },
-  errorState: { paddingHorizontal: 16, paddingTop: 8, fontSize: 13 },
-});

@@ -12,7 +12,6 @@ import {
   Image,
   Modal,
   Pressable,
-  StyleSheet,
   Text,
   View,
   type ImageStyle,
@@ -93,16 +92,24 @@ function OrganizationSwitcherTrigger(props: {
   }
 
   return (
-    <Pressable onPress={props.onPress} style={[styles.trigger, props.styles.trigger]}>
+    <Pressable
+      onPress={props.onPress}
+      className="flex-row items-center px-3 py-2 rounded-md border border-input gap-2"
+      style={props.styles.trigger}
+    >
       {props.current?.imageUrl !== undefined && props.current.imageUrl.length > 0 ? (
         <Image
           source={{ uri: props.current.imageUrl }}
-          style={[styles.triggerImage, props.styles.triggerImage]}
+          className="w-6 h-6 rounded-full"
+          style={props.styles.triggerImage}
         />
       ) : (
-        <View style={[styles.triggerPlaceholder, props.styles.triggerPlaceholder]} />
+        <View
+          className="w-6 h-6 rounded-full border border-input opacity-40"
+          style={props.styles.triggerPlaceholder}
+        />
       )}
-      <Text style={[styles.triggerName, props.styles.triggerName]}>
+      <Text className="text-sm font-medium" style={props.styles.triggerName}>
         {props.current?.name ?? props.copy.personalAccountLabel}
       </Text>
     </Pressable>
@@ -120,16 +127,26 @@ function CurrentOrganizationSection(props: {
 
   return (
     <View>
-      <Text style={[styles.sectionTitle, props.styles.sectionTitle]}>
+      <Text
+        className="text-xs text-muted-foreground mt-3 mb-2 font-medium"
+        style={props.styles.sectionTitle}
+      >
         {props.copy.currentOrganizationLabel}
       </Text>
-      <View style={[styles.item, styles.itemActive, props.styles.item, props.styles.itemActive]}>
-        <Text style={[styles.itemLabel, props.styles.itemLabel]}>{props.current.name}</Text>
+      <View
+        className="py-3 px-2 rounded-md opacity-60"
+        style={[props.styles.item, props.styles.itemActive]}
+      >
+        <Text className="text-base font-medium" style={props.styles.itemLabel}>
+          {props.current.name}
+        </Text>
         {props.current.slug !== undefined ? (
-          <Text style={[styles.itemMeta, props.styles.itemMeta]}>{props.current.slug}</Text>
+          <Text className="text-xs text-muted-foreground mt-0.5" style={props.styles.itemMeta}>
+            {props.current.slug}
+          </Text>
         ) : null}
       </View>
-      <View className="bg-border" style={[styles.divider, props.styles.divider]} />
+      <View className="bg-border h-px my-2" style={props.styles.divider} />
     </View>
   );
 }
@@ -168,44 +185,71 @@ export function ConvexOrganizationSwitcher(props: ExpoOrgSwitcherProps) {
         styles={s}
       />
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <Pressable style={[styles.modal, s.modal]} onPress={() => setOpen(false)}>
-          <Pressable className="bg-popover" style={[styles.panel, s.panel]} onPress={() => {}}>
+        <Pressable
+          onPress={() => setOpen(false)}
+          style={[
+            { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },
+            s.modal,
+          ]}
+        >
+          <Pressable
+            onPress={() => {}}
+            className="bg-popover px-4 py-5 rounded-t-xl"
+            style={s.panel}
+          >
             <CurrentOrganizationSection copy={copy} current={current} styles={s} />
-            <Text style={[styles.sectionTitle, s.sectionTitle]}>
+            <Text
+              className="text-xs text-muted-foreground mt-3 mb-2 font-medium"
+              style={s.sectionTitle}
+            >
               {copy.otherOrganizationsLabel}
             </Text>
             {others.length === 0 ? (
-              <Text style={[styles.itemMeta, s.itemMeta]}>{copy.noOrganizationsLabel}</Text>
+              <Text className="text-xs text-muted-foreground mt-0.5" style={s.itemMeta}>
+                {copy.noOrganizationsLabel}
+              </Text>
             ) : (
               others.map((org) => (
                 <Pressable
                   key={org._id}
                   onPress={() => void pickOrg(org._id)}
-                  style={[styles.item, s.item]}
+                  className="py-3 px-2 rounded-md"
+                  style={s.item}
                 >
-                  <Text style={[styles.itemLabel, s.itemLabel]}>{org.name}</Text>
+                  <Text className="text-base font-medium" style={s.itemLabel}>
+                    {org.name}
+                  </Text>
                   {org.slug !== undefined ? (
-                    <Text style={[styles.itemMeta, s.itemMeta]}>{org.slug}</Text>
+                    <Text className="text-xs text-muted-foreground mt-0.5" style={s.itemMeta}>
+                      {org.slug}
+                    </Text>
                   ) : null}
                 </Pressable>
               ))
             )}
             {props.showPersonalAccount === true && props.onSelectPersonalAccount !== undefined ? (
               <View>
-                <View className="bg-border" style={[styles.divider, s.divider]} />
-                <Pressable onPress={() => void pickPersonal()} style={[styles.item, s.item]}>
-                  <Text style={[styles.itemLabel, s.itemLabel]}>{copy.personalAccountLabel}</Text>
+                <View className="bg-border h-px my-2" style={s.divider} />
+                <Pressable
+                  onPress={() => void pickPersonal()}
+                  className="py-3 px-2 rounded-md"
+                  style={s.item}
+                >
+                  <Text className="text-base font-medium" style={s.itemLabel}>
+                    {copy.personalAccountLabel}
+                  </Text>
                 </Pressable>
               </View>
             ) : null}
             {props.onCreateOrganization !== undefined ? (
               <View>
-                <View className="bg-border" style={[styles.divider, s.divider]} />
+                <View className="bg-border h-px my-2" style={s.divider} />
                 <Pressable
                   onPress={() => void pickCreate()}
-                  style={[styles.createButton, s.createButton]}
+                  className="py-3 px-2 rounded-md border border-input items-center"
+                  style={s.createButton}
                 >
-                  <Text style={[styles.createButtonText, s.createButtonText]}>
+                  <Text className="text-sm font-medium" style={s.createButtonText}>
                     {copy.createOrganizationLabel}
                   </Text>
                 </Pressable>
@@ -217,56 +261,3 @@ export function ConvexOrganizationSwitcher(props: ExpoOrgSwitcherProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  trigger: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    gap: 8,
-  },
-  triggerImage: { width: 24, height: 24, borderRadius: 12 },
-  triggerPlaceholder: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    opacity: 0.4,
-  },
-  triggerName: { fontSize: 14, fontWeight: "500" },
-  modal: {
-    flex: 1,
-    justifyContent: "flex-end",
-    // convex-allow-color: modal scrim
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  panel: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    opacity: 0.6,
-    marginTop: 12,
-    marginBottom: 8,
-    fontWeight: "500",
-  },
-  item: { paddingVertical: 12, paddingHorizontal: 8, borderRadius: 6 },
-  itemActive: { opacity: 0.6 },
-  itemLabel: { fontSize: 15, fontWeight: "500" },
-  itemMeta: { fontSize: 12, opacity: 0.6, marginTop: 2 },
-  divider: { height: 1, marginVertical: 8 },
-  createButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  createButtonText: { fontSize: 14, fontWeight: "500" },
-});

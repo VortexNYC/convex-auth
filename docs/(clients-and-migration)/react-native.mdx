@@ -15,12 +15,58 @@ pnpm add @vortex-api/convex-auth convex
 pnpm add expo-secure-store
 ```
 
-## Provider
+The React Native components and example use **Uniwind** (Tailwind CSS v4 for React Native) and the convex-auth UI tokens:
+
+```bash
+pnpm add tailwindcss uniwind
+```
+
+## Metro and CSS entry
+
+Add Uniwind to `metro.config.js`:
+
+```js metro.config.js
+const { getDefaultConfig } = require("expo/metro-config");
+const { withUniwindConfig } = require("uniwind/metro");
+
+module.exports = withUniwindConfig(getDefaultConfig(__dirname), {
+  cssEntryFile: "./src/global.css",
+  debug: false,
+  inlineRem: 16,
+});
+```
+
+Create a CSS entry that imports Tailwind, Uniwind, and the auth package UI styles:
+
+```css src/global.css
+@import "tailwindcss";
+@import "uniwind";
+@import "@vortex-api/convex-auth/ui/styles.css";
+
+/* Allow Uniwind to find the class names used by the auth package. */
+@source "../../../packages/auth/src";
+```
+
+Import the CSS entry at the top of your root component:
 
 ```tsx src/App.tsx
-import { ConvexReactClient, ConvexProvider } from "convex/react";
-import { ExpoConvexAuthProvider } from "@vortex-api/convex-auth/react-native";
+import "./global.css";
+```
+
+The auth package already includes a `uniwind-env.d.ts` declaration that adds `className` props to React Native components, so the above classes are typed.
+
+## Provider
+
+Use `ExpoConvexAuthClientProvider` with a SecureStore-backed storage object. The provider also needs a way to receive deep links (OAuth, password reset, email verification, etc.):
+
+```tsx src/Root.tsx
+import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
+import { ConvexReactClient, ConvexProvider } from "convex/react";
+import {
+  ExpoConvexAuthClientProvider,
+  type NativeAuthActions,
+} from "@vortex-api/convex-auth/react-native";
 import { api } from "../convex/_generated/api";
 
 const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!);
@@ -28,68 +74,27 @@ const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!);
 const storage = {
   getItem: (key: string) => SecureStore.getItemAsync(key),
   setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
+  deleteItem: (key: string) => SecureStore.deleteItemAsync(key),
+  setItemAsync: async (key: string, value: string) => {
+    await SecureStore.setItemAsync(key, value);
+  },
+  deleteItemAsync: async (key: string) => {
+    await SecureStore.deleteItemAsync(key);
+  },
 };
 
 function Root() {
   return (
     <ConvexProvider client={convex}>
-      <ExpoConvexAuthProvider actions={api.auth} storage={storage}>
-        <App />
-      </ExpoConvexAuthProvider>
-    </ConvexProvider>
-  );
-}
-```
-
-`ExpoConvexAuthProvider` accepts a `storage` object with `getItem`, `setItem`, and `removeItem` to persist the token, refresh token, and session id. `expo-secure-store` is the recommended implementation.
-
-## Sign in and sign up
-
-```tsx src/SignIn.tsx
-import { useState } from "react";
-import { View, TextInput, Button } from "react-native";
-import { useAuthActions } from "@vortex-api/convex-auth/react-native";
-
-export function SignIn() {
-  const { signIn, signUp, isLoading } = useAuthActions();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  return (
-    <View>
-      <TextInput value={name} onChangeText={setName} placeholder="Name" />
-      <TextInput value={email} onChangeText={setEmail} placeholder="Email" />
-      <TextInput
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Password"
-        secureTextEntry
-      />
-      <Button title="Sign in" disabled={isLoading} onPress={() => signIn({ email, password })} />
-      <Button
-        title="Sign up"
-        disabled={isLoading}
-        onPress={() => signUp({ name, email, password })}
-      />
-    </View>
-  );
-}
-```
-
-## Client provider
-
-For apps that need the drop-in client, use `ExpoConvexAuthClientProvider`:
-
-```tsx src/Root.tsx
-import { ConvexProvider } from "convex/react";
-import { ExpoConvexAuthClientProvider } from "@vortex-api/convex-auth/react-native";
-import { api } from "../convex/_generated/api";
-
-function Root() {
-  return (
-    <ConvexProvider client={convex}>
-      <ExpoConvexAuthClientProvider actions={api.auth} storage={storage}>
+      <ExpoConvexAuthClientProvider
+        actions={api.auth as unknown as NativeAuthActions}
+        storage={storage}
+        initialUrl={Linking.createURL("/")}
+        subscribeToUrl={(handler) => {
+          const subscription = Linking.addEventListener("url", ({ url }) => handler(url));
+          return () => subscription.remove();
+        }}
+      >
         <App />
       </ExpoConvexAuthClientProvider>
     </ConvexProvider>
@@ -97,20 +102,119 @@ function Root() {
 }
 ```
 
-This gives you `useConvexAuthClient` with the same `signIn.email`, `signIn.social`, `signUp.email`, `useSession`, and `twoFactor` methods as the web client.
+`ExpoConvexAuthClientProvider` accepts a `storage` object with `getItem`, `setItem`, `deleteItem`, `setItemAsync`, and `deleteItemAsync` to persist the token, refresh token, and session id. `expo-secure-store` is the recommended implementation.
+
+## Sign in, sign up, and 2FA
+
+Use the drop-in screen components:
+
+```tsx src/SignIn.tsx
+import { ExpoAuthClientSignInScreen } from "@vortex-api/convex-auth/react-native";
+
+export function SignIn() {
+  return (
+    <ExpoAuthClientSignInScreen
+      signUpUrl=""
+      forceRedirectUrl={Linking.createURL("/")}
+      title="Sign in"
+      description="Sign in with Google, GitHub, Discord, or email."
+    />
+  );
+}
+```
+
+`ExpoAuthClientSignInScreen` and `ExpoAuthClientSignUpScreen` already handle the 2FA step-up internally. If `signIn.email` returns `twoFactorRedirect`, they render `ConvexVerifyTwoFactorForm` automatically.
 
 ## OAuth in React Native
 
-For Google, GitHub, or Discord in React Native, start the OAuth flow with `signInWithRedirect` and complete it in a web browser or deep link handler. Redirect the user to the returned `url`, then route the callback to the same `/api/auth/callback/:provider` endpoint. Read the resulting `?token=...` and call `updateSession`.
+For Google, GitHub, or Discord in React Native, `ExpoAuthClientSignInScreen` calls `signIn.social` and opens the returned `url` with `expo-linking` `openURL`. The provider must redirect back to your app's URL scheme, for example `convex-auth-rn:///`. `ExpoConvexAuthClientProvider` receives the deep link through `subscribeToUrl` and completes the session.
 
-## Expo screen components
+## Other auth flows
 
-`@vortex-api/convex-auth/react-native` also ships full screen components for common flows:
+The package ships additional form components for the flows that are usually reached by deep link:
 
+| Component                   | Use                                                                                                                     |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `ConvexForgotPasswordForm`  | Request a password reset email. Pass `resetPasswordUrl` (the deep link the reset email should point at).                |
+| `ConvexResetPasswordForm`   | Set a new password after the user opens the reset deep link. Pass `token` from the deep link.                           |
+| `ConvexVerifyEmailScreen`   | Verify an email from a deep link. Pass `token`; optionally pass `userEmail` and `resendCallbackUrl` to allow resending. |
+| `ConvexVerifyTwoFactorForm` | Collect TOTP or backup code during sign-in. Usually handled by `ExpoAuthClientSignInScreen`.                            |
+| `ConvexEnableTwoFactorForm` | Enroll TOTP on a signed-in account. Pass `issuer` and, optionally, `renderQR` for a QR component.                       |
+
+Example deep link parsing for reset and verify:
+
+```tsx src/useAuthDeepLink.ts
+import * as Linking from "expo-linking";
+
+export type AuthDeepLink =
+  | { screen: "reset"; token: string }
+  | { screen: "verify"; token: string }
+  | null;
+
+export function parseAuthDeepLink(url: string | null): AuthDeepLink {
+  if (typeof url !== "string" || url.length === 0) return null;
+  const parsed = Linking.parse(url);
+  const path = parsed.path?.toLowerCase() ?? "";
+  const token = typeof parsed.queryParams?.token === "string" ? parsed.queryParams.token : "";
+
+  if (path === "reset-password" && token.length > 0) {
+    return { screen: "reset", token };
+  }
+  if (path === "verify-email" && token.length > 0) {
+    return { screen: "verify", token };
+  }
+  return null;
+}
+```
+
+Render the matching component when a deep link is received:
+
+```tsx src/Reset.tsx
+import { ConvexResetPasswordForm } from "@vortex-api/convex-auth/react-native";
+
+export function Reset({ token }: { token: string }) {
+  return (
+    <ConvexResetPasswordForm
+      token={token}
+      onReset={() => {
+        // navigate to sign-in
+      }}
+    />
+  );
+}
+```
+
+## Styling
+
+The screen components support a `styles` prop for every keyed element (`root`, `title`, `input`, `submitButton`, etc.). The components also use Uniwind `className` strings internally, so styling works out of the box if you imported the convex-auth CSS.
+
+```tsx
+<ExpoAuthClientSignInScreen
+  styles={{
+    root: { padding: 24, borderRadius: 12 },
+    submitButton: { backgroundColor: "#0f172a" },
+  }}
+/>
+```
+
+Use the design tokens from `@vortex-api/convex-auth/ui/styles.css` in your own components instead of hard-coding colors. The components reference tokens like `bg-background`, `text-foreground`, `border-input`, and `text-destructive`.
+
+## Available components
+
+- `ExpoConvexAuthClientProvider`
 - `ExpoAuthClientSignInScreen`
 - `ExpoAuthClientSignUpScreen`
-- `ExpoAuthPostSignUpPage`
-- `ExpoAuthAcceptInvitePage`
-- `ExpoAuthOrganizationChooserPage`
-
-Use these when you want plug-and-play auth pages in an Expo Router app.
+- `ConvexForgotPasswordForm`
+- `ConvexResetPasswordForm`
+- `ConvexVerifyEmailScreen`
+- `ConvexVerifyTwoFactorForm`
+- `ConvexEnableTwoFactorForm`
+- `ConvexSessionList`
+- `ConvexChangeEmailForm`
+- `ConvexProfileEditForm`
+- `ConvexProfileImageUploader`
+- `ConvexCreateOrganization`
+- `ConvexOrganizationList`
+- `ConvexOrganizationMembers`
+- `ConvexOrganizationProfile`
+- `ConvexOrganizationSwitcher`

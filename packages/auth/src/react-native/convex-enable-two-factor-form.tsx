@@ -16,7 +16,6 @@
 import { useState, type ReactNode } from "react";
 import {
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -152,10 +151,14 @@ export function ConvexEnableTwoFactorForm(props: ExpoEnableTwoFactorFormProps) {
   }
 
   return (
-    <View style={[styles.root, s.root]}>
-      <View style={[styles.header, s.header]}>
-        <Text style={[styles.title, s.title]}>{header.title}</Text>
-        <Text style={[styles.description, s.description]}>{header.description}</Text>
+    <View className="w-full py-2" style={s.root}>
+      <View className="px-4 pb-3" style={s.header}>
+        <Text className="text-base font-semibold" style={s.title}>
+          {header.title}
+        </Text>
+        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+          {header.description}
+        </Text>
       </View>
 
       {step === "password" ? (
@@ -211,12 +214,10 @@ function TwoFactorUnavailable(args: {
   copy: TwoFactorFormCopy;
   stylesOverride: ExpoEnableTwoFactorFormStyles;
 }) {
+  const s = args.stylesOverride;
   return (
-    <View style={[styles.root, args.stylesOverride.root]}>
-      <Text
-        className="text-destructive"
-        style={[styles.errorState, args.stylesOverride.errorState]}
-      >
+    <View className="w-full py-2" style={s.root}>
+      <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
         {args.copy.unavailable}
       </Text>
     </View>
@@ -235,8 +236,10 @@ function TwoFactorPasswordStep(args: {
   const s = args.stylesOverride;
   return (
     <View>
-      <View style={[styles.field, s.field]}>
-        <Text style={[styles.label, s.label]}>{args.copy.passwordLabel}</Text>
+      <View className="px-4 py-2" style={s.field}>
+        <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+          {args.copy.passwordLabel}
+        </Text>
         <TextInput
           value={args.password}
           onChangeText={args.onPasswordChange}
@@ -244,15 +247,17 @@ function TwoFactorPasswordStep(args: {
           autoCapitalize="none"
           autoComplete="password"
           secureTextEntry
-          style={[styles.input, s.input]}
+          className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+          style={s.input}
         />
       </View>
       <Pressable
         onPress={() => void args.onSubmit()}
         disabled={args.isEnabling}
-        style={[styles.submitButton, s.submitButton]}
+        className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input items-center"
+        style={s.submitButton}
       >
-        <Text style={[styles.submitButtonText, s.submitButtonText]}>
+        <Text className="text-sm font-medium" style={s.submitButtonText}>
           {args.isEnabling ? args.copy.submitting : args.copy.passwordSubmit}
         </Text>
       </Pressable>
@@ -277,18 +282,24 @@ function TwoFactorVerifyStep(args: {
   return (
     <View>
       {args.totpURI !== null && args.renderQR !== undefined ? (
-        <View style={[styles.qr, s.qr]}>{args.renderQR(args.totpURI)}</View>
+        <View className="items-center py-3" style={s.qr}>
+          {args.renderQR(args.totpURI)}
+        </View>
       ) : null}
       {args.secret !== null ? (
-        <View style={[styles.field, s.field]}>
-          <Text style={[styles.label, s.label]}>{args.copy.secretLabel}</Text>
-          <Text selectable style={[styles.secret, s.secret]}>
+        <View className="px-4 py-2" style={s.field}>
+          <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+            {args.copy.secretLabel}
+          </Text>
+          <Text selectable className="text-base font-mono tracking-wide" style={s.secret}>
             {args.secret}
           </Text>
         </View>
       ) : null}
-      <View style={[styles.field, s.field]}>
-        <Text style={[styles.label, s.label]}>{args.copy.codeLabel}</Text>
+      <View className="px-4 py-2" style={s.field}>
+        <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+          {args.copy.codeLabel}
+        </Text>
         <TextInput
           value={args.code}
           onChangeText={args.onCodeChange}
@@ -296,15 +307,17 @@ function TwoFactorVerifyStep(args: {
           autoCapitalize="none"
           autoComplete="one-time-code"
           keyboardType="number-pad"
-          style={[styles.input, s.input]}
+          className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+          style={s.input}
         />
       </View>
       <Pressable
         onPress={() => void args.onSubmit()}
         disabled={args.isVerifying}
-        style={[styles.submitButton, s.submitButton]}
+        className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input items-center"
+        style={s.submitButton}
       >
-        <Text style={[styles.submitButtonText, s.submitButtonText]}>
+        <Text className="text-sm font-medium" style={s.submitButtonText}>
           {args.isVerifying ? args.copy.submitting : args.copy.verifySubmit}
         </Text>
       </Pressable>
@@ -322,15 +335,21 @@ function TwoFactorBackupStep(args: {
   const s = args.stylesOverride;
   return (
     <View>
-      <View style={[styles.backupCodes, s.backupCodes]}>
+      <View className="px-4 py-2 gap-1" style={s.backupCodes}>
         {args.backupCodes.map((backupCode) => (
-          <Text key={backupCode} selectable style={[styles.backupCode, s.backupCode]}>
+          <Text key={backupCode} selectable className="text-base font-mono" style={s.backupCode}>
             {backupCode}
           </Text>
         ))}
       </View>
-      <Pressable onPress={() => args.onDone?.()} style={[styles.submitButton, s.submitButton]}>
-        <Text style={[styles.submitButtonText, s.submitButtonText]}>{args.copy.done}</Text>
+      <Pressable
+        onPress={() => args.onDone?.()}
+        className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input items-center"
+        style={s.submitButton}
+      >
+        <Text className="text-sm font-medium" style={s.submitButtonText}>
+          {args.copy.done}
+        </Text>
       </Pressable>
     </View>
   );
@@ -340,44 +359,10 @@ function TwoFactorError(args: {
   error: string | null;
   stylesOverride: ExpoEnableTwoFactorFormStyles;
 }) {
+  const s = args.stylesOverride;
   return args.error === null ? null : (
-    <Text className="text-destructive" style={[styles.errorState, args.stylesOverride.errorState]}>
+    <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
       {args.error}
     </Text>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { paddingVertical: 8 },
-  header: { paddingHorizontal: 16, paddingBottom: 12 },
-  title: { fontSize: 16, fontWeight: "600" },
-  description: { fontSize: 13, opacity: 0.6, marginTop: 2 },
-  field: { paddingHorizontal: 16, paddingVertical: 8 },
-  label: { fontSize: 13, opacity: 0.7, marginBottom: 4 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-  },
-  secret: {
-    fontSize: 15,
-    fontFamily: "Courier",
-    letterSpacing: 1,
-  },
-  qr: { alignItems: "center", paddingVertical: 12 },
-  backupCodes: { paddingHorizontal: 16, paddingVertical: 8, gap: 4 },
-  backupCode: { fontSize: 15, fontFamily: "Courier" },
-  submitButton: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  submitButtonText: { fontSize: 14, fontWeight: "500" },
-  errorState: { paddingHorizontal: 16, paddingTop: 8, fontSize: 13 },
-});

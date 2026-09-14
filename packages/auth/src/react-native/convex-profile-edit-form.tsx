@@ -16,7 +16,6 @@
 import { useState } from "react";
 import {
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -116,90 +115,72 @@ export function ConvexProfileEditForm(props: ExpoProfileEditFormProps) {
   }
 
   return (
-    <View style={[styles.root, s.root]}>
-      <View style={[styles.header, s.header]}>
-        <Text style={[styles.title, s.title]}>{copy.title}</Text>
-        <Text style={[styles.description, s.description]}>{copy.description}</Text>
+    <View className="w-full py-2" style={s.root}>
+      <View className="px-4 pb-3" style={s.header}>
+        <Text className="text-base font-semibold" style={s.title}>
+          {copy.title}
+        </Text>
+        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+          {copy.description}
+        </Text>
       </View>
       {isAvailable ? (
         <View>
-          <View style={[styles.field, s.field]}>
-            <Text style={[styles.label, s.label]}>{copy.nameLabel}</Text>
+          <View className="px-4 pb-3" style={s.field}>
+            <Text className="text-xs text-muted-foreground mb-1.5" style={s.label}>
+              {copy.nameLabel}
+            </Text>
             <TextInput
               value={name}
               onChangeText={setName}
-              className="border-border"
-              style={[styles.input, s.input]}
               autoCapitalize="words"
               autoCorrect={false}
+              className="w-full border border-input bg-background text-foreground rounded-md px-2.5 py-2 text-sm"
+              style={s.input}
             />
           </View>
           {showImageField ? (
-            <View style={[styles.field, s.field]}>
-              <Text style={[styles.label, s.label]}>{copy.imageLabel}</Text>
+            <View className="px-4 pb-3" style={s.field}>
+              <Text className="text-xs text-muted-foreground mb-1.5" style={s.label}>
+                {copy.imageLabel}
+              </Text>
               <TextInput
                 value={image}
                 onChangeText={setImage}
-                className="border-border"
-                style={[styles.input, s.input]}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="url"
+                className="w-full border border-input bg-background text-foreground rounded-md px-2.5 py-2 text-sm"
+                style={s.input}
               />
             </View>
           ) : null}
           <Pressable
             onPress={() => void handleSubmit()}
             disabled={isUpdating}
-            style={[styles.submitButton, s.submitButton]}
+            className="mx-4 px-3 py-2.5 rounded-md border border-input items-center"
+            style={s.submitButton}
           >
-            <Text style={[styles.submitButtonText, s.submitButtonText]}>
+            <Text className="text-sm font-medium" style={s.submitButtonText}>
               {isUpdating ? copy.submitting : copy.submit}
             </Text>
           </Pressable>
           {success !== null ? (
-            <Text className="text-success" style={[styles.successState, s.successState]}>
+            <Text className="text-success px-4 pt-2 text-sm" style={s.successState}>
               {success}
             </Text>
           ) : null}
           {error !== null ? (
-            <Text className="text-destructive" style={[styles.errorState, s.errorState]}>
+            <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
               {error}
             </Text>
           ) : null}
         </View>
       ) : (
-        <Text className="text-destructive" style={[styles.errorState, s.errorState]}>
+        <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
           {copy.unavailable}
         </Text>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { paddingVertical: 8 },
-  header: { paddingHorizontal: 16, paddingBottom: 12 },
-  title: { fontSize: 16, fontWeight: "600" },
-  description: { fontSize: 13, opacity: 0.6, marginTop: 2 },
-  field: { paddingHorizontal: 16, paddingBottom: 12 },
-  label: { fontSize: 12, opacity: 0.7, marginBottom: 6 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 14,
-  },
-  submitButton: {
-    marginHorizontal: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  submitButtonText: { fontSize: 14, fontWeight: "500" },
-  successState: { paddingHorizontal: 16, paddingTop: 8, fontSize: 13 },
-  errorState: { paddingHorizontal: 16, paddingTop: 8, fontSize: 13 },
-});

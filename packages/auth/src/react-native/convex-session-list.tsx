@@ -18,7 +18,6 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  StyleSheet,
   Text,
   View,
   type StyleProp,
@@ -130,19 +129,24 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
   }
 
   return (
-    <View style={[styles.root, s.root]}>
-      <View style={[styles.header, s.header]}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.title, s.title]}>{copy.title}</Text>
-          <Text style={[styles.description, s.description]}>{copy.description}</Text>
+    <View className="w-full py-2" style={s.root}>
+      <View className="flex-row items-start px-4 pb-3 gap-3" style={s.header}>
+        <View className="flex-1">
+          <Text className="text-base font-semibold" style={s.title}>
+            {copy.title}
+          </Text>
+          <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+            {copy.description}
+          </Text>
         </View>
         {showRevokeOthers && otherSessionCount > 0 ? (
           <Pressable
             onPress={() => void handleRevokeOthers()}
             disabled={isRevoking}
-            style={[styles.revokeOthersButton, s.revokeOthersButton]}
+            className="px-3 py-1.5 rounded-md border border-input"
+            style={s.revokeOthersButton}
           >
-            <Text style={[styles.revokeOthersButtonText, s.revokeOthersButtonText]}>
+            <Text className="text-sm" style={s.revokeOthersButtonText}>
               {isRevoking ? copy.revokingOthersButton : copy.revokeOthersButton}
             </Text>
           </Pressable>
@@ -150,18 +154,22 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
       </View>
 
       {isLoading ? (
-        <View style={[styles.loadingState, s.loadingState]}>
+        <View className="p-4 items-center gap-2" style={s.loadingState}>
           <ActivityIndicator />
-          <Text style={s.itemMeta}>{copy.loading}</Text>
+          <Text className="text-xs text-muted-foreground" style={s.itemMeta}>
+            {copy.loading}
+          </Text>
         </View>
       ) : error !== null ? (
-        <Text className="text-destructive" style={[styles.errorState, s.errorState]}>
+        <Text className="text-destructive p-4 text-sm" style={s.errorState}>
           {error === "Session listing is not available on this auth client"
             ? copy.unavailable
             : error}
         </Text>
       ) : (sessions ?? []).length === 0 ? (
-        <Text style={[styles.emptyState, s.emptyState]}>{copy.empty}</Text>
+        <Text className="p-4 text-sm text-muted-foreground" style={s.emptyState}>
+          {copy.empty}
+        </Text>
       ) : (
         <FlatList
           data={sessions ?? []}
@@ -184,7 +192,7 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
         />
       )}
       {localError !== null ? (
-        <Text className="text-destructive" style={[styles.errorState, s.errorState]}>
+        <Text className="text-destructive p-4 text-sm" style={s.errorState}>
           {localError}
         </Text>
       ) : null}
@@ -204,18 +212,14 @@ function SessionRow(args: {
   const { session, isCurrent, isRevoking, copy, styles: s, onRevoke, formatTimestamp } = args;
   return (
     <View
-      style={[
-        styles.item,
-        s.item,
-        isCurrent ? styles.itemCurrent : undefined,
-        isCurrent ? s.itemCurrent : undefined,
-      ]}
+      className="flex-row items-center px-4 py-3 gap-3"
+      style={[s.item, isCurrent ? s.itemCurrent : undefined]}
     >
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.itemPrimary, s.itemPrimary]}>
+      <View className="flex-1">
+        <Text className="text-sm font-medium" style={s.itemPrimary}>
           {isCurrent ? copy.currentBadge : (session.userAgent ?? "Device")}
         </Text>
-        <Text style={[styles.itemMeta, s.itemMeta]}>
+        <Text className="text-xs text-muted-foreground mt-0.5" style={s.itemMeta}>
           {copy.lastActivePrefix}: {formatTimestamp(session.updatedAt)}
         </Text>
       </View>
@@ -223,9 +227,10 @@ function SessionRow(args: {
         <Pressable
           onPress={onRevoke}
           disabled={isRevoking}
-          style={[styles.revokeButton, s.revokeButton]}
+          className="px-3 py-1.5 rounded-md border border-input"
+          style={s.revokeButton}
         >
-          <Text style={[styles.revokeButtonText, s.revokeButtonText]}>
+          <Text className="text-sm" style={s.revokeButtonText}>
             {isRevoking ? copy.revoking : copy.revoke}
           </Text>
         </Pressable>
@@ -233,45 +238,3 @@ function SessionRow(args: {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { paddingVertical: 8 },
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    gap: 12,
-  },
-  title: { fontSize: 16, fontWeight: "600" },
-  description: { fontSize: 13, opacity: 0.6, marginTop: 2 },
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  itemCurrent: {
-    // Consumer overrides via styles.itemCurrent for theme accent.
-  },
-  itemPrimary: { fontSize: 14, fontWeight: "500" },
-  itemMeta: { fontSize: 12, opacity: 0.6, marginTop: 2 },
-  revokeButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  revokeButtonText: { fontSize: 13 },
-  revokeOthersButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  revokeOthersButtonText: { fontSize: 13 },
-  emptyState: { padding: 16, fontSize: 13, opacity: 0.6 },
-  loadingState: { padding: 16, alignItems: "center", gap: 8 },
-  errorState: { padding: 16, fontSize: 13 },
-});
