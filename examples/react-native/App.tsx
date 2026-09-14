@@ -207,7 +207,7 @@ function useTheme() {
           marginBottom: 16,
         },
         input: {
-          alignSelf: "stretch",
+          width: formWidth - 48,
           borderWidth: 1,
           borderColor: colors.inputBorder,
           borderRadius: 8,
@@ -217,7 +217,7 @@ function useTheme() {
         },
         inputText: { color: colors.text },
         submitButton: {
-          alignSelf: "stretch",
+          width: formWidth - 48,
           backgroundColor: isDark ? colors.primary : "#0f172a",
           borderRadius: 8,
           padding: 12,
@@ -228,7 +228,7 @@ function useTheme() {
           fontWeight: "600",
         },
         providerButton: {
-          alignSelf: "stretch",
+          width: formWidth - 48,
           borderWidth: 1,
           borderColor: colors.surfaceBorder,
           borderRadius: 8,
