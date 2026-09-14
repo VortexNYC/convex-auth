@@ -6,6 +6,7 @@ import {
   View,
   useColorScheme,
   useWindowDimensions,
+  Dimensions,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
@@ -45,9 +46,6 @@ const socialProviders = [
 function useTheme() {
   const colorScheme = useColorScheme() ?? "light";
   const isDark = colorScheme === "dark";
-  const { width } = useWindowDimensions();
-  const screenWidth = typeof width === "number" && width > 0 ? width : 390;
-  const formWidth = Math.min(screenWidth - 48, 460);
 
   const colors = useMemo(
     () =>
@@ -83,6 +81,15 @@ function useTheme() {
     [isDark],
   );
 
+  const { width } = useWindowDimensions();
+  const screenWidth =
+    typeof width === "number" && width > 0
+      ? width
+      : Dimensions.get("screen").width > 0
+        ? Dimensions.get("screen").width
+        : 1194;
+  const formWidth = Math.min(screenWidth - 48, 460);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -98,7 +105,7 @@ function useTheme() {
         },
         container: {
           flex: 1,
-          alignItems: "center",
+          alignItems: "flex-start",
           justifyContent: "center",
           padding: 24,
           backgroundColor: colors.background,
@@ -115,6 +122,7 @@ function useTheme() {
           fontWeight: "600",
         },
         guestButton: {
+          alignSelf: "stretch",
           marginTop: 16,
           paddingVertical: 12,
           paddingHorizontal: 24,
@@ -161,6 +169,7 @@ function useTheme() {
           color: colors.textMuted,
         },
         signOutButton: {
+          alignSelf: "stretch",
           marginTop: 16,
           paddingVertical: 12,
           paddingHorizontal: 24,
@@ -173,74 +182,78 @@ function useTheme() {
           fontWeight: "600",
         },
       }),
-    [colors, isDark],
+    [colors, isDark, formWidth],
   );
 
   const authScreenStyles: ExpoAuthClientScreenStyles = useMemo(
-    () => ({
-      root: {
-        width: formWidth,
-        padding: 24,
-        backgroundColor: colors.background,
-      },
-      title: {
-        fontSize: 24,
-        fontWeight: "700",
-        marginBottom: 8,
-        color: colors.text,
-      },
-      description: {
-        fontSize: 14,
-        color: colors.textMuted,
-        marginBottom: 16,
-      },
-      input: {
-        width: formWidth - 48,
-        borderWidth: 1,
-        borderColor: colors.inputBorder,
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 12,
-        backgroundColor: colors.inputBackground,
-      },
-      inputText: { color: colors.text },
-      submitButton: {
-        width: formWidth - 48,
-        backgroundColor: isDark ? colors.primary : "#0f172a",
-        borderRadius: 8,
-        padding: 12,
-        alignItems: "center",
-      },
-      submitButtonText: {
-        color: isDark ? colors.primaryText : "#ffffff",
-        fontWeight: "600",
-      },
-      providerButton: {
-        width: formWidth - 48,
-        borderWidth: 1,
-        borderColor: colors.surfaceBorder,
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 8,
-        alignItems: "center",
-      },
-      providerButtonText: { color: colors.text },
-      error: { color: colors.danger, marginBottom: 8 },
-    }),
+    () =>
+      StyleSheet.create({
+        root: {
+          width: formWidth,
+          marginLeft: (screenWidth - 48 - formWidth) / 2,
+          padding: 24,
+          backgroundColor: colors.background,
+          alignItems: "stretch",
+        },
+        title: {
+          fontSize: 24,
+          fontWeight: "700",
+          marginBottom: 8,
+          color: colors.text,
+        },
+        description: {
+          fontSize: 14,
+          color: colors.textMuted,
+          marginBottom: 16,
+        },
+        input: {
+          alignSelf: "stretch",
+          borderWidth: 1,
+          borderColor: colors.inputBorder,
+          borderRadius: 8,
+          padding: 12,
+          marginBottom: 12,
+          backgroundColor: colors.inputBackground,
+        },
+        inputText: { color: colors.text },
+        submitButton: {
+          alignSelf: "stretch",
+          backgroundColor: isDark ? colors.primary : "#0f172a",
+          borderRadius: 8,
+          padding: 12,
+          alignItems: "center",
+        },
+        submitButtonText: {
+          color: isDark ? colors.primaryText : "#ffffff",
+          fontWeight: "600",
+        },
+        providerButton: {
+          alignSelf: "stretch",
+          borderWidth: 1,
+          borderColor: colors.surfaceBorder,
+          borderRadius: 8,
+          padding: 12,
+          marginBottom: 8,
+          alignItems: "center",
+        },
+        providerButtonText: { color: colors.text },
+        error: { color: colors.danger, marginBottom: 8 },
+      }),
     [colors, isDark, formWidth],
   );
 
   const sessionListStyles: ExpoSessionListStyles = useMemo(
     () => ({
       root: {
+        flex: 1,
         backgroundColor: colors.surface,
         borderRadius: 12,
         marginBottom: 16,
       },
+      list: { flexGrow: 1 },
       header: { padding: 16 },
       title: { fontSize: 18, fontWeight: "700", color: colors.text },
       description: { fontSize: 14, color: colors.textMuted },
-      list: {},
       item: {
         padding: 12,
         borderBottomWidth: 1,
