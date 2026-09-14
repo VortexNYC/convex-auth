@@ -151,7 +151,7 @@ export function ConvexEnableTwoFactorForm(props: ExpoEnableTwoFactorFormProps) {
   }
 
   return (
-    <View className="py-2" style={s.root}>
+    <View className="w-full py-2" style={s.root}>
       <View className="px-4 pb-3" style={s.header}>
         <Text className="text-base font-semibold" style={s.title}>
           {header.title}
@@ -216,7 +216,7 @@ function TwoFactorUnavailable(args: {
 }) {
   const s = args.stylesOverride;
   return (
-    <View className="py-2" style={s.root}>
+    <View className="w-full py-2" style={s.root}>
       <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
         {args.copy.unavailable}
       </Text>

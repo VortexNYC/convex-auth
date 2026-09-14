@@ -2,12 +2,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "./src/global.css";
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
   useColorScheme,
   useWindowDimensions,
   Dimensions,
+  type TextStyle,
+  type ViewStyle,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
@@ -15,7 +18,11 @@ import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
 import { ConvexReactClient, ConvexProvider } from "convex/react";
 import {
+  ConvexEnableTwoFactorForm,
+  ConvexForgotPasswordForm,
+  ConvexResetPasswordForm,
   ConvexSessionList,
+  ConvexVerifyEmailScreen,
   ExpoAuthClientSignInScreen,
   ExpoAuthClientSignUpScreen,
   ExpoConvexAuthClientProvider,
@@ -27,7 +34,7 @@ import {
 } from "@vortex-api/convex-auth/react-native";
 import { api } from "./convex/_generated/api";
 
-type Screen = "signIn" | "signUp" | "signedIn";
+type Screen = "signIn" | "signUp" | "forgot" | "reset" | "verify" | "enableTwoFactor";
 
 const TOKEN_KEYS = ["convex-auth-token", "convex-auth-refresh-token", "convex-auth-session-id"];
 
@@ -90,110 +97,17 @@ function useTheme() {
         ? Dimensions.get("screen").width
         : 1194;
   const formWidth = Math.min(screenWidth - 48, 460);
-
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        loading: {
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: colors.background,
-        },
-        loadingText: {
-          fontSize: 16,
-          color: colors.textMuted,
-        },
-        container: {
-          flex: 1,
-          alignItems: "flex-start",
-          justifyContent: "center",
-          padding: 24,
-          backgroundColor: colors.background,
-        },
-        footer: {
-          flexDirection: "row",
-          marginTop: 16,
-        },
-        footerText: {
-          color: colors.textSubtle,
-        },
-        footerLink: {
-          color: colors.primary,
-          fontWeight: "600",
-        },
-        guestButton: {
-          alignSelf: "stretch",
-          marginTop: 16,
-          paddingVertical: 12,
-          paddingHorizontal: 24,
-          borderRadius: 8,
-          backgroundColor: colors.primary,
-        },
-        guestButtonText: {
-          color: colors.primaryText,
-          fontWeight: "600",
-        },
-        signedIn: {
-          flex: 1,
-          padding: 24,
-          backgroundColor: colors.background,
-        },
-        userCard: {
-          backgroundColor: colors.surface,
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 16,
-          shadowColor: isDark ? "#000000" : "#000000",
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.1,
-          shadowRadius: 2,
-          elevation: 2,
-        },
-        userTitle: {
-          fontSize: 18,
-          fontWeight: "700",
-          marginBottom: 4,
-          color: colors.text,
-        },
-        userSubtitle: {
-          fontSize: 16,
-          color: colors.textSubtle,
-        },
-        userBody: {
-          fontSize: 14,
-          color: colors.textMuted,
-        },
-        token: {
-          marginTop: 8,
-          fontSize: 12,
-          color: colors.textMuted,
-        },
-        signOutButton: {
-          alignSelf: "stretch",
-          marginTop: 16,
-          paddingVertical: 12,
-          paddingHorizontal: 24,
-          borderRadius: 8,
-          backgroundColor: colors.danger,
-          alignItems: "center",
-        },
-        signOutButtonText: {
-          color: "#ffffff",
-          fontWeight: "600",
-        },
-      }),
-    [colors, isDark, formWidth],
-  );
+  const formMarginLeft = Math.max(0, (screenWidth - 48 - formWidth) / 2);
 
   const authScreenStyles: ExpoAuthClientScreenStyles = useMemo(
     () =>
       StyleSheet.create({
         root: {
           width: formWidth,
-          marginLeft: (screenWidth - 48 - formWidth) / 2,
+          marginLeft: formMarginLeft,
           padding: 24,
           backgroundColor: colors.background,
+          borderRadius: 12,
           alignItems: "flex-start",
         },
         title: {
@@ -237,7 +151,7 @@ function useTheme() {
         providerButtonText: { color: colors.text },
         error: { color: colors.danger, marginBottom: 8 },
       }),
-    [colors, isDark, formWidth],
+    [colors, isDark, formWidth, formMarginLeft],
   );
 
   const sessionListStyles: ExpoSessionListStyles = useMemo(
@@ -279,17 +193,47 @@ function useTheme() {
     [colors],
   );
 
+  const formCardStyle: ViewStyle = useMemo(
+    () => ({
+      width: formWidth,
+      marginLeft: formMarginLeft,
+      padding: 24,
+      backgroundColor: colors.background,
+      borderRadius: 12,
+    }),
+    [colors.background, formWidth, formMarginLeft],
+  );
+
+  const buttonPrimaryStyle: ViewStyle = useMemo(
+    () => ({
+      backgroundColor: colors.primary,
+      borderRadius: 8,
+    }),
+    [colors.primary],
+  );
+
+  const buttonDangerStyle: ViewStyle = useMemo(
+    () => ({
+      backgroundColor: colors.danger,
+      borderRadius: 8,
+    }),
+    [colors.danger],
+  );
+
   return {
     colorScheme,
     isDark,
-    styles,
+    colors,
     authScreenStyles,
     sessionListStyles,
+    formCardStyle,
+    buttonPrimaryStyle,
+    buttonDangerStyle,
   };
 }
 
 function AuthProviders({ children }: { children: React.ReactNode }) {
-  const { colorScheme, styles } = useTheme();
+  const { colorScheme } = useTheme();
   const cacheRef = useRef<Record<string, string>>({});
   const [ready, setReady] = useState(false);
 
@@ -339,8 +283,10 @@ function AuthProviders({ children }: { children: React.ReactNode }) {
     return (
       <>
         <StatusBar style={statusBarStyle} />
-        <View style={styles.loading}>
-          <Text style={styles.loadingText}>Loading…</Text>
+        <View className="flex-1 items-center justify-center" style={{ backgroundColor: "#0f172a" }}>
+          <Text className="text-base" style={{ color: "#94a3b8" }}>
+            Loading…
+          </Text>
         </View>
       </>
     );
@@ -372,11 +318,79 @@ export default function App() {
   );
 }
 
+type DeepLinkRoute =
+  | { screen: "reset"; token: string }
+  | { screen: "verify"; token: string }
+  | null;
+
+function parseDeepLink(url: string | null): DeepLinkRoute {
+  if (typeof url !== "string" || url.length === 0) return null;
+  const parsed = Linking.parse(url);
+  const path = parsed.path?.toLowerCase() ?? "";
+  const token = typeof parsed.queryParams?.token === "string" ? parsed.queryParams.token : "";
+  if (path === "reset-password" && token.length > 0) {
+    return { screen: "reset", token };
+  }
+  if (path === "verify-email" && token.length > 0) {
+    return { screen: "verify", token };
+  }
+  return null;
+}
+
+function useDeepLink(setRoute: (route: DeepLinkRoute) => void) {
+  useEffect(() => {
+    let mounted = true;
+    async function handleInitial() {
+      const initial = await Linking.getInitialURL();
+      if (!mounted) return;
+      setRoute(parseDeepLink(initial));
+    }
+    void handleInitial();
+
+    const subscription = Linking.addEventListener("url", ({ url }) => {
+      setRoute(parseDeepLink(url));
+    });
+
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, [setRoute]);
+}
+
+function FooterLink({
+  label,
+  onPress,
+  style,
+}: {
+  label: string;
+  onPress: () => void;
+  style?: TextStyle;
+}) {
+  return (
+    <Pressable onPress={onPress}>
+      <Text className="text-sm font-semibold" style={style}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 function InnerApp() {
   const [screen, setScreen] = useState<Screen>("signIn");
+  const [deepLink, setDeepLink] = useState<DeepLinkRoute>(null);
   const authClient = useConvexAuthClientContext();
   const session = authClient?.useSession();
-  const { styles, authScreenStyles, sessionListStyles } = useTheme();
+  const { colors, authScreenStyles, sessionListStyles, formCardStyle, buttonPrimaryStyle } =
+    useTheme();
+
+  useDeepLink(setDeepLink);
+
+  useEffect(() => {
+    if (deepLink !== null) {
+      setScreen(deepLink.screen);
+    }
+  }, [deepLink]);
 
   useEffect(() => {
     ScreenOrientation.unlockAsync().catch(() => {
@@ -386,9 +400,38 @@ function InnerApp() {
 
   if (authClient === null || session === undefined || session.isPending) {
     return (
-      <View style={styles.loading}>
-        <Text style={styles.loadingText}>Loading…</Text>
+      <View
+        className="flex-1 items-center justify-center"
+        style={{ backgroundColor: colors.background }}
+      >
+        <Text className="text-base" style={{ color: colors.textMuted }}>
+          Loading…
+        </Text>
       </View>
+    );
+  }
+
+  if (screen === "enableTwoFactor" && session.data?.user) {
+    return (
+      <ScrollView
+        className="flex-1 p-6"
+        contentContainerStyle={{ flexGrow: 1 }}
+        style={{ backgroundColor: colors.background }}
+      >
+        <View style={formCardStyle}>
+          <ConvexEnableTwoFactorForm
+            issuer="convex-auth-rn"
+            onEnrolled={() => setScreen("signIn")}
+          />
+          <View className="px-4 pt-4 items-center">
+            <FooterLink
+              label="Back"
+              onPress={() => setScreen("signIn")}
+              style={{ color: colors.primary }}
+            />
+          </View>
+        </View>
+      </ScrollView>
     );
   }
 
@@ -399,6 +442,7 @@ function InnerApp() {
           await authClient.signOut();
           setScreen("signIn");
         }}
+        onEnableTwoFactor={() => setScreen("enableTwoFactor")}
         sessionListStyles={sessionListStyles}
       />
     );
@@ -407,7 +451,7 @@ function InnerApp() {
   const redirectUrl = Linking.createURL("/");
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 justify-center p-6" style={{ backgroundColor: colors.background }}>
       {screen === "signUp" ? (
         <>
           <ExpoAuthClientSignUpScreen
@@ -418,13 +462,70 @@ function InnerApp() {
             styles={authScreenStyles}
             socialProviders={socialProviders}
           />
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
-            <Pressable onPress={() => setScreen("signIn")}>
-              <Text style={styles.footerLink}>Sign in</Text>
-            </Pressable>
+          <View className="flex-row mt-4" style={{ marginLeft: formCardStyle.marginLeft }}>
+            <Text className="text-sm" style={{ color: colors.textSubtle }}>
+              Already have an account?{" "}
+            </Text>
+            <FooterLink
+              label="Sign in"
+              onPress={() => setScreen("signIn")}
+              style={{ color: colors.primary }}
+            />
           </View>
         </>
+      ) : screen === "forgot" ? (
+        <View style={formCardStyle}>
+          <ConvexForgotPasswordForm
+            resetPasswordUrl={Linking.createURL("/reset-password")}
+            onRequested={() => setScreen("signIn")}
+          />
+          <View className="px-4 pt-4 items-center">
+            <Text className="text-sm" style={{ color: colors.textSubtle }}>
+              Remembered your password?{" "}
+            </Text>
+            <FooterLink
+              label="Sign in"
+              onPress={() => setScreen("signIn")}
+              style={{ color: colors.primary }}
+            />
+          </View>
+        </View>
+      ) : screen === "reset" ? (
+        <View style={formCardStyle}>
+          <ConvexResetPasswordForm
+            token={deepLink?.token ?? ""}
+            onReset={() => setScreen("signIn")}
+          />
+          <View className="px-4 pt-4 items-center">
+            <Text className="text-sm" style={{ color: colors.textSubtle }}>
+              Done?{" "}
+            </Text>
+            <FooterLink
+              label="Sign in"
+              onPress={() => setScreen("signIn")}
+              style={{ color: colors.primary }}
+            />
+          </View>
+        </View>
+      ) : screen === "verify" ? (
+        <View style={formCardStyle}>
+          <ConvexVerifyEmailScreen
+            token={deepLink?.token ?? ""}
+            userEmail={session.data?.user?.email ?? null}
+            resendCallbackUrl={Linking.createURL("/verify-email")}
+            onVerified={() => setScreen("signIn")}
+          />
+          <View className="px-4 pt-4 items-center">
+            <Text className="text-sm" style={{ color: colors.textSubtle }}>
+              Verified?{" "}
+            </Text>
+            <FooterLink
+              label="Sign in"
+              onPress={() => setScreen("signIn")}
+              style={{ color: colors.primary }}
+            />
+          </View>
+        </View>
       ) : (
         <>
           <ExpoAuthClientSignInScreen
@@ -436,18 +537,32 @@ function InnerApp() {
             socialProviders={socialProviders}
           />
           <Pressable
-            style={styles.guestButton}
             onPress={async () => {
               await authClient?.signIn.anonymous({});
             }}
+            className="self-stretch mt-4 py-3 px-6 rounded-lg items-center"
+            style={buttonPrimaryStyle}
           >
-            <Text style={styles.guestButtonText}>Continue as guest</Text>
+            <Text className="text-sm font-semibold" style={{ color: colors.primaryText }}>
+              Continue as guest
+            </Text>
           </Pressable>
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don’t have an account? </Text>
-            <Pressable onPress={() => setScreen("signUp")}>
-              <Text style={styles.footerLink}>Sign up</Text>
-            </Pressable>
+          <View className="flex-row mt-4" style={{ marginLeft: formCardStyle.marginLeft }}>
+            <Text className="text-sm" style={{ color: colors.textSubtle }}>
+              Don’t have an account?{" "}
+            </Text>
+            <FooterLink
+              label="Sign up"
+              onPress={() => setScreen("signUp")}
+              style={{ color: colors.primary }}
+            />
+          </View>
+          <View className="flex-row mt-2" style={{ marginLeft: formCardStyle.marginLeft }}>
+            <FooterLink
+              label="Forgot password?"
+              onPress={() => setScreen("forgot")}
+              style={{ color: colors.primary }}
+            />
           </View>
         </>
       )}
@@ -457,35 +572,64 @@ function InnerApp() {
 
 function SignedInView({
   onSignOut,
+  onEnableTwoFactor,
   sessionListStyles,
 }: {
   onSignOut: () => void | Promise<void>;
+  onEnableTwoFactor: () => void;
   sessionListStyles: ExpoSessionListStyles;
 }) {
   const authClient = useConvexAuthClientContext();
   const session = authClient?.useSession();
   const user = session?.data?.user;
   const currentToken = session?.data?.session?.token;
-  const { styles } = useTheme();
+  const { colors, buttonDangerStyle } = useTheme();
 
   return (
-    <View style={styles.signedIn}>
-      <View style={styles.userCard}>
-        <Text style={styles.userTitle}>Signed in</Text>
-        {user?.name ? <Text style={styles.userSubtitle}>{user.name}</Text> : null}
-        {user?.email ? <Text style={styles.userBody}>{user.email}</Text> : null}
-        <Text style={styles.token} numberOfLines={1} ellipsizeMode="tail">
+    <View className="flex-1 p-6" style={{ backgroundColor: colors.background }}>
+      <View className="rounded-xl p-4 mb-4" style={{ backgroundColor: colors.surface }}>
+        <Text className="text-lg font-bold" style={{ color: colors.text }}>
+          Signed in
+        </Text>
+        {user?.name ? (
+          <Text className="text-base" style={{ color: colors.textSubtle }}>
+            {user.name}
+          </Text>
+        ) : null}
+        {user?.email ? (
+          <Text className="text-sm" style={{ color: colors.textMuted }}>
+            {user.email}
+          </Text>
+        ) : null}
+        <Text
+          className="text-xs mt-2"
+          style={{ color: colors.textMuted }}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
           Token: {currentToken ?? "none"}
         </Text>
       </View>
       <ConvexSessionList currentSessionToken={currentToken ?? null} styles={sessionListStyles} />
       <Pressable
-        style={styles.signOutButton}
+        onPress={onEnableTwoFactor}
+        className="self-stretch mt-4 py-3 px-6 rounded-lg items-center border"
+        style={{ borderColor: colors.surfaceBorder }}
+      >
+        <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+          Enable two-factor auth
+        </Text>
+      </Pressable>
+      <Pressable
         onPress={async () => {
           await onSignOut();
         }}
+        className="self-stretch mt-4 py-3 px-6 rounded-lg items-center"
+        style={buttonDangerStyle}
       >
-        <Text style={styles.signOutButtonText}>Sign out</Text>
+        <Text className="text-sm font-semibold" style={{ color: "#ffffff" }}>
+          Sign out
+        </Text>
       </Pressable>
     </View>
   );
