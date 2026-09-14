@@ -14,7 +14,6 @@
 import { useState } from "react";
 import {
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -106,14 +105,20 @@ export function ConvexForgotPasswordForm(props: ExpoForgotPasswordFormProps) {
   }
 
   return (
-    <View style={[styles.root, s.root]}>
-      <View style={[styles.header, s.header]}>
-        <Text style={[styles.title, s.title]}>{copy.title}</Text>
-        <Text style={[styles.description, s.description]}>{copy.description}</Text>
+    <View className="py-2" style={s.root}>
+      <View className="px-4 pb-3" style={s.header}>
+        <Text className="text-base font-semibold" style={s.title}>
+          {copy.title}
+        </Text>
+        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+          {copy.description}
+        </Text>
       </View>
       <View>
-        <View style={[styles.field, s.field]}>
-          <Text style={[styles.label, s.label]}>{copy.emailLabel}</Text>
+        <View className="px-4 py-2" style={s.field}>
+          <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+            {copy.emailLabel}
+          </Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
@@ -121,23 +126,27 @@ export function ConvexForgotPasswordForm(props: ExpoForgotPasswordFormProps) {
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
-            style={[styles.input, s.input]}
+            className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+            style={s.input}
           />
         </View>
         <Pressable
           onPress={() => void handleSubmit()}
           disabled={isRequesting}
-          style={[styles.submitButton, s.submitButton]}
+          className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input items-center"
+          style={s.submitButton}
         >
-          <Text style={[styles.submitButtonText, s.submitButtonText]}>
+          <Text className="text-sm font-medium" style={s.submitButtonText}>
             {isRequesting ? copy.submitting : copy.submit}
           </Text>
         </Pressable>
         {success !== null ? (
-          <Text style={[styles.successState, s.successState]}>{success}</Text>
+          <Text className="px-4 pt-2 text-sm" style={s.successState}>
+            {success}
+          </Text>
         ) : null}
         {error !== null ? (
-          <Text className="text-destructive" style={[styles.errorState, s.errorState]}>
+          <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
             {error}
           </Text>
         ) : null}
@@ -145,31 +154,3 @@ export function ConvexForgotPasswordForm(props: ExpoForgotPasswordFormProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { paddingVertical: 8 },
-  header: { paddingHorizontal: 16, paddingBottom: 12 },
-  title: { fontSize: 16, fontWeight: "600" },
-  description: { fontSize: 13, opacity: 0.6, marginTop: 2 },
-  field: { paddingHorizontal: 16, paddingVertical: 8 },
-  label: { fontSize: 13, opacity: 0.7, marginBottom: 4 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-  },
-  submitButton: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignItems: "center",
-  },
-  submitButtonText: { fontSize: 14, fontWeight: "500" },
-  successState: { paddingHorizontal: 16, paddingTop: 8, fontSize: 13 },
-  errorState: { paddingHorizontal: 16, paddingTop: 8, fontSize: 13 },
-});
