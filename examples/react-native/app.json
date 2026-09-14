@@ -4,7 +4,7 @@
     "slug": "convex-auth-rn",
     "scheme": "convex-auth-rn",
     "version": "0.0.1",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {

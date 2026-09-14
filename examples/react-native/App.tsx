@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
 import { ConvexReactClient, ConvexProvider } from "convex/react";
@@ -33,7 +34,236 @@ const socialProviders = [
   { provider: "discord", label: "Discord" },
 ] as const;
 
+function useTheme() {
+  const colorScheme = useColorScheme() ?? "light";
+  const isDark = colorScheme === "dark";
+
+  const colors = useMemo(
+    () =>
+      isDark
+        ? {
+            background: "#0f172a",
+            surface: "#1e293b",
+            surfaceBorder: "#334155",
+            text: "#f8fafc",
+            textMuted: "#94a3b8",
+            textSubtle: "#cbd5e1",
+            primary: "#38bdf8",
+            primaryText: "#0f172a",
+            danger: "#f87171",
+            border: "#334155",
+            inputBackground: "#1e293b",
+            inputBorder: "#475569",
+          }
+        : {
+            background: "#ffffff",
+            surface: "#ffffff",
+            surfaceBorder: "#e2e8f0",
+            text: "#0f172a",
+            textMuted: "#64748b",
+            textSubtle: "#475569",
+            primary: "#0ea5e9",
+            primaryText: "#ffffff",
+            danger: "#ef4444",
+            border: "#e2e8f0",
+            inputBackground: "#ffffff",
+            inputBorder: "#e2e8f0",
+          },
+    [isDark],
+  );
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        loading: {
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: colors.background,
+        },
+        loadingText: {
+          fontSize: 16,
+          color: colors.textMuted,
+        },
+        container: {
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+          backgroundColor: colors.background,
+        },
+        footer: {
+          flexDirection: "row",
+          marginTop: 16,
+        },
+        footerText: {
+          color: colors.textSubtle,
+        },
+        footerLink: {
+          color: colors.primary,
+          fontWeight: "600",
+        },
+        guestButton: {
+          marginTop: 16,
+          paddingVertical: 12,
+          paddingHorizontal: 24,
+          borderRadius: 8,
+          backgroundColor: colors.primary,
+        },
+        guestButtonText: {
+          color: colors.primaryText,
+          fontWeight: "600",
+        },
+        signedIn: {
+          flex: 1,
+          padding: 24,
+          backgroundColor: colors.background,
+        },
+        userCard: {
+          backgroundColor: colors.surface,
+          borderRadius: 12,
+          padding: 16,
+          marginBottom: 16,
+          shadowColor: isDark ? "#000000" : "#000000",
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 2,
+          elevation: 2,
+        },
+        userTitle: {
+          fontSize: 18,
+          fontWeight: "700",
+          marginBottom: 4,
+          color: colors.text,
+        },
+        userSubtitle: {
+          fontSize: 16,
+          color: colors.textSubtle,
+        },
+        userBody: {
+          fontSize: 14,
+          color: colors.textMuted,
+        },
+        token: {
+          marginTop: 8,
+          fontSize: 12,
+          color: colors.textMuted,
+        },
+        signOutButton: {
+          marginTop: 16,
+          paddingVertical: 12,
+          paddingHorizontal: 24,
+          borderRadius: 8,
+          backgroundColor: colors.danger,
+          alignItems: "center",
+        },
+        signOutButtonText: {
+          color: "#ffffff",
+          fontWeight: "600",
+        },
+      }),
+    [colors, isDark],
+  );
+
+  const authScreenStyles: ExpoAuthClientScreenStyles = useMemo(
+    () => ({
+      root: {
+        padding: 24,
+        backgroundColor: colors.background,
+      },
+      title: {
+        fontSize: 24,
+        fontWeight: "700",
+        marginBottom: 8,
+        color: colors.text,
+      },
+      description: {
+        fontSize: 14,
+        color: colors.textMuted,
+        marginBottom: 16,
+      },
+      input: {
+        borderWidth: 1,
+        borderColor: colors.inputBorder,
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 12,
+        backgroundColor: colors.inputBackground,
+      },
+      inputText: { color: colors.text },
+      submitButton: {
+        backgroundColor: isDark ? colors.primary : "#0f172a",
+        borderRadius: 8,
+        padding: 12,
+        alignItems: "center",
+      },
+      submitButtonText: {
+        color: isDark ? colors.primaryText : "#ffffff",
+        fontWeight: "600",
+      },
+      providerButton: {
+        borderWidth: 1,
+        borderColor: colors.surfaceBorder,
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 8,
+        alignItems: "center",
+      },
+      providerButtonText: { color: colors.text },
+      error: { color: colors.danger, marginBottom: 8 },
+    }),
+    [colors, isDark],
+  );
+
+  const sessionListStyles: ExpoSessionListStyles = useMemo(
+    () => ({
+      root: {
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        marginBottom: 16,
+      },
+      header: { padding: 16 },
+      title: { fontSize: 18, fontWeight: "700", color: colors.text },
+      description: { fontSize: 14, color: colors.textMuted },
+      list: {},
+      item: {
+        padding: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.surfaceBorder,
+      },
+      itemCurrent: { backgroundColor: colors.inputBackground },
+      itemPrimary: { fontSize: 14, color: colors.text },
+      itemMeta: { fontSize: 12, color: colors.textMuted },
+      revokeButton: {
+        backgroundColor: colors.danger,
+        borderRadius: 6,
+        padding: 8,
+      },
+      revokeButtonText: { color: "#ffffff" },
+      revokeOthersButton: {
+        backgroundColor: colors.danger,
+        borderRadius: 8,
+        padding: 8,
+      },
+      revokeOthersButtonText: { color: "#ffffff" },
+      emptyState: { color: colors.textMuted },
+      loadingState: { padding: 16 },
+      errorState: { color: colors.danger },
+    }),
+    [colors],
+  );
+
+  return {
+    colorScheme,
+    isDark,
+    styles,
+    authScreenStyles,
+    sessionListStyles,
+  };
+}
+
 function AuthProviders({ children }: { children: React.ReactNode }) {
+  const { colorScheme, styles } = useTheme();
   const cacheRef = useRef<Record<string, string>>({});
   const [ready, setReady] = useState(false);
 
@@ -77,11 +307,16 @@ function AuthProviders({ children }: { children: React.ReactNode }) {
     },
   }).current;
 
+  const statusBarStyle = colorScheme === "dark" ? "light" : "dark";
+
   if (!ready) {
     return (
-      <View style={styles.loading}>
-        <Text style={styles.loadingText}>Loading…</Text>
-      </View>
+      <>
+        <StatusBar style={statusBarStyle} />
+        <View style={styles.loading}>
+          <Text style={styles.loadingText}>Loading…</Text>
+        </View>
+      </>
     );
   }
 
@@ -96,6 +331,7 @@ function AuthProviders({ children }: { children: React.ReactNode }) {
           return () => subscription.remove();
         }}
       >
+        <StatusBar style={statusBarStyle} />
         {children}
       </ExpoConvexAuthClientProvider>
     </ConvexProvider>
@@ -114,6 +350,7 @@ function InnerApp() {
   const [screen, setScreen] = useState<Screen>("signIn");
   const authClient = useConvexAuthClientContext();
   const session = authClient?.useSession();
+  const { styles, authScreenStyles, sessionListStyles } = useTheme();
 
   if (authClient === null || session === undefined || session.isPending) {
     return (
@@ -130,6 +367,7 @@ function InnerApp() {
           await authClient.signOut();
           setScreen("signIn");
         }}
+        sessionListStyles={sessionListStyles}
       />
     );
   }
@@ -185,11 +423,18 @@ function InnerApp() {
   );
 }
 
-function SignedInView({ onSignOut }: { onSignOut: () => void | Promise<void> }) {
+function SignedInView({
+  onSignOut,
+  sessionListStyles,
+}: {
+  onSignOut: () => void | Promise<void>;
+  sessionListStyles: ExpoSessionListStyles;
+}) {
   const authClient = useConvexAuthClientContext();
   const session = authClient?.useSession();
   const user = session?.data?.user;
   const currentToken = session?.data?.session?.token;
+  const { styles } = useTheme();
 
   return (
     <View style={styles.signedIn}>
@@ -213,131 +458,3 @@ function SignedInView({ onSignOut }: { onSignOut: () => void | Promise<void> }) 
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#ffffff",
-  },
-  loadingText: {
-    fontSize: 16,
-    color: "#64748b",
-  },
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-    backgroundColor: "#ffffff",
-  },
-  footer: {
-    flexDirection: "row",
-    marginTop: 16,
-  },
-  footerText: {
-    color: "#475569",
-  },
-  footerLink: {
-    color: "#0ea5e9",
-    fontWeight: "600",
-  },
-  guestButton: {
-    marginTop: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    backgroundColor: "#0ea5e9",
-  },
-  guestButtonText: {
-    color: "#ffffff",
-    fontWeight: "600",
-  },
-  signedIn: {
-    flex: 1,
-    padding: 24,
-    backgroundColor: "#f8fafc",
-  },
-  userCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  userTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  userSubtitle: {
-    fontSize: 16,
-    color: "#334155",
-  },
-  userBody: {
-    fontSize: 14,
-    color: "#64748b",
-  },
-  token: {
-    marginTop: 8,
-    fontSize: 12,
-    color: "#94a3b8",
-  },
-  signOutButton: {
-    marginTop: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    backgroundColor: "#ef4444",
-    alignItems: "center",
-  },
-  signOutButtonText: {
-    color: "#ffffff",
-    fontWeight: "600",
-  },
-});
-
-const authScreenStyles: ExpoAuthClientScreenStyles = {
-  root: { padding: 24, backgroundColor: "#ffffff" },
-  title: { fontSize: 24, fontWeight: "700", marginBottom: 8 },
-  description: { fontSize: 14, color: "#64748b", marginBottom: 16 },
-  input: {
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  inputText: { color: "#0f172a" },
-  submitButton: {
-    backgroundColor: "#0f172a",
-    borderRadius: 8,
-    padding: 12,
-    alignItems: "center",
-  },
-  submitButtonText: { color: "#ffffff", fontWeight: "600" },
-  providerButton: {
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    alignItems: "center",
-  },
-  providerButtonText: { color: "#0f172a" },
-  error: { color: "#ef4444", marginBottom: 8 },
-};
-
-const sessionListStyles: ExpoSessionListStyles = {
-  root: { backgroundColor: "#ffffff", borderRadius: 12, marginBottom: 16 },
-  item: { padding: 12, borderBottomWidth: 1, borderBottomColor: "#e2e8f0" },
-  itemPrimary: { fontSize: 14 },
-  itemMeta: { fontSize: 12 },
-  revokeButton: { backgroundColor: "#ef4444", borderRadius: 6, padding: 8 },
-  revokeButtonText: { color: "#ffffff" },
-};
