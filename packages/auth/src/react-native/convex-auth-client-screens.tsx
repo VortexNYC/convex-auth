@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -9,6 +10,14 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+
+function flattenViewStyle(s: StyleProp<ViewStyle>): ViewStyle {
+  return (StyleSheet.flatten(s) ?? {}) as ViewStyle;
+}
+
+function flattenTextStyle(s: StyleProp<TextStyle>): TextStyle {
+  return (StyleSheet.flatten(s) ?? {}) as TextStyle;
+}
 
 import type { ConvexAuthSocialProvider } from "../react/client";
 import { useConvexAuthClientContext } from "../react/client";
@@ -144,9 +153,9 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
     <View style={s.root}>
       <Text style={s.title}>{copy.title}</Text>
       <Text style={s.description}>{copy.description}</Text>
-      <View style={s.input}>
+      <View style={flattenViewStyle(s.input)}>
         <TextInput
-          style={[s.inputText, { width: "100%" }]}
+          style={flattenTextStyle(s.inputText)}
           placeholder={copy.emailPlaceholder}
           autoCapitalize="none"
           keyboardType="email-address"
@@ -154,9 +163,9 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
           onChangeText={setEmail}
         />
       </View>
-      <View style={s.input}>
+      <View style={flattenViewStyle(s.input)}>
         <TextInput
-          style={[s.inputText, { width: "100%" }]}
+          style={flattenTextStyle(s.inputText)}
           placeholder={copy.passwordPlaceholder}
           secureTextEntry
           value={password}
@@ -164,7 +173,11 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
         />
       </View>
       {error !== null ? <Text style={s.error}>{error}</Text> : null}
-      <Pressable style={s.submitButton} onPress={handleSubmit} disabled={isSubmitting}>
+      <Pressable
+        style={StyleSheet.flatten(s.submitButton)}
+        onPress={handleSubmit}
+        disabled={isSubmitting}
+      >
         {isSubmitting ? (
           <ActivityIndicator />
         ) : (
@@ -174,7 +187,7 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
       {props.socialProviders?.map((provider) => (
         <Pressable
           key={provider.provider}
-          style={s.providerButton}
+          style={StyleSheet.flatten(s.providerButton)}
           onPress={() => handleSocialSignIn(provider.provider)}
           disabled={provider.disabled}
         >
@@ -273,17 +286,17 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
     <View style={s.root}>
       <Text style={s.title}>{copy.title}</Text>
       <Text style={s.description}>{copy.description}</Text>
-      <View style={s.input}>
+      <View style={flattenViewStyle(s.input)}>
         <TextInput
-          style={[s.inputText, { width: "100%" }]}
+          style={flattenTextStyle(s.inputText)}
           placeholder={copy.namePlaceholder}
           value={name}
           onChangeText={setName}
         />
       </View>
-      <View style={s.input}>
+      <View style={flattenViewStyle(s.input)}>
         <TextInput
-          style={[s.inputText, { width: "100%" }]}
+          style={flattenTextStyle(s.inputText)}
           placeholder={copy.emailPlaceholder}
           autoCapitalize="none"
           keyboardType="email-address"
@@ -291,9 +304,9 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
           onChangeText={setEmail}
         />
       </View>
-      <View style={s.input}>
+      <View style={flattenViewStyle(s.input)}>
         <TextInput
-          style={[s.inputText, { width: "100%" }]}
+          style={flattenTextStyle(s.inputText)}
           placeholder={copy.passwordPlaceholder}
           secureTextEntry
           value={password}
@@ -301,7 +314,11 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
         />
       </View>
       {error !== null ? <Text style={s.error}>{error}</Text> : null}
-      <Pressable style={s.submitButton} onPress={handleSubmit} disabled={isSubmitting}>
+      <Pressable
+        style={StyleSheet.flatten(s.submitButton)}
+        onPress={handleSubmit}
+        disabled={isSubmitting}
+      >
         {isSubmitting ? (
           <ActivityIndicator />
         ) : (

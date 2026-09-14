@@ -193,7 +193,7 @@ function useTheme() {
           marginLeft: (screenWidth - 48 - formWidth) / 2,
           padding: 24,
           backgroundColor: colors.background,
-          alignItems: "stretch",
+          alignItems: "flex-start",
         },
         title: {
           fontSize: 24,
@@ -208,6 +208,7 @@ function useTheme() {
         },
         input: {
           width: formWidth - 48,
+          alignItems: "stretch",
           borderWidth: 1,
           borderColor: colors.inputBorder,
           borderRadius: 8,
@@ -217,7 +218,7 @@ function useTheme() {
         },
         inputText: { color: colors.text },
         submitButton: {
-          width: formWidth - 48,
+          alignSelf: "stretch",
           backgroundColor: isDark ? colors.primary : "#0f172a",
           borderRadius: 8,
           padding: 12,
@@ -228,7 +229,7 @@ function useTheme() {
           fontWeight: "600",
         },
         providerButton: {
-          width: formWidth - 48,
+          alignSelf: "stretch",
           borderWidth: 1,
           borderColor: colors.surfaceBorder,
           borderRadius: 8,
