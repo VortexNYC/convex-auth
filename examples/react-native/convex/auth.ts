@@ -15,7 +15,9 @@ function extractTokenFromEmailDraft(draft: EmailDraft): string | null {
   if (!match) return null;
   const url = new URL(match[0]);
   const pathToken = url.pathname.split("/").pop();
-  if (pathToken && pathToken !== "verify-email") return pathToken;
+  if (pathToken && pathToken !== "verify-email" && pathToken !== "reset-password") {
+    return pathToken;
+  }
   return url.searchParams.get("token");
 }
 

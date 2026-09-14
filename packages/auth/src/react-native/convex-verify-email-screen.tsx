@@ -104,7 +104,7 @@ export function ConvexVerifyEmailScreen(props: ExpoVerifyEmailScreenProps) {
     return () => {
       cancelled = true;
     };
-  }, [props.token, authClient, props.onVerified, hasToken]);
+  }, [props.token, authClient, hasToken]);
 
   async function handleResend() {
     setResendResult(null);

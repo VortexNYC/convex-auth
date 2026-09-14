@@ -113,7 +113,7 @@ export function ConvexVerifyEmailScreen(props: ConvexVerifyEmailScreenProps) {
     };
     // Re-run only if the token or client changes — onVerified should
     // not retrigger this effect even if the parent re-creates it.
-  }, [props.token, authClient, props.onVerified, isAvailable, hasToken]);
+  }, [props.token, authClient, isAvailable, hasToken]);
 
   async function handleResend() {
     setResendResult(null);

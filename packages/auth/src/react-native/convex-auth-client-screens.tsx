@@ -19,7 +19,7 @@ export type ExpoAuthClientScreenStyles = {
   root?: StyleProp<ViewStyle>;
   title?: StyleProp<TextStyle>;
   description?: StyleProp<TextStyle>;
-  input?: StyleProp<ViewStyle>;
+  input?: StyleProp<TextStyle>;
   inputText?: StyleProp<TextStyle>;
   submitButton?: StyleProp<ViewStyle>;
   submitButtonText?: StyleProp<TextStyle>;
@@ -144,27 +144,25 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
     <View style={s.root}>
       <Text style={s.title}>{copy.title}</Text>
       <Text style={s.description}>{copy.description}</Text>
-      <View className="w-full" style={s.input}>
-        <TextInput
-          className="w-full"
-          style={s.inputText}
-          placeholder={copy.emailPlaceholder}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-      </View>
-      <View className="w-full" style={s.input}>
-        <TextInput
-          className="w-full"
-          style={s.inputText}
-          placeholder={copy.passwordPlaceholder}
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-      </View>
+      <TextInput
+        className="w-full"
+        style={[s.input, s.inputText]}
+        placeholder={copy.emailPlaceholder}
+        accessibilityLabel="Email"
+        autoCapitalize="none"
+        keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput
+        className="w-full"
+        style={[s.input, s.inputText]}
+        placeholder={copy.passwordPlaceholder}
+        accessibilityLabel="Password"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
       {error !== null ? <Text style={s.error}>{error}</Text> : null}
       <Pressable
         className="w-full"
@@ -281,36 +279,33 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
     <View style={s.root}>
       <Text style={s.title}>{copy.title}</Text>
       <Text style={s.description}>{copy.description}</Text>
-      <View className="w-full" style={s.input}>
-        <TextInput
-          className="w-full"
-          style={s.inputText}
-          placeholder={copy.namePlaceholder}
-          value={name}
-          onChangeText={setName}
-        />
-      </View>
-      <View className="w-full" style={s.input}>
-        <TextInput
-          className="w-full"
-          style={s.inputText}
-          placeholder={copy.emailPlaceholder}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-        />
-      </View>
-      <View className="w-full" style={s.input}>
-        <TextInput
-          className="w-full"
-          style={s.inputText}
-          placeholder={copy.passwordPlaceholder}
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-      </View>
+      <TextInput
+        className="w-full"
+        style={[s.input, s.inputText]}
+        placeholder={copy.namePlaceholder}
+        accessibilityLabel="Name"
+        value={name}
+        onChangeText={setName}
+      />
+      <TextInput
+        className="w-full"
+        style={[s.input, s.inputText]}
+        placeholder={copy.emailPlaceholder}
+        accessibilityLabel="Email"
+        autoCapitalize="none"
+        keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput
+        className="w-full"
+        style={[s.input, s.inputText]}
+        placeholder={copy.passwordPlaceholder}
+        accessibilityLabel="Password"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
       {error !== null ? <Text style={s.error}>{error}</Text> : null}
       <Pressable
         className="w-full"
