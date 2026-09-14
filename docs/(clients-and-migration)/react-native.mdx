@@ -12,7 +12,7 @@ sidebar:
 ```bash
 pnpm add @vortex-api/convex-auth convex
 # or, if you use Expo:
-pnpm add expo-secure-store
+pnpm add expo-secure-store expo-web-browser
 ```
 
 The React Native components and example use **Uniwind** (Tailwind CSS v4 for React Native) and the convex-auth UI tokens:
@@ -127,7 +127,23 @@ export function SignIn() {
 
 ## OAuth in React Native
 
-For Google, GitHub, or Discord in React Native, `ExpoAuthClientSignInScreen` calls `signIn.social` and opens the returned `url` with `expo-linking` `openURL`. The provider must redirect back to your app's URL scheme, for example `convex-auth-rn:///`. `ExpoConvexAuthClientProvider` receives the deep link through `subscribeToUrl` and completes the session.
+For Google, GitHub, or Discord in React Native, `ExpoAuthClientSignInScreen` calls `signIn.social` and opens the returned OAuth URL with `expo-web-browser` `openAuthSessionAsync`. The OAuth provider is configured to redirect to `https://<your-deployment>.convex.site/api/auth/callback/<provider>`; the Convex auth server then redirects back to your app's URL scheme with the session token, refresh token, and session id as query parameters.
+
+Register your scheme in `app.json`:
+
+```json app.json
+{
+  "expo": {
+    "scheme": "convex-auth-rn",
+    "ios": { "bundleIdentifier": "nyc.vortex.convexauth.demo" },
+    "android": { "package": "nyc.vortex.convexauth.demo" }
+  }
+}
+```
+
+`ExpoConvexAuthClientProvider` receives the callback through `subscribeToUrl` and completes the session.
+
+Expo Go uses the `exp://` scheme, so in development `Linking.createURL("/")` returns an `exp://.../--/` URL. Expo Go can be used for quick tests, but for a real OAuth app registration you should build a development or standalone client so the custom scheme belongs to your app.
 
 ## Other auth flows
 

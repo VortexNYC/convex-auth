@@ -11,7 +11,7 @@ import {
 } from "react-native";
 
 import type { ConvexAuthSocialProvider } from "../react/client";
-import { useConvexAuthClientContext } from "../react/client";
+import { useAuthActions, useConvexAuthClientContext } from "../react/client";
 
 import { ConvexVerifyTwoFactorForm } from "./convex-verify-two-factor-form";
 
@@ -62,6 +62,8 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
     submittingLabel: "Signing in...",
   };
 
+  const authActions = useAuthActions();
+
   const handleSocialSignIn = useCallback(
     async (provider: string) => {
       setError(null);
@@ -79,17 +81,49 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
           return;
         }
         const url = result.data?.url;
-        if (typeof url === "string") {
+        if (typeof url !== "string" || url.length === 0) {
+          setError("Could not start social sign-in");
+          return;
+        }
+
+        try {
+          const WebBrowser = await import("expo-web-browser");
+          const session = await WebBrowser.openAuthSessionAsync(url, props.forceRedirectUrl);
+
+          if (session.type === "success" && typeof session.url === "string") {
+            const searchIndex = session.url.indexOf("?");
+            const search = searchIndex >= 0 ? session.url.slice(searchIndex + 1) : "";
+            const params = new URLSearchParams(search);
+            const token = params.get("token");
+            const refreshToken = params.get("refreshToken");
+            const sessionId = params.get("sessionId");
+            const oauthError = params.get("error");
+
+            if (oauthError) {
+              setError(params.get("error_description") ?? oauthError);
+              return;
+            }
+
+            if (token) {
+              authActions.setToken(token);
+              authActions.setRefreshToken(refreshToken ?? null);
+              authActions.setSessionId(sessionId ?? null);
+              await props.navigate?.({ to: props.forceRedirectUrl, replace: true });
+            }
+          } else if (session.type === "cancel" || session.type === "dismiss") {
+            // User closed the browser without completing the flow.
+          }
+        } catch {
+          // expo-web-browser may not be installed or the device may not
+          // support an auth session; fall through to the system browser.
           const { openURL } = await import("expo-linking");
           await openURL(url);
-        } else {
-          setError("Could not start social sign-in");
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Social sign-in failed");
       }
     },
-    [authClient, props.forceRedirectUrl, props.onRuntimeUnavailable],
+    [authClient, authActions, props.forceRedirectUrl, props.navigate, props.onRuntimeUnavailable],
   );
 
   const handleSubmit = useCallback(async () => {
