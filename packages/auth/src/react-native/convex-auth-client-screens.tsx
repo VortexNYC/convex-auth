@@ -2,7 +2,6 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -10,14 +9,6 @@ import {
   type TextStyle,
   type ViewStyle,
 } from "react-native";
-
-function flattenViewStyle(s: StyleProp<ViewStyle>): ViewStyle {
-  return (StyleSheet.flatten(s) ?? {}) as ViewStyle;
-}
-
-function flattenTextStyle(s: StyleProp<TextStyle>): TextStyle {
-  return (StyleSheet.flatten(s) ?? {}) as TextStyle;
-}
 
 import type { ConvexAuthSocialProvider } from "../react/client";
 import { useConvexAuthClientContext } from "../react/client";
@@ -153,9 +144,10 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
     <View style={s.root}>
       <Text style={s.title}>{copy.title}</Text>
       <Text style={s.description}>{copy.description}</Text>
-      <View style={flattenViewStyle(s.input)}>
+      <View className="w-full" style={s.input}>
         <TextInput
-          style={flattenTextStyle(s.inputText)}
+          className="w-full"
+          style={s.inputText}
           placeholder={copy.emailPlaceholder}
           autoCapitalize="none"
           keyboardType="email-address"
@@ -163,9 +155,10 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
           onChangeText={setEmail}
         />
       </View>
-      <View style={flattenViewStyle(s.input)}>
+      <View className="w-full" style={s.input}>
         <TextInput
-          style={flattenTextStyle(s.inputText)}
+          className="w-full"
+          style={s.inputText}
           placeholder={copy.passwordPlaceholder}
           secureTextEntry
           value={password}
@@ -174,7 +167,8 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
       </View>
       {error !== null ? <Text style={s.error}>{error}</Text> : null}
       <Pressable
-        style={StyleSheet.flatten(s.submitButton)}
+        className="w-full"
+        style={s.submitButton}
         onPress={handleSubmit}
         disabled={isSubmitting}
       >
@@ -187,7 +181,8 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
       {props.socialProviders?.map((provider) => (
         <Pressable
           key={provider.provider}
-          style={StyleSheet.flatten(s.providerButton)}
+          className="w-full"
+          style={s.providerButton}
           onPress={() => handleSocialSignIn(provider.provider)}
           disabled={provider.disabled}
         >
@@ -286,17 +281,19 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
     <View style={s.root}>
       <Text style={s.title}>{copy.title}</Text>
       <Text style={s.description}>{copy.description}</Text>
-      <View style={flattenViewStyle(s.input)}>
+      <View className="w-full" style={s.input}>
         <TextInput
-          style={flattenTextStyle(s.inputText)}
+          className="w-full"
+          style={s.inputText}
           placeholder={copy.namePlaceholder}
           value={name}
           onChangeText={setName}
         />
       </View>
-      <View style={flattenViewStyle(s.input)}>
+      <View className="w-full" style={s.input}>
         <TextInput
-          style={flattenTextStyle(s.inputText)}
+          className="w-full"
+          style={s.inputText}
           placeholder={copy.emailPlaceholder}
           autoCapitalize="none"
           keyboardType="email-address"
@@ -304,9 +301,10 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
           onChangeText={setEmail}
         />
       </View>
-      <View style={flattenViewStyle(s.input)}>
+      <View className="w-full" style={s.input}>
         <TextInput
-          style={flattenTextStyle(s.inputText)}
+          className="w-full"
+          style={s.inputText}
           placeholder={copy.passwordPlaceholder}
           secureTextEntry
           value={password}
@@ -315,7 +313,8 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
       </View>
       {error !== null ? <Text style={s.error}>{error}</Text> : null}
       <Pressable
-        style={StyleSheet.flatten(s.submitButton)}
+        className="w-full"
+        style={s.submitButton}
         onPress={handleSubmit}
         disabled={isSubmitting}
       >

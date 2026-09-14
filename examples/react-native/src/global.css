@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@import "uniwind";
+@import "@vortex-api/convex-auth/ui/styles.css";
+
+@source "../../../packages/auth/src";

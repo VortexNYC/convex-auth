@@ -206,6 +206,12 @@ importers:
       react-native:
         specifier: ^0.86.0
         version: 0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.8)
+      tailwindcss:
+        specifier: '4'
+        version: 4.3.3
+      uniwind:
+        specifier: ^1.5.0
+        version: 1.11.0(@expo/metro-config@57.0.12(expo@57.0.22)(typescript@5.9.3))(metro-cache@0.84.5)(metro-transform-worker@0.84.5)(metro@0.84.5)(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)
     devDependencies:
       '@types/react':
         specifier: ^19.2.0
@@ -11936,7 +11942,7 @@ snapshots:
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
-      '@jridgewell/sourcemap-codec': 1.5.5
+      '@jridgewell/sourcemap-codec': 1.6.0
       '@jridgewell/trace-mapping': 0.3.31
 
   '@jridgewell/remapping@2.3.5':
@@ -19859,6 +19865,21 @@ snapshots:
       metro-cache: 0.84.5
       react: 19.2.8
       react-native: 0.84.1(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.8)
+      tailwindcss: 4.3.3
+    optionalDependencies:
+      '@expo/metro-config': 57.0.12(expo@57.0.22)(typescript@5.9.3)
+      metro-transform-worker: 0.84.5
+
+  uniwind@1.11.0(@expo/metro-config@57.0.12(expo@57.0.22)(typescript@5.9.3))(metro-cache@0.84.5)(metro-transform-worker@0.84.5)(metro@0.84.5)(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3):
+    dependencies:
+      '@tailwindcss/node': 4.3.2
+      '@tailwindcss/oxide': 4.3.2
+      culori: 4.0.2
+      lightningcss: 1.30.1
+      metro: 0.84.5
+      metro-cache: 0.84.5
+      react: 19.2.8
+      react-native: 0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.8)
       tailwindcss: 4.3.3
     optionalDependencies:
       '@expo/metro-config': 57.0.12(expo@57.0.22)(typescript@5.9.3)
