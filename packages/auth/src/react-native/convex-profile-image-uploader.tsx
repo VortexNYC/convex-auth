@@ -26,7 +26,6 @@ import { useState } from "react";
 import {
   Image,
   Pressable,
-  StyleSheet,
   Text,
   View,
   type ImageStyle,
@@ -118,31 +117,44 @@ export function ConvexProfileImageUploader(props: ExpoProfileImageUploaderProps)
   }
 
   return (
-    <View style={[styles.root, s.root]}>
-      <View style={[styles.header, s.header]}>
-        <Text style={[styles.title, s.title]}>{copy.title}</Text>
-        <Text style={[styles.description, s.description]}>{copy.description}</Text>
+    <View className="w-full py-2" style={s.root}>
+      <View className="px-4 pb-3" style={s.header}>
+        <Text className="text-base font-semibold" style={s.title}>
+          {copy.title}
+        </Text>
+        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+          {copy.description}
+        </Text>
       </View>
-      <View style={{ alignItems: "center", paddingHorizontal: 16 }}>
+      <View className="items-center px-4">
         {currentImage !== null ? (
-          <Image source={{ uri: currentImage }} style={[styles.preview, s.preview]} />
+          <Image
+            source={{ uri: currentImage }}
+            className="w-24 h-24 rounded-full"
+            style={s.preview}
+          />
         ) : (
-          <Text style={[styles.noPreview, s.noPreview]}>{copy.noImage}</Text>
+          <Text className="text-sm text-muted-foreground py-3" style={s.noPreview}>
+            {copy.noImage}
+          </Text>
         )}
         <Pressable
           onPress={() => void handlePick()}
           disabled={isUploading}
-          style={[styles.pickButton, s.pickButton]}
+          className="mt-3 px-4 py-2.5 rounded-md border border-input"
+          style={s.pickButton}
         >
-          <Text style={[styles.pickButtonText, s.pickButtonText]}>
+          <Text className="text-sm font-medium" style={s.pickButtonText}>
             {isUploading ? copy.uploading : copy.pick}
           </Text>
         </Pressable>
         {success !== null ? (
-          <Text style={[styles.successState, s.successState]}>{success}</Text>
+          <Text className="text-success pt-2 text-sm" style={s.successState}>
+            {success}
+          </Text>
         ) : null}
         {error !== null ? (
-          <Text className="text-destructive" style={[styles.errorState, s.errorState]}>
+          <Text className="text-destructive pt-2 text-sm" style={s.errorState}>
             {error}
           </Text>
         ) : null}
@@ -150,22 +162,3 @@ export function ConvexProfileImageUploader(props: ExpoProfileImageUploaderProps)
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { paddingVertical: 8 },
-  header: { paddingHorizontal: 16, paddingBottom: 12 },
-  title: { fontSize: 16, fontWeight: "600" },
-  description: { fontSize: 13, opacity: 0.6, marginTop: 2 },
-  preview: { width: 96, height: 96, borderRadius: 48 },
-  noPreview: { fontSize: 13, opacity: 0.6, paddingVertical: 12 },
-  pickButton: {
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  pickButtonText: { fontSize: 14, fontWeight: "500" },
-  successState: { paddingTop: 8, fontSize: 13 },
-  errorState: { paddingTop: 8, fontSize: 13 },
-});
