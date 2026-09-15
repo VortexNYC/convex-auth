@@ -14,11 +14,13 @@ import {
   Pressable,
   Text,
   TextInput,
+  useColorScheme,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { clsx } from "clsx";
 
 import {
   useConvexAuthChangeEmail,
@@ -41,6 +43,21 @@ export type ExpoChangeEmailFormStyles = {
   errorState?: StyleProp<TextStyle>;
 };
 
+export type ExpoChangeEmailFormClassNames = {
+  root?: string;
+  header?: string;
+  title?: string;
+  description?: string;
+  field?: string;
+  label?: string;
+  input?: string;
+  readonlyInput?: string;
+  submitButton?: string;
+  submitButtonText?: string;
+  successState?: string;
+  errorState?: string;
+};
+
 export type ExpoChangeEmailFormCopy = {
   title?: string;
   description?: string;
@@ -59,6 +76,7 @@ export type ExpoChangeEmailFormProps = {
   currentEmail?: string | null;
   verifyCallbackUrl?: string;
   styles?: ExpoChangeEmailFormStyles;
+  classNames?: ExpoChangeEmailFormClassNames;
   copy?: ExpoChangeEmailFormCopy;
   onRequested?: (newEmail: string) => void;
 };
@@ -80,6 +98,9 @@ const DEFAULT_COPY: Required<ExpoChangeEmailFormCopy> = {
 export function ConvexChangeEmailForm(props: ExpoChangeEmailFormProps) {
   const copy = { ...DEFAULT_COPY, ...props.copy };
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
   const contextClient = useConvexAuthClientContext();
   const authClient = props.authClient ?? contextClient ?? null;
   const { requestChange, isRequesting } = useConvexAuthChangeEmail(authClient);
@@ -112,69 +133,92 @@ export function ConvexChangeEmailForm(props: ExpoChangeEmailFormProps) {
     props.onRequested?.(trimmed);
   }
 
+  const rootClassName = clsx(
+    "w-full max-w-md self-center p-4 bg-background",
+    c.root,
+    isDark && "dark",
+  );
+
   return (
-    <View className="w-full py-2" style={s.root}>
-      <View className="px-4 pb-3" style={s.header}>
-        <Text className="text-base font-semibold text-foreground" style={s.title}>
+    <View className={rootClassName} style={s.root}>
+      <View className={clsx("pb-3", c.header)} style={s.header}>
+        <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
           {copy.title}
         </Text>
-        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+        <Text
+          className={clsx("text-sm text-muted-foreground", c.description)}
+          style={s.description}
+        >
           {copy.description}
         </Text>
       </View>
-      <View>
-        {props.currentEmail !== null && props.currentEmail !== undefined ? (
-          <View className="px-4 py-2" style={s.field}>
-            <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
-              {copy.currentEmailLabel}
-            </Text>
-            <TextInput
-              value={props.currentEmail}
-              editable={false}
-              className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm opacity-60"
-              style={[s.input, s.readonlyInput]}
-            />
-          </View>
-        ) : null}
-        <View className="px-4 py-2" style={s.field}>
-          <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
-            {copy.newEmailLabel}
+      {props.currentEmail !== null && props.currentEmail !== undefined ? (
+        <View className={clsx("w-full py-2", c.field)} style={s.field}>
+          <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
+            {copy.currentEmailLabel}
           </Text>
           <TextInput
-            value={newEmail}
-            onChangeText={setNewEmail}
-            placeholder={copy.newEmailPlaceholder}
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-            placeholderTextColorClassName="accent-muted-foreground"
-            style={s.input}
+            value={props.currentEmail}
+            editable={false}
+            className={clsx(
+              "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm opacity-60",
+              c.input,
+              c.readonlyInput,
+            )}
+            style={[s.input, s.readonlyInput]}
+            accessibilityLabel={copy.currentEmailLabel}
           />
         </View>
-        <Pressable
-          onPress={() => void handleSubmit()}
-          disabled={isRequesting}
-          className="mx-4 mt-3 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
-          style={s.submitButton}
-          accessibilityRole="button"
-          accessibilityLabel={copy.submit}
-        >
-          <Text className="text-sm font-medium text-primary-foreground" style={s.submitButtonText}>
-            {isRequesting ? copy.submitting : copy.submit}
-          </Text>
-        </Pressable>
-        {success !== null ? (
-          <Text className="px-4 pt-2 text-sm text-success" style={s.successState}>
-            {success}
-          </Text>
-        ) : null}
-        {error !== null ? (
-          <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
-            {error}
-          </Text>
-        ) : null}
+      ) : null}
+      <View className={clsx("w-full py-2", c.field)} style={s.field}>
+        <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
+          {copy.newEmailLabel}
+        </Text>
+        <TextInput
+          value={newEmail}
+          onChangeText={setNewEmail}
+          placeholder={copy.newEmailPlaceholder}
+          placeholderTextColorClassName="text-muted-foreground"
+          autoCapitalize="none"
+          autoComplete="email"
+          textContentType="emailAddress"
+          keyboardType="email-address"
+          className={clsx(
+            "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+            c.input,
+          )}
+          style={s.input}
+          accessibilityLabel={copy.newEmailLabel}
+        />
       </View>
+      <Pressable
+        onPress={() => void handleSubmit()}
+        disabled={isRequesting}
+        className={clsx("w-full bg-primary rounded-md p-3 mt-4 items-center", c.submitButton)}
+        style={s.submitButton}
+        accessibilityRole="button"
+        accessibilityLabel={isRequesting ? copy.submitting : copy.submit}
+      >
+        <Text
+          className={clsx("text-sm font-semibold text-primary-foreground", c.submitButtonText)}
+          style={s.submitButtonText}
+        >
+          {isRequesting ? copy.submitting : copy.submit}
+        </Text>
+      </Pressable>
+      {success !== null ? (
+        <Text
+          className={clsx("text-sm text-muted-foreground mt-2", c.successState)}
+          style={s.successState}
+        >
+          {success}
+        </Text>
+      ) : null}
+      {error !== null ? (
+        <Text className={clsx("text-sm text-destructive mt-2", c.errorState)} style={s.errorState}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }

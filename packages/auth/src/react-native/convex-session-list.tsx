@@ -10,8 +10,7 @@
  *   />
  *
  * Same API as the web version. Style overrides go through the
- * `styles` prop (RN style objects) rather than className strings —
- * RN convention.
+ * `styles` prop (RN style objects) and `classNames` (Uniwind classes).
  */
 import { useState } from "react";
 import {
@@ -19,11 +18,13 @@ import {
   FlatList,
   Pressable,
   Text,
+  useColorScheme,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { clsx } from "clsx";
 
 import {
   useConvexAuthRevokeSession,
@@ -52,6 +53,25 @@ export type ExpoSessionListStyles = {
   errorState?: StyleProp<TextStyle>;
 };
 
+export type ExpoSessionListClassNames = {
+  root?: string;
+  header?: string;
+  title?: string;
+  description?: string;
+  list?: string;
+  item?: string;
+  itemCurrent?: string;
+  itemPrimary?: string;
+  itemMeta?: string;
+  revokeButton?: string;
+  revokeButtonText?: string;
+  revokeOthersButton?: string;
+  revokeOthersButtonText?: string;
+  emptyState?: string;
+  loadingState?: string;
+  errorState?: string;
+};
+
 export type ExpoSessionListCopy = {
   title?: string;
   description?: string;
@@ -71,6 +91,7 @@ export type ExpoSessionListProps = {
   currentSessionToken?: string | null;
   showRevokeOthersAction?: boolean;
   styles?: ExpoSessionListStyles;
+  classNames?: ExpoSessionListClassNames;
   copy?: ExpoSessionListCopy;
   formatTimestamp?: (value: string | Date) => string;
 };
@@ -100,6 +121,9 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
   const authClient = props.authClient ?? contextClient ?? null;
   const copy = { ...DEFAULT_COPY, ...props.copy };
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
   const fmt = props.formatTimestamp ?? defaultFormatTimestamp;
 
   const { sessions, isLoading, error, refetch } = useConvexAuthSessionList(authClient);
@@ -128,14 +152,28 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
     else await refetch();
   }
 
+  const rootClassName = clsx(
+    "w-full max-w-md self-center p-4 bg-background",
+    c.root,
+    isDark && "dark",
+  );
+
+  const listClassName = clsx("w-full gap-1", c.list);
+
   return (
-    <View className="w-full py-2" style={s.root}>
-      <View className="flex-row items-start px-4 pb-3 gap-3" style={s.header}>
+    <View className={rootClassName} style={s.root}>
+      <View
+        className={clsx("flex-row items-start justify-between pb-3 gap-3", c.header)}
+        style={s.header}
+      >
         <View className="flex-1">
-          <Text className="text-base font-semibold text-foreground" style={s.title}>
+          <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
             {copy.title}
           </Text>
-          <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+          <Text
+            className={clsx("text-sm text-muted-foreground", c.description)}
+            style={s.description}
+          >
             {copy.description}
           </Text>
         </View>
@@ -143,12 +181,18 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
           <Pressable
             onPress={() => void handleRevokeOthers()}
             disabled={isRevoking}
-            className="px-3 py-1.5 rounded-md border border-input bg-background items-center justify-center"
+            className={clsx(
+              "px-3 py-1.5 rounded-md border border-border bg-card",
+              c.revokeOthersButton,
+            )}
             style={s.revokeOthersButton}
             accessibilityRole="button"
-            accessibilityLabel={copy.revokeOthersButton}
+            accessibilityLabel={isRevoking ? copy.revokingOthersButton : copy.revokeOthersButton}
           >
-            <Text className="text-sm text-foreground" style={s.revokeOthersButtonText}>
+            <Text
+              className={clsx("text-sm text-card-foreground", c.revokeOthersButtonText)}
+              style={s.revokeOthersButtonText}
+            >
               {isRevoking ? copy.revokingOthersButton : copy.revokeOthersButton}
             </Text>
           </Pressable>
@@ -156,20 +200,23 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
       </View>
 
       {isLoading ? (
-        <View className="p-4 items-center gap-2" style={s.loadingState}>
-          <ActivityIndicator colorClassName="accent-primary" />
-          <Text className="text-xs text-muted-foreground" style={s.itemMeta}>
+        <View className={clsx("py-6 items-center gap-2", c.loadingState)} style={s.loadingState}>
+          <ActivityIndicator colorClassName="text-primary" />
+          <Text className={clsx("text-xs text-muted-foreground", c.itemMeta)} style={s.itemMeta}>
             {copy.loading}
           </Text>
         </View>
       ) : error !== null ? (
-        <Text className="text-destructive p-4 text-sm" style={s.errorState}>
+        <Text className={clsx("text-sm text-destructive py-3", c.errorState)} style={s.errorState}>
           {error === "Session listing is not available on this auth client"
             ? copy.unavailable
             : error}
         </Text>
       ) : (sessions ?? []).length === 0 ? (
-        <Text className="p-4 text-sm text-muted-foreground" style={s.emptyState}>
+        <Text
+          className={clsx("text-sm text-muted-foreground py-3", c.emptyState)}
+          style={s.emptyState}
+        >
           {copy.empty}
         </Text>
       ) : (
@@ -177,6 +224,7 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
           data={sessions ?? []}
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.list}
+          className={listClassName}
           renderItem={({ item }) => {
             const isCurrent = item.token === props.currentSessionToken;
             return (
@@ -186,6 +234,7 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
                 isRevoking={revokingToken === item.token}
                 copy={copy}
                 styles={s}
+                classNames={c}
                 onRevoke={() => void handleRevoke(item.token)}
                 formatTimestamp={fmt}
               />
@@ -194,7 +243,7 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
         />
       )}
       {localError !== null ? (
-        <Text className="text-destructive p-4 text-sm" style={s.errorState}>
+        <Text className={clsx("text-sm text-destructive mt-2", c.errorState)} style={s.errorState}>
           {localError}
         </Text>
       ) : null}
@@ -208,20 +257,39 @@ function SessionRow(args: {
   isRevoking: boolean;
   copy: Required<ExpoSessionListCopy>;
   styles: ExpoSessionListStyles;
+  classNames: ExpoSessionListClassNames;
   onRevoke: () => void;
   formatTimestamp: (value: string | Date) => string;
 }) {
-  const { session, isCurrent, isRevoking, copy, styles: s, onRevoke, formatTimestamp } = args;
+  const {
+    session,
+    isCurrent,
+    isRevoking,
+    copy,
+    styles: s,
+    classNames: c,
+    onRevoke,
+    formatTimestamp,
+  } = args;
+  const itemClassName = clsx(
+    "flex-row items-center py-3 gap-3",
+    isCurrent && "bg-muted/50",
+    c.item,
+    isCurrent && c.itemCurrent,
+  );
   return (
-    <View
-      className="flex-row items-center px-4 py-3 gap-3"
-      style={[s.item, isCurrent ? s.itemCurrent : undefined]}
-    >
+    <View className={itemClassName} style={[s.item, isCurrent ? s.itemCurrent : undefined]}>
       <View className="flex-1">
-        <Text className="text-sm font-medium text-foreground" style={s.itemPrimary}>
+        <Text
+          className={clsx("text-sm font-medium text-foreground", c.itemPrimary)}
+          style={s.itemPrimary}
+        >
           {isCurrent ? copy.currentBadge : (session.userAgent ?? "Device")}
         </Text>
-        <Text className="text-xs text-muted-foreground mt-0.5" style={s.itemMeta}>
+        <Text
+          className={clsx("text-xs text-muted-foreground mt-0.5", c.itemMeta)}
+          style={s.itemMeta}
+        >
           {copy.lastActivePrefix}: {formatTimestamp(session.updatedAt)}
         </Text>
       </View>
@@ -229,12 +297,15 @@ function SessionRow(args: {
         <Pressable
           onPress={onRevoke}
           disabled={isRevoking}
-          className="px-3 py-1.5 rounded-md border border-input bg-background items-center justify-center"
+          className={clsx("px-3 py-1.5 rounded-md border border-border bg-card", c.revokeButton)}
           style={s.revokeButton}
           accessibilityRole="button"
-          accessibilityLabel={copy.revoke}
+          accessibilityLabel={isRevoking ? copy.revoking : copy.revoke}
         >
-          <Text className="text-sm text-foreground" style={s.revokeButtonText}>
+          <Text
+            className={clsx("text-sm text-card-foreground", c.revokeButtonText)}
+            style={s.revokeButtonText}
+          >
             {isRevoking ? copy.revoking : copy.revoke}
           </Text>
         </Pressable>

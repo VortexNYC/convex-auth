@@ -18,11 +18,13 @@ import {
   Pressable,
   Text,
   TextInput,
+  useColorScheme,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { clsx } from "clsx";
 
 import {
   extractTotpSecret,
@@ -49,6 +51,23 @@ export type ExpoEnableTwoFactorFormStyles = {
   errorState?: StyleProp<TextStyle>;
 };
 
+export type ExpoEnableTwoFactorFormClassNames = {
+  root?: string;
+  header?: string;
+  title?: string;
+  description?: string;
+  field?: string;
+  label?: string;
+  input?: string;
+  submitButton?: string;
+  submitButtonText?: string;
+  secret?: string;
+  qr?: string;
+  backupCodes?: string;
+  backupCode?: string;
+  errorState?: string;
+};
+
 export type ExpoEnableTwoFactorFormCopy = {
   title?: string;
   description?: string;
@@ -73,6 +92,7 @@ export type ExpoEnableTwoFactorFormProps = {
   issuer?: string;
   renderQR?: (totpURI: string) => ReactNode;
   styles?: ExpoEnableTwoFactorFormStyles;
+  classNames?: ExpoEnableTwoFactorFormClassNames;
   copy?: ExpoEnableTwoFactorFormCopy;
   onEnrolled?: () => void;
 };
@@ -106,6 +126,9 @@ export function ConvexEnableTwoFactorForm(props: ExpoEnableTwoFactorFormProps) {
   const authClient = props.authClient ?? contextClient ?? null;
   const copy = { ...DEFAULT_COPY, ...props.copy };
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   const { enable, isEnabling } = useConvexAuthEnableTwoFactor(authClient);
   const { verifyTotp, isVerifying } = useConvexAuthVerifyTotp(authClient);
@@ -146,17 +169,32 @@ export function ConvexEnableTwoFactorForm(props: ExpoEnableTwoFactorFormProps) {
     setStep("backup");
   }
 
+  const rootClassName = clsx(
+    "w-full max-w-md self-center p-4 bg-background",
+    c.root,
+    isDark && "dark",
+  );
+
   if (!isAvailable) {
-    return <TwoFactorUnavailable copy={copy} stylesOverride={s} />;
+    return (
+      <View className={rootClassName} style={s.root}>
+        <Text className={clsx("text-sm text-destructive mt-2", c.errorState)} style={s.errorState}>
+          {copy.unavailable}
+        </Text>
+      </View>
+    );
   }
 
   return (
-    <View className="w-full py-2" style={s.root}>
-      <View className="px-4 pb-3" style={s.header}>
-        <Text className="text-base font-semibold text-foreground" style={s.title}>
+    <View className={rootClassName} style={s.root}>
+      <View className={clsx("pb-3", c.header)} style={s.header}>
+        <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
           {header.title}
         </Text>
-        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+        <Text
+          className={clsx("text-sm text-muted-foreground", c.description)}
+          style={s.description}
+        >
           {header.description}
         </Text>
       </View>
@@ -164,17 +202,19 @@ export function ConvexEnableTwoFactorForm(props: ExpoEnableTwoFactorFormProps) {
       {step === "password" ? (
         <TwoFactorPasswordStep
           copy={copy}
+          classNames={c}
           error={error}
           isEnabling={isEnabling}
           onPasswordChange={setPassword}
           onSubmit={handlePassword}
           password={password}
-          stylesOverride={s}
+          styles={s}
         />
       ) : null}
 
       {step === "verify" ? (
         <TwoFactorVerifyStep
+          classNames={c}
           code={code}
           copy={copy}
           error={error}
@@ -183,7 +223,7 @@ export function ConvexEnableTwoFactorForm(props: ExpoEnableTwoFactorFormProps) {
           onSubmit={handleVerify}
           renderQR={props.renderQR}
           secret={secret}
-          stylesOverride={s}
+          styles={s}
           totpURI={totpURI}
         />
       ) : null}
@@ -191,9 +231,10 @@ export function ConvexEnableTwoFactorForm(props: ExpoEnableTwoFactorFormProps) {
       {step === "backup" ? (
         <TwoFactorBackupStep
           backupCodes={backupCodes}
+          classNames={c}
           copy={copy}
           onDone={props.onEnrolled}
-          stylesOverride={s}
+          styles={s}
         />
       ) : null}
     </View>
@@ -210,64 +251,63 @@ function getTwoFactorHeader(copy: TwoFactorFormCopy, step: Step) {
   return { title: copy.title, description: copy.description };
 }
 
-function TwoFactorUnavailable(args: {
-  copy: TwoFactorFormCopy;
-  stylesOverride: ExpoEnableTwoFactorFormStyles;
-}) {
-  const s = args.stylesOverride;
-  return (
-    <View className="w-full py-2" style={s.root}>
-      <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
-        {args.copy.unavailable}
-      </Text>
-    </View>
-  );
-}
-
 function TwoFactorPasswordStep(args: {
   copy: TwoFactorFormCopy;
+  classNames: ExpoEnableTwoFactorFormClassNames;
   error: string | null;
   isEnabling: boolean;
   onPasswordChange: (value: string) => void;
   onSubmit: () => Promise<void>;
   password: string;
-  stylesOverride: ExpoEnableTwoFactorFormStyles;
+  styles: ExpoEnableTwoFactorFormStyles;
 }) {
-  const s = args.stylesOverride;
+  const s = args.styles;
+  const c = args.classNames;
   return (
-    <View>
-      <View className="px-4 py-2" style={s.field}>
-        <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+    <View className="w-full">
+      <View className={clsx("w-full py-2", c.field)} style={s.field}>
+        <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
           {args.copy.passwordLabel}
         </Text>
         <TextInput
           value={args.password}
           onChangeText={args.onPasswordChange}
           placeholder={args.copy.passwordPlaceholder}
+          placeholderTextColorClassName="text-muted-foreground"
           autoCapitalize="none"
           autoComplete="password"
+          textContentType="password"
           secureTextEntry
-          className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-          placeholderTextColorClassName="accent-muted-foreground"
+          className={clsx(
+            "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+            c.input,
+          )}
           style={s.input}
+          accessibilityLabel={args.copy.passwordLabel}
         />
       </View>
       <Pressable
         onPress={() => void args.onSubmit()}
         disabled={args.isEnabling}
-        className="mx-4 mt-3 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
+        className={clsx("w-full bg-primary rounded-md p-3 mt-4 items-center", c.submitButton)}
         style={s.submitButton}
+        accessibilityRole="button"
+        accessibilityLabel={args.isEnabling ? args.copy.submitting : args.copy.passwordSubmit}
       >
-        <Text className="text-sm font-medium text-primary-foreground" style={s.submitButtonText}>
+        <Text
+          className={clsx("text-sm font-semibold text-primary-foreground", c.submitButtonText)}
+          style={s.submitButtonText}
+        >
           {args.isEnabling ? args.copy.submitting : args.copy.passwordSubmit}
         </Text>
       </Pressable>
-      <TwoFactorError error={args.error} stylesOverride={s} />
+      <TwoFactorError classNames={c} error={args.error} styles={s} />
     </View>
   );
 }
 
 function TwoFactorVerifyStep(args: {
+  classNames: ExpoEnableTwoFactorFormClassNames;
   code: string;
   copy: TwoFactorFormCopy;
   error: string | null;
@@ -276,77 +316,90 @@ function TwoFactorVerifyStep(args: {
   onSubmit: () => Promise<void>;
   renderQR?: (totpURI: string) => ReactNode;
   secret: string | null;
-  stylesOverride: ExpoEnableTwoFactorFormStyles;
+  styles: ExpoEnableTwoFactorFormStyles;
   totpURI: string | null;
 }) {
-  const s = args.stylesOverride;
+  const s = args.styles;
+  const c = args.classNames;
   return (
-    <View>
+    <View className="w-full">
       {args.totpURI !== null && args.renderQR !== undefined ? (
-        <View className="items-center py-3" style={s.qr}>
+        <View className={clsx("items-center py-3", c.qr)} style={s.qr}>
           {args.renderQR(args.totpURI)}
         </View>
       ) : null}
       {args.secret !== null ? (
-        <View className="px-4 py-2" style={s.field}>
-          <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+        <View className={clsx("w-full py-2", c.field)} style={s.field}>
+          <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
             {args.copy.secretLabel}
           </Text>
           <Text
             selectable
-            className="text-base font-mono tracking-wide text-foreground"
+            className={clsx("text-base font-mono tracking-wide text-foreground", c.secret)}
             style={s.secret}
           >
             {args.secret}
           </Text>
         </View>
       ) : null}
-      <View className="px-4 py-2" style={s.field}>
-        <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+      <View className={clsx("w-full py-2", c.field)} style={s.field}>
+        <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
           {args.copy.codeLabel}
         </Text>
         <TextInput
           value={args.code}
           onChangeText={args.onCodeChange}
           placeholder={args.copy.codePlaceholder}
+          placeholderTextColorClassName="text-muted-foreground"
           autoCapitalize="none"
           autoComplete="one-time-code"
+          textContentType="oneTimeCode"
           keyboardType="number-pad"
-          className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-          placeholderTextColorClassName="accent-muted-foreground"
+          className={clsx(
+            "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+            c.input,
+          )}
           style={s.input}
+          accessibilityLabel={args.copy.codeLabel}
         />
       </View>
       <Pressable
         onPress={() => void args.onSubmit()}
         disabled={args.isVerifying}
-        className="mx-4 mt-3 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
+        className={clsx("w-full bg-primary rounded-md p-3 mt-4 items-center", c.submitButton)}
         style={s.submitButton}
+        accessibilityRole="button"
+        accessibilityLabel={args.isVerifying ? args.copy.submitting : args.copy.verifySubmit}
       >
-        <Text className="text-sm font-medium text-primary-foreground" style={s.submitButtonText}>
+        <Text
+          className={clsx("text-sm font-semibold text-primary-foreground", c.submitButtonText)}
+          style={s.submitButtonText}
+        >
           {args.isVerifying ? args.copy.submitting : args.copy.verifySubmit}
         </Text>
       </Pressable>
-      <TwoFactorError error={args.error} stylesOverride={s} />
+      <TwoFactorError classNames={c} error={args.error} styles={s} />
     </View>
   );
 }
 
 function TwoFactorBackupStep(args: {
   backupCodes: string[];
+  classNames: ExpoEnableTwoFactorFormClassNames;
   copy: TwoFactorFormCopy;
   onDone?: () => void;
-  stylesOverride: ExpoEnableTwoFactorFormStyles;
+  styles: ExpoEnableTwoFactorFormStyles;
 }) {
-  const s = args.stylesOverride;
+  const s = args.styles;
+  const c = args.classNames;
   return (
-    <View>
-      <View className="px-4 py-2 gap-1" style={s.backupCodes}>
+    <View className="w-full">
+      <View className={clsx("w-full py-2 gap-1", c.backupCodes)} style={s.backupCodes}>
         {args.backupCodes.map((backupCode) => (
           <Text
             key={backupCode}
             selectable
-            className="text-base font-mono text-foreground"
+            className={clsx("text-base font-mono text-foreground", c.backupCode)}
             style={s.backupCode}
           >
             {backupCode}
@@ -355,10 +408,18 @@ function TwoFactorBackupStep(args: {
       </View>
       <Pressable
         onPress={() => args.onDone?.()}
-        className="mx-4 mt-3 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
+        className={clsx(
+          "w-full border border-border bg-card rounded-md p-3 mt-4 items-center",
+          c.submitButton,
+        )}
         style={s.submitButton}
+        accessibilityRole="button"
+        accessibilityLabel={args.copy.done}
       >
-        <Text className="text-sm font-medium text-primary-foreground" style={s.submitButtonText}>
+        <Text
+          className={clsx("text-sm font-medium text-card-foreground", c.submitButtonText)}
+          style={s.submitButtonText}
+        >
           {args.copy.done}
         </Text>
       </Pressable>
@@ -367,12 +428,14 @@ function TwoFactorBackupStep(args: {
 }
 
 function TwoFactorError(args: {
+  classNames: ExpoEnableTwoFactorFormClassNames;
   error: string | null;
-  stylesOverride: ExpoEnableTwoFactorFormStyles;
+  styles: ExpoEnableTwoFactorFormStyles;
 }) {
-  const s = args.stylesOverride;
+  const s = args.styles;
+  const c = args.classNames;
   return args.error === null ? null : (
-    <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
+    <Text className={clsx("text-sm text-destructive mt-2", c.errorState)} style={s.errorState}>
       {args.error}
     </Text>
   );

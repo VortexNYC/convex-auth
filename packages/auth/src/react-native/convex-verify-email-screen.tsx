@@ -16,11 +16,13 @@ import { useEffect, useState } from "react";
 import {
   Pressable,
   Text,
+  useColorScheme,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { clsx } from "clsx";
 
 import {
   useConvexAuthResendVerification,
@@ -42,6 +44,19 @@ export type ExpoVerifyEmailScreenStyles = {
   resendButtonText?: StyleProp<TextStyle>;
 };
 
+export type ExpoVerifyEmailScreenClassNames = {
+  root?: string;
+  header?: string;
+  title?: string;
+  description?: string;
+  verifyingState?: string;
+  verifiedState?: string;
+  errorState?: string;
+  missingTokenState?: string;
+  resendButton?: string;
+  resendButtonText?: string;
+};
+
 export type ExpoVerifyEmailScreenCopy = {
   title?: string;
   description?: string;
@@ -61,6 +76,7 @@ export type ExpoVerifyEmailScreenProps = {
   userEmail?: string | null;
   resendCallbackUrl?: string;
   styles?: ExpoVerifyEmailScreenStyles;
+  classNames?: ExpoVerifyEmailScreenClassNames;
   copy?: ExpoVerifyEmailScreenCopy;
   onVerified?: () => void;
 };
@@ -84,6 +100,9 @@ export function ConvexVerifyEmailScreen(props: ExpoVerifyEmailScreenProps) {
   const authClient = props.authClient ?? contextClient ?? null;
   const copy = { ...DEFAULT_COPY, ...props.copy };
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
   const { status, error, verifyEmail } = useConvexAuthVerifyEmail(authClient);
   const { resend, isResending } = useConvexAuthResendVerification(authClient);
   const [resendResult, setResendResult] = useState<string | null>(null);
@@ -122,49 +141,79 @@ export function ConvexVerifyEmailScreen(props: ExpoVerifyEmailScreenProps) {
     setResendResult(copy.resendSuccess);
   }
 
+  const rootClassName = clsx(
+    "w-full max-w-md self-center p-4 bg-background",
+    c.root,
+    isDark && "dark",
+  );
+
   return (
-    <View className="w-full py-2" style={s.root}>
-      <View className="px-4 pb-3" style={s.header}>
-        <Text className="text-base font-semibold text-foreground" style={s.title}>
+    <View className={rootClassName} style={s.root}>
+      <View className={clsx("pb-3", c.header)} style={s.header}>
+        <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
           {copy.title}
         </Text>
-        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+        <Text
+          className={clsx("text-sm text-muted-foreground", c.description)}
+          style={s.description}
+        >
           {copy.description}
         </Text>
       </View>
       {!hasToken ? (
-        <Text className="text-destructive px-4 pt-2 text-sm" style={s.missingTokenState}>
+        <Text
+          className={clsx("text-sm text-destructive mt-2", c.missingTokenState)}
+          style={s.missingTokenState}
+        >
           {copy.missingTokenMessage}
         </Text>
       ) : status === "verifying" || status === "idle" ? (
-        <Text className="px-4 pt-2 text-sm text-foreground" style={s.verifyingState}>
+        <Text
+          className={clsx("text-sm text-muted-foreground mt-2", c.verifyingState)}
+          style={s.verifyingState}
+        >
           {copy.verifying}
         </Text>
       ) : status === "verified" ? (
-        <Text className="px-4 pt-2 text-sm text-success" style={s.verifiedState}>
+        <Text
+          className={clsx("text-sm text-muted-foreground mt-2", c.verifiedState)}
+          style={s.verifiedState}
+        >
           {copy.verified}
         </Text>
       ) : (
-        <View>
-          <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
+        <View className="w-full">
+          <Text
+            className={clsx("text-sm text-destructive mt-2", c.errorState)}
+            style={s.errorState}
+          >
             {copy.errorPrefix} {error}
           </Text>
           {canResend ? (
             <Pressable
               onPress={() => void handleResend()}
               disabled={isResending}
-              className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input bg-background items-center justify-center"
+              className={clsx(
+                "w-full border border-border bg-card rounded-md p-3 mt-4 items-center",
+                c.resendButton,
+              )}
               style={s.resendButton}
               accessibilityRole="button"
-              accessibilityLabel={copy.resend}
+              accessibilityLabel={isResending ? copy.resending : copy.resend}
             >
-              <Text className="text-sm font-medium text-foreground" style={s.resendButtonText}>
+              <Text
+                className={clsx("text-sm text-card-foreground", c.resendButtonText)}
+                style={s.resendButtonText}
+              >
                 {isResending ? copy.resending : copy.resend}
               </Text>
             </Pressable>
           ) : null}
           {resendResult !== null ? (
-            <Text className="px-4 pt-2 text-sm text-success" style={s.verifiedState}>
+            <Text
+              className={clsx("text-sm text-muted-foreground mt-2", c.verifiedState)}
+              style={s.verifiedState}
+            >
               {resendResult}
             </Text>
           ) : null}

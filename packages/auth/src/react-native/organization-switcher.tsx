@@ -13,12 +13,14 @@ import {
   Modal,
   Pressable,
   Text,
+  useColorScheme,
   View,
   type ImageStyle,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { clsx } from "clsx";
 
 export type ConvexOrgSwitcherOrganization = {
   _id: string;
@@ -44,6 +46,23 @@ export type ExpoOrgSwitcherStyles = {
   createButtonText?: StyleProp<TextStyle>;
 };
 
+export type ExpoOrgSwitcherClassNames = {
+  trigger?: string;
+  triggerName?: string;
+  triggerImage?: string;
+  triggerPlaceholder?: string;
+  modal?: string;
+  panel?: string;
+  sectionTitle?: string;
+  item?: string;
+  itemActive?: string;
+  itemLabel?: string;
+  itemMeta?: string;
+  divider?: string;
+  createButton?: string;
+  createButtonText?: string;
+};
+
 export type ExpoOrgSwitcherCopy = {
   currentOrganizationLabel?: string;
   otherOrganizationsLabel?: string;
@@ -58,6 +77,7 @@ export type ExpoOrgSwitcherProps = {
   currentOrganization?: ConvexOrgSwitcherOrganization | null;
   showPersonalAccount?: boolean;
   styles?: ExpoOrgSwitcherStyles;
+  classNames?: ExpoOrgSwitcherClassNames;
   copy?: ExpoOrgSwitcherCopy;
   onSelectOrganization: (organizationId: string) => void | Promise<void>;
   onSelectPersonalAccount?: () => void | Promise<void>;
@@ -82,7 +102,10 @@ function OrganizationSwitcherTrigger(props: {
   onPress: () => void;
   renderCustomTrigger?: ExpoOrgSwitcherProps["renderCustomTrigger"];
   styles: ExpoOrgSwitcherStyles;
+  classNames: ExpoOrgSwitcherClassNames;
 }) {
+  const s = props.styles;
+  const c = props.classNames;
   const custom = props.renderCustomTrigger?.({
     organization: props.current,
     onPress: props.onPress,
@@ -94,22 +117,33 @@ function OrganizationSwitcherTrigger(props: {
   return (
     <Pressable
       onPress={props.onPress}
-      className="flex-row items-center px-3 py-2 rounded-md border border-input bg-background gap-2"
-      style={props.styles.trigger}
+      className={clsx(
+        "flex-row items-center px-3 py-2 rounded-md border border-border gap-2",
+        c.trigger,
+      )}
+      style={s.trigger}
+      accessibilityRole="button"
+      accessibilityLabel={props.current?.name ?? props.copy.personalAccountLabel}
     >
       {props.current?.imageUrl !== undefined && props.current.imageUrl.length > 0 ? (
         <Image
           source={{ uri: props.current.imageUrl }}
-          className="w-6 h-6 rounded-full"
-          style={props.styles.triggerImage}
+          className={clsx("w-6 h-6 rounded-full", c.triggerImage)}
+          style={s.triggerImage}
         />
       ) : (
         <View
-          className="w-6 h-6 rounded-full border border-input opacity-40"
-          style={props.styles.triggerPlaceholder}
+          className={clsx(
+            "w-6 h-6 rounded-full border border-input bg-muted opacity-40",
+            c.triggerPlaceholder,
+          )}
+          style={s.triggerPlaceholder}
         />
       )}
-      <Text className="text-sm font-medium text-foreground" style={props.styles.triggerName}>
+      <Text
+        className={clsx("text-sm font-medium text-foreground", c.triggerName)}
+        style={s.triggerName}
+      >
         {props.current?.name ?? props.copy.personalAccountLabel}
       </Text>
     </Pressable>
@@ -120,7 +154,10 @@ function CurrentOrganizationSection(props: {
   copy: Required<ExpoOrgSwitcherCopy>;
   current: ConvexOrgSwitcherOrganization | null;
   styles: ExpoOrgSwitcherStyles;
+  classNames: ExpoOrgSwitcherClassNames;
 }) {
+  const s = props.styles;
+  const c = props.classNames;
   if (props.current === null) {
     return null;
   }
@@ -128,25 +165,31 @@ function CurrentOrganizationSection(props: {
   return (
     <View>
       <Text
-        className="text-xs text-muted-foreground mt-3 mb-2 font-medium"
-        style={props.styles.sectionTitle}
+        className={clsx("text-xs text-muted-foreground mt-3 mb-2 font-medium", c.sectionTitle)}
+        style={s.sectionTitle}
       >
         {props.copy.currentOrganizationLabel}
       </Text>
       <View
-        className="py-3 px-2 rounded-md opacity-60"
-        style={[props.styles.item, props.styles.itemActive]}
+        className={clsx("py-3 px-2 rounded-md opacity-60 bg-muted/50", c.item, c.itemActive)}
+        style={[s.item, s.itemActive]}
       >
-        <Text className="text-base font-medium text-foreground" style={props.styles.itemLabel}>
+        <Text
+          className={clsx("text-base font-medium text-foreground", c.itemLabel)}
+          style={s.itemLabel}
+        >
           {props.current.name}
         </Text>
         {props.current.slug !== undefined ? (
-          <Text className="text-xs text-muted-foreground mt-0.5" style={props.styles.itemMeta}>
+          <Text
+            className={clsx("text-xs text-muted-foreground mt-0.5", c.itemMeta)}
+            style={s.itemMeta}
+          >
             {props.current.slug}
           </Text>
         ) : null}
       </View>
-      <View className="bg-border h-px my-2" style={props.styles.divider} />
+      <View className={clsx("bg-border h-px my-2", c.divider)} style={s.divider} />
     </View>
   );
 }
@@ -154,6 +197,9 @@ function CurrentOrganizationSection(props: {
 export function ConvexOrganizationSwitcher(props: ExpoOrgSwitcherProps) {
   const copy = { ...DEFAULT_COPY, ...props.copy };
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
   const [open, setOpen] = useState(false);
 
   const current =
@@ -183,6 +229,7 @@ export function ConvexOrganizationSwitcher(props: ExpoOrgSwitcherProps) {
         onPress={() => setOpen(true)}
         renderCustomTrigger={props.renderCustomTrigger}
         styles={s}
+        classNames={c}
       />
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
         <Pressable
@@ -191,21 +238,28 @@ export function ConvexOrganizationSwitcher(props: ExpoOrgSwitcherProps) {
             { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },
             s.modal,
           ]}
+          className={clsx(c.modal)}
         >
           <Pressable
             onPress={() => {}}
-            className="bg-popover px-4 py-5 rounded-t-xl"
+            className={clsx("bg-card px-4 py-5 rounded-t-xl", c.panel, isDark && "dark")}
             style={s.panel}
           >
-            <CurrentOrganizationSection copy={copy} current={current} styles={s} />
+            <CurrentOrganizationSection copy={copy} current={current} styles={s} classNames={c} />
             <Text
-              className="text-xs text-muted-foreground mt-3 mb-2 font-medium"
+              className={clsx(
+                "text-xs text-muted-foreground mt-3 mb-2 font-medium",
+                c.sectionTitle,
+              )}
               style={s.sectionTitle}
             >
               {copy.otherOrganizationsLabel}
             </Text>
             {others.length === 0 ? (
-              <Text className="text-xs text-muted-foreground mt-0.5" style={s.itemMeta}>
+              <Text
+                className={clsx("text-xs text-muted-foreground mt-0.5", c.itemMeta)}
+                style={s.itemMeta}
+              >
                 {copy.noOrganizationsLabel}
               </Text>
             ) : (
@@ -213,14 +267,22 @@ export function ConvexOrganizationSwitcher(props: ExpoOrgSwitcherProps) {
                 <Pressable
                   key={org._id}
                   onPress={() => void pickOrg(org._id)}
-                  className="py-3 px-2 rounded-md"
+                  className={clsx("py-3 px-2 rounded-md", c.item)}
                   style={s.item}
+                  accessibilityRole="button"
+                  accessibilityLabel={org.name}
                 >
-                  <Text className="text-base font-medium text-foreground" style={s.itemLabel}>
+                  <Text
+                    className={clsx("text-base font-medium text-foreground", c.itemLabel)}
+                    style={s.itemLabel}
+                  >
                     {org.name}
                   </Text>
                   {org.slug !== undefined ? (
-                    <Text className="text-xs text-muted-foreground mt-0.5" style={s.itemMeta}>
+                    <Text
+                      className={clsx("text-xs text-muted-foreground mt-0.5", c.itemMeta)}
+                      style={s.itemMeta}
+                    >
                       {org.slug}
                     </Text>
                   ) : null}
@@ -229,13 +291,18 @@ export function ConvexOrganizationSwitcher(props: ExpoOrgSwitcherProps) {
             )}
             {props.showPersonalAccount === true && props.onSelectPersonalAccount !== undefined ? (
               <View>
-                <View className="bg-border h-px my-2" style={s.divider} />
+                <View className={clsx("bg-border h-px my-2", c.divider)} style={s.divider} />
                 <Pressable
                   onPress={() => void pickPersonal()}
-                  className="py-3 px-2 rounded-md"
+                  className={clsx("py-3 px-2 rounded-md", c.item)}
                   style={s.item}
+                  accessibilityRole="button"
+                  accessibilityLabel={copy.personalAccountLabel}
                 >
-                  <Text className="text-base font-medium text-foreground" style={s.itemLabel}>
+                  <Text
+                    className={clsx("text-base font-medium text-foreground", c.itemLabel)}
+                    style={s.itemLabel}
+                  >
                     {copy.personalAccountLabel}
                   </Text>
                 </Pressable>
@@ -243,15 +310,21 @@ export function ConvexOrganizationSwitcher(props: ExpoOrgSwitcherProps) {
             ) : null}
             {props.onCreateOrganization !== undefined ? (
               <View>
-                <View className="bg-border h-px my-2" style={s.divider} />
+                <View className={clsx("bg-border h-px my-2", c.divider)} style={s.divider} />
                 <Pressable
                   onPress={() => void pickCreate()}
-                  className="py-3 px-2 rounded-md border border-input bg-popover items-center justify-center"
+                  className={clsx(
+                    "py-3 px-2 rounded-md border border-border bg-card items-center",
+                    c.createButton,
+                  )}
                   style={s.createButton}
                   accessibilityRole="button"
                   accessibilityLabel={copy.createOrganizationLabel}
                 >
-                  <Text className="text-sm font-medium text-foreground" style={s.createButtonText}>
+                  <Text
+                    className={clsx("text-sm font-medium text-card-foreground", c.createButtonText)}
+                    style={s.createButtonText}
+                  >
                     {copy.createOrganizationLabel}
                   </Text>
                 </Pressable>

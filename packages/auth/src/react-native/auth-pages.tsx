@@ -5,11 +5,13 @@ import {
   ActivityIndicator,
   Pressable,
   Text,
+  useColorScheme,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { clsx } from "clsx";
 
 import { buildExpoAuthSignUpUrl } from "./auth-page-utils";
 
@@ -25,6 +27,31 @@ type CurrentOrganization = {
   _id: string;
   name?: string | null;
 } | null;
+
+export type ExpoAuthOrganizationChooserPageStyles = {
+  root?: StyleProp<ViewStyle>;
+  title?: StyleProp<TextStyle>;
+  description?: StyleProp<TextStyle>;
+  eyebrow?: StyleProp<TextStyle>;
+  organizationButton?: StyleProp<ViewStyle>;
+  organizationButtonText?: StyleProp<TextStyle>;
+  selectedOrganizationButton?: StyleProp<ViewStyle>;
+  loading?: StyleProp<TextStyle>;
+  empty?: StyleProp<TextStyle>;
+};
+
+export type ExpoAuthOrganizationChooserPageClassNames = {
+  root?: string;
+  title?: string;
+  description?: string;
+  error?: string;
+  eyebrow?: string;
+  organizationButton?: string;
+  organizationButtonText?: string;
+  selectedOrganizationButton?: string;
+  loading?: string;
+  empty?: string;
+};
 
 export type ExpoAuthOrganizationChooserPageProps = {
   getDefaultOrganization: FunctionReference<
@@ -54,16 +81,23 @@ export type ExpoAuthOrganizationChooserPageProps = {
   loadingDescription?: string;
   emptyTitle?: string;
   emptyDescription?: string;
-  styles?: {
-    root?: StyleProp<ViewStyle>;
-    title?: StyleProp<TextStyle>;
-    description?: StyleProp<TextStyle>;
-    organizationButton?: StyleProp<ViewStyle>;
-    organizationButtonText?: StyleProp<TextStyle>;
-    selectedOrganizationButton?: StyleProp<ViewStyle>;
-    loading?: StyleProp<TextStyle>;
-    empty?: StyleProp<TextStyle>;
-  };
+  styles?: ExpoAuthOrganizationChooserPageStyles;
+  classNames?: ExpoAuthOrganizationChooserPageClassNames;
+};
+
+export type ExpoAuthPostSignUpPageStyles = {
+  root?: StyleProp<ViewStyle>;
+  title?: StyleProp<TextStyle>;
+  description?: StyleProp<TextStyle>;
+  loading?: StyleProp<TextStyle>;
+};
+
+export type ExpoAuthPostSignUpPageClassNames = {
+  root?: string;
+  title?: string;
+  description?: string;
+  error?: string;
+  loading?: string;
 };
 
 type PostSignUpPageProps = {
@@ -89,13 +123,44 @@ type PostSignUpPageProps = {
   description?: string;
   loadingTitle?: string;
   loadingDescription?: string;
-  styles?: {
-    root?: StyleProp<ViewStyle>;
-    title?: StyleProp<TextStyle>;
-    description?: StyleProp<TextStyle>;
-    loading?: StyleProp<TextStyle>;
-  };
+  styles?: ExpoAuthPostSignUpPageStyles;
+  classNames?: ExpoAuthPostSignUpPageClassNames;
 };
+
+export type ExpoAuthAcceptInvitePageStyles = {
+  root?: StyleProp<ViewStyle>;
+  title?: StyleProp<TextStyle>;
+  description?: StyleProp<TextStyle>;
+  error?: StyleProp<TextStyle>;
+  loading?: StyleProp<TextStyle>;
+};
+
+export type ExpoAuthAcceptInvitePageClassNames = {
+  root?: string;
+  title?: string;
+  description?: string;
+  error?: string;
+  loading?: string;
+};
+
+type AcceptInvitePageProps = {
+  getInvitationByToken: FunctionReference<"action", "public", { token: string }, unknown>;
+  navigate: NavigateTo;
+  signUpPath: string;
+  invitationToken?: string | null;
+  title?: string;
+  description?: string;
+  loadingTitle?: string;
+  loadingDescription?: string;
+  errorTitle?: string;
+  errorDescription?: string;
+  styles?: ExpoAuthAcceptInvitePageStyles;
+  classNames?: ExpoAuthAcceptInvitePageClassNames;
+};
+
+function useAuthPageClassNames(c?: string, isDark = false) {
+  return clsx("w-full max-w-md self-center p-4 bg-background", c, isDark && "dark");
+}
 
 export function ExpoAuthPostSignUpPage(props: PostSignUpPageProps) {
   const currentOrganization = useQuery(props.getDefaultOrganization, {}) as
@@ -108,6 +173,8 @@ export function ExpoAuthPostSignUpPage(props: PostSignUpPageProps) {
   const redeemInvitation = props.redeemInvitation ? useMutation(props.redeemInvitation) : null;
 
   const [error, setError] = useState<string | null>(null);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   useEffect(() => {
     if (currentOrganization === undefined || availableOrganizations === undefined) {
@@ -146,46 +213,32 @@ export function ExpoAuthPostSignUpPage(props: PostSignUpPageProps) {
   ]);
 
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
   const title = props.title ?? "Finalizing your workspace";
   const description = props.description ?? "We're finishing your organization access.";
+  const rootClassName = useAuthPageClassNames(c.root, isDark);
 
   return (
-    <View className="p-4" style={s.root}>
-      <Text className="text-2xl font-bold text-foreground" style={s.title}>
+    <View className={rootClassName} style={s.root}>
+      <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
         {props.loadingTitle ?? title}
       </Text>
-      <Text className="text-muted-foreground" style={s.description}>
+      <Text className={clsx("text-sm text-muted-foreground", c.description)} style={s.description}>
         {props.loadingDescription ?? description}
       </Text>
-      {error !== null ? <Text className="text-destructive text-sm mt-2">{error}</Text> : null}
-      <ActivityIndicator className="mt-4" colorClassName="accent-primary" />
+      {error !== null ? (
+        <Text className={clsx("text-sm text-destructive mt-2", c.error)}>{error}</Text>
+      ) : null}
+      <ActivityIndicator className={clsx("mt-4", c.loading)} colorClassName="text-primary" />
     </View>
   );
 }
 
-type AcceptInvitePageProps = {
-  getInvitationByToken: FunctionReference<"action", "public", { token: string }, unknown>;
-  navigate: NavigateTo;
-  signUpPath: string;
-  invitationToken?: string | null;
-  title?: string;
-  description?: string;
-  loadingTitle?: string;
-  loadingDescription?: string;
-  errorTitle?: string;
-  errorDescription?: string;
-  styles?: {
-    root?: StyleProp<ViewStyle>;
-    title?: StyleProp<TextStyle>;
-    description?: StyleProp<TextStyle>;
-    error?: StyleProp<TextStyle>;
-    loading?: StyleProp<TextStyle>;
-  };
-};
-
 export function ExpoAuthAcceptInvitePage(props: AcceptInvitePageProps) {
   const [error, setError] = useState<string | null>(null);
   const getInvitationByToken = useAction(props.getInvitationByToken);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   useEffect(() => {
     if (props.invitationToken === undefined || props.invitationToken === null) {
@@ -221,21 +274,26 @@ export function ExpoAuthAcceptInvitePage(props: AcceptInvitePageProps) {
   }, [props, getInvitationByToken]);
 
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
   const title = props.title ?? "You're invited";
   const description =
     props.description ?? "We're connecting you to the workspace that invited you.";
+  const rootClassName = useAuthPageClassNames(c.root, isDark);
 
   if (error !== null) {
     return (
-      <View className="p-4" style={s.root}>
-        <Text className="text-2xl font-bold text-foreground" style={s.title}>
+      <View className={rootClassName} style={s.root}>
+        <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
           {props.errorTitle ?? "Invite unavailable"}
         </Text>
-        <Text className="text-muted-foreground" style={s.description}>
+        <Text
+          className={clsx("text-sm text-muted-foreground", c.description)}
+          style={s.description}
+        >
           {props.errorDescription ??
             "This invite link is missing required access details or has expired."}
         </Text>
-        <Text className="text-destructive text-sm mt-2" style={s.error}>
+        <Text className={clsx("text-sm text-destructive mt-2", c.error)} style={s.error}>
           {error}
         </Text>
       </View>
@@ -243,14 +301,14 @@ export function ExpoAuthAcceptInvitePage(props: AcceptInvitePageProps) {
   }
 
   return (
-    <View className="p-4" style={s.root}>
-      <Text className="text-2xl font-bold text-foreground" style={s.title}>
+    <View className={rootClassName} style={s.root}>
+      <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
         {props.loadingTitle ?? title}
       </Text>
-      <Text className="text-muted-foreground" style={s.description}>
+      <Text className={clsx("text-sm text-muted-foreground", c.description)} style={s.description}>
         {props.loadingDescription ?? description}
       </Text>
-      <ActivityIndicator className="mt-4" />
+      <ActivityIndicator className={clsx("mt-4", c.loading)} colorClassName="text-primary" />
     </View>
   );
 }
@@ -269,34 +327,44 @@ export function ExpoAuthOrganizationChooserPage(props: ExpoAuthOrganizationChoos
   const setActiveOrganization = useMutation(props.setActiveOrganization);
 
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
   const title = props.title ?? "Choose organization";
   const description =
     props.description ??
     `Select the workspace you want to use. Current resolved organization: ${
       currentOrganization?.name ?? "none"
     }.`;
+  const rootClassName = useAuthPageClassNames(c.root, isDark);
 
   if (currentOrganization === undefined || availableOrganizations === undefined) {
     return (
-      <View className="p-4" style={s.root}>
-        <Text className="text-2xl font-bold text-foreground" style={s.title}>
+      <View className={rootClassName} style={s.root}>
+        <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
           {props.loadingTitle ?? title}
         </Text>
-        <Text className="text-muted-foreground" style={s.description}>
+        <Text
+          className={clsx("text-sm text-muted-foreground", c.description)}
+          style={s.description}
+        >
           {props.loadingDescription ?? "Loading workspaces..."}
         </Text>
-        <ActivityIndicator className="mt-4" />
+        <ActivityIndicator className={clsx("mt-4", c.loading)} colorClassName="text-primary" />
       </View>
     );
   }
 
   if (availableOrganizations.length === 0) {
     return (
-      <View className="p-4" style={s.root}>
-        <Text className="text-2xl font-bold text-foreground" style={s.title}>
+      <View className={rootClassName} style={s.root}>
+        <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
           {props.emptyTitle ?? title}
         </Text>
-        <Text className="text-muted-foreground" style={s.description}>
+        <Text
+          className={clsx("text-sm text-muted-foreground", c.description)}
+          style={s.description}
+        >
           {props.emptyDescription ?? "No workspaces available."}
         </Text>
       </View>
@@ -304,20 +372,20 @@ export function ExpoAuthOrganizationChooserPage(props: ExpoAuthOrganizationChoos
   }
 
   return (
-    <View className="p-4" style={s.root}>
+    <View className={rootClassName} style={s.root}>
       {props.eyebrow !== undefined ? (
-        <Text className="text-sm text-muted-foreground" style={s.description}>
+        <Text className={clsx("text-sm text-muted-foreground", c.eyebrow)} style={s.eyebrow}>
           {props.eyebrow}
         </Text>
       ) : null}
-      <Text className="text-2xl font-bold text-foreground" style={s.title}>
+      <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
         {title}
       </Text>
-      <Text className="text-muted-foreground" style={s.description}>
+      <Text className={clsx("text-sm text-muted-foreground", c.description)} style={s.description}>
         {description}
       </Text>
       {selectionError !== null ? (
-        <Text className="text-destructive text-sm mt-2">{selectionError}</Text>
+        <Text className={clsx("text-sm text-destructive mt-2", c.error)}>{selectionError}</Text>
       ) : null}
       {availableOrganizations.map((organization) => {
         const isSelected = currentOrganization?._id === organization._id;
@@ -325,7 +393,11 @@ export function ExpoAuthOrganizationChooserPage(props: ExpoAuthOrganizationChoos
         return (
           <Pressable
             key={organization._id}
-            className={`border border-input p-3 mt-2 rounded bg-background items-center justify-center ${isSelected ? "bg-primary" : ""}`}
+            className={clsx(
+              "border p-3 mt-2 rounded-md items-center",
+              isSelected ? "bg-primary border-primary" : "bg-card border-border",
+              isSelected ? c.selectedOrganizationButton : c.organizationButton,
+            )}
             style={isSelected ? s.selectedOrganizationButton : s.organizationButton}
             onPress={async () => {
               setSelectionError(null);
@@ -342,14 +414,18 @@ export function ExpoAuthOrganizationChooserPage(props: ExpoAuthOrganizationChoos
               }
             }}
             disabled={isBusy}
+            accessibilityRole="button"
+            accessibilityLabel={organization.name}
           >
             {isBusy ? (
-              <ActivityIndicator
-                colorClassName={isSelected ? "accent-primary-foreground" : "accent-primary"}
-              />
+              <ActivityIndicator colorClassName="text-primary-foreground" />
             ) : (
               <Text
-                className={`text-center text-foreground ${isSelected ? "text-primary-foreground" : ""}`}
+                className={clsx(
+                  "text-center text-sm font-medium",
+                  isSelected ? "text-primary-foreground" : "text-card-foreground",
+                  c.organizationButtonText,
+                )}
                 style={s.organizationButtonText}
               >
                 {organization.name}

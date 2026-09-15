@@ -8,11 +8,13 @@ import {
   Pressable,
   Text,
   TextInput,
+  useColorScheme,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { clsx } from "clsx";
 
 export type ExpoOrgProfileOrganization = {
   _id: string;
@@ -37,6 +39,22 @@ export type ExpoOrgProfileStyles = {
   errorState?: StyleProp<TextStyle>;
 };
 
+export type ExpoOrgProfileClassNames = {
+  root?: string;
+  header?: string;
+  title?: string;
+  description?: string;
+  field?: string;
+  label?: string;
+  input?: string;
+  submitButton?: string;
+  submitButtonText?: string;
+  dangerButton?: string;
+  dangerButtonText?: string;
+  successState?: string;
+  errorState?: string;
+};
+
 export type ExpoOrgProfileCopy = {
   title?: string;
   description?: string;
@@ -53,6 +71,7 @@ export type ExpoOrgProfileCopy = {
 export type ExpoOrgProfileProps = {
   organization: ExpoOrgProfileOrganization | null;
   styles?: ExpoOrgProfileStyles;
+  classNames?: ExpoOrgProfileClassNames;
   copy?: ExpoOrgProfileCopy;
   showSlugField?: boolean;
   onUpdate: (args: {
@@ -79,13 +98,16 @@ const DEFAULT_COPY: Required<ExpoOrgProfileCopy> = {
 function OrganizationProfileHeader(props: {
   copy: Required<ExpoOrgProfileCopy>;
   styles: ExpoOrgProfileStyles;
+  classNames: ExpoOrgProfileClassNames;
 }) {
+  const s = props.styles;
+  const c = props.classNames;
   return (
-    <View className="px-4 pb-3" style={props.styles.header}>
-      <Text className="text-base font-semibold text-foreground" style={props.styles.title}>
+    <View className={clsx("pb-3", c.header)} style={s.header}>
+      <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
         {props.copy.title}
       </Text>
-      <Text className="text-sm text-muted-foreground mt-0.5" style={props.styles.description}>
+      <Text className={clsx("text-sm text-muted-foreground", c.description)} style={s.description}>
         {props.copy.description}
       </Text>
     </View>
@@ -97,25 +119,33 @@ function OrganizationProfileDangerZone(props: {
   deleting: boolean;
   onDelete?: () => void;
   styles: ExpoOrgProfileStyles;
+  classNames: ExpoOrgProfileClassNames;
 }) {
+  const s = props.styles;
+  const c = props.classNames;
   if (props.onDelete === undefined) {
     return null;
   }
 
   return (
-    <View className="mt-6 px-4">
-      <Text className="text-sm text-muted-foreground mb-1" style={props.styles.label}>
+    <View className={clsx("mt-6 w-full", c.field)} style={s.field}>
+      <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
         {props.copy.dangerZoneTitle}
       </Text>
       <Pressable
         onPress={props.onDelete}
         disabled={props.deleting}
-        className="mt-2 px-3 py-2.5 rounded-md border border-destructive items-center"
-        style={props.styles.dangerButton}
+        className={clsx(
+          "mt-2 w-full rounded-md border border-destructive p-3 items-center",
+          c.dangerButton,
+        )}
+        style={s.dangerButton}
+        accessibilityRole="button"
+        accessibilityLabel={props.deleting ? props.copy.deleting : props.copy.deleteButton}
       >
         <Text
-          className="text-destructive text-sm font-medium"
-          style={props.styles.dangerButtonText}
+          className={clsx("text-sm font-medium text-destructive", c.dangerButtonText)}
+          style={s.dangerButtonText}
         >
           {props.deleting ? props.copy.deleting : props.copy.deleteButton}
         </Text>
@@ -127,6 +157,9 @@ function OrganizationProfileDangerZone(props: {
 export function ConvexOrganizationProfile(props: ExpoOrgProfileProps) {
   const copy = { ...DEFAULT_COPY, ...props.copy };
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
   const showSlug = props.showSlugField ?? true;
   const [name, setName] = useState(props.organization?.name ?? "");
   const [slug, setSlug] = useState(props.organization?.slug ?? "");
@@ -177,55 +210,77 @@ export function ConvexOrganizationProfile(props: ExpoOrgProfileProps) {
     }
   }
 
+  const rootClassName = clsx(
+    "w-full max-w-md self-center p-4 bg-background",
+    c.root,
+    isDark && "dark",
+  );
+
   return (
-    <View className="w-full py-2" style={s.root}>
-      <OrganizationProfileHeader copy={copy} styles={s} />
-      <View className="px-4 py-2" style={s.field}>
-        <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+    <View className={rootClassName} style={s.root}>
+      <OrganizationProfileHeader copy={copy} styles={s} classNames={c} />
+      <View className={clsx("w-full py-2", c.field)} style={s.field}>
+        <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
           {copy.nameLabel}
         </Text>
         <TextInput
           value={name}
           onChangeText={setName}
-          className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-          placeholderTextColorClassName="accent-muted-foreground"
+          placeholder={copy.nameLabel}
+          placeholderTextColorClassName="text-muted-foreground"
+          autoCapitalize="words"
+          autoCorrect={false}
+          className={clsx(
+            "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+            c.input,
+          )}
           style={s.input}
+          accessibilityLabel={copy.nameLabel}
         />
       </View>
       {showSlug ? (
-        <View className="px-4 py-2" style={s.field}>
-          <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+        <View className={clsx("w-full py-2", c.field)} style={s.field}>
+          <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
             {copy.slugLabel}
           </Text>
           <TextInput
             value={slug}
             onChangeText={setSlug}
+            placeholder={copy.slugLabel}
+            placeholderTextColorClassName="text-muted-foreground"
             autoCapitalize="none"
-            className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-            placeholderTextColorClassName="accent-muted-foreground"
+            autoCorrect={false}
+            className={clsx(
+              "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+              c.input,
+            )}
             style={s.input}
+            accessibilityLabel={copy.slugLabel}
           />
         </View>
       ) : null}
       <Pressable
         onPress={() => void handleSubmit()}
         disabled={submitting}
-        className="mx-4 mt-3 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
+        className={clsx("w-full bg-primary rounded-md p-3 mt-4 items-center", c.submitButton)}
         style={s.submitButton}
         accessibilityRole="button"
-        accessibilityLabel={copy.submit}
+        accessibilityLabel={submitting ? copy.submitting : copy.submit}
       >
-        <Text className="text-sm font-medium text-primary-foreground" style={s.submitButtonText}>
+        <Text
+          className={clsx("text-sm font-semibold text-primary-foreground", c.submitButtonText)}
+          style={s.submitButtonText}
+        >
           {submitting ? copy.submitting : copy.submit}
         </Text>
       </Pressable>
       {success !== null ? (
-        <Text className="text-success px-4 pt-2 text-sm" style={s.successState}>
+        <Text className={clsx("text-sm text-success mt-2", c.successState)} style={s.successState}>
           {success}
         </Text>
       ) : null}
       {error !== null ? (
-        <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
+        <Text className={clsx("text-sm text-destructive mt-2", c.errorState)} style={s.errorState}>
           {error}
         </Text>
       ) : null}
@@ -234,6 +289,7 @@ export function ConvexOrganizationProfile(props: ExpoOrgProfileProps) {
         deleting={deleting}
         onDelete={props.onDelete === undefined ? undefined : () => void handleDelete()}
         styles={s}
+        classNames={c}
       />
     </View>
   );
