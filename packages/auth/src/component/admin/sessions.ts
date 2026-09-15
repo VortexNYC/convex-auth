@@ -17,13 +17,28 @@ type AdminSessionListItem = Pick<
   | "createdAt"
 >;
 
+const adminSessionValidator = v.object({
+  _id: v.id("authSessions"),
+  sessionId: v.string(),
+  userId: v.id("users"),
+  ipAddress: v.optional(v.string()),
+  userAgent: v.optional(v.string()),
+  expiresAt: v.number(),
+  revokedAt: v.optional(v.number()),
+  createdAt: v.number(),
+});
+
 export const listSessions = query({
   args: {
     userId: v.optional(v.id("users")),
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
   },
-  returns: v.any(),
+  returns: v.object({
+    sessions: v.array(adminSessionValidator),
+    nextCursor: v.optional(v.string()),
+    hasNextPage: v.boolean(),
+  }),
   handler: async (
     ctx,
     args,
@@ -42,9 +57,9 @@ export const listSessions = query({
           .withIndex("by_user", (index) => index.eq("userId", userId))
           .order("desc")
       : ctx.db.query("authSessions").order("desc");
-    const page = await q.take(limit);
+    const paginated = await q.paginate({ cursor: args.cursor ?? null, numItems: limit });
 
-    const sessions: AdminSessionListItem[] = page.map((session) => ({
+    const sessions: AdminSessionListItem[] = paginated.page.map((session) => ({
       _id: session._id,
       sessionId: session.sessionId,
       userId: session.userId,
@@ -57,16 +72,16 @@ export const listSessions = query({
 
     return {
       sessions,
-      nextCursor: undefined,
-      hasNextPage: sessions.length === limit,
+      nextCursor: paginated.continueCursor,
+      hasNextPage: !paginated.isDone,
     };
   },
 });
 
 export const getSession = query({
   args: { sessionId: v.string() },
-  returns: v.any(),
-  handler: async (ctx, args): Promise<Doc<"authSessions"> | null> => {
+  returns: v.union(adminSessionValidator, v.null()),
+  handler: async (ctx, args): Promise<AdminSessionListItem | null> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Not authenticated");
@@ -75,9 +90,22 @@ export const getSession = query({
 
     const sessions = await ctx.db
       .query("authSessions")
-      .withIndex("by_session_id", (q) => q.eq("sessionId", args.sessionId))
+      .withIndex("by_session_id", (index) => index.eq("sessionId", args.sessionId))
       .take(1);
-    return sessions[0] ?? null;
+    const session = sessions[0];
+    if (session === undefined) {
+      return null;
+    }
+    return {
+      _id: session._id,
+      sessionId: session.sessionId,
+      userId: session.userId,
+      ipAddress: session.ipAddress,
+      userAgent: session.userAgent,
+      expiresAt: session.expiresAt,
+      revokedAt: session.revokedAt,
+      createdAt: session.createdAt,
+    };
   },
 });
 

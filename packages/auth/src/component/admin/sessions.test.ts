@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../schema.js";
+import type { Id } from "../_generated/dataModel.js";
 import { getSession, listSessions, revokeAllSessionsForUser, revokeSession } from "./sessions.js";
 
 const modules = import.meta.glob("../**/*.*s");
@@ -12,8 +13,8 @@ async function insertUser(
   email: string,
   name: string,
   isSuperAdmin = false,
-) {
-  return await t.run((ctx) =>
+): Promise<Id<"users">> {
+  return (await t.run((ctx) =>
     ctx.db.insert("users", {
       email,
       name,
@@ -23,19 +24,19 @@ async function insertUser(
       createdAt: 0,
       updatedAt: 0,
     }),
-  );
+  )) as Id<"users">;
 }
 
 async function insertSession(
   t: ReturnType<typeof convexTest>,
-  userId: string,
+  userId: Id<"users">,
   sessionId: string,
   overrides: { revokedAt?: number } = {},
-) {
-  return await t.run((ctx) =>
+): Promise<Id<"authSessions">> {
+  return (await t.run((ctx) =>
     ctx.db.insert("authSessions", {
       sessionId,
-      userId: userId as any,
+      userId,
       token: `token-${sessionId}`,
       expiresAt: Date.now() + 3600_000,
       ipAddress: "127.0.0.1",
@@ -44,25 +45,25 @@ async function insertSession(
       createdAt: 0,
       updatedAt: 0,
     }),
-  );
+  )) as Id<"authSessions">;
 }
 
 async function insertRefreshToken(
   t: ReturnType<typeof convexTest>,
-  userId: string,
+  userId: Id<"users">,
   sessionId: string,
-) {
-  return await t.run((ctx) =>
+): Promise<Id<"authRefreshTokens">> {
+  return (await t.run((ctx) =>
     ctx.db.insert("authRefreshTokens", {
       tokenHash: `hash-${sessionId}`,
       sessionId,
-      userId: userId as any,
+      userId,
       expiresAt: Date.now() + 3600_000,
       revokedAt: undefined,
       createdAt: 0,
       updatedAt: 0,
     }),
-  );
+  )) as Id<"authRefreshTokens">;
 }
 
 describe("admin sessions", () => {
@@ -99,7 +100,7 @@ describe("admin sessions", () => {
 
     const result = await t
       .withIdentity({ subject: adminId })
-      .query(listSessions, { userId: userA as any, limit: 10 });
+      .query(listSessions, { userId: userA, limit: 10 });
 
     expect(result.sessions).toHaveLength(1);
     expect(result.sessions[0].sessionId).toBe("sess-a");
@@ -116,7 +117,6 @@ describe("admin sessions", () => {
       .query(getSession, { sessionId: "sess-1" });
 
     expect(session?.sessionId).toBe("sess-1");
-    expect(session?.token).toBe("token-sess-1");
   });
 
   it("revokes a session and its refresh tokens", async () => {
@@ -131,10 +131,10 @@ describe("admin sessions", () => {
       .mutation(revokeSession, { sessionId: "sess-1" });
     expect(result.revoked).toBe(true);
 
-    const session = await t.run((ctx) => ctx.db.get("authSessions", sessionId as any));
+    const session = await t.run((ctx) => ctx.db.get("authSessions", sessionId));
     expect(session?.revokedAt).toBeDefined();
 
-    const token = await t.run((ctx) => ctx.db.get("authRefreshTokens", tokenId as any));
+    const token = await t.run((ctx) => ctx.db.get("authRefreshTokens", tokenId));
     expect(token?.revokedAt).toBeDefined();
 
     const audits = await t.run((ctx) =>
@@ -155,10 +155,10 @@ describe("admin sessions", () => {
 
     const result = await t
       .withIdentity({ subject: adminId })
-      .mutation(revokeAllSessionsForUser, { userId: userId as any });
+      .mutation(revokeAllSessionsForUser, { userId });
     expect(result.count).toBe(1);
 
-    const session = await t.run((ctx) => ctx.db.get("authSessions", activeSession as any));
+    const session = await t.run((ctx) => ctx.db.get("authSessions", activeSession));
     expect(session?.revokedAt).toBeDefined();
   });
 });
