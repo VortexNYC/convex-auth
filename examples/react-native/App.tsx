@@ -27,10 +27,10 @@ type Screen = "signIn" | "signUp" | "forgot" | "reset" | "verify" | "enableTwoFa
 
 const TOKEN_KEYS = ["convex-auth-token", "convex-auth-refresh-token", "convex-auth-session-id"];
 
-const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL ?? Constants.expoConfig?.extra?.convexUrl;
+const convexUrl = Constants.expoConfig?.extra?.convexUrl ?? process.env.EXPO_PUBLIC_CONVEX_URL;
 if (typeof convexUrl !== "string" || convexUrl.length === 0) {
   throw new Error(
-    "EXPO_PUBLIC_CONVEX_URL is not set and Constants.expoConfig.extra.convexUrl is not available",
+    "Constants.expoConfig.extra.convexUrl and EXPO_PUBLIC_CONVEX_URL are not set; add EXPO_PUBLIC_CONVEX_URL to .env",
   );
 }
 

@@ -219,6 +219,9 @@ importers:
       '@types/react':
         specifier: ^19.2.0
         version: 19.2.18
+      dotenv:
+        specifier: ^16.6.1
+        version: 16.6.1
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
