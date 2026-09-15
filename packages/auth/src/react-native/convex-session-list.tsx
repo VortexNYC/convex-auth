@@ -12,7 +12,7 @@
  * Same API as the web version. Style overrides go through the
  * `styles` prop (RN style objects) and `classNames` (Uniwind classes).
  */
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -94,6 +94,8 @@ export type ExpoSessionListProps = {
   classNames?: ExpoSessionListClassNames;
   copy?: ExpoSessionListCopy;
   formatTimestamp?: (value: string | Date) => string;
+  header?: ReactElement | null;
+  footer?: ReactElement | null;
 };
 
 const DEFAULT_COPY: Required<ExpoSessionListCopy> = {
@@ -201,7 +203,7 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
 
       {isLoading ? (
         <View className={clsx("py-6 items-center gap-2", c.loadingState)} style={s.loadingState}>
-          <ActivityIndicator colorClassName="text-primary" />
+          <ActivityIndicator colorClassName="accent-primary" />
           <Text className={clsx("text-xs text-muted-foreground", c.itemMeta)} style={s.itemMeta}>
             {copy.loading}
           </Text>
@@ -225,6 +227,9 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={s.list}
           className={listClassName}
+          style={{ flex: 1 }}
+          ListHeaderComponent={props.header}
+          ListFooterComponent={props.footer}
           renderItem={({ item }) => {
             const isCurrent = item.token === props.currentSessionToken;
             return (

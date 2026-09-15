@@ -226,7 +226,7 @@ export function ConvexVerifyTwoFactorForm(props: ExpoVerifyTwoFactorFormProps) {
         accessibilityLabel={isVerifying ? copy.submitting : copy.submit}
       >
         {isVerifying ? (
-          <ActivityIndicator colorClassName="text-primary-foreground" />
+          <ActivityIndicator colorClassName="accent-primary-foreground" />
         ) : (
           <Text
             className={clsx("text-sm font-semibold text-primary-foreground", c.submitButtonText)}

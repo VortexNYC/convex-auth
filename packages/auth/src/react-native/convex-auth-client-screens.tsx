@@ -256,7 +256,7 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
         accessibilityLabel={copy.submitLabel}
       >
         {isSubmitting ? (
-          <ActivityIndicator colorClassName="text-primary-foreground" />
+          <ActivityIndicator colorClassName="accent-primary-foreground" />
         ) : (
           <Text
             className={clsx("text-sm font-semibold text-primary-foreground", c.submitButtonText)}
@@ -456,7 +456,7 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
         accessibilityLabel={copy.submitLabel}
       >
         {isSubmitting ? (
-          <ActivityIndicator colorClassName="text-primary-foreground" />
+          <ActivityIndicator colorClassName="accent-primary-foreground" />
         ) : (
           <Text
             className={clsx("text-sm font-semibold text-primary-foreground", c.submitButtonText)}
