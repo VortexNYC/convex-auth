@@ -14,11 +14,13 @@ import {
   Pressable,
   Text,
   TextInput,
+  useColorScheme,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { clsx } from "clsx";
 
 import {
   useConvexAuthResetPassword,
@@ -40,6 +42,20 @@ export type ExpoResetPasswordFormStyles = {
   errorState?: StyleProp<TextStyle>;
 };
 
+export type ExpoResetPasswordFormClassNames = {
+  root?: string;
+  header?: string;
+  title?: string;
+  description?: string;
+  field?: string;
+  label?: string;
+  input?: string;
+  submitButton?: string;
+  submitButtonText?: string;
+  successState?: string;
+  errorState?: string;
+};
+
 export type ExpoResetPasswordFormCopy = {
   title?: string;
   description?: string;
@@ -59,6 +75,7 @@ export type ExpoResetPasswordFormProps = {
   token: string;
   minPasswordLength?: number;
   styles?: ExpoResetPasswordFormStyles;
+  classNames?: ExpoResetPasswordFormClassNames;
   copy?: ExpoResetPasswordFormCopy;
   onReset?: () => void;
 };
@@ -83,6 +100,9 @@ export function ConvexResetPasswordForm(props: ExpoResetPasswordFormProps) {
   const authClient = props.authClient ?? contextClient ?? null;
   const copy = { ...DEFAULT_COPY, ...props.copy };
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
   const minLength = props.minPasswordLength ?? 12;
   const { resetPassword, isResetting } = useConvexAuthResetPassword(authClient);
   const [password, setPassword] = useState("");
@@ -115,78 +135,105 @@ export function ConvexResetPasswordForm(props: ExpoResetPasswordFormProps) {
     props.onReset?.();
   }
 
+  const rootClassName = clsx(
+    "w-full max-w-md self-center p-4 bg-background",
+    c.root,
+    isDark && "dark",
+  );
+
   return (
-    <View className="w-full py-2" style={s.root}>
-      <View className="px-4 pb-3" style={s.header}>
-        <Text className="text-base font-semibold text-foreground" style={s.title}>
+    <View className={rootClassName} style={s.root}>
+      <View className={clsx("pb-3", c.header)} style={s.header}>
+        <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
           {copy.title}
         </Text>
-        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+        <Text
+          className={clsx("text-sm text-muted-foreground", c.description)}
+          style={s.description}
+        >
           {copy.description}
         </Text>
       </View>
       {!hasToken ? (
-        <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
+        <Text className={clsx("text-sm text-destructive mt-2", c.errorState)} style={s.errorState}>
           {copy.missingTokenMessage}
         </Text>
       ) : (
-        <View>
-          <View className="px-4 py-2" style={s.field}>
-            <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+        <>
+          <View className={clsx("w-full py-2", c.field)} style={s.field}>
+            <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
               {copy.passwordLabel}
             </Text>
             <TextInput
               value={password}
               onChangeText={setPassword}
+              placeholder={copy.passwordLabel}
+              placeholderTextColorClassName="text-muted-foreground"
               secureTextEntry
               autoCapitalize="none"
               autoComplete="password-new"
-              className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-              placeholderTextColorClassName="accent-muted-foreground"
+              textContentType="newPassword"
+              className={clsx(
+                "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+                c.input,
+              )}
               style={s.input}
+              accessibilityLabel={copy.passwordLabel}
             />
           </View>
-          <View className="px-4 py-2" style={s.field}>
-            <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+          <View className={clsx("w-full py-2", c.field)} style={s.field}>
+            <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
               {copy.confirmPasswordLabel}
             </Text>
             <TextInput
               value={confirm}
               onChangeText={setConfirm}
+              placeholder={copy.confirmPasswordLabel}
+              placeholderTextColorClassName="text-muted-foreground"
               secureTextEntry
               autoCapitalize="none"
               autoComplete="password-new"
-              className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-              placeholderTextColorClassName="accent-muted-foreground"
+              textContentType="newPassword"
+              className={clsx(
+                "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+                c.input,
+              )}
               style={s.input}
+              accessibilityLabel={copy.confirmPasswordLabel}
             />
           </View>
           <Pressable
             onPress={() => void handleSubmit()}
             disabled={isResetting}
-            className="mx-4 mt-3 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
+            className={clsx("w-full bg-primary rounded-md p-3 mt-4 items-center", c.submitButton)}
             style={s.submitButton}
             accessibilityRole="button"
-            accessibilityLabel={copy.submit}
+            accessibilityLabel={isResetting ? copy.submitting : copy.submit}
           >
             <Text
-              className="text-sm font-medium text-primary-foreground"
+              className={clsx("text-sm font-semibold text-primary-foreground", c.submitButtonText)}
               style={s.submitButtonText}
             >
               {isResetting ? copy.submitting : copy.submit}
             </Text>
           </Pressable>
           {success !== null ? (
-            <Text className="px-4 pt-2 text-sm text-success" style={s.successState}>
+            <Text
+              className={clsx("text-sm text-muted-foreground mt-2", c.successState)}
+              style={s.successState}
+            >
               {success}
             </Text>
           ) : null}
           {error !== null ? (
-            <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
+            <Text
+              className={clsx("text-sm text-destructive mt-2", c.errorState)}
+              style={s.errorState}
+            >
               {error}
             </Text>
           ) : null}
-        </View>
+        </>
       )}
     </View>
   );
