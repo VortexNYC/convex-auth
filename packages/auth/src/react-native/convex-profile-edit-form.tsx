@@ -18,11 +18,13 @@ import {
   Pressable,
   Text,
   TextInput,
+  useColorScheme,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { clsx } from "clsx";
 
 import {
   useConvexAuthUpdateProfile,
@@ -44,6 +46,20 @@ export type ExpoProfileEditFormStyles = {
   errorState?: StyleProp<TextStyle>;
 };
 
+export type ExpoProfileEditFormClassNames = {
+  root?: string;
+  header?: string;
+  title?: string;
+  description?: string;
+  field?: string;
+  label?: string;
+  input?: string;
+  submitButton?: string;
+  submitButtonText?: string;
+  successState?: string;
+  errorState?: string;
+};
+
 export type ExpoProfileEditFormCopy = {
   title?: string;
   description?: string;
@@ -61,6 +77,7 @@ export type ExpoProfileEditFormProps = {
   initialImage?: string;
   showImageField?: boolean;
   styles?: ExpoProfileEditFormStyles;
+  classNames?: ExpoProfileEditFormClassNames;
   copy?: ExpoProfileEditFormCopy;
   onUpdated?: (next: { name?: string; image?: string }) => void;
 };
@@ -81,6 +98,9 @@ export function ConvexProfileEditForm(props: ExpoProfileEditFormProps) {
   const authClient = props.authClient ?? contextClient ?? null;
   const copy = { ...DEFAULT_COPY, ...props.copy };
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   const { updateProfile, isUpdating } = useConvexAuthUpdateProfile(authClient);
   const [name, setName] = useState(props.initialName ?? "");
@@ -114,77 +134,105 @@ export function ConvexProfileEditForm(props: ExpoProfileEditFormProps) {
     props.onUpdated?.(args);
   }
 
+  const rootClassName = clsx(
+    "w-full max-w-md self-center p-4 bg-background",
+    c.root,
+    isDark && "dark",
+  );
+
   return (
-    <View className="w-full py-2" style={s.root}>
-      <View className="px-4 pb-3" style={s.header}>
-        <Text className="text-base font-semibold text-foreground" style={s.title}>
+    <View className={rootClassName} style={s.root}>
+      <View className={clsx("pb-3", c.header)} style={s.header}>
+        <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
           {copy.title}
         </Text>
-        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+        <Text
+          className={clsx("text-sm text-muted-foreground", c.description)}
+          style={s.description}
+        >
           {copy.description}
         </Text>
       </View>
       {isAvailable ? (
-        <View>
-          <View className="px-4 pb-3" style={s.field}>
-            <Text className="text-xs text-muted-foreground mb-1.5" style={s.label}>
+        <>
+          <View className={clsx("w-full py-2", c.field)} style={s.field}>
+            <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
               {copy.nameLabel}
             </Text>
             <TextInput
               value={name}
               onChangeText={setName}
+              placeholder={copy.nameLabel}
+              placeholderTextColorClassName="text-muted-foreground"
               autoCapitalize="words"
               autoCorrect={false}
-              className="w-full border border-input bg-background text-foreground rounded-md px-2.5 py-2 text-sm"
-              placeholderTextColorClassName="accent-muted-foreground"
+              autoComplete="name"
+              textContentType="name"
+              className={clsx(
+                "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+                c.input,
+              )}
               style={s.input}
+              accessibilityLabel={copy.nameLabel}
             />
           </View>
           {showImageField ? (
-            <View className="px-4 pb-3" style={s.field}>
-              <Text className="text-xs text-muted-foreground mb-1.5" style={s.label}>
+            <View className={clsx("w-full py-2", c.field)} style={s.field}>
+              <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
                 {copy.imageLabel}
               </Text>
               <TextInput
                 value={image}
                 onChangeText={setImage}
+                placeholder={copy.imageLabel}
+                placeholderTextColorClassName="text-muted-foreground"
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoComplete="off"
                 keyboardType="url"
-                className="w-full border border-input bg-background text-foreground rounded-md px-2.5 py-2 text-sm"
-                placeholderTextColorClassName="accent-muted-foreground"
+                className={clsx(
+                  "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+                  c.input,
+                )}
                 style={s.input}
+                accessibilityLabel={copy.imageLabel}
               />
             </View>
           ) : null}
           <Pressable
             onPress={() => void handleSubmit()}
             disabled={isUpdating}
-            className="mx-4 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
+            className={clsx("w-full bg-primary rounded-md p-3 mt-4 items-center", c.submitButton)}
             style={s.submitButton}
             accessibilityRole="button"
-            accessibilityLabel={copy.submit}
+            accessibilityLabel={isUpdating ? copy.submitting : copy.submit}
           >
             <Text
-              className="text-sm font-medium text-primary-foreground"
+              className={clsx("text-sm font-semibold text-primary-foreground", c.submitButtonText)}
               style={s.submitButtonText}
             >
               {isUpdating ? copy.submitting : copy.submit}
             </Text>
           </Pressable>
           {success !== null ? (
-            <Text className="text-success px-4 pt-2 text-sm" style={s.successState}>
+            <Text
+              className={clsx("text-sm text-success mt-2", c.successState)}
+              style={s.successState}
+            >
               {success}
             </Text>
           ) : null}
           {error !== null ? (
-            <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
+            <Text
+              className={clsx("text-sm text-destructive mt-2", c.errorState)}
+              style={s.errorState}
+            >
               {error}
             </Text>
           ) : null}
-        </View>
+        </>
       ) : (
-        <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
+        <Text className={clsx("text-sm text-destructive mt-2", c.errorState)} style={s.errorState}>
           {copy.unavailable}
         </Text>
       )}

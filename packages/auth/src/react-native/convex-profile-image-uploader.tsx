@@ -27,12 +27,14 @@ import {
   Image,
   Pressable,
   Text,
+  useColorScheme,
   View,
   type ImageStyle,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { clsx } from "clsx";
 
 import {
   useConvexAuthUploadProfileImage,
@@ -53,6 +55,19 @@ export type ExpoProfileImageUploaderStyles = {
   errorState?: StyleProp<TextStyle>;
 };
 
+export type ExpoProfileImageUploaderClassNames = {
+  root?: string;
+  header?: string;
+  title?: string;
+  description?: string;
+  preview?: string;
+  noPreview?: string;
+  pickButton?: string;
+  pickButtonText?: string;
+  successState?: string;
+  errorState?: string;
+};
+
 export type ExpoProfileImageUploaderCopy = {
   title?: string;
   description?: string;
@@ -71,6 +86,7 @@ export type ExpoProfileImageUploaderProps = {
   uploadFile: (file: Blob | string) => Promise<string>;
   initialImage?: string | null;
   styles?: ExpoProfileImageUploaderStyles;
+  classNames?: ExpoProfileImageUploaderClassNames;
   copy?: ExpoProfileImageUploaderCopy;
   onUploaded?: (url: string) => void;
 };
@@ -90,6 +106,9 @@ export function ConvexProfileImageUploader(props: ExpoProfileImageUploaderProps)
   const authClient = props.authClient ?? contextClient ?? null;
   const copy = { ...DEFAULT_COPY, ...props.copy };
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
   const { uploadAndSave, isUploading } = useConvexAuthUploadProfileImage(authClient, {
     uploadFile: props.uploadFile,
   });
@@ -116,47 +135,72 @@ export function ConvexProfileImageUploader(props: ExpoProfileImageUploaderProps)
     }
   }
 
+  const rootClassName = clsx(
+    "w-full max-w-md self-center p-4 bg-background",
+    c.root,
+    isDark && "dark",
+  );
+
   return (
-    <View className="w-full py-2" style={s.root}>
-      <View className="px-4 pb-3" style={s.header}>
-        <Text className="text-base font-semibold text-foreground" style={s.title}>
+    <View className={rootClassName} style={s.root}>
+      <View className={clsx("pb-3", c.header)} style={s.header}>
+        <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
           {copy.title}
         </Text>
-        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+        <Text
+          className={clsx("text-sm text-muted-foreground", c.description)}
+          style={s.description}
+        >
           {copy.description}
         </Text>
       </View>
-      <View className="items-center px-4">
+      <View className="items-center w-full">
         {currentImage !== null ? (
           <Image
             source={{ uri: currentImage }}
-            className="w-24 h-24 rounded-full"
+            className={clsx("w-24 h-24 rounded-full", c.preview)}
             style={s.preview}
+            accessibilityLabel="Profile picture"
           />
         ) : (
-          <Text className="text-sm text-muted-foreground py-3" style={s.noPreview}>
+          <Text
+            className={clsx("text-sm text-muted-foreground py-3", c.noPreview)}
+            style={s.noPreview}
+          >
             {copy.noImage}
           </Text>
         )}
         <Pressable
           onPress={() => void handlePick()}
           disabled={isUploading}
-          className="mt-3 px-4 py-2.5 rounded-md bg-primary items-center justify-center"
+          className={clsx(
+            "mt-3 px-4 py-2.5 rounded-md border border-border bg-card items-center",
+            c.pickButton,
+          )}
           style={s.pickButton}
           accessibilityRole="button"
-          accessibilityLabel={copy.pick}
+          accessibilityLabel={isUploading ? copy.uploading : copy.pick}
         >
-          <Text className="text-sm font-medium text-primary-foreground" style={s.pickButtonText}>
+          <Text
+            className={clsx("text-sm font-medium text-card-foreground", c.pickButtonText)}
+            style={s.pickButtonText}
+          >
             {isUploading ? copy.uploading : copy.pick}
           </Text>
         </Pressable>
         {success !== null ? (
-          <Text className="text-success pt-2 text-sm" style={s.successState}>
+          <Text
+            className={clsx("text-sm text-success mt-2", c.successState)}
+            style={s.successState}
+          >
             {success}
           </Text>
         ) : null}
         {error !== null ? (
-          <Text className="text-destructive pt-2 text-sm" style={s.errorState}>
+          <Text
+            className={clsx("text-sm text-destructive mt-2", c.errorState)}
+            style={s.errorState}
+          >
             {error}
           </Text>
         ) : null}
