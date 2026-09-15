@@ -48,7 +48,12 @@ export function nativeAuthQueries(component: NativeEmailAndPasswordComponentHand
       const session = await ctx.runQuery(component.native.sessions.getSessionByToken, {
         token: args.token,
       });
-      if (!session || session.sessionId !== sessionId || (session.expiresAt ?? 0) < Date.now()) {
+      if (
+        !session ||
+        session.sessionId !== sessionId ||
+        (session.expiresAt ?? 0) < Date.now() ||
+        session.revokedAt !== undefined
+      ) {
         return {};
       }
 

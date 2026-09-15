@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./src/global.css";
 import {
+  AppState,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -26,6 +27,7 @@ import {
   ExpoAuthClientSignInScreen,
   ExpoAuthClientSignUpScreen,
   ExpoConvexAuthClientProvider,
+  useAuthActions,
   useConvexAuthClientContext,
   type ExpoAuthClientScreenStyles,
   type ExpoConvexAuthStorage,
@@ -232,30 +234,60 @@ function useTheme() {
   };
 }
 
+function SecureStoreHydrator() {
+  const actions = useAuthActions();
+  const isHydratedRef = useRef(false);
+
+  useEffect(() => {
+    if (isHydratedRef.current) return;
+
+    function hydrate() {
+      if (isHydratedRef.current) return;
+
+      const values: Record<string, string> = {};
+      for (const key of TOKEN_KEYS) {
+        try {
+          const value = SecureStore.getItem(key);
+          if (value !== null && value !== undefined) {
+            values[key] = value;
+          }
+        } catch {
+          // Ignore SecureStore read errors.
+        }
+      }
+
+      isHydratedRef.current = true;
+
+      if (values[TOKEN_KEYS[0]]) {
+        actions.setToken(values[TOKEN_KEYS[0]]);
+      }
+      if (values[TOKEN_KEYS[1]]) {
+        actions.setRefreshToken(values[TOKEN_KEYS[1]]);
+      }
+      if (values[TOKEN_KEYS[2]]) {
+        actions.setSessionId(values[TOKEN_KEYS[2]]);
+      }
+    }
+
+    if (AppState.currentState === "active") {
+      hydrate();
+    }
+
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        hydrate();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [actions]);
+
+  return null;
+}
+
 function AuthProviders({ children }: { children: React.ReactNode }) {
   const { colorScheme } = useTheme();
   const cacheRef = useRef<Record<string, string>>({});
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const loaded: Record<string, string> = {};
-      for (const key of TOKEN_KEYS) {
-        const value = await SecureStore.getItemAsync(key);
-        if (value !== null && value !== undefined) {
-          loaded[key] = value;
-        }
-      }
-      if (!cancelled) {
-        cacheRef.current = loaded;
-        setReady(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const storage: ExpoConvexAuthStorage = useRef<ExpoConvexAuthStorage>({
     getItem: (key) => cacheRef.current[key] ?? null,
@@ -279,19 +311,6 @@ function AuthProviders({ children }: { children: React.ReactNode }) {
 
   const statusBarStyle = colorScheme === "dark" ? "light" : "dark";
 
-  if (!ready) {
-    return (
-      <>
-        <StatusBar style={statusBarStyle} />
-        <View className="flex-1 items-center justify-center" style={{ backgroundColor: "#0f172a" }}>
-          <Text className="text-base" style={{ color: "#94a3b8" }}>
-            Loading…
-          </Text>
-        </View>
-      </>
-    );
-  }
-
   return (
     <ConvexProvider client={convex}>
       <ExpoConvexAuthClientProvider
@@ -299,11 +318,22 @@ function AuthProviders({ children }: { children: React.ReactNode }) {
         storage={storage}
         initialUrl={Linking.createURL("/")}
         subscribeToUrl={(handler) => {
-          const subscription = Linking.addEventListener("url", ({ url }) => handler(url));
+          const subscription = Linking.addEventListener("url", ({ url }) => {
+            const parsed = Linking.parse(url);
+            const rawPath = parsed.path?.toLowerCase() ?? "";
+            const path = rawPath.replace(/^--\//, "");
+            // Only notify the auth provider of session-token URLs (e.g. OAuth
+            // callback to the root). Verification/reset deep links carry
+            // one-time tokens that must not replace the current session.
+            if (path === "" || path === "/") {
+              handler(url);
+            }
+          });
           return () => subscription.remove();
         }}
       >
         <StatusBar style={statusBarStyle} />
+        <SecureStoreHydrator />
         {children}
       </ExpoConvexAuthClientProvider>
     </ConvexProvider>
@@ -326,7 +356,8 @@ type DeepLinkRoute =
 function parseDeepLink(url: string | null): DeepLinkRoute {
   if (typeof url !== "string" || url.length === 0) return null;
   const parsed = Linking.parse(url);
-  const path = parsed.path?.toLowerCase() ?? "";
+  const rawPath = parsed.path?.toLowerCase() ?? "";
+  const path = rawPath.replace(/^--\//, "");
   const token = typeof parsed.queryParams?.token === "string" ? parsed.queryParams.token : "";
   if (path === "reset-password" && token.length > 0) {
     return { screen: "reset", token };
@@ -348,7 +379,10 @@ function useDeepLink(setRoute: (route: DeepLinkRoute) => void) {
     void handleInitial();
 
     const subscription = Linking.addEventListener("url", ({ url }) => {
-      setRoute(parseDeepLink(url));
+      const route = parseDeepLink(url);
+      if (route !== null) {
+        setRoute(route);
+      }
     });
 
     return () => {
@@ -435,6 +469,54 @@ function InnerApp() {
     );
   }
 
+  if (screen === "reset") {
+    return (
+      <View className="flex-1 justify-center p-6" style={{ backgroundColor: colors.background }}>
+        <View style={formCardStyle}>
+          <ConvexResetPasswordForm
+            token={deepLink?.token ?? ""}
+            onReset={() => setScreen("signIn")}
+          />
+          <View className="px-4 pt-4 items-center">
+            <Text className="text-sm" style={{ color: colors.textSubtle }}>
+              Done?{" "}
+            </Text>
+            <FooterLink
+              label="Sign in"
+              onPress={() => setScreen("signIn")}
+              style={{ color: colors.primary }}
+            />
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (screen === "verify") {
+    return (
+      <View className="flex-1 justify-center p-6" style={{ backgroundColor: colors.background }}>
+        <View style={formCardStyle}>
+          <ConvexVerifyEmailScreen
+            token={deepLink?.token ?? ""}
+            userEmail={session.data?.user?.email ?? null}
+            resendCallbackUrl={Linking.createURL("/verify-email")}
+            onVerified={() => setScreen("signIn")}
+          />
+          <View className="px-4 pt-4 items-center">
+            <Text className="text-sm" style={{ color: colors.textSubtle }}>
+              Verified?{" "}
+            </Text>
+            <FooterLink
+              label="Sign in"
+              onPress={() => setScreen("signIn")}
+              style={{ color: colors.primary }}
+            />
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   if (session.data?.user) {
     return (
       <SignedInView
@@ -482,42 +564,6 @@ function InnerApp() {
           <View className="px-4 pt-4 items-center">
             <Text className="text-sm" style={{ color: colors.textSubtle }}>
               Remembered your password?{" "}
-            </Text>
-            <FooterLink
-              label="Sign in"
-              onPress={() => setScreen("signIn")}
-              style={{ color: colors.primary }}
-            />
-          </View>
-        </View>
-      ) : screen === "reset" ? (
-        <View style={formCardStyle}>
-          <ConvexResetPasswordForm
-            token={deepLink?.token ?? ""}
-            onReset={() => setScreen("signIn")}
-          />
-          <View className="px-4 pt-4 items-center">
-            <Text className="text-sm" style={{ color: colors.textSubtle }}>
-              Done?{" "}
-            </Text>
-            <FooterLink
-              label="Sign in"
-              onPress={() => setScreen("signIn")}
-              style={{ color: colors.primary }}
-            />
-          </View>
-        </View>
-      ) : screen === "verify" ? (
-        <View style={formCardStyle}>
-          <ConvexVerifyEmailScreen
-            token={deepLink?.token ?? ""}
-            userEmail={session.data?.user?.email ?? null}
-            resendCallbackUrl={Linking.createURL("/verify-email")}
-            onVerified={() => setScreen("signIn")}
-          />
-          <View className="px-4 pt-4 items-center">
-            <Text className="text-sm" style={{ color: colors.textSubtle }}>
-              Verified?{" "}
             </Text>
             <FooterLink
               label="Sign in"
