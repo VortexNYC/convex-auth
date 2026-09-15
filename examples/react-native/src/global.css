@@ -3,4 +3,4 @@
 @import "@vortex-api/convex-auth/ui/styles.css";
 
 @source "..";
-@source "../../../packages/auth/src";
+@source "../../../packages/auth/src/react-native";

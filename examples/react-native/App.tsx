@@ -126,31 +126,33 @@ function AuthProviders({ children }: { children: React.ReactNode }) {
   const statusBarStyle = colorScheme === "dark" ? "light" : "dark";
 
   return (
-    <ConvexProvider client={convex}>
-      <ExpoConvexAuthClientProvider
-        actions={api.auth as unknown as NativeAuthActions}
-        storage={storage}
-        initialUrl={Linking.createURL("/")}
-        subscribeToUrl={(handler) => {
-          const subscription = Linking.addEventListener("url", ({ url }) => {
-            const parsed = Linking.parse(url);
-            const rawPath = parsed.path?.toLowerCase() ?? "";
-            const path = rawPath.replace(/^--\//, "");
-            // Only notify the auth provider of session-token URLs (e.g. OAuth
-            // callback to the root). Verification/reset deep links carry
-            // one-time tokens that must not replace the current session.
-            if (path === "" || path === "/") {
-              handler(url);
-            }
-          });
-          return () => subscription.remove();
-        }}
-      >
-        <StatusBar style={statusBarStyle} />
-        <SecureStoreHydrator />
-        {children}
-      </ExpoConvexAuthClientProvider>
-    </ConvexProvider>
+    <View style={{ flex: 1 }}>
+      <ConvexProvider client={convex}>
+        <ExpoConvexAuthClientProvider
+          actions={api.auth as unknown as NativeAuthActions}
+          storage={storage}
+          initialUrl={Linking.createURL("/")}
+          subscribeToUrl={(handler) => {
+            const subscription = Linking.addEventListener("url", ({ url }) => {
+              const parsed = Linking.parse(url);
+              const rawPath = parsed.path?.toLowerCase() ?? "";
+              const path = rawPath.replace(/^--\//, "");
+              // Only notify the auth provider of session-token URLs (e.g. OAuth
+              // callback to the root). Verification/reset deep links carry
+              // one-time tokens that must not replace the current session.
+              if (path === "" || path === "/") {
+                handler(url);
+              }
+            });
+            return () => subscription.remove();
+          }}
+        >
+          <StatusBar style={statusBarStyle} />
+          <SecureStoreHydrator />
+          {children}
+        </ExpoConvexAuthClientProvider>
+      </ConvexProvider>
+    </View>
   );
 }
 
@@ -329,77 +331,81 @@ function InnerApp() {
   }
 
   return (
-    <View className={clsx(rootClassName, "justify-center p-6")}>
-      {screen === "signUp" ? (
-        <>
-          <ExpoAuthClientSignUpScreen
-            signInUrl=""
-            forceRedirectUrl={redirectUrl}
-            title="Create account"
-            description="Sign up with Google, GitHub, Discord, or email."
-            socialProviders={socialProviders}
-          />
-          <View className="flex-row mt-4 self-center">
-            <Text className="text-sm text-muted-foreground">Already have an account? </Text>
-            <FooterLink
-              label="Sign in"
-              onPress={() => setScreen("signIn")}
-              className="text-primary"
+    <ScrollView className={clsx(rootClassName)} style={{ flex: 1 }}>
+      <View className="w-full" style={{ padding: 24 }}>
+        {screen === "signUp" ? (
+          <>
+            <ExpoAuthClientSignUpScreen
+              signInUrl=""
+              forceRedirectUrl={redirectUrl}
+              title="Create account"
+              description="Sign up with Google, GitHub, Discord, or email."
+              socialProviders={socialProviders}
             />
-          </View>
-        </>
-      ) : screen === "forgot" ? (
-        <View className="w-full max-w-md self-center p-4 rounded-xl bg-card">
-          <ConvexForgotPasswordForm
-            resetPasswordUrl={Linking.createURL("/reset-password")}
-            onRequested={() => setScreen("signIn")}
-          />
-          <View className="px-4 pt-4 items-center">
-            <Text className="text-sm text-muted-foreground">Remembered your password? </Text>
-            <FooterLink
-              label="Sign in"
-              onPress={() => setScreen("signIn")}
-              className="text-primary"
+            <View className="flex-row mt-4 self-center">
+              <Text className="text-sm text-muted-foreground">Already have an account? </Text>
+              <FooterLink
+                label="Sign in"
+                onPress={() => setScreen("signIn")}
+                className="text-primary"
+              />
+            </View>
+          </>
+        ) : screen === "forgot" ? (
+          <View className="w-full max-w-md self-center p-4 rounded-xl bg-card">
+            <ConvexForgotPasswordForm
+              resetPasswordUrl={Linking.createURL("/reset-password")}
+              onRequested={() => setScreen("signIn")}
             />
+            <View className="px-4 pt-4 items-center">
+              <Text className="text-sm text-muted-foreground">Remembered your password? </Text>
+              <FooterLink
+                label="Sign in"
+                onPress={() => setScreen("signIn")}
+                className="text-primary"
+              />
+            </View>
           </View>
-        </View>
-      ) : (
-        <>
-          <ExpoAuthClientSignInScreen
-            signUpUrl=""
-            forceRedirectUrl={redirectUrl}
-            title="Sign in"
-            description="Sign in with Google, GitHub, Discord, or email."
-            socialProviders={socialProviders}
-          />
-          <Pressable
-            onPress={async () => {
-              await authClient?.signIn.anonymous({});
-            }}
-            className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center bg-primary"
-            accessibilityRole="button"
-            accessibilityLabel="Continue as guest"
-          >
-            <Text className="text-sm font-semibold text-primary-foreground">Continue as guest</Text>
-          </Pressable>
-          <View className="flex-row mt-4 self-center">
-            <Text className="text-sm text-muted-foreground">Don’t have an account? </Text>
-            <FooterLink
-              label="Sign up"
-              onPress={() => setScreen("signUp")}
-              className="text-primary"
+        ) : (
+          <>
+            <ExpoAuthClientSignInScreen
+              signUpUrl=""
+              forceRedirectUrl={redirectUrl}
+              title="Sign in"
+              description="Sign in with Google, GitHub, Discord, or email."
+              socialProviders={socialProviders}
             />
-          </View>
-          <View className="flex-row mt-2 self-center">
-            <FooterLink
-              label="Forgot password?"
-              onPress={() => setScreen("forgot")}
-              className="text-primary"
-            />
-          </View>
-        </>
-      )}
-    </View>
+            <Pressable
+              onPress={async () => {
+                await authClient?.signIn.anonymous({});
+              }}
+              className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center bg-primary"
+              accessibilityRole="button"
+              accessibilityLabel="Continue as guest"
+            >
+              <Text className="text-sm font-semibold text-primary-foreground">
+                Continue as guest
+              </Text>
+            </Pressable>
+            <View className="flex-row mt-4 self-center">
+              <Text className="text-sm text-muted-foreground">Don’t have an account? </Text>
+              <FooterLink
+                label="Sign up"
+                onPress={() => setScreen("signUp")}
+                className="text-primary"
+              />
+            </View>
+            <View className="flex-row mt-2 self-center">
+              <FooterLink
+                label="Forgot password?"
+                onPress={() => setScreen("forgot")}
+                className="text-primary"
+              />
+            </View>
+          </>
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
@@ -417,34 +423,40 @@ function SignedInView({
   const rootClassName = useRootClassName();
 
   return (
-    <View className={clsx(rootClassName, "p-6")}>
-      <View className="rounded-xl p-4 mb-4 bg-card">
-        <Text className="text-lg font-bold text-foreground">Signed in</Text>
-        {user?.name ? <Text className="text-base text-muted-foreground">{user.name}</Text> : null}
-        {user?.email ? <Text className="text-sm text-muted-foreground">{user.email}</Text> : null}
-        <Text className="text-xs mt-2 text-muted-foreground" numberOfLines={1} ellipsizeMode="tail">
-          Token: {currentToken ?? "none"}
-        </Text>
+    <ScrollView className={clsx(rootClassName)} style={{ flex: 1 }}>
+      <View className="w-full" style={{ padding: 24 }}>
+        <View className="rounded-xl p-4 mb-4 bg-card">
+          <Text className="text-lg font-bold text-foreground">Signed in</Text>
+          {user?.name ? <Text className="text-base text-muted-foreground">{user.name}</Text> : null}
+          {user?.email ? <Text className="text-sm text-muted-foreground">{user.email}</Text> : null}
+          <Text
+            className="text-xs mt-2 text-muted-foreground"
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            Token: {currentToken ?? "none"}
+          </Text>
+        </View>
+        <ConvexSessionList currentSessionToken={currentToken ?? null} />
+        <Pressable
+          onPress={onEnableTwoFactor}
+          className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center border border-border bg-card"
+          accessibilityRole="button"
+          accessibilityLabel="Enable two-factor auth"
+        >
+          <Text className="text-sm font-semibold text-card-foreground">Enable two-factor auth</Text>
+        </Pressable>
+        <Pressable
+          onPress={async () => {
+            await onSignOut();
+          }}
+          className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center bg-destructive"
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+        >
+          <Text className="text-sm font-semibold text-destructive-foreground">Sign out</Text>
+        </Pressable>
       </View>
-      <ConvexSessionList currentSessionToken={currentToken ?? null} />
-      <Pressable
-        onPress={onEnableTwoFactor}
-        className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center border border-border bg-card"
-        accessibilityRole="button"
-        accessibilityLabel="Enable two-factor auth"
-      >
-        <Text className="text-sm font-semibold text-card-foreground">Enable two-factor auth</Text>
-      </Pressable>
-      <Pressable
-        onPress={async () => {
-          await onSignOut();
-        }}
-        className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center bg-destructive"
-        accessibilityRole="button"
-        accessibilityLabel="Sign out"
-      >
-        <Text className="text-sm font-semibold text-destructive-foreground">Sign out</Text>
-      </Pressable>
-    </View>
+    </ScrollView>
   );
 }
