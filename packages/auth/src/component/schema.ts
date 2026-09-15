@@ -5,6 +5,7 @@ import {
   auth_md_credentials,
   auth_md_registrations,
 } from "./schema/authMd.js";
+import { auth_admin_audits } from "./schema/admin.js";
 import { auth_identities, users } from "./schema/users.js";
 import { auth_passkeys, auth_passkey_challenges } from "./schema/passkeys.js";
 import {
@@ -75,6 +76,7 @@ export default defineSchema({
 
   api_keys,
   auth_audit_events,
+  auth_admin_audits,
 
   webhook_endpoints,
   webhook_deliveries,
