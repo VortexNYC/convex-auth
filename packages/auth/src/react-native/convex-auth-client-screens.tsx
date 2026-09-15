@@ -216,7 +216,7 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
         )}
         style={[s.input, s.inputText]}
         placeholder={copy.emailPlaceholder}
-        placeholderTextColorClassName="text-muted-foreground"
+        placeholderTextColorClassName="accent-muted-foreground"
         accessibilityLabel="Email"
         autoCapitalize="none"
         autoComplete="email"
@@ -233,7 +233,7 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
         )}
         style={[s.input, s.inputText]}
         placeholder={copy.passwordPlaceholder}
-        placeholderTextColorClassName="text-muted-foreground"
+        placeholderTextColorClassName="accent-muted-foreground"
         accessibilityLabel="Password"
         autoCapitalize="none"
         autoComplete="password"
@@ -399,7 +399,7 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
         )}
         style={[s.input, s.inputText]}
         placeholder={copy.namePlaceholder}
-        placeholderTextColorClassName="text-muted-foreground"
+        placeholderTextColorClassName="accent-muted-foreground"
         accessibilityLabel="Name"
         autoCapitalize="words"
         autoCorrect={false}
@@ -416,7 +416,7 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
         )}
         style={[s.input, s.inputText]}
         placeholder={copy.emailPlaceholder}
-        placeholderTextColorClassName="text-muted-foreground"
+        placeholderTextColorClassName="accent-muted-foreground"
         accessibilityLabel="Email"
         autoCapitalize="none"
         autoComplete="email"
@@ -433,7 +433,7 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
         )}
         style={[s.input, s.inputText]}
         placeholder={copy.passwordPlaceholder}
-        placeholderTextColorClassName="text-muted-foreground"
+        placeholderTextColorClassName="accent-muted-foreground"
         accessibilityLabel="Password"
         autoCapitalize="none"
         autoComplete="new-password"

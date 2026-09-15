@@ -163,7 +163,7 @@ export function ConvexProfileEditForm(props: ExpoProfileEditFormProps) {
               value={name}
               onChangeText={setName}
               placeholder={copy.nameLabel}
-              placeholderTextColorClassName="text-muted-foreground"
+              placeholderTextColorClassName="accent-muted-foreground"
               autoCapitalize="words"
               autoCorrect={false}
               autoComplete="name"
@@ -185,7 +185,7 @@ export function ConvexProfileEditForm(props: ExpoProfileEditFormProps) {
                 value={image}
                 onChangeText={setImage}
                 placeholder={copy.imageLabel}
-                placeholderTextColorClassName="text-muted-foreground"
+                placeholderTextColorClassName="accent-muted-foreground"
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="off"

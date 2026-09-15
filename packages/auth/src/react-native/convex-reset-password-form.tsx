@@ -168,7 +168,7 @@ export function ConvexResetPasswordForm(props: ExpoResetPasswordFormProps) {
               value={password}
               onChangeText={setPassword}
               placeholder={copy.passwordLabel}
-              placeholderTextColorClassName="text-muted-foreground"
+              placeholderTextColorClassName="accent-muted-foreground"
               secureTextEntry
               autoCapitalize="none"
               autoComplete="password-new"
@@ -189,7 +189,7 @@ export function ConvexResetPasswordForm(props: ExpoResetPasswordFormProps) {
               value={confirm}
               onChangeText={setConfirm}
               placeholder={copy.confirmPasswordLabel}
-              placeholderTextColorClassName="text-muted-foreground"
+              placeholderTextColorClassName="accent-muted-foreground"
               secureTextEntry
               autoCapitalize="none"
               autoComplete="password-new"

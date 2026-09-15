@@ -151,7 +151,7 @@ export function ConvexForgotPasswordForm(props: ExpoForgotPasswordFormProps) {
           value={email}
           onChangeText={setEmail}
           placeholder={copy.emailPlaceholder}
-          placeholderTextColorClassName="text-muted-foreground"
+          placeholderTextColorClassName="accent-muted-foreground"
           autoCapitalize="none"
           autoComplete="email"
           textContentType="emailAddress"

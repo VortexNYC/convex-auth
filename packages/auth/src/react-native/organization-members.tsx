@@ -267,7 +267,7 @@ function ConvexOrganizationMembersInviteSection({
           keyboardType="email-address"
           onChangeText={onEmailChange}
           placeholder={copy.emailPlaceholder}
-          placeholderTextColorClassName="text-muted-foreground"
+          placeholderTextColorClassName="accent-muted-foreground"
           autoComplete="email"
           textContentType="emailAddress"
           className={clsx(

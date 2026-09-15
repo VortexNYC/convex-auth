@@ -178,7 +178,7 @@ export function ConvexChangeEmailForm(props: ExpoChangeEmailFormProps) {
           value={newEmail}
           onChangeText={setNewEmail}
           placeholder={copy.newEmailPlaceholder}
-          placeholderTextColorClassName="text-muted-foreground"
+          placeholderTextColorClassName="accent-muted-foreground"
           autoCapitalize="none"
           autoComplete="email"
           textContentType="emailAddress"

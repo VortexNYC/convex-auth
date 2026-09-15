@@ -227,7 +227,7 @@ export function ConvexOrganizationProfile(props: ExpoOrgProfileProps) {
           value={name}
           onChangeText={setName}
           placeholder={copy.nameLabel}
-          placeholderTextColorClassName="text-muted-foreground"
+          placeholderTextColorClassName="accent-muted-foreground"
           autoCapitalize="words"
           autoCorrect={false}
           className={clsx(
@@ -247,7 +247,7 @@ export function ConvexOrganizationProfile(props: ExpoOrgProfileProps) {
             value={slug}
             onChangeText={setSlug}
             placeholder={copy.slugLabel}
-            placeholderTextColorClassName="text-muted-foreground"
+            placeholderTextColorClassName="accent-muted-foreground"
             autoCapitalize="none"
             autoCorrect={false}
             className={clsx(
