@@ -2,11 +2,20 @@
 
 import { describe, expect, it } from "vitest";
 import { convexTest } from "convex-test";
+import { makeFunctionReference } from "convex/server";
 import schema from "../schema.js";
 import type { Id } from "../_generated/dataModel.js";
-import { getSession, listSessions, revokeAllSessionsForUser, revokeSession } from "./sessions.js";
 
-const modules = import.meta.glob("../**/*.*s");
+const rawModules = import.meta.glob(["../_generated/**/*.*s", "./*.*s"]);
+const modules = Object.fromEntries(
+  Object.entries(rawModules).map(([path, loader]) => {
+    const withoutExt = path.replace(/\.[^.]+$/, "");
+    const normalized = withoutExt.startsWith("./")
+      ? withoutExt.replace("./", "admin/")
+      : withoutExt.replace("../", "");
+    return [normalized, loader];
+  }),
+);
 
 async function insertUser(
   t: ReturnType<typeof convexTest>,
@@ -74,7 +83,9 @@ describe("admin sessions", () => {
     await insertSession(t, userId, "sess-1");
     await insertSession(t, userId, "sess-2");
 
-    const result = await t.withIdentity({ subject: adminId }).query(listSessions, { limit: 10 });
+    const result = await t
+      .withIdentity({ subject: adminId })
+      .query(makeFunctionReference<"query">("admin/sessions:listSessions"), { limit: 10 });
 
     expect(result.sessions).toHaveLength(2);
     expect(result.sessions[0].sessionId).toBe("sess-2");
@@ -85,9 +96,11 @@ describe("admin sessions", () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t, "user@example.com", "User");
 
-    await expect(t.withIdentity({ subject: userId }).query(listSessions, {})).rejects.toThrow(
-      "Forbidden: super admin required",
-    );
+    await expect(
+      t
+        .withIdentity({ subject: userId })
+        .query(makeFunctionReference<"query">("admin/sessions:listSessions"), {}),
+    ).rejects.toThrow("Forbidden: super admin required");
   });
 
   it("lists sessions filtered by user", async () => {
@@ -100,7 +113,10 @@ describe("admin sessions", () => {
 
     const result = await t
       .withIdentity({ subject: adminId })
-      .query(listSessions, { userId: userA, limit: 10 });
+      .query(makeFunctionReference<"query">("admin/sessions:listSessions"), {
+        userId: userA,
+        limit: 10,
+      });
 
     expect(result.sessions).toHaveLength(1);
     expect(result.sessions[0].sessionId).toBe("sess-a");
@@ -114,7 +130,7 @@ describe("admin sessions", () => {
 
     const session = await t
       .withIdentity({ subject: adminId })
-      .query(getSession, { sessionId: "sess-1" });
+      .query(makeFunctionReference<"query">("admin/sessions:getSession"), { sessionId: "sess-1" });
 
     expect(session?.sessionId).toBe("sess-1");
   });
@@ -128,7 +144,9 @@ describe("admin sessions", () => {
 
     const result = await t
       .withIdentity({ subject: adminId })
-      .mutation(revokeSession, { sessionId: "sess-1" });
+      .mutation(makeFunctionReference<"mutation">("admin/sessions:revokeSession"), {
+        sessionId: "sess-1",
+      });
     expect(result.revoked).toBe(true);
 
     const session = await t.run((ctx) => ctx.db.get("authSessions", sessionId));
@@ -155,7 +173,9 @@ describe("admin sessions", () => {
 
     const result = await t
       .withIdentity({ subject: adminId })
-      .mutation(revokeAllSessionsForUser, { userId });
+      .mutation(makeFunctionReference<"mutation">("admin/sessions:revokeAllSessionsForUser"), {
+        userId,
+      });
     expect(result.count).toBe(1);
 
     const session = await t.run((ctx) => ctx.db.get("authSessions", activeSession));
