@@ -153,7 +153,7 @@ export function ConvexEnableTwoFactorForm(props: ExpoEnableTwoFactorFormProps) {
   return (
     <View className="w-full py-2" style={s.root}>
       <View className="px-4 pb-3" style={s.header}>
-        <Text className="text-base font-semibold" style={s.title}>
+        <Text className="text-base font-semibold text-foreground" style={s.title}>
           {header.title}
         </Text>
         <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
@@ -248,16 +248,17 @@ function TwoFactorPasswordStep(args: {
           autoComplete="password"
           secureTextEntry
           className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+          placeholderTextColorClassName="accent-muted-foreground"
           style={s.input}
         />
       </View>
       <Pressable
         onPress={() => void args.onSubmit()}
         disabled={args.isEnabling}
-        className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input items-center"
+        className="mx-4 mt-3 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
         style={s.submitButton}
       >
-        <Text className="text-sm font-medium" style={s.submitButtonText}>
+        <Text className="text-sm font-medium text-primary-foreground" style={s.submitButtonText}>
           {args.isEnabling ? args.copy.submitting : args.copy.passwordSubmit}
         </Text>
       </Pressable>
@@ -291,7 +292,11 @@ function TwoFactorVerifyStep(args: {
           <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
             {args.copy.secretLabel}
           </Text>
-          <Text selectable className="text-base font-mono tracking-wide" style={s.secret}>
+          <Text
+            selectable
+            className="text-base font-mono tracking-wide text-foreground"
+            style={s.secret}
+          >
             {args.secret}
           </Text>
         </View>
@@ -308,16 +313,17 @@ function TwoFactorVerifyStep(args: {
           autoComplete="one-time-code"
           keyboardType="number-pad"
           className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+          placeholderTextColorClassName="accent-muted-foreground"
           style={s.input}
         />
       </View>
       <Pressable
         onPress={() => void args.onSubmit()}
         disabled={args.isVerifying}
-        className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input items-center"
+        className="mx-4 mt-3 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
         style={s.submitButton}
       >
-        <Text className="text-sm font-medium" style={s.submitButtonText}>
+        <Text className="text-sm font-medium text-primary-foreground" style={s.submitButtonText}>
           {args.isVerifying ? args.copy.submitting : args.copy.verifySubmit}
         </Text>
       </Pressable>
@@ -337,17 +343,22 @@ function TwoFactorBackupStep(args: {
     <View>
       <View className="px-4 py-2 gap-1" style={s.backupCodes}>
         {args.backupCodes.map((backupCode) => (
-          <Text key={backupCode} selectable className="text-base font-mono" style={s.backupCode}>
+          <Text
+            key={backupCode}
+            selectable
+            className="text-base font-mono text-foreground"
+            style={s.backupCode}
+          >
             {backupCode}
           </Text>
         ))}
       </View>
       <Pressable
         onPress={() => args.onDone?.()}
-        className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input items-center"
+        className="mx-4 mt-3 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
         style={s.submitButton}
       >
-        <Text className="text-sm font-medium" style={s.submitButtonText}>
+        <Text className="text-sm font-medium text-primary-foreground" style={s.submitButtonText}>
           {args.copy.done}
         </Text>
       </Pressable>

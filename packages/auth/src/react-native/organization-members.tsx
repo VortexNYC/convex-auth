@@ -141,7 +141,7 @@ export function ConvexOrganizationMembers(props: ExpoOrgMembersProps) {
   return (
     <View className="w-full py-2" style={s.root}>
       <View className="px-4 pb-3" style={s.header}>
-        <Text className="text-base font-semibold" style={s.title}>
+        <Text className="text-base font-semibold text-foreground" style={s.title}>
           {copy.title}
         </Text>
         <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
@@ -219,6 +219,7 @@ function ConvexOrganizationMembersInviteSection({
           onChangeText={onEmailChange}
           placeholder={copy.emailPlaceholder}
           className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+          placeholderTextColorClassName="accent-muted-foreground"
           style={stylesOverride.input}
           value={email}
         />
@@ -231,10 +232,15 @@ function ConvexOrganizationMembersInviteSection({
         <Pressable
           disabled={inviting || email.trim().length === 0}
           onPress={() => void onInvite()}
-          className="w-full px-3 py-2.5 rounded-md border border-input items-center"
+          className="w-full px-3 py-2.5 rounded-md bg-primary items-center justify-center"
           style={stylesOverride.primaryButton}
+          accessibilityRole="button"
+          accessibilityLabel={copy.invite}
         >
-          <Text className="text-sm font-medium" style={stylesOverride.primaryButtonText}>
+          <Text
+            className="text-sm font-medium text-primary-foreground"
+            style={stylesOverride.primaryButtonText}
+          >
             {inviting ? copy.inviting : copy.invite}
           </Text>
         </Pressable>
@@ -269,15 +275,18 @@ function ConvexOrganizationRolePicker({
             onPress={() => onRoleChange(role.key)}
             className={
               active
-                ? "px-3 py-1.5 rounded-md border border-input opacity-60"
-                : "px-3 py-1.5 rounded-md border border-input"
+                ? "px-3 py-1.5 rounded-md border border-input bg-primary items-center justify-center"
+                : "px-3 py-1.5 rounded-md border border-input bg-background items-center justify-center"
             }
             style={[
               stylesOverride.rolePickerItem,
               active ? stylesOverride.rolePickerItemActive : undefined,
             ]}
           >
-            <Text className="text-sm" style={stylesOverride.rolePickerItemText}>
+            <Text
+              className={`text-sm ${active ? "text-primary-foreground" : "text-foreground"}`}
+              style={stylesOverride.rolePickerItemText}
+            >
               {role.label}
             </Text>
           </Pressable>
@@ -355,7 +364,7 @@ function ConvexOrganizationMemberRow({
         />
       ) : null}
       <View className="flex-1">
-        <Text className="text-sm font-medium" style={stylesOverride.memberName}>
+        <Text className="text-sm font-medium text-foreground" style={stylesOverride.memberName}>
           {member.name ?? member.email ?? member.userId}
           {member.isViewer === true ? " (you)" : ""}
         </Text>
@@ -370,8 +379,10 @@ function ConvexOrganizationMemberRow({
             const result = await onRemoveMember(member._id);
             if (!result.ok) onError(result.error);
           }}
-          className="px-2.5 py-1.5 rounded-md border border-destructive"
+          className="px-2.5 py-1.5 rounded-md border border-destructive bg-background items-center justify-center"
           style={stylesOverride.dangerButton}
+          accessibilityRole="button"
+          accessibilityLabel={copy.remove}
         >
           <Text className="text-destructive text-xs" style={stylesOverride.dangerButtonText}>
             {copy.remove}
@@ -438,7 +449,7 @@ function ConvexOrganizationInvitationRow({
   return (
     <View className="flex-row items-center px-4 py-3 gap-3" style={stylesOverride.memberItem}>
       <View className="flex-1">
-        <Text className="text-sm font-medium" style={stylesOverride.memberName}>
+        <Text className="text-sm font-medium text-foreground" style={stylesOverride.memberName}>
           {invitation.email}
         </Text>
         <Text className="text-xs text-muted-foreground mt-0.5" style={stylesOverride.memberMeta}>
@@ -452,8 +463,10 @@ function ConvexOrganizationInvitationRow({
             const result = await onCancelInvitation(invitation._id);
             if (!result.ok) onError(result.error);
           }}
-          className="px-2.5 py-1.5 rounded-md border border-destructive"
+          className="px-2.5 py-1.5 rounded-md border border-destructive bg-background items-center justify-center"
           style={stylesOverride.dangerButton}
+          accessibilityRole="button"
+          accessibilityLabel={copy.cancelInvite}
         >
           <Text className="text-destructive text-xs" style={stylesOverride.dangerButtonText}>
             {copy.cancelInvite}

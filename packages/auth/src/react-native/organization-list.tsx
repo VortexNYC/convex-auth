@@ -106,7 +106,7 @@ function OrganizationListHeader(props: {
 }) {
   return (
     <View className="px-4 pb-3" style={props.styles.header}>
-      <Text className="text-base font-semibold" style={props.styles.title}>
+      <Text className="text-base font-semibold text-foreground" style={props.styles.title}>
         {props.copy.title}
       </Text>
       <Text className="text-sm text-muted-foreground mt-0.5" style={props.styles.description}>
@@ -130,10 +130,15 @@ function CreateOrganizationAction(props: {
       <View className="bg-border h-px my-3" style={props.styles.divider} />
       <Pressable
         onPress={() => void props.onCreateOrganization?.()}
-        className="mx-4 px-3 py-2 rounded-md border border-input items-center"
+        className="mx-4 px-3 py-2 rounded-md border border-input bg-background items-center justify-center"
         style={props.styles.primaryButton}
+        accessibilityRole="button"
+        accessibilityLabel={props.copy.createLabel}
       >
-        <Text className="text-sm font-medium" style={props.styles.primaryButtonText}>
+        <Text
+          className="text-sm font-medium text-foreground"
+          style={props.styles.primaryButtonText}
+        >
           {props.copy.createLabel}
         </Text>
       </Pressable>
@@ -181,7 +186,7 @@ export function ConvexOrganizationList(props: ExpoOrgListProps) {
                   />
                 )}
                 <View className="flex-1">
-                  <Text className="text-base font-medium" style={s.itemName}>
+                  <Text className="text-base font-medium text-foreground" style={s.itemName}>
                     {item.name}
                   </Text>
                   {item.roleKey !== undefined ? (
@@ -217,7 +222,7 @@ export function ConvexOrganizationList(props: ExpoOrgListProps) {
               style={s.invitationItem}
             >
               <View className="flex-1">
-                <Text className="text-base font-medium" style={s.itemName}>
+                <Text className="text-base font-medium text-foreground" style={s.itemName}>
                   {inv.organizationName}
                 </Text>
                 {inv.roleKey !== undefined ? (
@@ -229,10 +234,12 @@ export function ConvexOrganizationList(props: ExpoOrgListProps) {
               {props.onAcceptInvitation !== undefined ? (
                 <Pressable
                   onPress={() => void props.onAcceptInvitation?.(inv._id)}
-                  className="mx-4 px-3 py-2 rounded-md border border-input items-center"
+                  className="mx-4 px-3 py-2 rounded-md border border-input bg-background items-center justify-center"
                   style={s.primaryButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={copy.acceptLabel}
                 >
-                  <Text className="text-sm font-medium" style={s.primaryButtonText}>
+                  <Text className="text-sm font-medium text-foreground" style={s.primaryButtonText}>
                     {copy.acceptLabel}
                   </Text>
                 </Pressable>
@@ -240,10 +247,12 @@ export function ConvexOrganizationList(props: ExpoOrgListProps) {
               {props.onRejectInvitation !== undefined ? (
                 <Pressable
                   onPress={() => void props.onRejectInvitation?.(inv._id)}
-                  className="px-3 py-2 rounded-md"
+                  className="px-3 py-2 rounded-md border border-input bg-background items-center justify-center"
                   style={s.secondaryButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={copy.rejectLabel}
                 >
-                  <Text className="text-sm" style={s.secondaryButtonText}>
+                  <Text className="text-sm text-foreground" style={s.secondaryButtonText}>
                     {copy.rejectLabel}
                   </Text>
                 </Pressable>

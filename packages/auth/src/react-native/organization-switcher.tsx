@@ -94,7 +94,7 @@ function OrganizationSwitcherTrigger(props: {
   return (
     <Pressable
       onPress={props.onPress}
-      className="flex-row items-center px-3 py-2 rounded-md border border-input gap-2"
+      className="flex-row items-center px-3 py-2 rounded-md border border-input bg-background gap-2"
       style={props.styles.trigger}
     >
       {props.current?.imageUrl !== undefined && props.current.imageUrl.length > 0 ? (
@@ -109,7 +109,7 @@ function OrganizationSwitcherTrigger(props: {
           style={props.styles.triggerPlaceholder}
         />
       )}
-      <Text className="text-sm font-medium" style={props.styles.triggerName}>
+      <Text className="text-sm font-medium text-foreground" style={props.styles.triggerName}>
         {props.current?.name ?? props.copy.personalAccountLabel}
       </Text>
     </Pressable>
@@ -137,7 +137,7 @@ function CurrentOrganizationSection(props: {
         className="py-3 px-2 rounded-md opacity-60"
         style={[props.styles.item, props.styles.itemActive]}
       >
-        <Text className="text-base font-medium" style={props.styles.itemLabel}>
+        <Text className="text-base font-medium text-foreground" style={props.styles.itemLabel}>
           {props.current.name}
         </Text>
         {props.current.slug !== undefined ? (
@@ -216,7 +216,7 @@ export function ConvexOrganizationSwitcher(props: ExpoOrgSwitcherProps) {
                   className="py-3 px-2 rounded-md"
                   style={s.item}
                 >
-                  <Text className="text-base font-medium" style={s.itemLabel}>
+                  <Text className="text-base font-medium text-foreground" style={s.itemLabel}>
                     {org.name}
                   </Text>
                   {org.slug !== undefined ? (
@@ -235,7 +235,7 @@ export function ConvexOrganizationSwitcher(props: ExpoOrgSwitcherProps) {
                   className="py-3 px-2 rounded-md"
                   style={s.item}
                 >
-                  <Text className="text-base font-medium" style={s.itemLabel}>
+                  <Text className="text-base font-medium text-foreground" style={s.itemLabel}>
                     {copy.personalAccountLabel}
                   </Text>
                 </Pressable>
@@ -246,10 +246,12 @@ export function ConvexOrganizationSwitcher(props: ExpoOrgSwitcherProps) {
                 <View className="bg-border h-px my-2" style={s.divider} />
                 <Pressable
                   onPress={() => void pickCreate()}
-                  className="py-3 px-2 rounded-md border border-input items-center"
+                  className="py-3 px-2 rounded-md border border-input bg-popover items-center justify-center"
                   style={s.createButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={copy.createOrganizationLabel}
                 >
-                  <Text className="text-sm font-medium" style={s.createButtonText}>
+                  <Text className="text-sm font-medium text-foreground" style={s.createButtonText}>
                     {copy.createOrganizationLabel}
                   </Text>
                 </Pressable>

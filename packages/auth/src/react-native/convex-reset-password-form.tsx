@@ -118,7 +118,7 @@ export function ConvexResetPasswordForm(props: ExpoResetPasswordFormProps) {
   return (
     <View className="w-full py-2" style={s.root}>
       <View className="px-4 pb-3" style={s.header}>
-        <Text className="text-base font-semibold" style={s.title}>
+        <Text className="text-base font-semibold text-foreground" style={s.title}>
           {copy.title}
         </Text>
         <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
@@ -142,6 +142,7 @@ export function ConvexResetPasswordForm(props: ExpoResetPasswordFormProps) {
               autoCapitalize="none"
               autoComplete="password-new"
               className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+              placeholderTextColorClassName="accent-muted-foreground"
               style={s.input}
             />
           </View>
@@ -156,21 +157,27 @@ export function ConvexResetPasswordForm(props: ExpoResetPasswordFormProps) {
               autoCapitalize="none"
               autoComplete="password-new"
               className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+              placeholderTextColorClassName="accent-muted-foreground"
               style={s.input}
             />
           </View>
           <Pressable
             onPress={() => void handleSubmit()}
             disabled={isResetting}
-            className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input items-center"
+            className="mx-4 mt-3 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
             style={s.submitButton}
+            accessibilityRole="button"
+            accessibilityLabel={copy.submit}
           >
-            <Text className="text-sm font-medium" style={s.submitButtonText}>
+            <Text
+              className="text-sm font-medium text-primary-foreground"
+              style={s.submitButtonText}
+            >
               {isResetting ? copy.submitting : copy.submit}
             </Text>
           </Pressable>
           {success !== null ? (
-            <Text className="px-4 pt-2 text-sm" style={s.successState}>
+            <Text className="px-4 pt-2 text-sm text-success" style={s.successState}>
               {success}
             </Text>
           ) : null}
