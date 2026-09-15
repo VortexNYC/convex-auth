@@ -273,7 +273,7 @@ function TwoFactorPasswordStep(args: {
           value={args.password}
           onChangeText={args.onPasswordChange}
           placeholder={args.copy.passwordPlaceholder}
-          placeholderTextColorClassName="text-muted-foreground"
+          placeholderTextColorClassName="accent-muted-foreground"
           autoCapitalize="none"
           autoComplete="password"
           textContentType="password"
@@ -350,7 +350,7 @@ function TwoFactorVerifyStep(args: {
           value={args.code}
           onChangeText={args.onCodeChange}
           placeholder={args.copy.codePlaceholder}
-          placeholderTextColorClassName="text-muted-foreground"
+          placeholderTextColorClassName="accent-muted-foreground"
           autoCapitalize="none"
           autoComplete="one-time-code"
           textContentType="oneTimeCode"

@@ -141,7 +141,7 @@ export function ConvexCreateOrganization(props: ExpoCreateOrgProps) {
           value={name}
           onChangeText={setName}
           placeholder={copy.namePlaceholder}
-          placeholderTextColorClassName="text-muted-foreground"
+          placeholderTextColorClassName="accent-muted-foreground"
           autoCapitalize="words"
           autoCorrect={false}
           className={clsx(
@@ -161,7 +161,7 @@ export function ConvexCreateOrganization(props: ExpoCreateOrgProps) {
             value={slug}
             onChangeText={setSlug}
             placeholder={copy.slugPlaceholder}
-            placeholderTextColorClassName="text-muted-foreground"
+            placeholderTextColorClassName="accent-muted-foreground"
             autoCapitalize="none"
             autoCorrect={false}
             className={clsx(

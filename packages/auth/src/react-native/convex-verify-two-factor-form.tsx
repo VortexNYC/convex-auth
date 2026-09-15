@@ -188,7 +188,7 @@ export function ConvexVerifyTwoFactorForm(props: ExpoVerifyTwoFactorFormProps) {
           value={code}
           onChangeText={setCode}
           placeholder={mode === "totp" ? copy.codePlaceholder : copy.backupCodePlaceholder}
-          placeholderTextColorClassName="text-muted-foreground"
+          placeholderTextColorClassName="accent-muted-foreground"
           autoCapitalize="none"
           autoComplete="one-time-code"
           textContentType="oneTimeCode"
