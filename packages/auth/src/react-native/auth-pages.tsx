@@ -229,7 +229,7 @@ export function ExpoAuthPostSignUpPage(props: PostSignUpPageProps) {
       {error !== null ? (
         <Text className={clsx("text-sm text-destructive mt-2", c.error)}>{error}</Text>
       ) : null}
-      <ActivityIndicator className={clsx("mt-4", c.loading)} colorClassName="text-primary" />
+      <ActivityIndicator className={clsx("mt-4", c.loading)} colorClassName="accent-primary" />
     </View>
   );
 }
@@ -308,7 +308,7 @@ export function ExpoAuthAcceptInvitePage(props: AcceptInvitePageProps) {
       <Text className={clsx("text-sm text-muted-foreground", c.description)} style={s.description}>
         {props.loadingDescription ?? description}
       </Text>
-      <ActivityIndicator className={clsx("mt-4", c.loading)} colorClassName="text-primary" />
+      <ActivityIndicator className={clsx("mt-4", c.loading)} colorClassName="accent-primary" />
     </View>
   );
 }
@@ -350,7 +350,7 @@ export function ExpoAuthOrganizationChooserPage(props: ExpoAuthOrganizationChoos
         >
           {props.loadingDescription ?? "Loading workspaces..."}
         </Text>
-        <ActivityIndicator className={clsx("mt-4", c.loading)} colorClassName="text-primary" />
+        <ActivityIndicator className={clsx("mt-4", c.loading)} colorClassName="accent-primary" />
       </View>
     );
   }
@@ -418,7 +418,7 @@ export function ExpoAuthOrganizationChooserPage(props: ExpoAuthOrganizationChoos
             accessibilityLabel={organization.name}
           >
             {isBusy ? (
-              <ActivityIndicator colorClassName="text-primary-foreground" />
+              <ActivityIndicator colorClassName="accent-primary-foreground" />
             ) : (
               <Text
                 className={clsx(

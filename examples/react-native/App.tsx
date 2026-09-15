@@ -422,12 +422,12 @@ function SignedInView({
   const session = authClient?.useSession();
   const user = session?.data?.user;
   const currentToken = session?.data?.session?.token;
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
 
   return (
-    <ScrollView style={{ flex: 1 }}>
-      <View className={clsx("w-full bg-background", isDark && "dark")} style={{ padding: 24 }}>
+    <ConvexSessionList
+      currentSessionToken={currentToken ?? null}
+      styles={{ root: { flex: 1 } }}
+      header={
         <View className="rounded-xl p-4 mb-4 bg-card">
           <Text className="text-lg font-bold text-foreground">Signed in</Text>
           {user?.name ? <Text className="text-base text-muted-foreground">{user.name}</Text> : null}
@@ -440,26 +440,31 @@ function SignedInView({
             Token: {currentToken ?? "none"}
           </Text>
         </View>
-        <ConvexSessionList currentSessionToken={currentToken ?? null} />
-        <Pressable
-          onPress={onEnableTwoFactor}
-          className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center border border-border bg-card"
-          accessibilityRole="button"
-          accessibilityLabel="Enable two-factor auth"
-        >
-          <Text className="text-sm font-semibold text-card-foreground">Enable two-factor auth</Text>
-        </Pressable>
-        <Pressable
-          onPress={async () => {
-            await onSignOut();
-          }}
-          className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center bg-destructive"
-          accessibilityRole="button"
-          accessibilityLabel="Sign out"
-        >
-          <Text className="text-sm font-semibold text-destructive-foreground">Sign out</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+      }
+      footer={
+        <>
+          <Pressable
+            onPress={onEnableTwoFactor}
+            className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center border border-border bg-card"
+            accessibilityRole="button"
+            accessibilityLabel="Enable two-factor auth"
+          >
+            <Text className="text-sm font-semibold text-card-foreground">
+              Enable two-factor auth
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={async () => {
+              await onSignOut();
+            }}
+            className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center bg-destructive"
+            accessibilityRole="button"
+            accessibilityLabel="Sign out"
+          >
+            <Text className="text-sm font-semibold text-destructive-foreground">Sign out</Text>
+          </Pressable>
+        </>
+      }
+    />
   );
 }
