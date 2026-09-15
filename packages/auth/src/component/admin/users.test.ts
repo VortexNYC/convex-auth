@@ -2,10 +2,19 @@
 
 import { describe, expect, it } from "vitest";
 import { convexTest } from "convex-test";
+import { makeFunctionReference } from "convex/server";
 import schema from "../schema.js";
-import { banUser, getUser, listUsers, removeUser, unbanUser } from "./users.js";
 
-const modules = import.meta.glob("../**/*.*s");
+const rawModules = import.meta.glob(["../_generated/**/*.*s", "./*.*s"]);
+const modules = Object.fromEntries(
+  Object.entries(rawModules).map(([path, loader]) => {
+    const withoutExt = path.replace(/\.[^.]+$/, "");
+    const normalized = withoutExt.startsWith("./")
+      ? withoutExt.replace("./", "admin/")
+      : withoutExt.replace("../", "");
+    return [normalized, loader];
+  }),
+);
 
 async function insertUser(
   t: ReturnType<typeof convexTest>,
@@ -32,7 +41,9 @@ describe("admin users", () => {
     const adminId = await insertUser(t, "admin@example.com", "Admin", true);
     await insertUser(t, "user@example.com", "User");
 
-    const result = await t.withIdentity({ subject: adminId }).query(listUsers, { limit: 10 });
+    const result = await t
+      .withIdentity({ subject: adminId })
+      .query(makeFunctionReference<"query">("admin/users:listUsers"), { limit: 10 });
 
     expect(result.users).toHaveLength(2);
     expect(result.hasNextPage).toBe(false);
@@ -42,9 +53,11 @@ describe("admin users", () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t, "user@example.com", "User");
 
-    await expect(t.withIdentity({ subject: userId }).query(listUsers, {})).rejects.toThrow(
-      "Forbidden: super admin required",
-    );
+    await expect(
+      t
+        .withIdentity({ subject: userId })
+        .query(makeFunctionReference<"query">("admin/users:listUsers"), {}),
+    ).rejects.toThrow("Forbidden: super admin required");
   });
 
   it("gets a user by id", async () => {
@@ -52,7 +65,9 @@ describe("admin users", () => {
     const adminId = await insertUser(t, "admin@example.com", "Admin", true);
     const userId = await insertUser(t, "user@example.com", "User");
 
-    const user = await t.withIdentity({ subject: adminId }).query(getUser, { userId });
+    const user = await t
+      .withIdentity({ subject: adminId })
+      .query(makeFunctionReference<"query">("admin/users:getUser"), { userId });
 
     expect(user?._id).toBe(userId);
     expect(user?.email).toBe("user@example.com");
@@ -65,21 +80,26 @@ describe("admin users", () => {
     const asAdmin = t.withIdentity({ subject: adminId });
     const bannedUntil = Date.now() + 60_000;
 
-    const banResult = await asAdmin.mutation(banUser, {
-      userId,
-      bannedUntil,
-      reason: "spam",
-    });
+    const banResult = await asAdmin.mutation(
+      makeFunctionReference<"mutation">("admin/users:banUser"),
+      {
+        userId,
+        bannedUntil,
+        reason: "spam",
+      },
+    );
     expect(banResult.userId).toBe(userId);
     expect(banResult.bannedUntil).toBe(bannedUntil);
 
-    let user = await asAdmin.query(getUser, { userId });
+    let user = await asAdmin.query(makeFunctionReference<"query">("admin/users:getUser"), {
+      userId,
+    });
     expect(user?.bannedUntil).toBe(bannedUntil);
     expect(user?.banReason).toBe("spam");
 
-    await asAdmin.mutation(unbanUser, { userId });
+    await asAdmin.mutation(makeFunctionReference<"mutation">("admin/users:unbanUser"), { userId });
 
-    user = await asAdmin.query(getUser, { userId });
+    user = await asAdmin.query(makeFunctionReference<"query">("admin/users:getUser"), { userId });
     expect(user?.bannedUntil).toBeUndefined();
     expect(user?.banReason).toBeUndefined();
   });
@@ -89,7 +109,9 @@ describe("admin users", () => {
     const adminId = await insertUser(t, "admin@example.com", "Admin", true);
 
     await expect(
-      t.withIdentity({ subject: adminId }).mutation(banUser, { userId: adminId }),
+      t
+        .withIdentity({ subject: adminId })
+        .mutation(makeFunctionReference<"mutation">("admin/users:banUser"), { userId: adminId }),
     ).rejects.toThrow("Cannot ban yourself");
   });
 
@@ -115,7 +137,10 @@ describe("admin users", () => {
 
     const result = await t
       .withIdentity({ subject: adminId })
-      .mutation(removeUser, { userId, reason: "test" });
+      .mutation(makeFunctionReference<"mutation">("admin/users:removeUser"), {
+        userId,
+        reason: "test",
+      });
     expect(result.deleted).toBe(true);
 
     const user = await t.run((ctx) => ctx.db.get("users", userId));
@@ -135,7 +160,9 @@ describe("admin users", () => {
     const adminId = await insertUser(t, "admin@example.com", "Admin", true);
 
     await expect(
-      t.withIdentity({ subject: adminId }).mutation(removeUser, { userId: adminId }),
+      t
+        .withIdentity({ subject: adminId })
+        .mutation(makeFunctionReference<"mutation">("admin/users:removeUser"), { userId: adminId }),
     ).rejects.toThrow("Cannot remove yourself");
   });
 });
