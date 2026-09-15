@@ -5,7 +5,6 @@ import { StatusBar } from "expo-status-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
-import Constants from "expo-constants";
 import { ConvexReactClient, ConvexProvider } from "convex/react";
 import {
   ConvexEnableTwoFactorForm,
@@ -23,15 +22,15 @@ import {
 } from "@vortex-api/convex-auth/react-native";
 import { api } from "./convex/_generated/api";
 
+import { clsx } from "clsx";
+
 type Screen = "signIn" | "signUp" | "forgot" | "reset" | "verify" | "enableTwoFactor";
 
 const TOKEN_KEYS = ["convex-auth-token", "convex-auth-refresh-token", "convex-auth-session-id"];
 
-const convexUrl = Constants.expoConfig?.extra?.convexUrl ?? process.env.EXPO_PUBLIC_CONVEX_URL;
+const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
 if (typeof convexUrl !== "string" || convexUrl.length === 0) {
-  throw new Error(
-    "Constants.expoConfig.extra.convexUrl and EXPO_PUBLIC_CONVEX_URL are not set; add EXPO_PUBLIC_CONVEX_URL to .env",
-  );
+  throw new Error("EXPO_PUBLIC_CONVEX_URL is not set");
 }
 
 const convex = new ConvexReactClient(convexUrl);
@@ -42,10 +41,10 @@ const socialProviders = [
   { provider: "discord", label: "Discord" },
 ] as const;
 
-function useTheme() {
-  const colorScheme = useColorScheme() ?? "light";
-  const statusBarStyle: "light" | "dark" = colorScheme === "dark" ? "light" : "dark";
-  return { colorScheme, statusBarStyle };
+function useRootClassName() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+  return clsx("flex-1 bg-background", isDark && "dark");
 }
 
 function SecureStoreHydrator() {
@@ -100,7 +99,7 @@ function SecureStoreHydrator() {
 }
 
 function AuthProviders({ children }: { children: React.ReactNode }) {
-  const { statusBarStyle } = useTheme();
+  const colorScheme = useColorScheme() ?? "light";
   const cacheRef = useRef<Record<string, string>>({});
 
   const storage: ExpoConvexAuthStorage = useRef<ExpoConvexAuthStorage>({
@@ -123,6 +122,8 @@ function AuthProviders({ children }: { children: React.ReactNode }) {
     },
   }).current;
 
+  const statusBarStyle = colorScheme === "dark" ? "light" : "dark";
+
   return (
     <ConvexProvider client={convex}>
       <ExpoConvexAuthClientProvider
@@ -134,6 +135,9 @@ function AuthProviders({ children }: { children: React.ReactNode }) {
             const parsed = Linking.parse(url);
             const rawPath = parsed.path?.toLowerCase() ?? "";
             const path = rawPath.replace(/^--\//, "");
+            // Only notify the auth provider of session-token URLs (e.g. OAuth
+            // callback to the root). Verification/reset deep links carry
+            // one-time tokens that must not replace the current session.
             if (path === "" || path === "/") {
               handler(url);
             }
@@ -150,13 +154,10 @@ function AuthProviders({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const { colorScheme } = useTheme();
   return (
-    <View className={colorScheme === "dark" ? "flex-1 bg-background dark" : "flex-1 bg-background"}>
-      <AuthProviders>
-        <InnerApp />
-      </AuthProviders>
-    </View>
+    <AuthProviders>
+      <InnerApp />
+    </AuthProviders>
   );
 }
 
@@ -204,10 +205,18 @@ function useDeepLink(setRoute: (route: DeepLinkRoute) => void) {
   }, [setRoute]);
 }
 
-function FooterLink({ label, onPress }: { label: string; onPress: () => void }) {
+function FooterLink({
+  label,
+  onPress,
+  className,
+}: {
+  label: string;
+  onPress: () => void;
+  className?: string;
+}) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
-      <Text className="text-sm font-semibold text-primary">{label}</Text>
+      <Text className={clsx("text-sm font-semibold", className)}>{label}</Text>
     </Pressable>
   );
 }
@@ -217,6 +226,7 @@ function InnerApp() {
   const [deepLink, setDeepLink] = useState<DeepLinkRoute>(null);
   const authClient = useConvexAuthClientContext();
   const session = authClient?.useSession();
+  const rootClassName = useRootClassName();
 
   useDeepLink(setDeepLink);
 
@@ -234,7 +244,7 @@ function InnerApp() {
 
   if (authClient === null || session === undefined || session.isPending) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <View className={clsx(rootClassName, "items-center justify-center")}>
         <Text className="text-base text-muted-foreground">Loading…</Text>
       </View>
     );
@@ -245,22 +255,16 @@ function InnerApp() {
   if (screen === "enableTwoFactor" && session.data?.user) {
     return (
       <ScrollView
-        className="flex-1 bg-background"
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: "flex-start",
-          alignItems: "center",
-          padding: 24,
-        }}
-        keyboardShouldPersistTaps="handled"
+        className={clsx(rootClassName, "p-6")}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
       >
-        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl flex-col">
+        <View className="w-full max-w-md self-center p-4 rounded-xl bg-card">
           <ConvexEnableTwoFactorForm
             issuer="convex-auth-rn"
             onEnrolled={() => setScreen("signIn")}
           />
           <View className="px-4 pt-4 items-center">
-            <FooterLink label="Back" onPress={() => setScreen("signIn")} />
+            <FooterLink label="Back" onPress={() => setScreen("signIn")} className="text-primary" />
           </View>
         </View>
       </ScrollView>
@@ -269,55 +273,45 @@ function InnerApp() {
 
   if (screen === "reset") {
     return (
-      <ScrollView
-        className="flex-1 bg-background"
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: "flex-start",
-          alignItems: "center",
-          padding: 24,
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl flex-col">
+      <View className={clsx(rootClassName, "justify-center p-6")}>
+        <View className="w-full max-w-md self-center p-4 rounded-xl bg-card">
           <ConvexResetPasswordForm
             token={deepLink?.token ?? ""}
             onReset={() => setScreen("signIn")}
           />
-          <View className="flex-row justify-center items-center px-4 pt-4 gap-1">
+          <View className="px-4 pt-4 items-center">
             <Text className="text-sm text-muted-foreground">Done? </Text>
-            <FooterLink label="Sign in" onPress={() => setScreen("signIn")} />
+            <FooterLink
+              label="Sign in"
+              onPress={() => setScreen("signIn")}
+              className="text-primary"
+            />
           </View>
         </View>
-      </ScrollView>
+      </View>
     );
   }
 
   if (screen === "verify") {
     return (
-      <ScrollView
-        className="flex-1 bg-background"
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: "flex-start",
-          alignItems: "center",
-          padding: 24,
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl flex-col">
+      <View className={clsx(rootClassName, "justify-center p-6")}>
+        <View className="w-full max-w-md self-center p-4 rounded-xl bg-card">
           <ConvexVerifyEmailScreen
             token={deepLink?.token ?? ""}
             userEmail={session.data?.user?.email ?? null}
             resendCallbackUrl={Linking.createURL("/verify-email")}
             onVerified={() => setScreen("signIn")}
           />
-          <View className="flex-row justify-center items-center px-4 pt-4 gap-1">
+          <View className="px-4 pt-4 items-center">
             <Text className="text-sm text-muted-foreground">Verified? </Text>
-            <FooterLink label="Sign in" onPress={() => setScreen("signIn")} />
+            <FooterLink
+              label="Sign in"
+              onPress={() => setScreen("signIn")}
+              className="text-primary"
+            />
           </View>
         </View>
-      </ScrollView>
+      </View>
     );
   }
 
@@ -334,18 +328,9 @@ function InnerApp() {
   }
 
   return (
-    <ScrollView
-      className="flex-1 bg-background"
-      contentContainerStyle={{
-        flexGrow: 1,
-        justifyContent: "flex-start",
-        alignItems: "center",
-        padding: 24,
-      }}
-      keyboardShouldPersistTaps="handled"
-    >
+    <View className={clsx(rootClassName, "justify-center p-6")}>
       {screen === "signUp" ? (
-        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl flex-col">
+        <>
           <ExpoAuthClientSignUpScreen
             signInUrl=""
             forceRedirectUrl={redirectUrl}
@@ -353,24 +338,32 @@ function InnerApp() {
             description="Sign up with Google, GitHub, Discord, or email."
             socialProviders={socialProviders}
           />
-          <View className="flex-row justify-center items-center mt-4 gap-1">
+          <View className="flex-row mt-4 self-center">
             <Text className="text-sm text-muted-foreground">Already have an account? </Text>
-            <FooterLink label="Sign in" onPress={() => setScreen("signIn")} />
+            <FooterLink
+              label="Sign in"
+              onPress={() => setScreen("signIn")}
+              className="text-primary"
+            />
           </View>
-        </View>
+        </>
       ) : screen === "forgot" ? (
-        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl flex-col">
+        <View className="w-full max-w-md self-center p-4 rounded-xl bg-card">
           <ConvexForgotPasswordForm
             resetPasswordUrl={Linking.createURL("/reset-password")}
             onRequested={() => setScreen("signIn")}
           />
-          <View className="flex-row justify-center items-center px-4 pt-4 gap-1">
+          <View className="px-4 pt-4 items-center">
             <Text className="text-sm text-muted-foreground">Remembered your password? </Text>
-            <FooterLink label="Sign in" onPress={() => setScreen("signIn")} />
+            <FooterLink
+              label="Sign in"
+              onPress={() => setScreen("signIn")}
+              className="text-primary"
+            />
           </View>
         </View>
       ) : (
-        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl flex-col">
+        <>
           <ExpoAuthClientSignInScreen
             signUpUrl=""
             forceRedirectUrl={redirectUrl}
@@ -382,22 +375,30 @@ function InnerApp() {
             onPress={async () => {
               await authClient?.signIn.anonymous({});
             }}
-            className="w-full mt-4 py-3 px-6 rounded-lg bg-primary items-center justify-center"
+            className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center bg-primary"
             accessibilityRole="button"
             accessibilityLabel="Continue as guest"
           >
             <Text className="text-sm font-semibold text-primary-foreground">Continue as guest</Text>
           </Pressable>
-          <View className="flex-row justify-center items-center mt-4 gap-1">
+          <View className="flex-row mt-4 self-center">
             <Text className="text-sm text-muted-foreground">Don’t have an account? </Text>
-            <FooterLink label="Sign up" onPress={() => setScreen("signUp")} />
+            <FooterLink
+              label="Sign up"
+              onPress={() => setScreen("signUp")}
+              className="text-primary"
+            />
           </View>
-          <View className="flex-row justify-center items-center mt-2">
-            <FooterLink label="Forgot password?" onPress={() => setScreen("forgot")} />
+          <View className="flex-row mt-2 self-center">
+            <FooterLink
+              label="Forgot password?"
+              onPress={() => setScreen("forgot")}
+              className="text-primary"
+            />
           </View>
-        </View>
+        </>
       )}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -412,31 +413,32 @@ function SignedInView({
   const session = authClient?.useSession();
   const user = session?.data?.user;
   const currentToken = session?.data?.session?.token;
+  const rootClassName = useRootClassName();
 
   return (
-    <View className="flex-1 p-6 bg-background">
+    <View className={clsx(rootClassName, "p-6")}>
       <View className="rounded-xl p-4 mb-4 bg-card">
         <Text className="text-lg font-bold text-foreground">Signed in</Text>
-        {user?.name ? <Text className="text-base text-foreground">{user.name}</Text> : null}
+        {user?.name ? <Text className="text-base text-muted-foreground">{user.name}</Text> : null}
         {user?.email ? <Text className="text-sm text-muted-foreground">{user.email}</Text> : null}
-        <Text className="text-xs text-muted-foreground mt-2" numberOfLines={1} ellipsizeMode="tail">
+        <Text className="text-xs mt-2 text-muted-foreground" numberOfLines={1} ellipsizeMode="tail">
           Token: {currentToken ?? "none"}
         </Text>
       </View>
       <ConvexSessionList currentSessionToken={currentToken ?? null} />
       <Pressable
         onPress={onEnableTwoFactor}
-        className="w-full mt-4 py-3 px-6 rounded-lg items-center justify-center border border-input bg-background"
+        className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center border border-border bg-card"
         accessibilityRole="button"
         accessibilityLabel="Enable two-factor auth"
       >
-        <Text className="text-sm font-semibold text-foreground">Enable two-factor auth</Text>
+        <Text className="text-sm font-semibold text-card-foreground">Enable two-factor auth</Text>
       </Pressable>
       <Pressable
         onPress={async () => {
           await onSignOut();
         }}
-        className="w-full mt-4 py-3 px-6 rounded-lg items-center justify-center bg-destructive"
+        className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center bg-destructive"
         accessibilityRole="button"
         accessibilityLabel="Sign out"
       >

@@ -176,6 +176,9 @@ importers:
       '@vortex-api/convex-auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
       convex:
         specifier: ^1.45.0
         version: 1.45.0(react@19.2.8)
