@@ -45,6 +45,7 @@ export * from "./convex-profile-edit-form";
 export * from "./convex-profile-image-uploader";
 export * from "./convex-reset-password-form";
 export * from "./convex-session-list";
+export * from "./admin-dashboard";
 export * from "./convex-verify-email-screen";
 export * from "./convex-verify-two-factor-form";
 export * from "./webhooks";
