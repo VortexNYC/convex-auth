@@ -186,7 +186,7 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
         autoCapitalize="none"
         autoComplete="email"
         textContentType="emailAddress"
-        keyboardType="default"
+        keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
       />
@@ -319,28 +319,37 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
       <Text style={s.title}>{copy.title}</Text>
       <Text style={s.description}>{copy.description}</Text>
       <TextInput
-        className="w-full"
+        className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
         style={[s.input, s.inputText]}
         placeholder={copy.namePlaceholder}
         accessibilityLabel="Name"
+        autoCapitalize="words"
+        autoCorrect={false}
+        autoComplete="name"
+        textContentType="name"
         value={name}
         onChangeText={setName}
       />
       <TextInput
-        className="w-full"
+        className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
         style={[s.input, s.inputText]}
         placeholder={copy.emailPlaceholder}
         accessibilityLabel="Email"
         autoCapitalize="none"
+        autoComplete="email"
+        textContentType="emailAddress"
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
       />
       <TextInput
-        className="w-full"
+        className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
         style={[s.input, s.inputText]}
         placeholder={copy.passwordPlaceholder}
         accessibilityLabel="Password"
+        autoCapitalize="none"
+        autoComplete="new-password"
+        textContentType="newPassword"
         secureTextEntry
         value={password}
         onChangeText={setPassword}
