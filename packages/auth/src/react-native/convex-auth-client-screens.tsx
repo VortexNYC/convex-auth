@@ -179,20 +179,25 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
       <Text style={s.title}>{copy.title}</Text>
       <Text style={s.description}>{copy.description}</Text>
       <TextInput
-        className="w-full"
+        className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
         style={[s.input, s.inputText]}
         placeholder={copy.emailPlaceholder}
         accessibilityLabel="Email"
         autoCapitalize="none"
-        keyboardType="email-address"
+        autoComplete="email"
+        textContentType="emailAddress"
+        keyboardType="default"
         value={email}
         onChangeText={setEmail}
       />
       <TextInput
-        className="w-full"
+        className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
         style={[s.input, s.inputText]}
         placeholder={copy.passwordPlaceholder}
         accessibilityLabel="Password"
+        autoCapitalize="none"
+        autoComplete="password"
+        textContentType="password"
         secureTextEntry
         value={password}
         onChangeText={setPassword}
