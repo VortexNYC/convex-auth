@@ -18,13 +18,25 @@ type AdminUserListItem = Pick<
   | "createdAt"
 >;
 
+const adminUserValidator = v.object({
+  _id: v.id("users"),
+  email: v.optional(v.string()),
+  name: v.optional(v.string()),
+  image: v.optional(v.string()),
+  isActive: v.boolean(),
+  isSuperAdmin: v.optional(v.boolean()),
+  bannedUntil: v.optional(v.number()),
+  banReason: v.optional(v.string()),
+  createdAt: v.number(),
+});
+
 export const listUsers = query({
   args: {
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
   },
   returns: v.object({
-    users: v.array(v.any()),
+    users: v.array(adminUserValidator),
     nextCursor: v.optional(v.string()),
     hasNextPage: v.boolean(),
   }),
@@ -40,9 +52,9 @@ export const listUsers = query({
 
     const limit = Math.min(args.limit ?? 20, MAX_PAGE_LIMIT);
     const q = ctx.db.query("users").order("desc");
-    const page = await q.take(limit);
+    const paginated = await q.paginate({ cursor: args.cursor ?? null, numItems: limit });
 
-    const users: AdminUserListItem[] = page.map((user) => ({
+    const users: AdminUserListItem[] = paginated.page.map((user) => ({
       _id: user._id,
       email: user.email,
       name: user.name,
@@ -56,22 +68,36 @@ export const listUsers = query({
 
     return {
       users,
-      nextCursor: undefined,
-      hasNextPage: users.length === limit,
+      nextCursor: paginated.continueCursor,
+      hasNextPage: !paginated.isDone,
     };
   },
 });
 
 export const getUser = query({
   args: { userId: v.id("users") },
-  returns: v.any(),
-  handler: async (ctx, args): Promise<Doc<"users"> | null> => {
+  returns: v.union(adminUserValidator, v.null()),
+  handler: async (ctx, args): Promise<AdminUserListItem | null> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("Not authenticated");
     }
     await requireSuperAdmin(ctx, identity.subject);
-    return await ctx.db.get("users", args.userId);
+    const user = await ctx.db.get("users", args.userId);
+    if (user === null) {
+      return null;
+    }
+    return {
+      _id: user._id,
+      email: user.email,
+      name: user.name,
+      image: user.image,
+      isActive: user.isActive,
+      isSuperAdmin: user.isSuperAdmin,
+      bannedUntil: user.bannedUntil,
+      banReason: user.banReason,
+      createdAt: user.createdAt,
+    };
   },
 });
 
