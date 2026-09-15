@@ -175,7 +175,7 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
   }
 
   return (
-    <View className="w-full max-w-md self-center p-6 bg-card rounded-xl" style={s.root}>
+    <View className="w-full flex-col" style={s.root}>
       <Text className="text-2xl font-bold text-foreground mb-2" style={s.title}>
         {copy.title}
       </Text>
@@ -334,7 +334,7 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
   }
 
   return (
-    <View className="w-full max-w-md self-center p-6 bg-card rounded-xl" style={s.root}>
+    <View className="w-full flex-col" style={s.root}>
       <Text className="text-2xl font-bold text-foreground mb-2" style={s.title}>
         {copy.title}
       </Text>

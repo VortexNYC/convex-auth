@@ -42,10 +42,6 @@ const socialProviders = [
   { provider: "discord", label: "Discord" },
 ] as const;
 
-const authScreenRootOverride = {
-  root: { padding: 0 },
-};
-
 function useTheme() {
   const colorScheme = useColorScheme() ?? "light";
   const statusBarStyle: "light" | "dark" = colorScheme === "dark" ? "light" : "dark";
@@ -252,13 +248,13 @@ function InnerApp() {
         className="flex-1 bg-background"
         contentContainerStyle={{
           flexGrow: 1,
-          justifyContent: "center",
+          justifyContent: "flex-start",
           alignItems: "center",
           padding: 24,
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl">
+        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl flex-col">
           <ConvexEnableTwoFactorForm
             issuer="convex-auth-rn"
             onEnrolled={() => setScreen("signIn")}
@@ -277,13 +273,13 @@ function InnerApp() {
         className="flex-1 bg-background"
         contentContainerStyle={{
           flexGrow: 1,
-          justifyContent: "center",
+          justifyContent: "flex-start",
           alignItems: "center",
           padding: 24,
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl">
+        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl flex-col">
           <ConvexResetPasswordForm
             token={deepLink?.token ?? ""}
             onReset={() => setScreen("signIn")}
@@ -303,13 +299,13 @@ function InnerApp() {
         className="flex-1 bg-background"
         contentContainerStyle={{
           flexGrow: 1,
-          justifyContent: "center",
+          justifyContent: "flex-start",
           alignItems: "center",
           padding: 24,
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl">
+        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl flex-col">
           <ConvexVerifyEmailScreen
             token={deepLink?.token ?? ""}
             userEmail={session.data?.user?.email ?? null}
@@ -342,20 +338,19 @@ function InnerApp() {
       className="flex-1 bg-background"
       contentContainerStyle={{
         flexGrow: 1,
-        justifyContent: "center",
+        justifyContent: "flex-start",
         alignItems: "center",
         padding: 24,
       }}
       keyboardShouldPersistTaps="handled"
     >
       {screen === "signUp" ? (
-        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl">
+        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl flex-col">
           <ExpoAuthClientSignUpScreen
             signInUrl=""
             forceRedirectUrl={redirectUrl}
             title="Create account"
             description="Sign up with Google, GitHub, Discord, or email."
-            styles={authScreenRootOverride}
             socialProviders={socialProviders}
           />
           <View className="flex-row justify-center items-center mt-4 gap-1">
@@ -364,7 +359,7 @@ function InnerApp() {
           </View>
         </View>
       ) : screen === "forgot" ? (
-        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl">
+        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl flex-col">
           <ConvexForgotPasswordForm
             resetPasswordUrl={Linking.createURL("/reset-password")}
             onRequested={() => setScreen("signIn")}
@@ -375,13 +370,12 @@ function InnerApp() {
           </View>
         </View>
       ) : (
-        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl">
+        <View className="w-full max-w-md self-center p-6 bg-card rounded-xl flex-col">
           <ExpoAuthClientSignInScreen
             signUpUrl=""
             forceRedirectUrl={redirectUrl}
             title="Sign in"
             description="Sign in with Google, GitHub, Discord, or email."
-            styles={authScreenRootOverride}
             socialProviders={socialProviders}
           />
           <Pressable
