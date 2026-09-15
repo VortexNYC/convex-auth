@@ -2,18 +2,20 @@
 
 import { describe, expect, it } from "vitest";
 import { convexTest } from "convex-test";
+import { makeFunctionReference } from "convex/server";
 import schema from "../schema.js";
 import type { Id } from "../_generated/dataModel.js";
-import {
-  getOrganization,
-  listMembers,
-  listOrganizations,
-  listRoles,
-  removeMember,
-  updateMemberRole,
-} from "./organisations.js";
 
-const modules = import.meta.glob("../**/*.*s");
+const rawModules = import.meta.glob(["../_generated/**/*.*s", "./*.*s"]);
+const modules = Object.fromEntries(
+  Object.entries(rawModules).map(([path, loader]) => {
+    const withoutExt = path.replace(/\.[^.]+$/, "");
+    const normalized = withoutExt.startsWith("./")
+      ? withoutExt.replace("./", "admin/")
+      : withoutExt.replace("../", "");
+    return [normalized, loader];
+  }),
+);
 
 async function insertUser(
   t: ReturnType<typeof convexTest>,
@@ -107,7 +109,9 @@ describe("admin organisations", () => {
 
     const result = await t
       .withIdentity({ subject: adminId })
-      .query(listOrganizations, { limit: 10 });
+      .query(makeFunctionReference<"query">("admin/organisations:listOrganizations"), {
+        limit: 10,
+      });
 
     expect(result.organizations).toHaveLength(1);
     expect(result.organizations[0].slug).toBe("acme");
@@ -117,9 +121,11 @@ describe("admin organisations", () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t, "user@example.com", "User");
 
-    await expect(t.withIdentity({ subject: userId }).query(listOrganizations, {})).rejects.toThrow(
-      "Forbidden: super admin required",
-    );
+    await expect(
+      t
+        .withIdentity({ subject: userId })
+        .query(makeFunctionReference<"query">("admin/organisations:listOrganizations"), {}),
+    ).rejects.toThrow("Forbidden: super admin required");
   });
 
   it("gets an organization by id", async () => {
@@ -129,7 +135,9 @@ describe("admin organisations", () => {
 
     const organization = await t
       .withIdentity({ subject: adminId })
-      .query(getOrganization, { organizationId: orgId });
+      .query(makeFunctionReference<"query">("admin/organisations:getOrganization"), {
+        organizationId: orgId,
+      });
 
     expect(organization?.name).toBe("Acme");
   });
@@ -144,7 +152,10 @@ describe("admin organisations", () => {
 
     const result = await t
       .withIdentity({ subject: adminId })
-      .query(listMembers, { organizationId: orgId, limit: 10 });
+      .query(makeFunctionReference<"query">("admin/organisations:listMembers"), {
+        organizationId: orgId,
+        limit: 10,
+      });
 
     expect(result.members).toHaveLength(1);
     expect(result.members[0].userId).toBe(userId);
@@ -159,7 +170,9 @@ describe("admin organisations", () => {
 
     const result = await t
       .withIdentity({ subject: adminId })
-      .query(listRoles, { organizationId: orgId });
+      .query(makeFunctionReference<"query">("admin/organisations:listRoles"), {
+        organizationId: orgId,
+      });
 
     expect(result.roles).toHaveLength(2);
     expect(result.roles.map((r) => r._id)).toContain(adminRoleId);
@@ -177,7 +190,10 @@ describe("admin organisations", () => {
 
     const result = await t
       .withIdentity({ subject: adminId })
-      .mutation(updateMemberRole, { memberId, roleId: adminRoleId });
+      .mutation(makeFunctionReference<"mutation">("admin/organisations:updateMemberRole"), {
+        memberId,
+        roleId: adminRoleId,
+      });
     expect(result.roleId).toBe(adminRoleId);
 
     const member = await t.run((ctx) => ctx.db.get("organization_members", memberId));
@@ -200,7 +216,11 @@ describe("admin organisations", () => {
     const roleId = await insertRole(t, orgId, "member", "Member", adminId);
     const memberId = await insertMember(t, orgId, roleId, userId);
 
-    const result = await t.withIdentity({ subject: adminId }).mutation(removeMember, { memberId });
+    const result = await t
+      .withIdentity({ subject: adminId })
+      .mutation(makeFunctionReference<"mutation">("admin/organisations:removeMember"), {
+        memberId,
+      });
     expect(result.removed).toBe(true);
 
     const member = await t.run((ctx) => ctx.db.get("organization_members", memberId));
