@@ -2,13 +2,13 @@
 
 ## Capability map
 
-| Module | Responsibility | Depends on |
-|---|---|---|
-| admin-core | RBAC gate, viewer resolution, audit context | auth core, permissions engine |
-| users-admin | List, create, update, ban/unban, delete users | admin-core |
-| sessions-admin | List and revoke any user session, revoke all sessions for a user | admin-core, users-admin |
-| organisations-admin | List orgs, manage members and role templates | admin-core, users-admin |
-| audit-log | Read-only admin action log | admin-core, all admin modules |
+| Module              | Responsibility                                                   | Depends on                    |
+| ------------------- | ---------------------------------------------------------------- | ----------------------------- |
+| admin-core          | RBAC gate, viewer resolution, audit context                      | auth core, permissions engine |
+| users-admin         | List, create, update, ban/unban, delete users                    | admin-core                    |
+| sessions-admin      | List and revoke any user session, revoke all sessions for a user | admin-core, users-admin       |
+| organisations-admin | List orgs, manage members and role templates                     | admin-core, users-admin       |
+| audit-log           | Read-only admin action log                                       | admin-core, all admin modules |
 
 Build order: `admin-core` → `users-admin` / `sessions-admin` / `organisations-admin` (parallel) → `audit-log`
 
