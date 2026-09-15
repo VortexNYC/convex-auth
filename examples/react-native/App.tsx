@@ -230,6 +230,8 @@ function InnerApp() {
   const authClient = useConvexAuthClientContext();
   const session = authClient?.useSession();
   const rootClassName = useRootClassName();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   useDeepLink(setDeepLink);
 
@@ -331,8 +333,8 @@ function InnerApp() {
   }
 
   return (
-    <ScrollView className={clsx(rootClassName)} style={{ flex: 1 }}>
-      <View className="w-full" style={{ padding: 24 }}>
+    <ScrollView style={{ flex: 1 }}>
+      <View className={clsx("w-full bg-background", isDark && "dark")} style={{ padding: 24 }}>
         {screen === "signUp" ? (
           <>
             <ExpoAuthClientSignUpScreen
@@ -420,11 +422,12 @@ function SignedInView({
   const session = authClient?.useSession();
   const user = session?.data?.user;
   const currentToken = session?.data?.session?.token;
-  const rootClassName = useRootClassName();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   return (
-    <ScrollView className={clsx(rootClassName)} style={{ flex: 1 }}>
-      <View className="w-full" style={{ padding: 24 }}>
+    <ScrollView style={{ flex: 1 }}>
+      <View className={clsx("w-full bg-background", isDark && "dark")} style={{ padding: 24 }}>
         <View className="rounded-xl p-4 mb-4 bg-card">
           <Text className="text-lg font-bold text-foreground">Signed in</Text>
           {user?.name ? <Text className="text-base text-muted-foreground">{user.name}</Text> : null}
