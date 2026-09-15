@@ -82,7 +82,7 @@ examples/react/src/AdminDashboardPanel.tsx     # demo page
 ## Boundaries
 
 - **Always:** implement admin operations as Convex-native queries/mutations; reuse the permission engine and role templates; keep public APIs typed; write tests for new functionality.
-- **Ask first:** adding new database tables or indexes; adding app-level super-admin roles; adding impersonation; adding user hard-delete; changing CI.
+- **Ask first:** adding new database tables or indexes; choosing the source of truth for the app-level `admin` role; changing CI.
 - **Never:** import `better-auth` as a runtime dependency; expose admin operations without authorisation checks; mix self-service and privileged admin logic in one component.
 
 ## Success criteria
@@ -94,8 +94,13 @@ examples/react/src/AdminDashboardPanel.tsx     # demo page
 - Dark mode, responsive, and keyboard navigable.
 - `check`, `typecheck`, `build`, and `test` pass.
 
+## Decisions
+
+1. **Scope:** App-scoped super-admin for v0. The Better Auth `admin` plugin is app-scoped, and the dashboard is for managing the whole application. Org-scoped admin can be added later through the existing role catalog and permission engine.
+2. **Impersonation:** Included in v0 if we can mint an impersonation session token safely. Better Auth supports `impersonateUser` and `stopImpersonating`; the Convex-native equivalent will be an action that issues a short-lived token for the target user.
+3. **User lifecycle:** Include both `ban`/`unban` (with reason and optional expiry) and hard `removeUser` in v0. A time-bound ban is the suspend mechanism, so a separate `suspend` operation is not needed.
+
 ## Open questions
 
-1. Is the first version app-scoped (super-admin) or org-scoped (org owner/admin), or both?
-2. Should user impersonation be in v0 or a follow-up slice?
-3. Should user deletion be hard delete or a banned/suspended flag in v0?
+1. What is the source of truth for the app-level `admin` role — a field on the user table, a permission from the role catalog, or a configurable `adminUserIds` list?
+2. Should audit records live in a new `authAdminAudits` table or be written to the existing audit pipeline?
