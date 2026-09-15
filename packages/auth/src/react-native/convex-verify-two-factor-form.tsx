@@ -17,11 +17,13 @@ import {
   Switch,
   Text,
   TextInput,
+  useColorScheme,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { clsx } from "clsx";
 
 import {
   useConvexAuthVerifyBackupCode,
@@ -47,6 +49,23 @@ export type ExpoVerifyTwoFactorFormStyles = {
   errorState?: StyleProp<TextStyle>;
 };
 
+export type ExpoVerifyTwoFactorFormClassNames = {
+  root?: string;
+  header?: string;
+  title?: string;
+  description?: string;
+  field?: string;
+  label?: string;
+  input?: string;
+  submitButton?: string;
+  submitButtonText?: string;
+  toggleButton?: string;
+  toggleButtonText?: string;
+  trustToggle?: string;
+  trustToggleLabel?: string;
+  errorState?: string;
+};
+
 export type ExpoVerifyTwoFactorFormCopy = {
   title?: string;
   description?: string;
@@ -66,6 +85,7 @@ export type ExpoVerifyTwoFactorFormProps = {
   authClient?: ConvexBetterAuthClient | null;
   showTrustDevice?: boolean;
   styles?: ExpoVerifyTwoFactorFormStyles;
+  classNames?: ExpoVerifyTwoFactorFormClassNames;
   copy?: ExpoVerifyTwoFactorFormCopy;
   onVerified?: () => void;
 };
@@ -92,6 +112,9 @@ export function ConvexVerifyTwoFactorForm(props: ExpoVerifyTwoFactorFormProps) {
   const authClient = props.authClient ?? contextClient ?? null;
   const copy = { ...DEFAULT_COPY, ...props.copy };
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
   const showTrustDevice = props.showTrustDevice ?? true;
 
   const { verifyTotp, isVerifying: isVerifyingTotp } = useConvexAuthVerifyTotp(authClient);
@@ -127,10 +150,16 @@ export function ConvexVerifyTwoFactorForm(props: ExpoVerifyTwoFactorFormProps) {
     setError(null);
   }
 
+  const rootClassName = clsx(
+    "w-full max-w-md self-center p-4 bg-background",
+    c.root,
+    isDark && "dark",
+  );
+
   if (!isAvailable) {
     return (
-      <View className="w-full py-2" style={s.root}>
-        <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
+      <View className={rootClassName} style={s.root}>
+        <Text className={clsx("text-sm text-destructive mt-2", c.errorState)} style={s.errorState}>
           {copy.unavailable}
         </Text>
       </View>
@@ -138,37 +167,51 @@ export function ConvexVerifyTwoFactorForm(props: ExpoVerifyTwoFactorFormProps) {
   }
 
   return (
-    <View className="w-full py-2" style={s.root}>
-      <View className="px-4 pb-3" style={s.header}>
-        <Text className="text-base font-semibold text-foreground" style={s.title}>
+    <View className={rootClassName} style={s.root}>
+      <View className={clsx("pb-3", c.header)} style={s.header}>
+        <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
           {copy.title}
         </Text>
-        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+        <Text
+          className={clsx("text-sm text-muted-foreground", c.description)}
+          style={s.description}
+        >
           {copy.description}
         </Text>
       </View>
 
-      <View className="px-4 py-2" style={s.field}>
-        <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
+      <View className={clsx("w-full py-2", c.field)} style={s.field}>
+        <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
           {mode === "totp" ? copy.codeLabel : copy.backupCodeLabel}
         </Text>
         <TextInput
           value={code}
           onChangeText={setCode}
           placeholder={mode === "totp" ? copy.codePlaceholder : copy.backupCodePlaceholder}
+          placeholderTextColorClassName="text-muted-foreground"
           autoCapitalize="none"
           autoComplete="one-time-code"
+          textContentType="oneTimeCode"
           keyboardType={mode === "totp" ? "number-pad" : "default"}
-          className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-          placeholderTextColorClassName="accent-muted-foreground"
+          className={clsx(
+            "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+            c.input,
+          )}
           style={s.input}
+          accessibilityLabel={mode === "totp" ? copy.codeLabel : copy.backupCodeLabel}
         />
       </View>
 
       {showTrustDevice ? (
-        <View className="flex-row items-center gap-2 px-4 py-2" style={s.trustToggle}>
+        <View
+          className={clsx("flex-row items-center gap-2 py-2", c.trustToggle)}
+          style={s.trustToggle}
+        >
           <Switch value={trustDevice} onValueChange={setTrustDevice} />
-          <Text className="text-sm text-muted-foreground" style={s.trustToggleLabel}>
+          <Text
+            className={clsx("text-sm text-muted-foreground", c.trustToggleLabel)}
+            style={s.trustToggleLabel}
+          >
             {copy.trustDeviceLabel}
           </Text>
         </View>
@@ -177,15 +220,18 @@ export function ConvexVerifyTwoFactorForm(props: ExpoVerifyTwoFactorFormProps) {
       <Pressable
         onPress={() => void handleSubmit()}
         disabled={isVerifying}
-        className="mx-4 mt-3 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
+        className={clsx("w-full bg-primary rounded-md p-3 mt-4 items-center", c.submitButton)}
         style={s.submitButton}
         accessibilityRole="button"
-        accessibilityLabel={copy.submit}
+        accessibilityLabel={isVerifying ? copy.submitting : copy.submit}
       >
         {isVerifying ? (
-          <ActivityIndicator colorClassName="accent-primary-foreground" />
+          <ActivityIndicator colorClassName="text-primary-foreground" />
         ) : (
-          <Text className="text-sm font-medium text-primary-foreground" style={s.submitButtonText}>
+          <Text
+            className={clsx("text-sm font-semibold text-primary-foreground", c.submitButtonText)}
+            style={s.submitButtonText}
+          >
             {copy.submit}
           </Text>
         )}
@@ -193,16 +239,21 @@ export function ConvexVerifyTwoFactorForm(props: ExpoVerifyTwoFactorFormProps) {
 
       <Pressable
         onPress={() => switchMode(mode === "totp" ? "backup" : "totp")}
-        className="mx-4 mt-2 py-2 items-center"
+        className={clsx("w-full mt-2 py-2 items-center", c.toggleButton)}
         style={s.toggleButton}
+        accessibilityRole="button"
+        accessibilityLabel={mode === "totp" ? copy.useBackupCode : copy.useAuthenticator}
       >
-        <Text className="text-sm text-muted-foreground" style={s.toggleButtonText}>
+        <Text
+          className={clsx("text-sm text-muted-foreground", c.toggleButtonText)}
+          style={s.toggleButtonText}
+        >
           {mode === "totp" ? copy.useBackupCode : copy.useAuthenticator}
         </Text>
       </Pressable>
 
       {error !== null ? (
-        <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
+        <Text className={clsx("text-sm text-destructive mt-2", c.errorState)} style={s.errorState}>
           {error}
         </Text>
       ) : null}
