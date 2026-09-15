@@ -4,11 +4,13 @@ import {
   Pressable,
   Text,
   TextInput,
+  useColorScheme,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { clsx } from "clsx";
 
 import type { ConvexAuthSocialProvider } from "../react/client";
 import { useAuthActions, useConvexAuthClientContext } from "../react/client";
@@ -29,6 +31,20 @@ export type ExpoAuthClientScreenStyles = {
   providerButtonText?: StyleProp<TextStyle>;
 };
 
+export type ExpoAuthClientScreenClassNames = {
+  root?: string;
+  title?: string;
+  description?: string;
+  input?: string;
+  inputText?: string;
+  submitButton?: string;
+  submitButtonText?: string;
+  error?: string;
+  footer?: string;
+  providerButton?: string;
+  providerButtonText?: string;
+};
+
 type NavigateTo = (args: { to: string; replace?: boolean }) => void | Promise<void>;
 
 export type ExpoAuthClientSignInScreenProps = {
@@ -39,6 +55,7 @@ export type ExpoAuthClientSignInScreenProps = {
   title?: string;
   description?: string;
   styles?: ExpoAuthClientScreenStyles;
+  classNames?: ExpoAuthClientScreenClassNames;
   socialProviders?: readonly ConvexAuthSocialProvider[];
   onOpened?: () => void;
   onRuntimeUnavailable?: () => void;
@@ -51,8 +68,11 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [twoFactorPending, setTwoFactorPending] = useState(false);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
   const copy = {
     title: props.title ?? "Sign in",
     description: props.description ?? "Access your workspace.",
@@ -162,9 +182,15 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
     props.onRuntimeUnavailable,
   ]);
 
+  const rootClassName = clsx(
+    "w-full max-w-md self-center p-4 bg-background",
+    c.root,
+    isDark && "dark",
+  );
+
   if (twoFactorPending) {
     return (
-      <View className="w-full" style={s.root}>
+      <View className={rootClassName} style={s.root}>
         <ConvexVerifyTwoFactorForm
           onVerified={() => {
             void props.navigate?.({ to: props.forceRedirectUrl, replace: true });
@@ -175,18 +201,22 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
   }
 
   return (
-    <View className="w-full flex-col" style={s.root}>
-      <Text className="text-2xl font-bold text-foreground mb-2" style={s.title}>
+    <View className={rootClassName} style={s.root}>
+      <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
         {copy.title}
       </Text>
-      <Text className="text-base text-muted-foreground mb-4" style={s.description}>
+      <Text className={clsx("text-sm text-muted-foreground", c.description)} style={s.description}>
         {copy.description}
       </Text>
       <TextInput
-        className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-        placeholderTextColorClassName="accent-muted-foreground"
+        className={clsx(
+          "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+          c.input,
+          c.inputText,
+        )}
         style={[s.input, s.inputText]}
         placeholder={copy.emailPlaceholder}
+        placeholderTextColorClassName="text-muted-foreground"
         accessibilityLabel="Email"
         autoCapitalize="none"
         autoComplete="email"
@@ -196,10 +226,14 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
         onChangeText={setEmail}
       />
       <TextInput
-        className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-        placeholderTextColorClassName="accent-muted-foreground"
+        className={clsx(
+          "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+          c.input,
+          c.inputText,
+        )}
         style={[s.input, s.inputText]}
         placeholder={copy.passwordPlaceholder}
+        placeholderTextColorClassName="text-muted-foreground"
         accessibilityLabel="Password"
         autoCapitalize="none"
         autoComplete="password"
@@ -209,12 +243,12 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
         onChangeText={setPassword}
       />
       {error !== null ? (
-        <Text className="text-destructive text-sm mb-3" style={s.error}>
+        <Text className={clsx("text-sm text-destructive mt-2", c.error)} style={s.error}>
           {error}
         </Text>
       ) : null}
       <Pressable
-        className="w-full mt-3 px-3 py-3 rounded-md bg-primary items-center justify-center"
+        className={clsx("w-full bg-primary rounded-md p-3 mt-4 items-center", c.submitButton)}
         style={s.submitButton}
         onPress={handleSubmit}
         disabled={isSubmitting}
@@ -222,10 +256,10 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
         accessibilityLabel={copy.submitLabel}
       >
         {isSubmitting ? (
-          <ActivityIndicator colorClassName="accent-primary-foreground" />
+          <ActivityIndicator colorClassName="text-primary-foreground" />
         ) : (
           <Text
-            className="text-sm font-semibold text-primary-foreground"
+            className={clsx("text-sm font-semibold text-primary-foreground", c.submitButtonText)}
             style={s.submitButtonText}
           >
             {copy.submitLabel}
@@ -235,14 +269,20 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
       {props.socialProviders?.map((provider) => (
         <Pressable
           key={provider.provider}
-          className="w-full mt-2 px-3 py-3 rounded-md border border-input bg-background items-center justify-center"
+          className={clsx(
+            "w-full border border-border bg-card rounded-md p-3 mt-2 items-center",
+            c.providerButton,
+          )}
           style={s.providerButton}
           onPress={() => handleSocialSignIn(provider.provider)}
           disabled={provider.disabled}
           accessibilityRole="button"
           accessibilityLabel={`Sign in with ${provider.label ?? provider.provider}`}
         >
-          <Text className="text-sm font-medium text-foreground" style={s.providerButtonText}>
+          <Text
+            className={clsx("text-sm text-card-foreground", c.providerButtonText)}
+            style={s.providerButtonText}
+          >
             Sign in with {provider.label ?? provider.provider}
           </Text>
         </Pressable>
@@ -258,6 +298,7 @@ export type ExpoAuthClientSignUpScreenProps = {
   title?: string;
   description?: string;
   styles?: ExpoAuthClientScreenStyles;
+  classNames?: ExpoAuthClientScreenClassNames;
   socialProviders?: readonly ConvexAuthSocialProvider[];
   onOpened?: () => void;
   onRuntimeUnavailable?: () => void;
@@ -271,8 +312,11 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [twoFactorPending, setTwoFactorPending] = useState(false);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
   const copy = {
     title: props.title ?? "Sign up",
     description: props.description ?? "Create an account.",
@@ -321,9 +365,15 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
     props.onRuntimeUnavailable,
   ]);
 
+  const rootClassName = clsx(
+    "w-full max-w-md self-center p-4 bg-background",
+    c.root,
+    isDark && "dark",
+  );
+
   if (twoFactorPending) {
     return (
-      <View className="w-full" style={s.root}>
+      <View className={rootClassName} style={s.root}>
         <ConvexVerifyTwoFactorForm
           onVerified={() => {
             void props.navigate?.({ to: props.forceRedirectUrl, replace: true });
@@ -334,18 +384,22 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
   }
 
   return (
-    <View className="w-full flex-col" style={s.root}>
-      <Text className="text-2xl font-bold text-foreground mb-2" style={s.title}>
+    <View className={rootClassName} style={s.root}>
+      <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
         {copy.title}
       </Text>
-      <Text className="text-base text-muted-foreground mb-4" style={s.description}>
+      <Text className={clsx("text-sm text-muted-foreground", c.description)} style={s.description}>
         {copy.description}
       </Text>
       <TextInput
-        className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-        placeholderTextColorClassName="accent-muted-foreground"
+        className={clsx(
+          "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+          c.input,
+          c.inputText,
+        )}
         style={[s.input, s.inputText]}
         placeholder={copy.namePlaceholder}
+        placeholderTextColorClassName="text-muted-foreground"
         accessibilityLabel="Name"
         autoCapitalize="words"
         autoCorrect={false}
@@ -355,10 +409,14 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
         onChangeText={setName}
       />
       <TextInput
-        className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-        placeholderTextColorClassName="accent-muted-foreground"
+        className={clsx(
+          "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+          c.input,
+          c.inputText,
+        )}
         style={[s.input, s.inputText]}
         placeholder={copy.emailPlaceholder}
+        placeholderTextColorClassName="text-muted-foreground"
         accessibilityLabel="Email"
         autoCapitalize="none"
         autoComplete="email"
@@ -368,10 +426,14 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
         onChangeText={setEmail}
       />
       <TextInput
-        className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-        placeholderTextColorClassName="accent-muted-foreground"
+        className={clsx(
+          "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+          c.input,
+          c.inputText,
+        )}
         style={[s.input, s.inputText]}
         placeholder={copy.passwordPlaceholder}
+        placeholderTextColorClassName="text-muted-foreground"
         accessibilityLabel="Password"
         autoCapitalize="none"
         autoComplete="new-password"
@@ -381,12 +443,12 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
         onChangeText={setPassword}
       />
       {error !== null ? (
-        <Text className="text-destructive text-sm mb-3" style={s.error}>
+        <Text className={clsx("text-sm text-destructive mt-2", c.error)} style={s.error}>
           {error}
         </Text>
       ) : null}
       <Pressable
-        className="w-full mt-3 px-3 py-3 rounded-md bg-primary items-center justify-center"
+        className={clsx("w-full bg-primary rounded-md p-3 mt-4 items-center", c.submitButton)}
         style={s.submitButton}
         onPress={handleSubmit}
         disabled={isSubmitting}
@@ -394,10 +456,10 @@ export function ExpoAuthClientSignUpScreen(props: ExpoAuthClientSignUpScreenProp
         accessibilityLabel={copy.submitLabel}
       >
         {isSubmitting ? (
-          <ActivityIndicator colorClassName="accent-primary-foreground" />
+          <ActivityIndicator colorClassName="text-primary-foreground" />
         ) : (
           <Text
-            className="text-sm font-semibold text-primary-foreground"
+            className={clsx("text-sm font-semibold text-primary-foreground", c.submitButtonText)}
             style={s.submitButtonText}
           >
             {copy.submitLabel}
