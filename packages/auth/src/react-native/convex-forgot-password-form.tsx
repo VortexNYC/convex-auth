@@ -16,11 +16,13 @@ import {
   Pressable,
   Text,
   TextInput,
+  useColorScheme,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from "react-native";
+import { clsx } from "clsx";
 
 import {
   useConvexAuthForgotPassword,
@@ -42,6 +44,20 @@ export type ExpoForgotPasswordFormStyles = {
   errorState?: StyleProp<TextStyle>;
 };
 
+export type ExpoForgotPasswordFormClassNames = {
+  root?: string;
+  header?: string;
+  title?: string;
+  description?: string;
+  field?: string;
+  label?: string;
+  input?: string;
+  submitButton?: string;
+  submitButtonText?: string;
+  successState?: string;
+  errorState?: string;
+};
+
 export type ExpoForgotPasswordFormCopy = {
   title?: string;
   description?: string;
@@ -57,6 +73,7 @@ export type ExpoForgotPasswordFormProps = {
   authClient?: ConvexBetterAuthClient | null;
   resetPasswordUrl: string;
   styles?: ExpoForgotPasswordFormStyles;
+  classNames?: ExpoForgotPasswordFormClassNames;
   copy?: ExpoForgotPasswordFormCopy;
   onRequested?: (email: string) => void;
 };
@@ -78,6 +95,9 @@ export function ConvexForgotPasswordForm(props: ExpoForgotPasswordFormProps) {
   const authClient = props.authClient ?? contextClient ?? null;
   const copy = { ...DEFAULT_COPY, ...props.copy };
   const s = props.styles ?? {};
+  const c = props.classNames ?? {};
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
   const { requestReset, isRequesting } = useConvexAuthForgotPassword(authClient);
   const [email, setEmail] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
@@ -104,56 +124,74 @@ export function ConvexForgotPasswordForm(props: ExpoForgotPasswordFormProps) {
     props.onRequested?.(trimmed);
   }
 
+  const rootClassName = clsx(
+    "w-full max-w-md self-center p-4 bg-background",
+    c.root,
+    isDark && "dark",
+  );
+
   return (
-    <View className="w-full py-2" style={s.root}>
-      <View className="px-4 pb-3" style={s.header}>
-        <Text className="text-base font-semibold text-foreground" style={s.title}>
+    <View className={rootClassName} style={s.root}>
+      <View className={clsx("pb-3", c.header)} style={s.header}>
+        <Text className={clsx("text-2xl font-bold text-foreground", c.title)} style={s.title}>
           {copy.title}
         </Text>
-        <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
+        <Text
+          className={clsx("text-sm text-muted-foreground", c.description)}
+          style={s.description}
+        >
           {copy.description}
         </Text>
       </View>
-      <View>
-        <View className="px-4 py-2" style={s.field}>
-          <Text className="text-sm text-muted-foreground mb-1" style={s.label}>
-            {copy.emailLabel}
-          </Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder={copy.emailPlaceholder}
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
-            placeholderTextColorClassName="accent-muted-foreground"
-            style={s.input}
-          />
-        </View>
-        <Pressable
-          onPress={() => void handleSubmit()}
-          disabled={isRequesting}
-          className="mx-4 mt-3 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
-          style={s.submitButton}
-          accessibilityRole="button"
-          accessibilityLabel={copy.submit}
-        >
-          <Text className="text-sm font-medium text-primary-foreground" style={s.submitButtonText}>
-            {isRequesting ? copy.submitting : copy.submit}
-          </Text>
-        </Pressable>
-        {success !== null ? (
-          <Text className="px-4 pt-2 text-sm text-success" style={s.successState}>
-            {success}
-          </Text>
-        ) : null}
-        {error !== null ? (
-          <Text className="text-destructive px-4 pt-2 text-sm" style={s.errorState}>
-            {error}
-          </Text>
-        ) : null}
+      <View className={clsx("w-full", c.field)} style={s.field}>
+        <Text className={clsx("text-sm text-muted-foreground mb-1", c.label)} style={s.label}>
+          {copy.emailLabel}
+        </Text>
+        <TextInput
+          value={email}
+          onChangeText={setEmail}
+          placeholder={copy.emailPlaceholder}
+          placeholderTextColorClassName="text-muted-foreground"
+          autoCapitalize="none"
+          autoComplete="email"
+          textContentType="emailAddress"
+          keyboardType="email-address"
+          className={clsx(
+            "w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm",
+            c.input,
+          )}
+          style={s.input}
+          accessibilityLabel={copy.emailLabel}
+        />
       </View>
+      <Pressable
+        onPress={() => void handleSubmit()}
+        disabled={isRequesting}
+        className={clsx("w-full bg-primary rounded-md p-3 mt-4 items-center", c.submitButton)}
+        style={s.submitButton}
+        accessibilityRole="button"
+        accessibilityLabel={isRequesting ? copy.submitting : copy.submit}
+      >
+        <Text
+          className={clsx("text-sm font-semibold text-primary-foreground", c.submitButtonText)}
+          style={s.submitButtonText}
+        >
+          {isRequesting ? copy.submitting : copy.submit}
+        </Text>
+      </Pressable>
+      {success !== null ? (
+        <Text
+          className={clsx("text-sm text-muted-foreground mt-2", c.successState)}
+          style={s.successState}
+        >
+          {success}
+        </Text>
+      ) : null}
+      {error !== null ? (
+        <Text className={clsx("text-sm text-destructive mt-2", c.errorState)} style={s.errorState}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }
