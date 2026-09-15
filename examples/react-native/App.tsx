@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
+import Constants from "expo-constants";
 import { ConvexReactClient, ConvexProvider } from "convex/react";
 import {
   ConvexEnableTwoFactorForm,
@@ -28,7 +29,7 @@ type Screen = "signIn" | "signUp" | "forgot" | "reset" | "verify" | "enableTwoFa
 
 const TOKEN_KEYS = ["convex-auth-token", "convex-auth-refresh-token", "convex-auth-session-id"];
 
-const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
+const convexUrl = Constants.expoConfig?.extra?.convexUrl ?? process.env.EXPO_PUBLIC_CONVEX_URL;
 if (typeof convexUrl !== "string" || convexUrl.length === 0) {
   throw new Error("EXPO_PUBLIC_CONVEX_URL is not set");
 }
