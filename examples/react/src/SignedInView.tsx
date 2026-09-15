@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AdminPortalPanel } from "./AdminPortalPanel";
 import {
   ConvexApiKeyCreated,
   ConvexApiKeyCreateForm,
@@ -97,6 +98,7 @@ export function SignedInView() {
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
+            <TabsTrigger value="admin-portal">Admin Portal</TabsTrigger>
             <TabsTrigger value="passkeys">Passkeys</TabsTrigger>
             <TabsTrigger value="organizations">Workspaces</TabsTrigger>
             <TabsTrigger value="api-keys">API Keys</TabsTrigger>
@@ -135,6 +137,10 @@ export function SignedInView() {
 
           <TabsContent value="sessions">
             <ConvexSessionList currentSessionToken={token} />
+          </TabsContent>
+
+          <TabsContent value="admin-portal" className="space-y-4">
+            <AdminPortalPanel />
           </TabsContent>
 
           <TabsContent value="passkeys">
