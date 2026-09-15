@@ -17,6 +17,7 @@ import { StatusBar } from "expo-status-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
+import Constants from "expo-constants";
 import { ConvexReactClient, ConvexProvider } from "convex/react";
 import {
   ConvexEnableTwoFactorForm,
@@ -40,9 +41,11 @@ type Screen = "signIn" | "signUp" | "forgot" | "reset" | "verify" | "enableTwoFa
 
 const TOKEN_KEYS = ["convex-auth-token", "convex-auth-refresh-token", "convex-auth-session-id"];
 
-const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
+const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL ?? Constants.expoConfig?.extra?.convexUrl;
 if (typeof convexUrl !== "string" || convexUrl.length === 0) {
-  throw new Error("EXPO_PUBLIC_CONVEX_URL is not set");
+  throw new Error(
+    "EXPO_PUBLIC_CONVEX_URL is not set and Constants.expoConfig.extra.convexUrl is not available",
+  );
 }
 
 const convex = new ConvexReactClient(convexUrl);
@@ -98,6 +101,7 @@ function useTheme() {
       : Dimensions.get("screen").width > 0
         ? Dimensions.get("screen").width
         : 1194;
+
   const formWidth = Math.min(screenWidth - 48, 460);
   const formMarginLeft = Math.max(0, (screenWidth - 48 - formWidth) / 2);
 
@@ -342,9 +346,11 @@ function AuthProviders({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <AuthProviders>
-      <InnerApp />
-    </AuthProviders>
+    <View className="flex-1">
+      <AuthProviders>
+        <InnerApp />
+      </AuthProviders>
+    </View>
   );
 }
 
@@ -448,9 +454,10 @@ function InnerApp() {
   if (screen === "enableTwoFactor" && session.data?.user) {
     return (
       <ScrollView
-        className="flex-1 p-6"
-        contentContainerStyle={{ flexGrow: 1 }}
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}
         style={{ backgroundColor: colors.background }}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={formCardStyle}>
           <ConvexEnableTwoFactorForm
@@ -471,7 +478,12 @@ function InnerApp() {
 
   if (screen === "reset") {
     return (
-      <View className="flex-1 justify-center p-6" style={{ backgroundColor: colors.background }}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}
+        style={{ backgroundColor: colors.background }}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={formCardStyle}>
           <ConvexResetPasswordForm
             token={deepLink?.token ?? ""}
@@ -488,13 +500,18 @@ function InnerApp() {
             />
           </View>
         </View>
-      </View>
+      </ScrollView>
     );
   }
 
   if (screen === "verify") {
     return (
-      <View className="flex-1 justify-center p-6" style={{ backgroundColor: colors.background }}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}
+        style={{ backgroundColor: colors.background }}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={formCardStyle}>
           <ConvexVerifyEmailScreen
             token={deepLink?.token ?? ""}
@@ -513,7 +530,7 @@ function InnerApp() {
             />
           </View>
         </View>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -533,7 +550,12 @@ function InnerApp() {
   const redirectUrl = Linking.createURL("/");
 
   return (
-    <View className="flex-1 justify-center p-6" style={{ backgroundColor: colors.background }}>
+    <ScrollView
+      className="flex-1"
+      contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}
+      style={{ backgroundColor: colors.background }}
+      keyboardShouldPersistTaps="handled"
+    >
       {screen === "signUp" ? (
         <>
           <ExpoAuthClientSignUpScreen
@@ -544,7 +566,10 @@ function InnerApp() {
             styles={authScreenStyles}
             socialProviders={socialProviders}
           />
-          <View className="flex-row mt-4" style={{ marginLeft: formCardStyle.marginLeft }}>
+          <View
+            className="flex-row mt-4"
+            style={{ width: formCardStyle.width, marginLeft: formCardStyle.marginLeft }}
+          >
             <Text className="text-sm" style={{ color: colors.textSubtle }}>
               Already have an account?{" "}
             </Text>
@@ -587,13 +612,19 @@ function InnerApp() {
               await authClient?.signIn.anonymous({});
             }}
             className="self-stretch mt-4 py-3 px-6 rounded-lg items-center"
-            style={buttonPrimaryStyle}
+            style={[
+              buttonPrimaryStyle,
+              { width: formCardStyle.width, marginLeft: formCardStyle.marginLeft },
+            ]}
           >
             <Text className="text-sm font-semibold" style={{ color: colors.primaryText }}>
               Continue as guest
             </Text>
           </Pressable>
-          <View className="flex-row mt-4" style={{ marginLeft: formCardStyle.marginLeft }}>
+          <View
+            className="flex-row mt-4"
+            style={{ width: formCardStyle.width, marginLeft: formCardStyle.marginLeft }}
+          >
             <Text className="text-sm" style={{ color: colors.textSubtle }}>
               Don’t have an account?{" "}
             </Text>
@@ -603,7 +634,10 @@ function InnerApp() {
               style={{ color: colors.primary }}
             />
           </View>
-          <View className="flex-row mt-2" style={{ marginLeft: formCardStyle.marginLeft }}>
+          <View
+            className="flex-row mt-2"
+            style={{ width: formCardStyle.width, marginLeft: formCardStyle.marginLeft }}
+          >
             <FooterLink
               label="Forgot password?"
               onPress={() => setScreen("forgot")}
@@ -612,7 +646,7 @@ function InnerApp() {
           </View>
         </>
       )}
-    </View>
+    </ScrollView>
   );
 }
 

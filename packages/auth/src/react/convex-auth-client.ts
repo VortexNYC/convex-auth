@@ -86,7 +86,7 @@ export function useConvexAuthClient() {
         }
       },
       anonymous: async (args = {}) => {
-        if (actions.signInAnonymous === undefined) {
+        if (typeof actions.signInAnonymous !== "function") {
           return { data: null, error: toError("Anonymous sign-in is not configured") };
         }
         try {
@@ -99,7 +99,7 @@ export function useConvexAuthClient() {
     },
 
     linkAccount: async (args) => {
-      if (actions.linkAnonymousAccount === undefined) {
+      if (typeof actions.linkAnonymousAccount !== "function") {
         return { data: null, error: toError("Anonymous account linking is not configured") };
       }
       try {
