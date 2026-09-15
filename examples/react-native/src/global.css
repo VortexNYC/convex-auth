@@ -2,4 +2,5 @@
 @import "uniwind";
 @import "@vortex-api/convex-auth/ui/styles.css";
 
+@source "..";
 @source "../../../packages/auth/src";

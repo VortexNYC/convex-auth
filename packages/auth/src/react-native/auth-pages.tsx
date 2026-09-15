@@ -151,14 +151,14 @@ export function ExpoAuthPostSignUpPage(props: PostSignUpPageProps) {
 
   return (
     <View className="p-4" style={s.root}>
-      <Text className="text-2xl font-bold" style={s.title}>
+      <Text className="text-2xl font-bold text-foreground" style={s.title}>
         {props.loadingTitle ?? title}
       </Text>
       <Text className="text-muted-foreground" style={s.description}>
         {props.loadingDescription ?? description}
       </Text>
-      {error !== null ? <Text className="text-destructive mt-2">{error}</Text> : null}
-      <ActivityIndicator className="mt-4" />
+      {error !== null ? <Text className="text-destructive text-sm mt-2">{error}</Text> : null}
+      <ActivityIndicator className="mt-4" colorClassName="accent-primary" />
     </View>
   );
 }
@@ -228,14 +228,14 @@ export function ExpoAuthAcceptInvitePage(props: AcceptInvitePageProps) {
   if (error !== null) {
     return (
       <View className="p-4" style={s.root}>
-        <Text className="text-2xl font-bold" style={s.title}>
+        <Text className="text-2xl font-bold text-foreground" style={s.title}>
           {props.errorTitle ?? "Invite unavailable"}
         </Text>
         <Text className="text-muted-foreground" style={s.description}>
           {props.errorDescription ??
             "This invite link is missing required access details or has expired."}
         </Text>
-        <Text className="text-destructive mt-2" style={s.error}>
+        <Text className="text-destructive text-sm mt-2" style={s.error}>
           {error}
         </Text>
       </View>
@@ -244,7 +244,7 @@ export function ExpoAuthAcceptInvitePage(props: AcceptInvitePageProps) {
 
   return (
     <View className="p-4" style={s.root}>
-      <Text className="text-2xl font-bold" style={s.title}>
+      <Text className="text-2xl font-bold text-foreground" style={s.title}>
         {props.loadingTitle ?? title}
       </Text>
       <Text className="text-muted-foreground" style={s.description}>
@@ -279,7 +279,7 @@ export function ExpoAuthOrganizationChooserPage(props: ExpoAuthOrganizationChoos
   if (currentOrganization === undefined || availableOrganizations === undefined) {
     return (
       <View className="p-4" style={s.root}>
-        <Text className="text-2xl font-bold" style={s.title}>
+        <Text className="text-2xl font-bold text-foreground" style={s.title}>
           {props.loadingTitle ?? title}
         </Text>
         <Text className="text-muted-foreground" style={s.description}>
@@ -293,7 +293,7 @@ export function ExpoAuthOrganizationChooserPage(props: ExpoAuthOrganizationChoos
   if (availableOrganizations.length === 0) {
     return (
       <View className="p-4" style={s.root}>
-        <Text className="text-2xl font-bold" style={s.title}>
+        <Text className="text-2xl font-bold text-foreground" style={s.title}>
           {props.emptyTitle ?? title}
         </Text>
         <Text className="text-muted-foreground" style={s.description}>
@@ -310,14 +310,14 @@ export function ExpoAuthOrganizationChooserPage(props: ExpoAuthOrganizationChoos
           {props.eyebrow}
         </Text>
       ) : null}
-      <Text className="text-2xl font-bold" style={s.title}>
+      <Text className="text-2xl font-bold text-foreground" style={s.title}>
         {title}
       </Text>
       <Text className="text-muted-foreground" style={s.description}>
         {description}
       </Text>
       {selectionError !== null ? (
-        <Text className="text-destructive mt-2">{selectionError}</Text>
+        <Text className="text-destructive text-sm mt-2">{selectionError}</Text>
       ) : null}
       {availableOrganizations.map((organization) => {
         const isSelected = currentOrganization?._id === organization._id;
@@ -325,7 +325,7 @@ export function ExpoAuthOrganizationChooserPage(props: ExpoAuthOrganizationChoos
         return (
           <Pressable
             key={organization._id}
-            className={`border p-3 mt-2 rounded ${isSelected ? "bg-primary" : ""}`}
+            className={`border border-input p-3 mt-2 rounded bg-background items-center justify-center ${isSelected ? "bg-primary" : ""}`}
             style={isSelected ? s.selectedOrganizationButton : s.organizationButton}
             onPress={async () => {
               setSelectionError(null);
@@ -344,10 +344,12 @@ export function ExpoAuthOrganizationChooserPage(props: ExpoAuthOrganizationChoos
             disabled={isBusy}
           >
             {isBusy ? (
-              <ActivityIndicator />
+              <ActivityIndicator
+                colorClassName={isSelected ? "accent-primary-foreground" : "accent-primary"}
+              />
             ) : (
               <Text
-                className={`text-center ${isSelected ? "text-primary-foreground" : ""}`}
+                className={`text-center text-foreground ${isSelected ? "text-primary-foreground" : ""}`}
                 style={s.organizationButtonText}
               >
                 {organization.name}

@@ -82,7 +82,7 @@ function OrganizationProfileHeader(props: {
 }) {
   return (
     <View className="px-4 pb-3" style={props.styles.header}>
-      <Text className="text-base font-semibold" style={props.styles.title}>
+      <Text className="text-base font-semibold text-foreground" style={props.styles.title}>
         {props.copy.title}
       </Text>
       <Text className="text-sm text-muted-foreground mt-0.5" style={props.styles.description}>
@@ -188,6 +188,7 @@ export function ConvexOrganizationProfile(props: ExpoOrgProfileProps) {
           value={name}
           onChangeText={setName}
           className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+          placeholderTextColorClassName="accent-muted-foreground"
           style={s.input}
         />
       </View>
@@ -201,6 +202,7 @@ export function ConvexOrganizationProfile(props: ExpoOrgProfileProps) {
             onChangeText={setSlug}
             autoCapitalize="none"
             className="w-full border border-input bg-background text-foreground rounded-md px-3 py-2 text-sm"
+            placeholderTextColorClassName="accent-muted-foreground"
             style={s.input}
           />
         </View>
@@ -208,15 +210,17 @@ export function ConvexOrganizationProfile(props: ExpoOrgProfileProps) {
       <Pressable
         onPress={() => void handleSubmit()}
         disabled={submitting}
-        className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input items-center"
+        className="mx-4 mt-3 px-3 py-2.5 rounded-md bg-primary items-center justify-center"
         style={s.submitButton}
+        accessibilityRole="button"
+        accessibilityLabel={copy.submit}
       >
-        <Text className="text-sm font-medium" style={s.submitButtonText}>
+        <Text className="text-sm font-medium text-primary-foreground" style={s.submitButtonText}>
           {submitting ? copy.submitting : copy.submit}
         </Text>
       </Pressable>
       {success !== null ? (
-        <Text className="px-4 pt-2 text-sm" style={s.successState}>
+        <Text className="text-success px-4 pt-2 text-sm" style={s.successState}>
           {success}
         </Text>
       ) : null}

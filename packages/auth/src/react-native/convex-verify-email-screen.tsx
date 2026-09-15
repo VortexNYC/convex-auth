@@ -125,7 +125,7 @@ export function ConvexVerifyEmailScreen(props: ExpoVerifyEmailScreenProps) {
   return (
     <View className="w-full py-2" style={s.root}>
       <View className="px-4 pb-3" style={s.header}>
-        <Text className="text-base font-semibold" style={s.title}>
+        <Text className="text-base font-semibold text-foreground" style={s.title}>
           {copy.title}
         </Text>
         <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
@@ -137,11 +137,11 @@ export function ConvexVerifyEmailScreen(props: ExpoVerifyEmailScreenProps) {
           {copy.missingTokenMessage}
         </Text>
       ) : status === "verifying" || status === "idle" ? (
-        <Text className="px-4 pt-2 text-sm" style={s.verifyingState}>
+        <Text className="px-4 pt-2 text-sm text-foreground" style={s.verifyingState}>
           {copy.verifying}
         </Text>
       ) : status === "verified" ? (
-        <Text className="px-4 pt-2 text-sm" style={s.verifiedState}>
+        <Text className="px-4 pt-2 text-sm text-success" style={s.verifiedState}>
           {copy.verified}
         </Text>
       ) : (
@@ -153,16 +153,18 @@ export function ConvexVerifyEmailScreen(props: ExpoVerifyEmailScreenProps) {
             <Pressable
               onPress={() => void handleResend()}
               disabled={isResending}
-              className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input items-center"
+              className="mx-4 mt-3 px-3 py-2.5 rounded-md border border-input bg-background items-center justify-center"
               style={s.resendButton}
+              accessibilityRole="button"
+              accessibilityLabel={copy.resend}
             >
-              <Text className="text-sm font-medium" style={s.resendButtonText}>
+              <Text className="text-sm font-medium text-foreground" style={s.resendButtonText}>
                 {isResending ? copy.resending : copy.resend}
               </Text>
             </Pressable>
           ) : null}
           {resendResult !== null ? (
-            <Text className="px-4 pt-2 text-sm" style={s.verifiedState}>
+            <Text className="px-4 pt-2 text-sm text-success" style={s.verifiedState}>
               {resendResult}
             </Text>
           ) : null}

@@ -5,124 +5,133 @@
  * greenfield app:
  *
  *   @import "tailwindcss";
+ *   @import "uniwind";
  *   @import "convex-auth-ui/styles.css";
  *   @source "../node_modules/convex-auth-ui/dist";
  *
  * Apps that already define these tokens keep their own values — the UI
  * primitives only reference the token NAMES, never hard-coded colors.
  */
-@custom-variant dark (&:is(.dark *));
+@custom-variant light {
+  &:where(.light, .light *) {
+    @slot;
+  }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.6 0.13 160);
-  --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.75 0.15 80);
-  --warning-foreground: oklch(0.205 0 0);
-  --info: oklch(0.6 0.13 230);
-  --info-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.5rem;
-
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  @media (prefers-color-scheme: light) {
+    &:not(:where(.light, .light *, .dark, .dark *)) {
+      @slot;
+    }
+  }
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.65 0.14 160);
-  --success-foreground: oklch(0.145 0 0);
-  --warning: oklch(0.8 0.16 80);
-  --warning-foreground: oklch(0.145 0 0);
-  --info: oklch(0.68 0.13 230);
-  --info-foreground: oklch(0.145 0 0);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.556 0 0);
+@custom-variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
 
-  --sidebar: oklch(0.17 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.985 0 0);
-  --sidebar-primary-foreground: oklch(0.205 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.556 0 0);
+  @media (prefers-color-scheme: dark) {
+    &:not(:where(.light, .light *, .dark, .dark *)) {
+      @slot;
+    }
+  }
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-warning: var(--warning);
-  --color-warning-foreground: var(--warning-foreground);
-  --color-info: var(--info);
-  --color-info-foreground: var(--info-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 0.125rem);
-  --radius-sm: calc(var(--radius) - 0.25rem);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+@layer theme {
+  :root {
+    @variant light {
+      --color-background: oklch(1 0 0);
+      --color-foreground: oklch(0.145 0 0);
+      --color-card: oklch(1 0 0);
+      --color-card-foreground: oklch(0.145 0 0);
+      --color-popover: oklch(1 0 0);
+      --color-popover-foreground: oklch(0.145 0 0);
+      --color-primary: oklch(0.205 0 0);
+      --color-primary-foreground: oklch(0.985 0 0);
+      --color-secondary: oklch(0.97 0 0);
+      --color-secondary-foreground: oklch(0.205 0 0);
+      --color-muted: oklch(0.97 0 0);
+      --color-muted-foreground: oklch(0.556 0 0);
+      --color-accent: oklch(0.97 0 0);
+      --color-accent-foreground: oklch(0.205 0 0);
+      --color-destructive: oklch(0.577 0.245 27.325);
+      --color-destructive-foreground: oklch(0.985 0 0);
+      --color-success: oklch(0.6 0.13 160);
+      --color-success-foreground: oklch(0.985 0 0);
+      --color-warning: oklch(0.75 0.15 80);
+      --color-warning-foreground: oklch(0.205 0 0);
+      --color-info: oklch(0.6 0.13 230);
+      --color-info-foreground: oklch(0.985 0 0);
+      --color-border: oklch(0.922 0 0);
+      --color-input: oklch(0.922 0 0);
+      --color-ring: oklch(0.708 0 0);
+
+      --color-sidebar: oklch(0.985 0 0);
+      --color-sidebar-foreground: oklch(0.145 0 0);
+      --color-sidebar-primary: oklch(0.205 0 0);
+      --color-sidebar-primary-foreground: oklch(0.985 0 0);
+      --color-sidebar-accent: oklch(0.97 0 0);
+      --color-sidebar-accent-foreground: oklch(0.205 0 0);
+      --color-sidebar-border: oklch(0.922 0 0);
+      --color-sidebar-ring: oklch(0.708 0 0);
+    }
+
+    @variant dark {
+      --color-background: oklch(0.145 0 0);
+      --color-foreground: oklch(0.985 0 0);
+      --color-card: oklch(0.205 0 0);
+      --color-card-foreground: oklch(0.985 0 0);
+      --color-popover: oklch(0.205 0 0);
+      --color-popover-foreground: oklch(0.985 0 0);
+      --color-primary: oklch(0.985 0 0);
+      --color-primary-foreground: oklch(0.205 0 0);
+      --color-secondary: oklch(0.269 0 0);
+      --color-secondary-foreground: oklch(0.985 0 0);
+      --color-muted: oklch(0.269 0 0);
+      --color-muted-foreground: oklch(0.708 0 0);
+      --color-accent: oklch(0.269 0 0);
+      --color-accent-foreground: oklch(0.985 0 0);
+      --color-destructive: oklch(0.577 0.245 27.325);
+      --color-destructive-foreground: oklch(0.985 0 0);
+      --color-success: oklch(0.65 0.14 160);
+      --color-success-foreground: oklch(0.145 0 0);
+      --color-warning: oklch(0.8 0.16 80);
+      --color-warning-foreground: oklch(0.145 0 0);
+      --color-info: oklch(0.68 0.13 230);
+      --color-info-foreground: oklch(0.145 0 0);
+      --color-border: oklch(0.269 0 0);
+      --color-input: oklch(0.269 0 0);
+      --color-ring: oklch(0.556 0 0);
+
+      --color-sidebar: oklch(0.17 0 0);
+      --color-sidebar-foreground: oklch(0.985 0 0);
+      --color-sidebar-primary: oklch(0.985 0 0);
+      --color-sidebar-primary-foreground: oklch(0.205 0 0);
+      --color-sidebar-accent: oklch(0.269 0 0);
+      --color-sidebar-accent-foreground: oklch(0.985 0 0);
+      --color-sidebar-border: oklch(0.269 0 0);
+      --color-sidebar-ring: oklch(0.556 0 0);
+    }
+
+    --radius: 0.5rem;
+    --radius-sm: calc(var(--radius) - 0.25rem);
+    --radius-md: calc(var(--radius) - 0.125rem);
+    --radius-lg: var(--radius);
+  }
+}
+
+/*
+ * Uniwind accent helpers for non-style color props.
+ * These are used by `placeholderTextColorClassName` and `colorClassName`
+ * on wrapped React Native components.
+ */
+@utility accent-muted-foreground {
+  accent-color: var(--color-muted-foreground);
+}
+
+@utility accent-primary {
+  accent-color: var(--color-primary);
+}
+
+@utility accent-primary-foreground {
+  accent-color: var(--color-primary-foreground);
 }

@@ -119,7 +119,7 @@ export function ConvexProfileImageUploader(props: ExpoProfileImageUploaderProps)
   return (
     <View className="w-full py-2" style={s.root}>
       <View className="px-4 pb-3" style={s.header}>
-        <Text className="text-base font-semibold" style={s.title}>
+        <Text className="text-base font-semibold text-foreground" style={s.title}>
           {copy.title}
         </Text>
         <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
@@ -141,10 +141,12 @@ export function ConvexProfileImageUploader(props: ExpoProfileImageUploaderProps)
         <Pressable
           onPress={() => void handlePick()}
           disabled={isUploading}
-          className="mt-3 px-4 py-2.5 rounded-md border border-input"
+          className="mt-3 px-4 py-2.5 rounded-md bg-primary items-center justify-center"
           style={s.pickButton}
+          accessibilityRole="button"
+          accessibilityLabel={copy.pick}
         >
-          <Text className="text-sm font-medium" style={s.pickButtonText}>
+          <Text className="text-sm font-medium text-primary-foreground" style={s.pickButtonText}>
             {isUploading ? copy.uploading : copy.pick}
           </Text>
         </Pressable>

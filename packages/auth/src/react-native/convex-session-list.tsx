@@ -132,7 +132,7 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
     <View className="w-full py-2" style={s.root}>
       <View className="flex-row items-start px-4 pb-3 gap-3" style={s.header}>
         <View className="flex-1">
-          <Text className="text-base font-semibold" style={s.title}>
+          <Text className="text-base font-semibold text-foreground" style={s.title}>
             {copy.title}
           </Text>
           <Text className="text-sm text-muted-foreground mt-0.5" style={s.description}>
@@ -143,10 +143,12 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
           <Pressable
             onPress={() => void handleRevokeOthers()}
             disabled={isRevoking}
-            className="px-3 py-1.5 rounded-md border border-input"
+            className="px-3 py-1.5 rounded-md border border-input bg-background items-center justify-center"
             style={s.revokeOthersButton}
+            accessibilityRole="button"
+            accessibilityLabel={copy.revokeOthersButton}
           >
-            <Text className="text-sm" style={s.revokeOthersButtonText}>
+            <Text className="text-sm text-foreground" style={s.revokeOthersButtonText}>
               {isRevoking ? copy.revokingOthersButton : copy.revokeOthersButton}
             </Text>
           </Pressable>
@@ -155,7 +157,7 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
 
       {isLoading ? (
         <View className="p-4 items-center gap-2" style={s.loadingState}>
-          <ActivityIndicator />
+          <ActivityIndicator colorClassName="accent-primary" />
           <Text className="text-xs text-muted-foreground" style={s.itemMeta}>
             {copy.loading}
           </Text>
@@ -216,7 +218,7 @@ function SessionRow(args: {
       style={[s.item, isCurrent ? s.itemCurrent : undefined]}
     >
       <View className="flex-1">
-        <Text className="text-sm font-medium" style={s.itemPrimary}>
+        <Text className="text-sm font-medium text-foreground" style={s.itemPrimary}>
           {isCurrent ? copy.currentBadge : (session.userAgent ?? "Device")}
         </Text>
         <Text className="text-xs text-muted-foreground mt-0.5" style={s.itemMeta}>
@@ -227,10 +229,12 @@ function SessionRow(args: {
         <Pressable
           onPress={onRevoke}
           disabled={isRevoking}
-          className="px-3 py-1.5 rounded-md border border-input"
+          className="px-3 py-1.5 rounded-md border border-input bg-background items-center justify-center"
           style={s.revokeButton}
+          accessibilityRole="button"
+          accessibilityLabel={copy.revoke}
         >
-          <Text className="text-sm" style={s.revokeButtonText}>
+          <Text className="text-sm text-foreground" style={s.revokeButtonText}>
             {isRevoking ? copy.revoking : copy.revoke}
           </Text>
         </Pressable>
