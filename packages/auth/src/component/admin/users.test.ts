@@ -227,4 +227,125 @@ describe("admin users", () => {
         .mutation(makeFunctionReference<"mutation">("admin/users:claimSuperAdmin"), {}),
     ).rejects.toThrow("User is not eligible to claim super admin");
   });
+
+  it("creates a user with a password and role", async () => {
+    const t = convexTest(schema, modules);
+    const adminId = await insertUser(t, "admin@example.com", "Admin", true);
+
+    const user = await t
+      .withIdentity({ subject: adminId })
+      .mutation(makeFunctionReference<"mutation">("admin/users:createUser"), {
+        email: "new@example.com",
+        password: "password123",
+        name: "New User",
+        role: "admin",
+      });
+
+    expect(user.email).toBe("new@example.com");
+    expect(user.name).toBe("New User");
+    expect(user.isSuperAdmin).toBe(true);
+    expect(user.roles).toEqual(["admin"]);
+
+    const identity = await t.run((ctx) =>
+      ctx.db
+        .query("auth_identities")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .take(1),
+    );
+    expect(identity).toHaveLength(1);
+
+    const account = await t.run((ctx) =>
+      ctx.db
+        .query("authAccounts")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .take(1),
+    );
+    expect(account).toHaveLength(1);
+  });
+
+  it("rejects creating a user with a duplicate email", async () => {
+    const t = convexTest(schema, modules);
+    const adminId = await insertUser(t, "admin@example.com", "Admin", true);
+    await insertUser(t, "taken@example.com", "Taken");
+
+    await expect(
+      t
+        .withIdentity({ subject: adminId })
+        .mutation(makeFunctionReference<"mutation">("admin/users:createUser"), {
+          email: "taken@example.com",
+          password: "password123",
+          name: "Taken Again",
+        }),
+    ).rejects.toThrow("User already exists");
+  });
+
+  it("sets a user's role and syncs isSuperAdmin", async () => {
+    const t = convexTest(schema, modules);
+    const adminId = await insertUser(t, "admin@example.com", "Admin", true);
+    const userId = await insertUser(t, "user@example.com", "User");
+
+    const user = await t
+      .withIdentity({ subject: adminId })
+      .mutation(makeFunctionReference<"mutation">("admin/users:setRole"), {
+        userId,
+        role: ["admin", "editor"],
+      });
+
+    expect(user.isSuperAdmin).toBe(true);
+    expect(user.roles).toEqual(["admin", "editor"]);
+  });
+
+  it("prevents self-role changes", async () => {
+    const t = convexTest(schema, modules);
+    const adminId = await insertUser(t, "admin@example.com", "Admin", true);
+
+    await expect(
+      t
+        .withIdentity({ subject: adminId })
+        .mutation(makeFunctionReference<"mutation">("admin/users:setRole"), {
+          userId: adminId,
+          role: "user",
+        }),
+    ).rejects.toThrow("Cannot change your own role");
+  });
+
+  it("sets a user's password", async () => {
+    const t = convexTest(schema, modules);
+    const adminId = await insertUser(t, "admin@example.com", "Admin", true);
+    const userId = await insertUser(t, "user@example.com", "User");
+
+    const result = await t
+      .withIdentity({ subject: adminId })
+      .mutation(makeFunctionReference<"mutation">("admin/users:setUserPassword"), {
+        userId,
+        password: "newpassword123",
+      });
+
+    expect(result.userId).toBe(userId);
+
+    const account = await t.run((ctx) =>
+      ctx.db
+        .query("authAccounts")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(1),
+    );
+    expect(account).toHaveLength(1);
+  });
+
+  it("filters users by role and active state", async () => {
+    const t = convexTest(schema, modules);
+    const adminId = await insertUser(t, "admin@example.com", "Admin", true);
+    await insertUser(t, "active@example.com", "Active");
+    const inactiveId = await insertUser(t, "inactive@example.com", "Inactive");
+    await t.run((ctx) => ctx.db.patch(inactiveId, { isActive: false }));
+
+    const result = await t
+      .withIdentity({ subject: adminId })
+      .query(makeFunctionReference<"query">("admin/users:listUsers"), {
+        isActive: true,
+        limit: 10,
+      });
+
+    expect(result.users.every((u) => u.isActive)).toBe(true);
+  });
 });

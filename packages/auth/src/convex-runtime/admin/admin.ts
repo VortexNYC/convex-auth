@@ -69,3 +69,21 @@ export async function createAdminAudit(
     createdAt: args.now ?? Date.now(),
   });
 }
+
+const DEFAULT_IMPERSONATION_SESSION_MS = 60 * 60 * 1000;
+const MAX_IMPERSONATION_SESSION_MS = 24 * 60 * 60 * 1000;
+
+export function getImpersonationSessionDuration(): number {
+  const raw = process.env.IMPERSONATION_SESSION_DURATION_MS;
+  if (raw === undefined || raw === "") {
+    return DEFAULT_IMPERSONATION_SESSION_MS;
+  }
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error("IMPERSONATION_SESSION_DURATION_MS must be a positive number of milliseconds");
+  }
+  if (value > MAX_IMPERSONATION_SESSION_MS) {
+    throw new Error("IMPERSONATION_SESSION_DURATION_MS must not exceed 24 hours");
+  }
+  return value;
+}

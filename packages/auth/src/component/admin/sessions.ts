@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel.js";
 import {
   createAdminAudit,
+  getImpersonationSessionDuration,
   isUserBanned,
   requireSuperAdmin,
 } from "../../convex-runtime/admin/admin.js";
@@ -209,8 +210,6 @@ export const revokeAllSessionsForUser = mutation({
   },
 });
 
-const IMPERSONATION_SESSION_TTL_MS = 60 * 60 * 1000;
-
 export const impersonateUser = mutation({
   args: { userId: v.id("users") },
   returns: v.object({
@@ -250,16 +249,17 @@ export const impersonateUser = mutation({
     }
 
     const now = Date.now();
+    const sessionTtl = getImpersonationSessionDuration();
     const sessionId = crypto.randomUUID();
     const refreshToken = generateVerificationToken();
     const refreshTokenHash = await hashToken(refreshToken);
-    const expiresAt = now + IMPERSONATION_SESSION_TTL_MS;
+    const expiresAt = now + sessionTtl;
 
     const token = await mintToken(
       String(args.userId),
       sessionId,
       { identityId: String(identityRecord._id) },
-      { expiresInSeconds: Math.floor(IMPERSONATION_SESSION_TTL_MS / 1000) },
+      { expiresInSeconds: Math.floor(sessionTtl / 1000) },
     );
 
     await ctx.db.insert("authSessions", {
