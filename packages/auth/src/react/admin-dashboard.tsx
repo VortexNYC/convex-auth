@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
   Input,
+  Label,
   Separator,
   Sheet,
   SheetBody,
@@ -105,6 +106,15 @@ export type ConvexAdminDashboardPagination = {
   loadMore?: (count: number) => void;
 };
 
+export type ConvexAdminDashboardAuditsFilters = {
+  action?: string;
+  targetType?: string;
+  targetId?: string;
+  adminId?: string;
+  from?: string;
+  to?: string;
+};
+
 export type ConvexAdminDashboardProps = {
   users?: ConvexAdminDashboardUser[];
   sessions?: ConvexAdminDashboardSession[];
@@ -123,6 +133,8 @@ export type ConvexAdminDashboardProps = {
   onRemoveUser?: (userId: string) => void;
   onImpersonateUser?: (userId: string) => void;
   onRevokeSession?: (sessionId: string) => void;
+  auditsFilters?: ConvexAdminDashboardAuditsFilters;
+  onAuditsFiltersChange?: (filters: ConvexAdminDashboardAuditsFilters) => void;
   usersPagination?: ConvexAdminDashboardPagination;
   sessionsPagination?: ConvexAdminDashboardPagination;
   organizationsPagination?: ConvexAdminDashboardPagination;
@@ -147,12 +159,15 @@ export function ConvexAdminDashboard({
   onRemoveUser,
   onImpersonateUser,
   onRevokeSession,
+  auditsFilters,
+  onAuditsFiltersChange,
   usersPagination,
   sessionsPagination,
   organizationsPagination,
   auditsPagination,
 }: ConvexAdminDashboardProps) {
   const [active, setActive] = React.useState<AdminSection>(defaultSection);
+  const filterId = React.useId();
 
   const c = {
     usersTitle: "Users",
@@ -393,6 +408,95 @@ export function ConvexAdminDashboard({
               <CardTitle>{c.auditTitle}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
+              {onAuditsFiltersChange && (
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs" htmlFor={`${filterId}-action`}>
+                      Action
+                    </Label>
+                    <Input
+                      id={`${filterId}-action`}
+                      type="search"
+                      placeholder="Action"
+                      value={auditsFilters?.action ?? ""}
+                      onChange={(event) =>
+                        onAuditsFiltersChange({ ...auditsFilters, action: event.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs" htmlFor={`${filterId}-targetType`}>
+                      Target type
+                    </Label>
+                    <Input
+                      id={`${filterId}-targetType`}
+                      type="search"
+                      placeholder="Target type"
+                      value={auditsFilters?.targetType ?? ""}
+                      onChange={(event) =>
+                        onAuditsFiltersChange({
+                          ...auditsFilters,
+                          targetType: event.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs" htmlFor={`${filterId}-targetId`}>
+                      Target ID
+                    </Label>
+                    <Input
+                      id={`${filterId}-targetId`}
+                      type="search"
+                      placeholder="Target ID"
+                      value={auditsFilters?.targetId ?? ""}
+                      onChange={(event) =>
+                        onAuditsFiltersChange({ ...auditsFilters, targetId: event.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs" htmlFor={`${filterId}-adminId`}>
+                      Admin ID
+                    </Label>
+                    <Input
+                      id={`${filterId}-adminId`}
+                      type="search"
+                      placeholder="Admin ID"
+                      value={auditsFilters?.adminId ?? ""}
+                      onChange={(event) =>
+                        onAuditsFiltersChange({ ...auditsFilters, adminId: event.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs" htmlFor={`${filterId}-from`}>
+                      From
+                    </Label>
+                    <Input
+                      id={`${filterId}-from`}
+                      type="date"
+                      value={auditsFilters?.from ?? ""}
+                      onChange={(event) =>
+                        onAuditsFiltersChange({ ...auditsFilters, from: event.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs" htmlFor={`${filterId}-to`}>
+                      To
+                    </Label>
+                    <Input
+                      id={`${filterId}-to`}
+                      type="date"
+                      value={auditsFilters?.to ?? ""}
+                      onChange={(event) =>
+                        onAuditsFiltersChange({ ...auditsFilters, to: event.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
               {audits.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No admin actions recorded.</p>
               ) : (
