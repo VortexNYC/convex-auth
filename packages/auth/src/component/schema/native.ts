@@ -23,6 +23,7 @@ export const authAccounts = defineTable({
 
 export const authSessions = defineTable({
   sessionId: v.string(),
+  familyId: v.optional(v.string()),
   userId: v.id("users"),
   token: v.string(),
   expiresAt: v.number(),
@@ -34,6 +35,7 @@ export const authSessions = defineTable({
   updatedAt: v.number(),
 })
   .index("by_session_id", ["sessionId"])
+  .index("by_family", ["familyId"])
   .index("by_token", ["token"])
   .index("by_user", ["userId"])
   .index("by_expires_at", ["expiresAt"]);
@@ -41,6 +43,7 @@ export const authSessions = defineTable({
 export const authRefreshTokens = defineTable({
   tokenHash: v.string(),
   sessionId: v.string(),
+  familyId: v.optional(v.string()),
   userId: v.id("users"),
   expiresAt: v.number(),
   revokedAt: v.optional(v.number()),
@@ -48,6 +51,7 @@ export const authRefreshTokens = defineTable({
   updatedAt: v.number(),
 })
   .index("by_token_hash", ["tokenHash"])
+  .index("by_family", ["familyId"])
   .index("by_session", ["sessionId"])
   .index("by_user", ["userId"])
   .index("by_expires_at", ["expiresAt"]);

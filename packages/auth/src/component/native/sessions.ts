@@ -1,9 +1,9 @@
 import { v, type Infer } from "convex/values";
 import { getPage } from "convex-helpers/server/pagination";
 import { getOneFrom } from "convex-helpers/server/relationships";
-import { mutation, query, type QueryCtx } from "../_generated/server.js";
+import { mutation, query, type MutationCtx, type QueryCtx } from "../_generated/server.js";
 import schema from "../schema.js";
-import type { Doc } from "../_generated/dataModel.js";
+import type { Doc, Id } from "../_generated/dataModel.js";
 
 const MAX_SESSIONS_PER_USER = 1000;
 
@@ -69,6 +69,7 @@ function toUserReturn(user: Doc<"users">): Infer<typeof userReturnValidator> {
 export const createSession = mutation({
   args: {
     sessionId: v.string(),
+    familyId: v.optional(v.string()),
     userId: v.id("users"),
     token: v.string(),
     expiresAt: v.number(),
@@ -77,6 +78,7 @@ export const createSession = mutation({
     const now = Date.now();
     return await ctx.db.insert("authSessions", {
       ...args,
+      familyId: args.familyId ?? args.sessionId,
       ipAddress: undefined,
       userAgent: undefined,
       revokedAt: undefined,
@@ -89,6 +91,7 @@ export const createSession = mutation({
 export const createSessionAndRefreshToken = mutation({
   args: {
     sessionId: v.string(),
+    familyId: v.optional(v.string()),
     userId: v.id("users"),
     token: v.string(),
     sessionExpiresAt: v.number(),
@@ -98,9 +101,11 @@ export const createSessionAndRefreshToken = mutation({
   returns: v.id("authSessions"),
   handler: async (ctx, args) => {
     const now = Date.now();
+    const familyId = args.familyId ?? args.sessionId;
     await ctx.db.insert("authRefreshTokens", {
       tokenHash: args.refreshTokenHash,
       sessionId: args.sessionId,
+      familyId,
       userId: args.userId,
       expiresAt: args.refreshTokenExpiresAt,
       revokedAt: undefined,
@@ -109,6 +114,7 @@ export const createSessionAndRefreshToken = mutation({
     });
     return await ctx.db.insert("authSessions", {
       sessionId: args.sessionId,
+      familyId,
       userId: args.userId,
       token: args.token,
       expiresAt: args.sessionExpiresAt,
@@ -184,6 +190,101 @@ export const revokeSessionsForUser = mutation({
   },
 });
 
+const MAX_FAMILY_MEMBERS = 1000;
+
+async function getRefreshTokensBySession(ctx: { db: QueryCtx["db"] }, sessionId: string) {
+  const { page } = await getPage(ctx, {
+    table: "authRefreshTokens",
+    index: "by_session",
+    startIndexKey: [sessionId],
+    endIndexKey: [sessionId],
+    absoluteMaxRows: MAX_FAMILY_MEMBERS,
+    schema,
+  });
+  return page;
+}
+
+async function getRefreshTokensByFamily(ctx: { db: QueryCtx["db"] }, familyId: string) {
+  const { page } = await getPage(ctx, {
+    table: "authRefreshTokens",
+    index: "by_family",
+    startIndexKey: [familyId],
+    endIndexKey: [familyId],
+    absoluteMaxRows: MAX_FAMILY_MEMBERS,
+    schema,
+  });
+  return page;
+}
+
+async function getSessionsByFamily(ctx: { db: QueryCtx["db"] }, familyId: string) {
+  const { page } = await getPage(ctx, {
+    table: "authSessions",
+    index: "by_family",
+    startIndexKey: [familyId],
+    endIndexKey: [familyId],
+    absoluteMaxRows: MAX_FAMILY_MEMBERS,
+    schema,
+  });
+  return page;
+}
+
+// Presentation of an already-rotated refresh token means the token was
+// replayed — either by an attacker holding a stolen token or by a client
+// racing itself. Fail closed: revoke every session and refresh token in the
+// family and record an audit event.
+async function revokeSessionFamily(
+  ctx: { db: MutationCtx["db"] },
+  familyId: string,
+  userId: string,
+  now: number,
+) {
+  // Rows created before family tracking carry no familyId; they are reachable
+  // through the spent token's own sessionId, which doubles as its familyId.
+  const [familyTokens, sessionTokens, familySessions] = await Promise.all([
+    getRefreshTokensByFamily(ctx, familyId),
+    getRefreshTokensBySession(ctx, familyId),
+    getSessionsByFamily(ctx, familyId),
+  ]);
+  const legacySession = await getOneFrom(
+    ctx.db,
+    "authSessions",
+    "by_session_id",
+    familyId,
+    "sessionId",
+  );
+
+  const seen = new Set<string>();
+  for (const token of [...familyTokens, ...sessionTokens]) {
+    if (seen.has(token._id)) {
+      continue;
+    }
+    seen.add(token._id);
+    if (!token.revokedAt) {
+      await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
+    }
+  }
+  for (const session of familySessions) {
+    seen.add(session._id);
+    if (!session.revokedAt) {
+      await ctx.db.patch(session._id, { revokedAt: now, updatedAt: now });
+    }
+  }
+  if (legacySession && !seen.has(legacySession._id) && !legacySession.revokedAt) {
+    await ctx.db.patch(legacySession._id, { revokedAt: now, updatedAt: now });
+  }
+
+  await ctx.db.insert("auth_audit_events", {
+    actorUserId: userId as Id<"users">,
+    actorType: "system",
+    eventType: "refresh_token_reuse",
+    targetType: "session",
+    targetId: familyId,
+    organizationId: undefined,
+    metadataJson: undefined,
+    createdAt: now,
+  });
+}
+
 export const rotateSession = mutation({
   args: {
     oldRefreshTokenHash: v.string(),
@@ -208,7 +309,16 @@ export const rotateSession = mutation({
       args.oldRefreshTokenHash,
       "tokenHash",
     );
-    if (!refresh || refresh.revokedAt || refresh.expiresAt <= now) {
+    if (!refresh || refresh.expiresAt <= now) {
+      return null;
+    }
+    if (refresh.revokedAt !== undefined) {
+      await revokeSessionFamily(
+        ctx,
+        refresh.familyId ?? refresh.sessionId,
+        refresh.userId,
+        now,
+      );
       return null;
     }
 
@@ -243,8 +353,11 @@ export const rotateSession = mutation({
       ctx.db.patch(session._id, { revokedAt: now, updatedAt: now }),
     ]);
 
+    const familyId = refresh.familyId ?? refresh.sessionId;
+
     await ctx.db.insert("authSessions", {
       sessionId: args.newSessionId,
+      familyId,
       userId: refresh.userId,
       token: args.newSessionToken,
       expiresAt: args.newSessionExpiresAt,
@@ -258,6 +371,7 @@ export const rotateSession = mutation({
     await ctx.db.insert("authRefreshTokens", {
       tokenHash: args.newRefreshTokenHash,
       sessionId: args.newSessionId,
+      familyId,
       userId: refresh.userId,
       expiresAt: args.newRefreshTokenExpiresAt,
       revokedAt: undefined,
