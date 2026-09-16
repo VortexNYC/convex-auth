@@ -166,12 +166,33 @@ const adminAuditValidator = v.object({
   createdAt: v.number(),
 });
 
+function parseDate(date: string | undefined, endOfDay: boolean): number | undefined {
+  if (!date) return undefined;
+  const time = endOfDay ? `${date}T23:59:59.999Z` : `${date}T00:00:00.000Z`;
+  const parsed = Date.parse(time);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
 export const listAdminAudits = query({
-  args: { paginationOpts: paginationOptsValidator },
+  args: {
+    action: v.optional(v.string()),
+    targetType: v.optional(v.string()),
+    targetId: v.optional(v.string()),
+    adminId: v.optional(v.string()),
+    from: v.optional(v.string()),
+    to: v.optional(v.string()),
+    paginationOpts: paginationOptsValidator,
+  },
   returns: paginationResultValidator(adminAuditValidator),
-  handler: async (ctx, { paginationOpts }) => {
+  handler: async (ctx, { action, targetType, targetId, adminId, from, to, paginationOpts }) => {
     await requireSuperAdmin(ctx);
     const result = await ctx.runQuery(components.convexAuth.admin.audit.listAdminAudits, {
+      action: action?.trim() || undefined,
+      targetType: targetType?.trim() || undefined,
+      targetId: targetId?.trim() || undefined,
+      adminId: adminId?.trim() || undefined,
+      from: parseDate(from?.trim(), false),
+      to: parseDate(to?.trim(), true),
       limit: Math.min(paginationOpts.numItems, PAGE_LIMIT),
       cursor: paginationOpts.cursor ?? undefined,
     });

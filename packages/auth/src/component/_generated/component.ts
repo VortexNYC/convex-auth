@@ -28,7 +28,16 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         listAdminAudits: FunctionReference<
           "query",
           "internal",
-          { cursor?: string; limit?: number },
+          {
+            action?: string;
+            adminId?: string;
+            cursor?: string;
+            from?: number;
+            limit?: number;
+            targetId?: string;
+            targetType?: string;
+            to?: number;
+          },
           {
             audits: Array<{
               _id: string;

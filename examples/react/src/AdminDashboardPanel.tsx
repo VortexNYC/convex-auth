@@ -18,6 +18,14 @@ export function AdminDashboardPanel() {
   const actions = useAuthActions();
   const [search, setSearch] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [auditsFilters, setAuditsFilters] = useState<{
+    action?: string;
+    targetType?: string;
+    targetId?: string;
+    adminId?: string;
+    from?: string;
+    to?: string;
+  }>({});
 
   const users = usePaginatedQuery(
     api.admin.listUsers,
@@ -30,7 +38,18 @@ export function AdminDashboardPanel() {
     {},
     { initialNumItems: PAGE_SIZE },
   );
-  const audits = usePaginatedQuery(api.admin.listAdminAudits, {}, { initialNumItems: PAGE_SIZE });
+  const audits = usePaginatedQuery(
+    api.admin.listAdminAudits,
+    {
+      action: auditsFilters.action?.trim() || undefined,
+      targetType: auditsFilters.targetType?.trim() || undefined,
+      targetId: auditsFilters.targetId?.trim() || undefined,
+      adminId: auditsFilters.adminId?.trim() || undefined,
+      from: auditsFilters.from?.trim() || undefined,
+      to: auditsFilters.to?.trim() || undefined,
+    },
+    { initialNumItems: PAGE_SIZE },
+  );
   const selectedUser = useQuery(
     api.admin.getUser,
     selectedUserId ? { userId: selectedUserId } : "skip",
@@ -57,6 +76,8 @@ export function AdminDashboardPanel() {
       sessions={sessions.results}
       organizations={organizations.results}
       audits={audits.results}
+      auditsFilters={auditsFilters}
+      onAuditsFiltersChange={setAuditsFilters}
       usersSearch={search}
       onUsersSearchChange={setSearch}
       onViewUser={setSelectedUserId}
