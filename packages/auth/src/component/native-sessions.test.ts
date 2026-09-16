@@ -200,4 +200,173 @@ describe("native sessions", () => {
     expect(newRefresh?.sessionId).toBe("session-2");
     expect(newRefresh?.userId).toBe(userId);
   });
+
+  it("rotateSession propagates familyId to the rotated-in session and token", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    await insertIdentity(t, userId);
+    const now = Date.now();
+
+    await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+      sessionId: "session-1",
+      userId,
+      token: "token-1",
+      sessionExpiresAt: now + 1_000_000,
+      refreshTokenHash: "old-hash",
+      refreshTokenExpiresAt: now + 1_000_000,
+    });
+
+    await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "old-hash",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "new-hash",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+
+    const [newSession, newRefresh] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-2"))
+          .unique(),
+        ctx.db
+          .query("authRefreshTokens")
+          .withIndex("by_token_hash", (q) => q.eq("tokenHash", "new-hash"))
+          .unique(),
+      ]),
+    );
+
+    expect(newSession?.familyId).toBe("session-1");
+    expect(newRefresh?.familyId).toBe("session-1");
+  });
+
+  it("replaying a rotated-out refresh token revokes the whole session family", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    await insertIdentity(t, userId);
+    const now = Date.now();
+
+    await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+      sessionId: "session-1",
+      userId,
+      token: "token-1",
+      sessionExpiresAt: now + 1_000_000,
+      refreshTokenHash: "hash-1",
+      refreshTokenExpiresAt: now + 1_000_000,
+    });
+
+    await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+
+    // Attacker replays the spent token.
+    const replay = await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-3",
+      newSessionToken: "token-3",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-3",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+    expect(replay).toBeNull();
+
+    const [liveSession, liveRefresh, noSession3] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-2"))
+          .unique(),
+        ctx.db
+          .query("authRefreshTokens")
+          .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-2"))
+          .unique(),
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-3"))
+          .unique(),
+      ]),
+    );
+
+    // The legitimate rotated-in session and token are dead too.
+    expect(liveSession?.revokedAt).toBeDefined();
+    expect(liveRefresh?.revokedAt).toBeDefined();
+    expect(noSession3).toBeNull();
+
+    const auditEvents = await t.run(async (ctx) => ctx.db.query("auth_audit_events").take(10));
+    expect(auditEvents).toHaveLength(1);
+    expect(auditEvents[0]).toMatchObject({
+      actorType: "system",
+      eventType: "refresh_token_reuse",
+      targetType: "session",
+      targetId: "session-1",
+      actorUserId: userId,
+    });
+  });
+
+  it("replaying a rotated-out token does not touch other sessions for the user", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    await insertIdentity(t, userId);
+    const now = Date.now();
+
+    // A second, unrelated sign-in (different device / family).
+    await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+      sessionId: "other-session",
+      userId,
+      token: "other-token",
+      sessionExpiresAt: now + 1_000_000,
+      refreshTokenHash: "other-hash",
+      refreshTokenExpiresAt: now + 1_000_000,
+    });
+
+    await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+      sessionId: "session-1",
+      userId,
+      token: "token-1",
+      sessionExpiresAt: now + 1_000_000,
+      refreshTokenHash: "hash-1",
+      refreshTokenExpiresAt: now + 1_000_000,
+    });
+    await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+    await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-3",
+      newSessionToken: "token-3",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-3",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+
+    const otherSession = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "other-session"))
+        .unique(),
+    );
+    expect(otherSession?.revokedAt).toBeUndefined();
+  });
 });

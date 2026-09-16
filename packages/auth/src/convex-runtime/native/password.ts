@@ -1,7 +1,7 @@
 import { base64url } from "jose";
-import { argon2idAsync } from "@noble/hashes/argon2.js";
+import { argon2id } from "@noble/hashes/argon2.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
-import { scryptAsync } from "@noble/hashes/scrypt.js";
+import { scrypt } from "@noble/hashes/scrypt.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { hexToBytes } from "@noble/hashes/utils.js";
 
@@ -49,7 +49,7 @@ function generateSalt(): Uint8Array {
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = generateSalt();
-  const derived = await argon2idAsync(password, salt, {
+  const derived = argon2id(password, salt, {
     t: DEFAULT_ARGON2_T,
     m: DEFAULT_ARGON2_M,
     p: DEFAULT_ARGON2_P,
@@ -126,7 +126,7 @@ async function verifyArgon2id(password: string, hash: string): Promise<boolean> 
   }
   const { salt, expected, t, m, p, version } = parsed;
   try {
-    const actual = await argon2idAsync(password, salt, {
+    const actual = argon2id(password, salt, {
       t,
       m,
       p,
@@ -183,7 +183,7 @@ async function verifyScrypt(password: string, hash: string): Promise<boolean> {
   }
   const { salt, expected, N, r, p } = parsed;
   try {
-    const actual = await scryptAsync(password, salt, {
+    const actual = scrypt(password, salt, {
       N,
       r,
       p,
@@ -236,7 +236,7 @@ async function verifyBetterAuthScrypt(password: string, hash: string): Promise<b
   }
   const { salt, expected } = parsed;
   try {
-    const actual = await scryptAsync(password.normalize("NFKC"), salt, {
+    const actual = scrypt(password.normalize("NFKC"), salt, {
       N: BETTER_AUTH_SCRYPT_N,
       r: BETTER_AUTH_SCRYPT_R,
       p: BETTER_AUTH_SCRYPT_P,

@@ -35,6 +35,7 @@ export const createRefreshToken = mutation({
   args: {
     tokenHash: v.string(),
     sessionId: v.string(),
+    familyId: v.optional(v.string()),
     userId: v.id("users"),
     expiresAt: v.number(),
   },
