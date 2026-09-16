@@ -42,10 +42,13 @@ export const auth = convexAuth({
     generateName: () => `Guest ${Math.random().toString(36).slice(2, 10)}`,
   },
   passkey: {
-    rpID: process.env.PASSKEY_RP_ID ?? "example.com",
-    // Comma-separated list covering every origin native platforms may emit:
-    // the web origin plus "android:apk-key-hash:<sha256-of-signing-cert>".
-    origin: (process.env.PASSKEY_ORIGINS ?? "https://example.com").split(","),
+    // Defaults to the .convex.site host — the well-known routes in http.ts
+    // serve the AASA/assetlinks files on that domain, so native passkeys work
+    // with no external website. Set PASSKEY_RP_ID for a custom domain.
+    rpID: process.env.PASSKEY_RP_ID ?? new URL(siteUrl).hostname,
+    // Comma-separated list covering every origin platforms may emit: the site
+    // origin plus "android:apk-key-hash:<base64url-sha256-of-signing-cert>".
+    origin: (process.env.PASSKEY_ORIGINS ?? new URL(siteUrl).origin).split(","),
     rpName: "Convex Auth Demo",
   },
   oauth: {

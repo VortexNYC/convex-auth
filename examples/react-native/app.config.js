@@ -20,8 +20,20 @@ const publicEnv = {
   convexSiteUrl: process.env.EXPO_PUBLIC_CONVEX_SITE_URL,
 };
 
+// iOS associated domain for native passkeys. Must equal the rpID configured
+// in convex/auth.ts (defaults to the deployment's .convex.site host).
+const passkeyRpId =
+  process.env.PASSKEY_RP_ID ??
+  (process.env.EXPO_PUBLIC_CONVEX_SITE_URL
+    ? new URL(process.env.EXPO_PUBLIC_CONVEX_SITE_URL).hostname
+    : undefined);
+
 module.exports = {
   ...expo,
+  ios: {
+    ...expo.ios,
+    associatedDomains: passkeyRpId ? [`webcredentials:${passkeyRpId}`] : [],
+  },
   plugins: ["expo-secure-store", "expo-web-browser"],
   extra: {
     ...expo.extra,
