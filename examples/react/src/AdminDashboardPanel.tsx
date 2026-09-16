@@ -1,4 +1,5 @@
-import { useMutation, usePaginatedQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import { usePaginatedQuery } from "convex-helpers/react";
 
 import { ConvexAdminDashboard } from "@vortex-api/convex-auth/react";
 

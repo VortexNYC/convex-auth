@@ -6,6 +6,21 @@ import type { Id } from "./_generated/dataModel";
 
 const PAGE_LIMIT = 100;
 
+function endCursorFrom(paginationOpts: unknown): string | null | undefined {
+  if (
+    typeof paginationOpts !== "object" ||
+    paginationOpts === null ||
+    !("endCursor" in paginationOpts)
+  ) {
+    return undefined;
+  }
+  const value = (paginationOpts as { endCursor: unknown }).endCursor;
+  if (typeof value === "string" || value === null) {
+    return value;
+  }
+  return undefined;
+}
+
 async function requireSuperAdmin(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
@@ -43,6 +58,7 @@ export const listUsers = query({
     const result = await ctx.runQuery(components.convexAuth.admin.users.listUsers, {
       limit: Math.min(paginationOpts.numItems, PAGE_LIMIT),
       cursor: paginationOpts.cursor ?? undefined,
+      endCursor: endCursorFrom(paginationOpts),
     });
     return {
       page: result.users,
@@ -75,6 +91,7 @@ export const listSessions = query({
       userId: userId ? (userId as Id<"users">) : undefined,
       limit: Math.min(paginationOpts.numItems, PAGE_LIMIT),
       cursor: paginationOpts.cursor ?? undefined,
+      endCursor: endCursorFrom(paginationOpts),
     });
     return {
       page: result.sessions,
@@ -103,6 +120,7 @@ export const listOrganizations = query({
     const result = await ctx.runQuery(components.convexAuth.admin.organisations.listOrganizations, {
       limit: Math.min(paginationOpts.numItems, PAGE_LIMIT),
       cursor: paginationOpts.cursor ?? undefined,
+      endCursor: endCursorFrom(paginationOpts),
     });
     return {
       page: result.organizations,
@@ -130,6 +148,7 @@ export const listAdminAudits = query({
     const result = await ctx.runQuery(components.convexAuth.admin.audit.listAdminAudits, {
       limit: Math.min(paginationOpts.numItems, PAGE_LIMIT),
       cursor: paginationOpts.cursor ?? undefined,
+      endCursor: endCursorFrom(paginationOpts),
     });
     return {
       page: result.audits,

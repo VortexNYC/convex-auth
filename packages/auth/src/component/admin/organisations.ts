@@ -81,6 +81,7 @@ export const listOrganizations = query({
   args: {
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
+    endCursor: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     organizations: v.array(adminOrganizationValidator),
@@ -105,7 +106,7 @@ export const listOrganizations = query({
     const { page, continueCursor, isDone } = await paginator(ctx.db, schema)
       .query("organizations")
       .order("desc")
-      .paginate({ cursor: args.cursor ?? null, numItems: limit });
+      .paginate({ cursor: args.cursor ?? null, numItems: limit, endCursor: args.endCursor });
 
     const organizations: AdminOrganizationListItem[] = page.map((organization) => ({
       _id: organization._id,
@@ -158,6 +159,7 @@ export const listMembers = query({
     organizationId: v.id("organizations"),
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
+    endCursor: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     members: v.array(adminMemberValidator),
@@ -179,7 +181,7 @@ export const listMembers = query({
       .query("organization_members")
       .withIndex("by_organization", (index) => index.eq("organizationId", args.organizationId))
       .order("desc")
-      .paginate({ cursor: args.cursor ?? null, numItems: limit });
+      .paginate({ cursor: args.cursor ?? null, numItems: limit, endCursor: args.endCursor });
 
     const members: AdminMemberListItem[] = page.map((member) => ({
       _id: member._id,

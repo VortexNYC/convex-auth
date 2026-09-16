@@ -20,6 +20,7 @@ export const listAdminAudits = query({
   args: {
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
+    endCursor: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     audits: v.array(adminAuditValidator),
@@ -41,7 +42,7 @@ export const listAdminAudits = query({
     const { page, continueCursor, isDone } = await paginator(ctx.db, schema)
       .query("auth_admin_audits")
       .order("desc")
-      .paginate({ cursor: args.cursor ?? null, numItems: limit });
+      .paginate({ cursor: args.cursor ?? null, numItems: limit, endCursor: args.endCursor });
 
     const audits = page.map((audit) => ({
       _id: audit._id,

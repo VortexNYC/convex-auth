@@ -36,6 +36,7 @@ export const listUsers = query({
   args: {
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
+    endCursor: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     users: v.array(adminUserValidator),
@@ -56,7 +57,7 @@ export const listUsers = query({
     const { page, continueCursor, isDone } = await paginator(ctx.db, schema)
       .query("users")
       .order("desc")
-      .paginate({ cursor: args.cursor ?? null, numItems: limit });
+      .paginate({ cursor: args.cursor ?? null, numItems: limit, endCursor: args.endCursor });
 
     const users: AdminUserListItem[] = page.map((user) => ({
       _id: user._id,

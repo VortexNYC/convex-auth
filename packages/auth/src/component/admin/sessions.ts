@@ -35,6 +35,7 @@ export const listSessions = query({
     userId: v.optional(v.id("users")),
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
+    endCursor: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     sessions: v.array(adminSessionValidator),
@@ -62,6 +63,7 @@ export const listSessions = query({
     const { page, continueCursor, isDone } = await q.paginate({
       cursor: args.cursor ?? null,
       numItems: limit,
+      endCursor: args.endCursor,
     });
 
     const sessions: AdminSessionListItem[] = page.map((session) => ({

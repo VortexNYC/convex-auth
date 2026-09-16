@@ -14,6 +14,7 @@
     "@convex-dev/static-hosting": "^0.2.1",
     "@vortex-api/convex-auth": "workspace:*",
     "convex": "^1.45.0",
+    "convex-helpers": "^0.1.93",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

@@ -28,7 +28,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         listAdminAudits: FunctionReference<
           "query",
           "internal",
-          { cursor?: string; limit?: number },
+          { cursor?: string; endCursor?: string | null; limit?: number },
           {
             audits: Array<{
               _id: string;
@@ -65,7 +65,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         listMembers: FunctionReference<
           "query",
           "internal",
-          { cursor?: string; limit?: number; organizationId: string },
+          {
+            cursor?: string;
+            endCursor?: string | null;
+            limit?: number;
+            organizationId: string;
+          },
           {
             hasNextPage: boolean;
             members: Array<{
@@ -85,7 +90,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         listOrganizations: FunctionReference<
           "query",
           "internal",
-          { cursor?: string; limit?: number },
+          { cursor?: string; endCursor?: string | null; limit?: number },
           {
             hasNextPage: boolean;
             nextCursor?: string;
@@ -157,7 +162,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         listSessions: FunctionReference<
           "query",
           "internal",
-          { cursor?: string; limit?: number; userId?: string },
+          {
+            cursor?: string;
+            endCursor?: string | null;
+            limit?: number;
+            userId?: string;
+          },
           {
             hasNextPage: boolean;
             nextCursor?: string;
@@ -224,7 +234,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         listUsers: FunctionReference<
           "query",
           "internal",
-          { cursor?: string; limit?: number },
+          { cursor?: string; endCursor?: string | null; limit?: number },
           {
             hasNextPage: boolean;
             nextCursor?: string;
