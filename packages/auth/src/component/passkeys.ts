@@ -43,6 +43,12 @@ export const generatePasskeyRegistrationOptions = mutation({
     authenticatorAttachment: v.optional(
       v.union(v.literal("platform"), v.literal("cross-platform")),
     ),
+    residentKey: v.optional(
+      v.union(v.literal("required"), v.literal("preferred"), v.literal("discouraged")),
+    ),
+    attestationType: v.optional(
+      v.union(v.literal("none"), v.literal("direct"), v.literal("enterprise")),
+    ),
     maxPasskeys: v.optional(v.number()),
   },
   returns: v.any(),
@@ -75,10 +81,10 @@ export const generatePasskeyRegistrationOptions = mutation({
       userName: args.identifier,
       userDisplayName: args.displayName ?? args.identifier,
       challenge,
-      attestationType: "none",
+      attestationType: args.attestationType ?? "none",
       excludeCredentials,
       authenticatorSelection: {
-        residentKey: "preferred",
+        residentKey: args.residentKey ?? "preferred",
         userVerification: args.userVerification ?? "preferred",
         authenticatorAttachment: args.authenticatorAttachment ?? undefined,
       },
@@ -104,8 +110,9 @@ export const verifyPasskeyRegistration = mutation({
     challenge: v.string(),
     response: registrationResponseValidator,
     rpID: v.string(),
-    origin: v.string(),
+    origin: v.union(v.string(), v.array(v.string())),
     name: v.optional(v.string()),
+    requireUserVerification: v.optional(v.boolean()),
   },
   returns: v.object({
     userId: v.id("users"),
@@ -145,7 +152,7 @@ export const verifyPasskeyRegistration = mutation({
       expectedChallenge: args.challenge,
       expectedOrigin: args.origin,
       expectedRPID: args.rpID,
-      requireUserVerification: true,
+      requireUserVerification: args.requireUserVerification ?? true,
     });
 
     if (!verification.verified) {
@@ -395,7 +402,8 @@ export const verifyPasskeyAuthentication = mutation({
     challenge: v.string(),
     response: authenticationResponseValidator,
     rpID: v.string(),
-    origin: v.string(),
+    origin: v.union(v.string(), v.array(v.string())),
+    requireUserVerification: v.optional(v.boolean()),
   },
   returns: v.object({
     token: v.string(),
@@ -448,7 +456,7 @@ export const verifyPasskeyAuthentication = mutation({
         counter: passkey.counter,
         transports: passkey.transports ?? [],
       },
-      requireUserVerification: true,
+      requireUserVerification: args.requireUserVerification ?? true,
     });
 
     if (!verification.verified) {

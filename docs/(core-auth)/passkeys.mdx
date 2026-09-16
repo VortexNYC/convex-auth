@@ -17,15 +17,21 @@ export const auth = convexAuth({
   component: components.convexAuth,
   passkey: {
     rpID: "example.com",
-    origin: "https://example.com",
+    // one origin, or every origin the app is served from
+    origin: ["https://example.com", "https://app.example.com"],
     rpName: "Example",
     // optional: cap active passkeys per user (default 10)
     maxPasskeysPerUser: 10,
+    // optional WebAuthn policy knobs
+    attestationType: "none", // "none" | "direct" | "enterprise"
+    userVerification: "preferred", // "required" enforces UV at verify time
+    residentKey: "preferred",
+    authenticatorAttachment: undefined, // "platform" | "cross-platform"
   },
 });
 ```
 
-`rpID` must match the registrable domain users authenticate from. `origin` must be the exact origin the browser sees. `maxPasskeysPerUser` caps active (non-revoked) passkeys per user.
+`rpID` must match the registrable domain users authenticate from. `origin` accepts a single origin or an array — every origin must be the exact origin the browser sees. `maxPasskeysPerUser` caps active (non-revoked) passkeys per user. When `userVerification` is `"required"`, verification enforces the UV flag; `"preferred"`/`"discouraged"` let authenticators that skip UV through.
 
 ## React
 
@@ -64,6 +70,17 @@ export function Passkeys() {
 ```
 
 `usePasskeys` handles the WebAuthn browser calls (`startRegistration` / `startAuthentication`) and the Convex mutations. `register`, `revoke`, `rename`, and `passkeys` operate on the signed-in user only — passkey management requires an authenticated session.
+
+### Conditional UI (autofill)
+
+Pass `autofill: true` to `usePasskeys` and add `autocomplete="username webauthn"` to your username input — the browser offers passkeys inside the autofill sheet instead of a modal:
+
+```tsx
+const passkeys = usePasskeys({ rpName, rpID, origin, autofill: true });
+
+<input autoComplete="username webauthn" ... />
+await passkeys.signIn(); // resolves when the user picks a passkey from autofill
+```
 
 ### `PasskeyManager`
 

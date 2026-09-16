@@ -2981,10 +2981,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "mutation",
         "internal",
         {
+          attestationType?: "none" | "direct" | "enterprise";
           authenticatorAttachment?: "platform" | "cross-platform";
           displayName?: string;
           identifier: string;
           maxPasskeys?: number;
+          residentKey?: "required" | "preferred" | "discouraged";
           rpID: string;
           rpName: string;
           userId: string;
@@ -3025,7 +3027,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "internal",
         {
           challenge: string;
-          origin: string;
+          origin: string | Array<string>;
+          requireUserVerification?: boolean;
           response: {
             authenticatorAttachment?: string;
             clientExtensionResults?: Record<string, any>;
@@ -3058,7 +3061,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           challenge: string;
           identifier: string;
           name?: string;
-          origin: string;
+          origin: string | Array<string>;
+          requireUserVerification?: boolean;
           response: {
             authenticatorAttachment?: string;
             clientExtensionResults?: Record<string, any>;

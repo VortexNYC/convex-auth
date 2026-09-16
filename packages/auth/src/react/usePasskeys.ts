@@ -18,13 +18,19 @@ export interface UsePasskeysArgs {
   rpName: string;
   rpID: string;
   origin: string;
+  /**
+   * Enable WebAuthn conditional UI (browser autofill on an
+   * `autocomplete="username webauthn"` input). When true, `signIn` uses
+   * conditional mediation instead of a modal prompt.
+   */
+  autofill?: boolean;
 }
 
 type RegistrationOptions = Parameters<typeof startRegistration>[0]["optionsJSON"];
 type AuthenticationOptions = Parameters<typeof startAuthentication>[0]["optionsJSON"];
 
 export function usePasskeys(args: UsePasskeysArgs) {
-  const { userId, identifier, rpName, rpID, origin } = args;
+  const { userId, identifier, rpName, rpID, origin, autofill } = args;
   const ctx = useContext(ConvexAuthContext);
   if (ctx === null) {
     throw new Error("usePasskeys must be used within a ConvexAuthProvider");
@@ -179,7 +185,10 @@ export function usePasskeys(args: UsePasskeysArgs) {
       setLoading(true);
       setError(null);
       try {
-        const response = await startAuthentication({ optionsJSON: authenticationOptions });
+        const response = await startAuthentication({
+          optionsJSON: authenticationOptions,
+          useBrowserAutofill: autofill ?? false,
+        });
         const result = await verifyAuthentication({
           challenge: authenticationOptions.challenge as string,
           response,
@@ -198,7 +207,7 @@ export function usePasskeys(args: UsePasskeysArgs) {
         setLoading(false);
       }
     },
-    [authenticationOptions, verifyAuthentication, rpID, origin, ctx],
+    [authenticationOptions, verifyAuthentication, rpID, origin, ctx, autofill],
   );
 
   const revoke = React.useCallback(

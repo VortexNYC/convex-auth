@@ -11,10 +11,20 @@ import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simp
 
 export type NativePasskeyConfig = {
   rpID: string;
-  origin: string;
+  /** Accepted origin(s) — a single origin or every origin the app is served from. */
+  origin: string | string[];
   rpName?: string;
   /** Maximum active passkeys per user. Defaults to 10. */
   maxPasskeysPerUser?: number;
+  /** Attestation conveyance. Defaults to "none". */
+  attestationType?: "none" | "direct" | "enterprise";
+  /**
+   * User-verification policy. When "required", verification enforces UV; other
+   * values let authenticators that skip UV through. Defaults to "preferred".
+   */
+  userVerification?: "required" | "preferred" | "discouraged";
+  authenticatorAttachment?: "platform" | "cross-platform";
+  residentKey?: "required" | "preferred" | "discouraged";
 };
 
 export type PasskeyComponentApi = {
@@ -49,6 +59,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
   const origin = config.origin;
   const rpName = config.rpName ?? "Convex Auth";
   const maxPasskeys = config.maxPasskeysPerUser;
+  const requireUserVerification = config.userVerification === "required";
 
   const getPasskeyRegistrationOptions = action({
     args: {
@@ -76,6 +87,10 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
         displayName: args.displayName,
         rpName: args.rpName ?? rpName,
         rpID: args.rpID ?? rpID,
+        userVerification: config.userVerification,
+        authenticatorAttachment: config.authenticatorAttachment,
+        residentKey: config.residentKey,
+        attestationType: config.attestationType,
         maxPasskeys,
       });
     },
@@ -89,7 +104,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
       response: v.any(),
       name: v.optional(v.string()),
       rpID: v.optional(v.string()),
-      origin: v.optional(v.string()),
+      origin: v.optional(v.union(v.string(), v.array(v.string()))),
     },
     returns: v.object({
       userId: v.string(),
@@ -104,7 +119,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
         response: RegistrationResponseJSON;
         name?: string;
         rpID?: string;
-        origin?: string;
+        origin?: string | string[];
       },
     ) => {
       const userId = await requireUserId(ctx, args.userId);
@@ -116,6 +131,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
         rpID: args.rpID ?? rpID,
         origin: args.origin ?? origin,
         name: args.name,
+        requireUserVerification,
       });
     },
   });
@@ -135,6 +151,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
         userId: args.userId as unknown as GenericId<"users"> | undefined,
         credentialId: args.credentialId,
         rpID: args.rpID ?? rpID,
+        userVerification: config.userVerification,
       });
     },
   });
@@ -144,7 +161,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
       challenge: v.string(),
       response: v.any(),
       rpID: v.optional(v.string()),
-      origin: v.optional(v.string()),
+      origin: v.optional(v.union(v.string(), v.array(v.string()))),
     },
     returns: v.object({
       token: v.string(),
@@ -160,7 +177,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
         challenge: string;
         response: AuthenticationResponseJSON;
         rpID?: string;
-        origin?: string;
+        origin?: string | string[];
       },
     ) => {
       return await ctx.runMutation(component.verifyPasskeyAuthentication, {
@@ -168,6 +185,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
         response: args.response,
         rpID: args.rpID ?? rpID,
         origin: args.origin ?? origin,
+        requireUserVerification,
       });
     },
   });
