@@ -11,13 +11,14 @@ Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 > **Disclaimer:** This is an independent, community-driven project. It is not affiliated with or endorsed by Convex Inc.
 
 [![CI][ci-badge]][ci]
+[![npm][npm-badge]][npm]
 [![Docs][docs-badge]][docs]
 [![License][license-badge]][license]
 [![Status][status-badge]][status]
 [![Node][node-badge]][node]
 [![pnpm][pnpm-badge]][pnpm]
 
-**[Docs](https://your-deployment.convex.site)** · **[How we got here](#how-we-got-here)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth)** · **[Architecture](<docs/(reference)/architecture.md>)**
+**[npm](https://www.npmjs.com/package/@vortex-api/convex-auth)** · **[Docs](https://your-deployment.convex.site)** · **[How we got here](#how-we-got-here)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth)** · **[Architecture](<docs/(reference)/architecture.md>)**
 
 </div>
 
@@ -25,7 +26,7 @@ Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 
 ## Status
 
-Public — `@vortex-api/convex-auth` is at `2.2.0` on npm. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, MCP auth, and agent auth) is passing full conformance. A one-time Better Auth data migration helper is in `packages/auth/scripts/migrate-better-auth.ts` for existing users.
+Public — [`@vortex-api/convex-auth`](https://www.npmjs.com/package/@vortex-api/convex-auth) is at `2.3.0` on npm. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, MCP auth, and agent auth) is passing full conformance. A one-time Better Auth data migration helper is in `packages/auth/scripts/migrate-better-auth.ts` for existing users.
 
 ## How we got here
 
@@ -390,6 +391,8 @@ Apache-2.0 — see `LICENSE`.
 
 [ci-badge]: https://img.shields.io/github/actions/workflow/status/VortexNYC/convex-auth/ci.yml?branch=main&style=for-the-badge&label=CI
 [ci]: https://github.com/VortexNYC/convex-auth/actions/workflows/ci.yml
+[npm-badge]: https://img.shields.io/npm/v/@vortex-api/convex-auth?style=for-the-badge&label=npm
+[npm]: https://www.npmjs.com/package/@vortex-api/convex-auth
 [docs-badge]: https://img.shields.io/badge/docs-online-292a44?style=for-the-badge
 [docs]: https://your-deployment.convex.site
 [license-badge]: https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=for-the-badge
