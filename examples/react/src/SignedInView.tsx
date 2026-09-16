@@ -88,6 +88,8 @@ export function SignedInView() {
           </div>
         </div>
 
+        <ImpersonationBanner />
+
         {message ? (
           <div className="bg-muted text-foreground rounded-lg p-3 text-sm" role="status">
             {message}
@@ -194,6 +196,61 @@ export function SignedInView() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+const ADMIN_SESSION_KEY = "convex-auth:admin-session";
+
+type StoredAdminSession = {
+  token: string;
+  refreshToken: string;
+  sessionId: string;
+};
+
+function ImpersonationBanner() {
+  const actions = useAuthActions();
+  const stopImpersonation = useMutation(api.admin.stopImpersonation);
+  const sessionId = actions.sessionId;
+  const state = useQuery(api.admin.getImpersonationState, sessionId ? { sessionId } : "skip");
+
+  if (!state || !state.impersonatedBy || !sessionId) {
+    return null;
+  }
+
+  const handleStop = async () => {
+    const raw = sessionStorage.getItem(ADMIN_SESSION_KEY);
+    if (!raw) {
+      return;
+    }
+    let stored: Partial<StoredAdminSession>;
+    try {
+      stored = JSON.parse(raw) as Partial<StoredAdminSession>;
+    } catch {
+      sessionStorage.removeItem(ADMIN_SESSION_KEY);
+      return;
+    }
+    if (!stored.token || !stored.refreshToken || !stored.sessionId) {
+      sessionStorage.removeItem(ADMIN_SESSION_KEY);
+      return;
+    }
+    await stopImpersonation({ sessionId });
+    actions.setToken(stored.token);
+    actions.setRefreshToken(stored.refreshToken);
+    actions.setSessionId(stored.sessionId);
+    sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  };
+
+  return (
+    <Card className="border-info/50 bg-info/10">
+      <CardContent className="flex items-center justify-between gap-4 py-4">
+        <p className="text-sm">
+          You are impersonating <strong>{actions.user?.email ?? "another user"}</strong>.
+        </p>
+        <Button variant="outline" size="sm" onClick={handleStop}>
+          Exit impersonation
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

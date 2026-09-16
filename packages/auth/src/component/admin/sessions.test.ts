@@ -1,8 +1,9 @@
 /// <reference types="vite/client" />
 
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { convexTest } from "convex-test";
 import { makeFunctionReference } from "convex/server";
+import { generateKeyPair, exportJWK } from "jose";
 import schema from "../schema.js";
 import type { Id } from "../_generated/dataModel.js";
 
@@ -74,6 +75,35 @@ async function insertRefreshToken(
     }),
   )) as Id<"authRefreshTokens">;
 }
+
+async function insertNativeIdentity(
+  t: ReturnType<typeof convexTest>,
+  userId: Id<"users">,
+  subject = crypto.randomUUID(),
+): Promise<Id<"auth_identities">> {
+  return (await t.run((ctx) =>
+    ctx.db.insert("auth_identities", {
+      identityId: crypto.randomUUID(),
+      userId,
+      provider: "password",
+      issuer: "native",
+      subject,
+      tokenIdentifier: `native:password:${subject}`,
+      emailVerified: false,
+      createdAt: 0,
+      updatedAt: 0,
+    }),
+  )) as Id<"auth_identities">;
+}
+
+beforeAll(async () => {
+  const pair = await generateKeyPair("RS256", { extractable: true });
+  const privateJwk = await exportJWK(pair.privateKey);
+  const publicJwk = await exportJWK(pair.publicKey);
+  process.env.JWT_PRIVATE_KEY = JSON.stringify(privateJwk);
+  process.env.JWKS = JSON.stringify({ keys: [{ use: "sig", ...publicJwk }] });
+  process.env.CONVEX_SITE_URL = "http://localhost:5174";
+});
 
 describe("admin sessions", () => {
   it("lists sessions for a super admin", async () => {
@@ -180,5 +210,60 @@ describe("admin sessions", () => {
 
     const session = await t.run((ctx) => ctx.db.get("authSessions", activeSession));
     expect(session?.revokedAt).toBeDefined();
+  });
+
+  it("creates an impersonated session for a super admin", async () => {
+    const t = convexTest(schema, modules);
+    const adminId = await insertUser(t, "admin@example.com", "Admin", true);
+    const userId = await insertUser(t, "user@example.com", "User");
+    await insertNativeIdentity(t, userId);
+
+    const result = await t
+      .withIdentity({ subject: adminId })
+      .mutation(makeFunctionReference<"mutation">("admin/sessions:impersonateUser"), { userId });
+
+    expect(result.token).toBeDefined();
+    expect(result.sessionId).toBeDefined();
+    expect(result.refreshToken).toBeDefined();
+
+    const session = await t
+      .withIdentity({ subject: userId })
+      .query(makeFunctionReference<"query">("admin/sessions:getImpersonationState"), {
+        sessionId: result.sessionId,
+      });
+    expect(session?.impersonatedBy).toBe(String(adminId));
+    expect(session?.userId).toBe(String(userId));
+
+    const audits = await t.run((ctx) =>
+      ctx.db
+        .query("auth_admin_audits")
+        .withIndex("by_admin", (q) => q.eq("adminId", adminId))
+        .take(1),
+    );
+    expect(audits[0]?.action).toBe("impersonateUser");
+  });
+
+  it("rejects impersonation without a native identity", async () => {
+    const t = convexTest(schema, modules);
+    const adminId = await insertUser(t, "admin@example.com", "Admin", true);
+    const userId = await insertUser(t, "user@example.com", "User");
+
+    await expect(
+      t
+        .withIdentity({ subject: adminId })
+        .mutation(makeFunctionReference<"mutation">("admin/sessions:impersonateUser"), { userId }),
+    ).rejects.toThrow("Cannot impersonate a user without a native identity");
+  });
+
+  it("rejects impersonation from a non-admin", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t, "user@example.com", "User");
+    await insertNativeIdentity(t, userId);
+
+    await expect(
+      t
+        .withIdentity({ subject: userId })
+        .mutation(makeFunctionReference<"mutation">("admin/sessions:impersonateUser"), { userId }),
+    ).rejects.toThrow("Forbidden: super admin required");
   });
 });

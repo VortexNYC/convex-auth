@@ -209,3 +209,51 @@ export const revokeSession = mutation({
     return null;
   },
 });
+
+export const getImpersonationState = query({
+  args: { sessionId: v.string() },
+  returns: v.object({
+    impersonatedBy: v.optional(v.string()),
+    userId: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const result = await ctx.runQuery(components.convexAuth.admin.sessions.getImpersonationState, {
+      sessionId: args.sessionId,
+    });
+    return {
+      impersonatedBy: result.impersonatedBy ? result.impersonatedBy : undefined,
+      userId: result.userId ? result.userId : undefined,
+    };
+  },
+});
+
+export const stopImpersonation = mutation({
+  args: { sessionId: v.string() },
+  returns: v.object({ revoked: v.boolean() }),
+  handler: async (ctx, args) => {
+    const result = await ctx.runMutation(components.convexAuth.admin.sessions.stopImpersonation, {
+      sessionId: args.sessionId,
+    });
+    return result;
+  },
+});
+
+export const impersonateUser = mutation({
+  args: { userId: v.string() },
+  returns: v.object({
+    token: v.string(),
+    refreshToken: v.string(),
+    sessionId: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    await requireSuperAdmin(ctx);
+    const result = await ctx.runMutation(components.convexAuth.admin.sessions.impersonateUser, {
+      userId: args.userId as Id<"users">,
+    });
+    return {
+      token: result.token,
+      refreshToken: result.refreshToken,
+      sessionId: result.sessionId,
+    };
+  },
+});

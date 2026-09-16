@@ -1,12 +1,20 @@
 import { useMutation, usePaginatedQuery } from "convex/react";
 
-import { ConvexAdminDashboard } from "@vortex-api/convex-auth/react";
+import { ConvexAdminDashboard, useAuthActions } from "@vortex-api/convex-auth/react";
 
 import { api } from "../convex/_generated/api";
 
 const PAGE_SIZE = 20;
+const ADMIN_SESSION_KEY = "convex-auth:admin-session";
+
+type StoredAdminSession = {
+  token: string;
+  refreshToken: string;
+  sessionId: string;
+};
 
 export function AdminDashboardPanel() {
+  const actions = useAuthActions();
   const users = usePaginatedQuery(api.admin.listUsers, {}, { initialNumItems: PAGE_SIZE });
   const sessions = usePaginatedQuery(api.admin.listSessions, {}, { initialNumItems: PAGE_SIZE });
   const organizations = usePaginatedQuery(
@@ -20,6 +28,7 @@ export function AdminDashboardPanel() {
   const unbanUser = useMutation(api.admin.unbanUser);
   const removeUser = useMutation(api.admin.removeUser);
   const revokeSession = useMutation(api.admin.revokeSession);
+  const impersonateUser = useMutation(api.admin.impersonateUser);
 
   if (
     users.status === "LoadingFirstPage" ||
@@ -67,6 +76,27 @@ export function AdminDashboardPanel() {
       }}
       onRevokeSession={async (sessionId) => {
         await revokeSession({ sessionId });
+      }}
+      onImpersonateUser={async (userId) => {
+        if (!actions.token || !actions.refreshToken || !actions.sessionId) {
+          throw new Error("Admin session is not available");
+        }
+        const stored: StoredAdminSession = {
+          token: actions.token,
+          refreshToken: actions.refreshToken,
+          sessionId: actions.sessionId,
+        };
+        sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(stored));
+        let result;
+        try {
+          result = await impersonateUser({ userId });
+        } catch (error) {
+          sessionStorage.removeItem(ADMIN_SESSION_KEY);
+          throw error;
+        }
+        actions.setToken(result.token);
+        actions.setRefreshToken(result.refreshToken);
+        actions.setSessionId(result.sessionId);
       }}
     />
   );

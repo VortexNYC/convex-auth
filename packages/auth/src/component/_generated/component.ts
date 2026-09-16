@@ -138,6 +138,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         >;
       };
       sessions: {
+        getImpersonationState: FunctionReference<
+          "query",
+          "internal",
+          { sessionId: string },
+          { impersonatedBy?: string; userId?: string },
+          Name
+        >;
         getSession: FunctionReference<
           "query",
           "internal",
@@ -152,6 +159,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             userAgent?: string;
             userId: string;
           } | null,
+          Name
+        >;
+        impersonateUser: FunctionReference<
+          "mutation",
+          "internal",
+          { userId: string },
+          { refreshToken: string; sessionId: string; token: string },
           Name
         >;
         listSessions: FunctionReference<
@@ -186,6 +200,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "internal",
           { sessionId: string },
           { revoked: boolean; sessionId: string },
+          Name
+        >;
+        stopImpersonation: FunctionReference<
+          "mutation",
+          "internal",
+          { sessionId: string },
+          { revoked: boolean },
           Name
         >;
       };

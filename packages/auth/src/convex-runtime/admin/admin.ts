@@ -1,6 +1,6 @@
 import type { GenericQueryCtx, GenericMutationCtx } from "convex/server";
 import type { GenericId } from "convex/values";
-import type { DataModel } from "../../component/_generated/dataModel.js";
+import type { DataModel, Id } from "../../component/_generated/dataModel.js";
 
 export type AdminAuditTarget =
   | { type: "user"; id: string }
@@ -17,7 +17,7 @@ export type AdminAuditArgs = {
 };
 
 export type AdminUser = {
-  _id: string;
+  _id: Id<"users">;
   isSuperAdmin?: boolean;
   bannedUntil?: number;
   isActive: boolean;
@@ -40,9 +40,19 @@ export async function requireSuperAdmin(
   return user as AdminUser;
 }
 
-export function isUserBanned(user: { bannedUntil?: number; isActive: boolean }): boolean {
+export function isUserBanned(user: {
+  bannedAt?: number;
+  bannedUntil?: number;
+  isActive: boolean;
+}): boolean {
   const now = Date.now();
-  return !user.isActive || (user.bannedUntil !== undefined && user.bannedUntil > now);
+  if (!user.isActive) {
+    return true;
+  }
+  if (user.bannedUntil !== undefined && user.bannedUntil > now) {
+    return true;
+  }
+  return user.bannedAt !== undefined && user.bannedUntil === undefined;
 }
 
 export async function createAdminAudit(

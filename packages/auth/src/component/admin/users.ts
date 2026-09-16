@@ -118,7 +118,7 @@ export const banUser = mutation({
       throw new Error("Not authenticated");
     }
     const admin = await requireSuperAdmin(ctx, identity.subject);
-    if (String(args.userId) === admin._id) {
+    if (String(args.userId) === String(admin._id)) {
       throw new Error("Cannot ban yourself");
     }
 
@@ -136,7 +136,7 @@ export const banUser = mutation({
     });
 
     await createAdminAudit(ctx, {
-      adminId: admin._id,
+      adminId: String(admin._id),
       action: "banUser",
       target: { type: "user", id: String(args.userId) },
       result: "success",
@@ -176,7 +176,7 @@ export const unbanUser = mutation({
     });
 
     await createAdminAudit(ctx, {
-      adminId: admin._id,
+      adminId: String(admin._id),
       action: "unbanUser",
       target: { type: "user", id: String(args.userId) },
       result: "success",
@@ -250,7 +250,7 @@ export const removeUser = mutation({
       throw new Error("Not authenticated");
     }
     const admin = await requireSuperAdmin(ctx, identity.subject);
-    if (String(args.userId) === admin._id) {
+    if (String(args.userId) === String(admin._id)) {
       throw new Error("Cannot remove yourself");
     }
 
@@ -293,7 +293,7 @@ export const removeUser = mutation({
 
     const now = Date.now();
     await createAdminAudit(ctx, {
-      adminId: admin._id,
+      adminId: String(admin._id),
       action: "removeUser",
       target: { type: "user", id: String(args.userId) },
       result: "success",
