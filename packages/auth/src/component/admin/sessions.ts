@@ -1,7 +1,9 @@
+import { paginator } from "convex-helpers/server/pagination";
 import { query, mutation } from "../_generated/server.js";
 import { v } from "convex/values";
-import type { Doc } from "../_generated/dataModel.js";
+import type { Doc, Id } from "../_generated/dataModel.js";
 import { createAdminAudit, requireSuperAdmin } from "../../convex-runtime/admin/admin.js";
+import schema from "../schema.js";
 
 const MAX_PAGE_LIMIT = 100;
 
@@ -51,15 +53,18 @@ export const listSessions = query({
 
     const limit = Math.min(args.limit ?? 20, MAX_PAGE_LIMIT);
     const userId = args.userId;
+    const base = paginator(ctx.db, schema).query("authSessions");
     const q = userId
-      ? ctx.db
-          .query("authSessions")
-          .withIndex("by_user", (index) => index.eq("userId", userId))
+      ? base
+          .withIndex("by_user", (index) => index.eq("userId", userId as Id<"users">))
           .order("desc")
-      : ctx.db.query("authSessions").order("desc");
-    const paginated = await q.paginate({ cursor: args.cursor ?? null, numItems: limit });
+      : base.order("desc");
+    const { page, continueCursor, isDone } = await q.paginate({
+      cursor: args.cursor ?? null,
+      numItems: limit,
+    });
 
-    const sessions: AdminSessionListItem[] = paginated.page.map((session) => ({
+    const sessions: AdminSessionListItem[] = page.map((session) => ({
       _id: session._id,
       sessionId: session.sessionId,
       userId: session.userId,
@@ -72,8 +77,8 @@ export const listSessions = query({
 
     return {
       sessions,
-      nextCursor: paginated.continueCursor,
-      hasNextPage: !paginated.isDone,
+      nextCursor: continueCursor,
+      hasNextPage: !isDone,
     };
   },
 });

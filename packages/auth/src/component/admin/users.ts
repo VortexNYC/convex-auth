@@ -1,7 +1,9 @@
+import { paginator } from "convex-helpers/server/pagination";
 import { query, mutation } from "../_generated/server.js";
 import { v } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel.js";
 import { createAdminAudit, requireSuperAdmin } from "../../convex-runtime/admin/admin.js";
+import schema from "../schema.js";
 
 const MAX_PAGE_LIMIT = 100;
 
@@ -51,10 +53,12 @@ export const listUsers = query({
     await requireSuperAdmin(ctx, identity.subject);
 
     const limit = Math.min(args.limit ?? 20, MAX_PAGE_LIMIT);
-    const q = ctx.db.query("users").order("desc");
-    const paginated = await q.paginate({ cursor: args.cursor ?? null, numItems: limit });
+    const { page, continueCursor, isDone } = await paginator(ctx.db, schema)
+      .query("users")
+      .order("desc")
+      .paginate({ cursor: args.cursor ?? null, numItems: limit });
 
-    const users: AdminUserListItem[] = paginated.page.map((user) => ({
+    const users: AdminUserListItem[] = page.map((user) => ({
       _id: user._id,
       email: user.email,
       name: user.name,
@@ -68,8 +72,8 @@ export const listUsers = query({
 
     return {
       users,
-      nextCursor: paginated.continueCursor,
-      hasNextPage: !paginated.isDone,
+      nextCursor: continueCursor,
+      hasNextPage: !isDone,
     };
   },
 });
