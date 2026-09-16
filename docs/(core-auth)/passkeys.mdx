@@ -155,8 +155,55 @@ The hook exposes the same surface as web — `register`, `signIn`, `revoke`, `re
 
 ### iOS
 
-Add the associated domain entitlement for your `rpID` (`webcredentials:example.com`) in `app.json`/`app.config.ts` under `ios.associatedDomains`, and serve an AASA file at `https://<rpID>/.well-known/apple-app-site-association` listing your app's `webcredentials` app ID. This requires a development build — passkeys do not work in Expo Go.
+Two sides to wire:
+
+1. **Entitlement** — add the associated domain for your `rpID` in `app.json`/`app.config.ts`:
+
+```json
+{ "ios": { "associatedDomains": ["webcredentials:example.com"] } }
+```
+
+2. **AASA file** — serve `application/json` at `https://<rpID>/.well-known/apple-app-site-association`:
+
+```json
+{ "webcredentials": { "apps": ["TEAMID.com.example.app"] } }
+```
+
+You can host this on your own domain, or on the Convex site deployment itself — `examples/react-native/convex/http.ts` serves it from the `PASSKEY_IOS_APP_ID` env var, which lets `rpID` be `<deployment>.convex.site` with no external website. Passkeys require a development build; they do not work in Expo Go.
 
 ### Android
 
-Serve `https://<rpID>/.well-known/assetlinks.json` granting your package `delegate_permission/common.get_login_creds` with your SHA-256 signing-certificate fingerprint. The assertion's origin arrives as `android:apk-key-hash:<base64url-sha256-of-cert>` — include it in `passkey.origin` (the array form) so verification accepts it. Android may cache the assetlinks lookup for up to 24 hours; reinstall or wait after changing it.
+Serve `https://<rpID>/.well-known/assetlinks.json` — again self-hostable or via the example's `http.ts` (`PASSKEY_ANDROID_PACKAGE` + `PASSKEY_ANDROID_SHA256_CERT_FINGERPRINT` env vars):
+
+```json
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.example.app",
+      "sha256_cert_fingerprints": ["AA:BB:CC:..."]
+    }
+  }
+]
+```
+
+`common.get_login_creds` is required for Credential Manager passkey flows — `handle_all_urls` alone is silently insufficient.
+
+Get the fingerprint from your signing cert:
+
+```sh
+keytool -list -v -keystore <keystore> | rg "SHA256:"
+```
+
+The assertion's `origin` arrives as `android:apk-key-hash:<base64url-sha256-of-cert>` — a base64url encoding of the raw SHA-256 bytes, **not** the colon-separated hex fingerprint. Derive it from the fingerprint with:
+
+```sh
+echo "AA:BB:CC:..." | tr -d ':' | xxd -r -p | base64 | tr '+/' '-_' | tr -d '='
+# → android:apk-key-hash:<output>
+```
+
+Include it in `passkey.origin` (array form) alongside the web origin. Android caches the assetlinks lookup for up to 24 hours — reinstall or wait after changing it.
