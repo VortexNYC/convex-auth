@@ -1,0 +1,13 @@
+---
+"@vortex-api/convex-auth": minor
+---
+
+Harden and extend passkeys: ownership enforcement, cloned-credential detection, rename, and per-user limits.
+
+- **Security:** passkey management (register, list, revoke, rename) is now bound to `ctx.auth.getUserIdentity()` — callers can only operate on their own passkeys.
+- **Security:** authentication challenges scoped to a user can only be completed by a credential owned by that user.
+- **Security:** a non-increasing signature counter revokes the passkey and writes a `passkey_counter_regression` audit event (cloned-authenticator detection).
+- New `renamePasskey` mutation, exposed through `auth.renamePasskey`, `usePasskeys().rename`, and an optional `onRename` prop on `PasskeyManager`.
+- `passkey.maxPasskeysPerUser` config caps active passkeys per user (default 10).
+- Passkey-issued sessions/refresh tokens now carry `familyId`, so they participate in refresh-token reuse detection.
+- Audit events are written for `passkey_registered`, `passkey_authenticated`, `passkey_renamed`, and `passkey_revoked`.

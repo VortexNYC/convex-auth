@@ -413,6 +413,7 @@ type NativePasskeyFunctionReferences = {
   verifyPasskeyAuthentication: FunctionReference<"action">;
   listPasskeys: FunctionReference<"query">;
   revokePasskey: FunctionReference<"mutation">;
+  renamePasskey: FunctionReference<"mutation">;
 };
 
 type ConvexAuthContextValue = NativeAuthActions & {

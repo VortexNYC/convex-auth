@@ -19,11 +19,13 @@ export const auth = convexAuth({
     rpID: "example.com",
     origin: "https://example.com",
     rpName: "Example",
+    // optional: cap active passkeys per user (default 10)
+    maxPasskeysPerUser: 10,
   },
 });
 ```
 
-`rpID` must match the registrable domain users authenticate from. `origin` must be the exact origin the browser sees.
+`rpID` must match the registrable domain users authenticate from. `origin` must be the exact origin the browser sees. `maxPasskeysPerUser` caps active (non-revoked) passkeys per user.
 
 ## React
 
@@ -55,12 +57,13 @@ export function Passkeys() {
       onAuthenticate={() => passkeys.signIn()}
       onVerifyAuthentication={({ response }) => passkeys.signIn()}
       onRevoke={({ credentialId }) => passkeys.revoke(credentialId)}
+      onRename={({ credentialId, name }) => passkeys.rename(credentialId, name)}
     />
   );
 }
 ```
 
-`usePasskeys` handles the WebAuthn browser calls (`startRegistration` / `startAuthentication`) and the Convex mutations.
+`usePasskeys` handles the WebAuthn browser calls (`startRegistration` / `startAuthentication`) and the Convex mutations. `register`, `revoke`, `rename`, and `passkeys` operate on the signed-in user only — passkey management requires an authenticated session.
 
 ### `PasskeyManager`
 
@@ -90,6 +93,9 @@ export function Passkeys() {
       onRevoke={async ({ credentialId }) => {
         // revoke the credential
       }}
+      onRename={async ({ credentialId, name }) => {
+        // optional: rename the credential
+      }}
     />
   );
 }
@@ -107,5 +113,6 @@ When `passkey` is configured, `auth` exposes:
 - `auth.verifyPasskeyAuthentication`
 - `auth.listPasskeys`
 - `auth.revokePasskey`
+- `auth.renamePasskey`
 
-Use `useAuthActions()` to call them from React.
+Use `useAuthActions()` to call them from React. Registration, listing, revoking, and renaming are bound to `ctx.auth.getUserIdentity()` — a caller can only manage their own passkeys. Authentication challenges generated for a specific user can only be completed by a credential belonging to that user, and a passkey whose signature counter regresses is revoked automatically (cloned-authenticator detection). All lifecycle events write `auth_audit_events` rows (`passkey_registered`, `passkey_authenticated`, `passkey_renamed`, `passkey_revoked`, `passkey_counter_regression`).

@@ -35,7 +35,8 @@ export function usePasskeys(args: UsePasskeysArgs) {
     !ctx.getPasskeyAuthenticationOptions ||
     !ctx.verifyPasskeyAuthentication ||
     !ctx.listPasskeys ||
-    !ctx.revokePasskey
+    !ctx.revokePasskey ||
+    !ctx.renamePasskey
   ) {
     throw new Error("Passkeys are not configured in convexAuth.");
   }
@@ -52,6 +53,7 @@ export function usePasskeys(args: UsePasskeysArgs) {
     ctx.verifyPasskeyAuthentication as unknown as FunctionReference<"action">,
   );
   const revokePasskey = useMutation(ctx.revokePasskey as unknown as FunctionReference<"mutation">);
+  const renamePasskey = useMutation(ctx.renamePasskey as unknown as FunctionReference<"mutation">);
   const passkeys = useQuery(ctx.listPasskeys as unknown as FunctionReference<"query">, {
     userId,
   });
@@ -213,11 +215,26 @@ export function usePasskeys(args: UsePasskeysArgs) {
     [revokePasskey],
   );
 
+  const rename = React.useCallback(
+    async (credentialId: string, name: string) => {
+      setError(null);
+      try {
+        await renamePasskey({ credentialId, name });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Rename failed";
+        setError(message);
+        throw new Error(message);
+      }
+    },
+    [renamePasskey],
+  );
+
   return {
     passkeys: (passkeys ?? []) as PasskeyListItem[],
     register,
     signIn,
     revoke,
+    rename,
     loading,
     error,
     supported,

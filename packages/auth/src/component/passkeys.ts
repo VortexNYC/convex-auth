@@ -12,6 +12,7 @@ import { mintToken } from "../convex-runtime/native/jwt.js";
 import { generateVerificationToken, hashToken } from "../convex-runtime/native/tokens.js";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+const MAX_PASSKEYS_PER_USER = 10;
 
 const registrationResponseValidator = v.object({
   id: v.string(),
@@ -42,6 +43,7 @@ export const generatePasskeyRegistrationOptions = mutation({
     authenticatorAttachment: v.optional(
       v.union(v.literal("platform"), v.literal("cross-platform")),
     ),
+    maxPasskeys: v.optional(v.number()),
   },
   returns: v.any(),
   handler: async (ctx, args) => {
@@ -54,6 +56,11 @@ export const generatePasskeyRegistrationOptions = mutation({
       .query("auth_passkeys")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .take(100);
+
+    const active = existing.filter((pk) => !pk.revokedAt);
+    if (active.length >= (args.maxPasskeys ?? MAX_PASSKEYS_PER_USER)) {
+      throw new Error("Maximum number of passkeys reached for this user");
+    }
 
     const excludeCredentials = existing
       .filter((pk) => !pk.revokedAt)
@@ -178,6 +185,17 @@ export const verifyPasskeyRegistration = mutation({
       lastUsedAt: now,
     });
 
+    await ctx.db.insert("auth_audit_events", {
+      actorUserId: args.userId,
+      actorType: "user",
+      eventType: "passkey_registered",
+      targetType: "passkey",
+      targetId: credential.id,
+      organizationId: undefined,
+      metadataJson: undefined,
+      createdAt: now,
+    });
+
     return { userId: args.userId, credentialId: credential.id };
   },
 });
@@ -218,6 +236,7 @@ export const listPasskeys = query({
 export const revokePasskey = mutation({
   args: {
     credentialId: v.string(),
+    userId: v.optional(v.id("users")),
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
@@ -229,8 +248,61 @@ export const revokePasskey = mutation({
     if (!passkey || passkey.revokedAt) {
       return false;
     }
+    if (args.userId && passkey.userId !== args.userId) {
+      throw new Error("Passkey does not belong to this user");
+    }
 
-    await ctx.db.patch(passkey._id, { revokedAt: Date.now() });
+    const now = Date.now();
+    await ctx.db.patch(passkey._id, { revokedAt: now });
+    await ctx.db.insert("auth_audit_events", {
+      actorUserId: passkey.userId,
+      actorType: "user",
+      eventType: "passkey_revoked",
+      targetType: "passkey",
+      targetId: passkey.credentialId,
+      organizationId: undefined,
+      metadataJson: undefined,
+      createdAt: now,
+    });
+    return true;
+  },
+});
+
+export const renamePasskey = mutation({
+  args: {
+    credentialId: v.string(),
+    userId: v.id("users"),
+    name: v.string(),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const passkey = await ctx.db
+      .query("auth_passkeys")
+      .withIndex("by_credentialId", (q) => q.eq("credentialId", args.credentialId))
+      .first();
+
+    if (!passkey || passkey.revokedAt) {
+      return false;
+    }
+    if (passkey.userId !== args.userId) {
+      throw new Error("Passkey does not belong to this user");
+    }
+
+    const name = args.name.trim();
+    if (!name) {
+      throw new Error("Passkey name cannot be empty");
+    }
+    await ctx.db.patch(passkey._id, { name });
+    await ctx.db.insert("auth_audit_events", {
+      actorUserId: args.userId,
+      actorType: "user",
+      eventType: "passkey_renamed",
+      targetType: "passkey",
+      targetId: passkey.credentialId,
+      organizationId: undefined,
+      metadataJson: undefined,
+      createdAt: Date.now(),
+    });
     return true;
   },
 });
@@ -359,6 +431,12 @@ export const verifyPasskeyAuthentication = mutation({
       throw new Error("Passkey not found or has been revoked");
     }
 
+    // The challenge was scoped to a user when options were generated — the
+    // authenticating credential must belong to that same user.
+    if (challengeRecord.userId && passkey.userId !== challengeRecord.userId) {
+      throw new Error("Passkey does not match the user this challenge was issued for");
+    }
+
     const verification = await verifyAuthenticationResponse({
       response: args.response as AuthenticationResponseJSON,
       expectedChallenge: args.challenge,
@@ -378,6 +456,30 @@ export const verifyPasskeyAuthentication = mutation({
     }
 
     const { authenticationInfo } = verification;
+
+    // A non-increasing counter on an authenticator that previously counted up
+    // means the credential was cloned. Revoke it rather than mint a session.
+    if (
+      authenticationInfo.newCounter > 0 &&
+      passkey.counter > 0 &&
+      authenticationInfo.newCounter <= passkey.counter
+    ) {
+      await ctx.db.patch(passkey._id, { revokedAt: now });
+      await ctx.db.insert("auth_audit_events", {
+        actorUserId: passkey.userId,
+        actorType: "system",
+        eventType: "passkey_counter_regression",
+        targetType: "passkey",
+        targetId: passkey.credentialId,
+        organizationId: undefined,
+        metadataJson: JSON.stringify({
+          storedCounter: passkey.counter,
+          presentedCounter: authenticationInfo.newCounter,
+        }),
+        createdAt: now,
+      });
+      throw new Error("Passkey counter regressed; the credential may have been cloned");
+    }
 
     await ctx.db.patch(passkey._id, {
       counter: authenticationInfo.newCounter,
@@ -407,6 +509,7 @@ export const verifyPasskeyAuthentication = mutation({
       tokenHash: refreshTokenHash,
       sessionId,
       userId: user._id,
+      familyId: sessionId,
       expiresAt: refreshTokenExpiresAt,
       revokedAt: undefined,
       createdAt: now,
@@ -417,12 +520,24 @@ export const verifyPasskeyAuthentication = mutation({
       sessionId,
       userId: user._id,
       token,
+      familyId: sessionId,
       expiresAt: sessionExpiresAt,
       ipAddress: undefined,
       userAgent: undefined,
       revokedAt: undefined,
       createdAt: now,
       updatedAt: now,
+    });
+
+    await ctx.db.insert("auth_audit_events", {
+      actorUserId: user._id,
+      actorType: "user",
+      eventType: "passkey_authenticated",
+      targetType: "session",
+      targetId: sessionId,
+      organizationId: undefined,
+      metadataJson: undefined,
+      createdAt: now,
     });
 
     return {

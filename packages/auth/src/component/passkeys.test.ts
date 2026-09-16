@@ -198,5 +198,194 @@ describe("passkeys", () => {
 
     const listAfter = await t.query(api.passkeys.listPasskeys, { userId });
     expect(listAfter[0]!.revoked).toBe(true);
+
+    const events = await t.run(async (ctx) =>
+      ctx.db
+        .query("auth_audit_events")
+        .withIndex("by_event_type", (q) => q.eq("eventType", "passkey_revoked"))
+        .take(10),
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0]!.targetId).toBe(credentialId);
+  });
+
+  it("renames a passkey and rejects wrong-owner and empty names", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const otherUserId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "other@example.com",
+        name: "Other",
+        emailVerified: false,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    const credentialId = "credential-to-rename";
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_passkeys", {
+        userId,
+        credentialId,
+        publicKey: "fake-public-key",
+        counter: 0,
+        transports: [],
+        name: "Old name",
+        createdAt: 0,
+        lastUsedAt: 0,
+      }),
+    );
+
+    await expect(
+      t.mutation(api.passkeys.renamePasskey, {
+        credentialId,
+        userId: otherUserId,
+        name: "Hijack",
+      }),
+    ).rejects.toThrow("does not belong");
+
+    await expect(
+      t.mutation(api.passkeys.renamePasskey, { credentialId, userId, name: "   " }),
+    ).rejects.toThrow("cannot be empty");
+
+    const renamed = await t.mutation(api.passkeys.renamePasskey, {
+      credentialId,
+      userId,
+      name: "  Work laptop  ",
+    });
+    expect(renamed).toBe(true);
+
+    const list = await t.query(api.passkeys.listPasskeys, { userId });
+    expect(list[0]!.name).toBe("Work laptop");
+  });
+
+  it("refuses to revoke a passkey owned by another user", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const otherUserId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "other@example.com",
+        name: "Other",
+        emailVerified: false,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_passkeys", {
+        userId,
+        credentialId: "victims-credential",
+        publicKey: "fake-public-key",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      }),
+    );
+
+    await expect(
+      t.mutation(api.passkeys.revokePasskey, {
+        credentialId: "victims-credential",
+        userId: otherUserId,
+      }),
+    ).rejects.toThrow("does not belong");
+
+    const list = await t.query(api.passkeys.listPasskeys, { userId });
+    expect(list[0]!.revoked).toBe(false);
+  });
+
+  it("enforces the per-user passkey limit", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_passkeys", {
+        userId,
+        credentialId: "existing-credential",
+        publicKey: "fake-public-key",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      }),
+    );
+
+    await expect(
+      t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
+        userId,
+        identifier: "shlomo@example.com",
+        rpName: RP_NAME,
+        rpID: RP_ID,
+        maxPasskeys: 1,
+      }),
+    ).rejects.toThrow("Maximum number of passkeys");
+
+    // Revoked passkeys don't count toward the cap.
+    await t.run(async (ctx) => {
+      const pk = await ctx.db
+        .query("auth_passkeys")
+        .withIndex("by_credentialId", (q) => q.eq("credentialId", "existing-credential"))
+        .first();
+      await ctx.db.patch(pk!._id, { revokedAt: 1 });
+    });
+
+    const options = await t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
+      userId,
+      identifier: "shlomo@example.com",
+      rpName: RP_NAME,
+      rpID: RP_ID,
+      maxPasskeys: 1,
+    });
+    expect(options).toBeDefined();
+  });
+
+  it("rejects an authentication ceremony when the challenge was scoped to another user", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const victimId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "victim@example.com",
+        name: "Victim",
+        emailVerified: false,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    // Victim's passkey exists; attacker generates options scoped to themselves.
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_passkeys", {
+        userId: victimId,
+        credentialId: "victim-credential",
+        publicKey: "fake-public-key",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      }),
+    );
+    const options = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
+      userId,
+      rpID: RP_ID,
+    })) as { challenge: string };
+
+    await expect(
+      t.mutation(api.passkeys.verifyPasskeyAuthentication, {
+        challenge: options.challenge,
+        response: {
+          id: "victim-credential",
+          rawId: "victim-credential",
+          response: {
+            clientDataJSON: "fake",
+            authenticatorData: "fake",
+            signature: "fake",
+          },
+          type: "public-key",
+        },
+        rpID: RP_ID,
+        origin: ORIGIN,
+      }),
+    ).rejects.toThrow("does not match the user");
   });
 });
