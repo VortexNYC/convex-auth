@@ -26,6 +26,7 @@ export function AdminDashboardPanel() {
     from?: string;
     to?: string;
   }>({});
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
 
   const users = usePaginatedQuery(
     api.admin.listUsers,
@@ -54,12 +55,27 @@ export function AdminDashboardPanel() {
     api.admin.getUser,
     selectedUserId ? { userId: selectedUserId } : "skip",
   );
+  const selectedOrganization = useQuery(
+    api.admin.getOrganization,
+    selectedOrganizationId ? { organizationId: selectedOrganizationId } : "skip",
+  );
+  const organizationMembers = usePaginatedQuery(
+    api.admin.listMembers,
+    selectedOrganizationId ? { organizationId: selectedOrganizationId } : "skip",
+    { initialNumItems: PAGE_SIZE },
+  );
+  const organizationRoles = useQuery(
+    api.admin.listRoles,
+    selectedOrganizationId ? { organizationId: selectedOrganizationId } : "skip",
+  );
 
   const banUser = useMutation(api.admin.banUser);
   const unbanUser = useMutation(api.admin.unbanUser);
   const removeUser = useMutation(api.admin.removeUser);
   const revokeSession = useMutation(api.admin.revokeSession);
   const impersonateUser = useMutation(api.admin.impersonateUser);
+  const updateMemberRole = useMutation(api.admin.updateMemberRole);
+  const removeMember = useMutation(api.admin.removeMember);
 
   if (
     users.status === "LoadingFirstPage" ||
@@ -83,6 +99,22 @@ export function AdminDashboardPanel() {
       onViewUser={setSelectedUserId}
       selectedUser={selectedUser ?? undefined}
       onCloseUserDetail={() => setSelectedUserId(null)}
+      onViewOrganization={setSelectedOrganizationId}
+      selectedOrganization={selectedOrganization ?? undefined}
+      onCloseOrganizationDetail={() => setSelectedOrganizationId(null)}
+      organizationMembers={organizationMembers.results ?? []}
+      organizationRoles={organizationRoles?.roles ?? []}
+      onUpdateMemberRole={async (memberId, roleId) => {
+        await updateMemberRole({ memberId, roleId });
+      }}
+      onRemoveMember={async (memberId) => {
+        await removeMember({ memberId });
+      }}
+      organizationMembersPagination={{
+        canLoadMore: organizationMembers.status === "CanLoadMore",
+        isLoading: organizationMembers.isLoading,
+        loadMore: organizationMembers.loadMore,
+      }}
       usersPagination={{
         canLoadMore: users.status === "CanLoadMore",
         isLoading: users.isLoading,

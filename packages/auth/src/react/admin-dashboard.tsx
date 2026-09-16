@@ -55,6 +55,30 @@ export type ConvexAdminDashboardOrganization = {
   updatedAt?: number;
 };
 
+export type ConvexAdminDashboardMember = {
+  _id: string;
+  organizationId: string;
+  userId?: string | null;
+  roleId: string;
+  status: string;
+  invitedEmail?: string | null;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type ConvexAdminDashboardRole = {
+  _id: string;
+  organizationId: string;
+  key: string;
+  name: string;
+  description?: string | null;
+  permissions: string[];
+  isSystem: boolean;
+  createdBy?: string | null;
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type ConvexAdminDashboardAudit = {
   _id: string;
   adminId: string;
@@ -83,6 +107,8 @@ export type ConvexAdminDashboardCopy = {
   sessionsTitle?: string;
   organizationsTitle?: string;
   auditTitle?: string;
+  membersTitle?: string;
+  rolesTitle?: string;
   banLabel?: string;
   unbanLabel?: string;
   removeLabel?: string;
@@ -135,6 +161,14 @@ export type ConvexAdminDashboardProps = {
   onRevokeSession?: (sessionId: string) => void;
   auditsFilters?: ConvexAdminDashboardAuditsFilters;
   onAuditsFiltersChange?: (filters: ConvexAdminDashboardAuditsFilters) => void;
+  onViewOrganization?: (organizationId: string) => void;
+  selectedOrganization?: ConvexAdminDashboardOrganization | null;
+  onCloseOrganizationDetail?: () => void;
+  organizationMembers?: ConvexAdminDashboardMember[];
+  organizationRoles?: ConvexAdminDashboardRole[];
+  onUpdateMemberRole?: (memberId: string, roleId: string) => void;
+  onRemoveMember?: (memberId: string) => void;
+  organizationMembersPagination?: ConvexAdminDashboardPagination;
   usersPagination?: ConvexAdminDashboardPagination;
   sessionsPagination?: ConvexAdminDashboardPagination;
   organizationsPagination?: ConvexAdminDashboardPagination;
@@ -161,6 +195,14 @@ export function ConvexAdminDashboard({
   onRevokeSession,
   auditsFilters,
   onAuditsFiltersChange,
+  onViewOrganization,
+  selectedOrganization,
+  onCloseOrganizationDetail,
+  organizationMembers = [],
+  organizationRoles = [],
+  onUpdateMemberRole,
+  onRemoveMember,
+  organizationMembersPagination,
   usersPagination,
   sessionsPagination,
   organizationsPagination,
@@ -174,6 +216,8 @@ export function ConvexAdminDashboard({
     sessionsTitle: "Sessions",
     organizationsTitle: "Organisations",
     auditTitle: "Audit log",
+    membersTitle: "Members",
+    rolesTitle: "Roles",
     banLabel: "Ban",
     unbanLabel: "Unban",
     removeLabel: "Remove",
@@ -389,11 +433,25 @@ export function ConvexAdminDashboard({
                 organizations.map((org) => (
                   <div
                     key={org._id}
-                    className={cn("border-b border-border py-2 last:border-0", classNames?.row)}
+                    className={cn(
+                      "border-b border-border py-2 last:border-0 flex items-start justify-between gap-4",
+                      classNames?.row,
+                    )}
                   >
-                    <p className="font-medium">{org.name}</p>
-                    {org.slug && <p className="text-muted-foreground text-sm">{org.slug}</p>}
-                    {org.status && <p className="text-muted-foreground text-xs">{org.status}</p>}
+                    <div>
+                      <p className="font-medium">{org.name}</p>
+                      {org.slug && <p className="text-muted-foreground text-sm">{org.slug}</p>}
+                      {org.status && <p className="text-muted-foreground text-xs">{org.status}</p>}
+                    </div>
+                    {onViewOrganization && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onViewOrganization(org._id)}
+                      >
+                        {c.viewLabel}
+                      </Button>
+                    )}
                   </div>
                 ))
               )}
@@ -532,6 +590,18 @@ export function ConvexAdminDashboard({
           onRemoveUser={onRemoveUser}
         />
       )}
+      {selectedOrganization && onCloseOrganizationDetail && (
+        <OrganizationDetailSheet
+          c={c}
+          organization={selectedOrganization}
+          members={organizationMembers}
+          roles={organizationRoles}
+          onCloseOrganizationDetail={onCloseOrganizationDetail}
+          onUpdateMemberRole={onUpdateMemberRole}
+          onRemoveMember={onRemoveMember}
+          membersPagination={organizationMembersPagination}
+        />
+      )}
     </div>
   );
 }
@@ -635,6 +705,135 @@ function UserDetailSheet({
             </Button>
           )}
         </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function OrganizationDetailSheet({
+  c,
+  organization,
+  members,
+  roles,
+  onCloseOrganizationDetail,
+  onUpdateMemberRole,
+  onRemoveMember,
+  membersPagination,
+}: {
+  c: Required<ConvexAdminDashboardCopy>;
+  organization: ConvexAdminDashboardOrganization;
+  members: ConvexAdminDashboardMember[];
+  roles: ConvexAdminDashboardRole[];
+  onCloseOrganizationDetail?: () => void;
+  onUpdateMemberRole?: (memberId: string, roleId: string) => void;
+  onRemoveMember?: (memberId: string) => void;
+  membersPagination?: ConvexAdminDashboardPagination;
+}) {
+  const roleById = new Map(roles.map((role) => [role._id, role]));
+
+  return (
+    <Sheet
+      open
+      onOpenChange={(open) => {
+        if (!open) onCloseOrganizationDetail?.();
+      }}
+    >
+      <SheetContent side="right">
+        <SheetHeader>
+          <SheetTitle>{organization.name}</SheetTitle>
+          {organization.slug && <SheetDescription>{organization.slug}</SheetDescription>}
+        </SheetHeader>
+        <SheetBody className="space-y-4">
+          {organization.status && <Badge variant="outline">{organization.status}</Badge>}
+          <Separator />
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium">{c.membersTitle}</h4>
+            {members.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No members.</p>
+            ) : (
+              members.map((member) => {
+                const currentRole = roleById.get(member.roleId);
+                return (
+                  <div key={member._id} className="border-b border-border py-2 last:border-0">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-sm truncate">
+                          {member.userId ?? member.invitedEmail ?? member._id}
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {member.status && (
+                            <Badge variant="outline" className="text-xs">
+                              {member.status}
+                            </Badge>
+                          )}
+                          {currentRole && (
+                            <Badge variant="outline" className="text-xs">
+                              {currentRole.name}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {onUpdateMemberRole && roles.length > 0 && (
+                          <select
+                            aria-label={`Role for ${member.userId ?? member.invitedEmail ?? member._id}`}
+                            className="h-8 rounded border border-input bg-background px-2 text-sm"
+                            value={member.roleId}
+                            onChange={(event) => onUpdateMemberRole(member._id, event.target.value)}
+                          >
+                            {roles.map((r) => (
+                              <option key={r._id} value={r._id}>
+                                {r.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {onRemoveMember && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            aria-label={`Remove ${member.userId ?? member.invitedEmail ?? member._id}`}
+                            onClick={() => onRemoveMember(member._id)}
+                          >
+                            {c.removeLabel}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            {membersPagination?.loadMore && membersPagination.canLoadMore !== false && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={membersPagination.isLoading}
+                onClick={() => membersPagination.loadMore?.(20)}
+              >
+                {membersPagination.isLoading ? c.loadingLabel : c.loadMoreLabel}
+              </Button>
+            )}
+          </div>
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium">{c.rolesTitle}</h4>
+            {roles.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No roles.</p>
+            ) : (
+              <ul className="space-y-1">
+                {roles.map((role) => (
+                  <li key={role._id} className="text-sm">
+                    <span className="font-medium">{role.name}</span>
+                    {role.key && (
+                      <span className="text-muted-foreground text-xs"> ({role.key})</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </SheetBody>
       </SheetContent>
     </Sheet>
   );
