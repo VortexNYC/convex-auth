@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { argon2id } from "@noble/hashes/argon2.js";
 import { scryptAsync } from "@noble/hashes/scrypt.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 import { bytesToBase64url, hashPassword, legacyPbkdf2Hash, verifyPassword } from "./password.js";
@@ -24,6 +25,16 @@ describe("password", () => {
     expect(hash1).not.toBe(hash2);
     expect(await verifyPassword("hunter2", hash1)).toBe(true);
     expect(await verifyPassword("hunter2", hash2)).toBe(true);
+  });
+
+  it("still verifies legacy (pre-WASM) argon2id hashes", async () => {
+    // Format written by the previous @noble/hashes implementation:
+    // $argon2id$v=19,m=19456,t=2,p=1$<b64url salt>$<b64url derived>
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const derived = argon2id("hunter2", salt, { t: 2, m: 19456, p: 1, dkLen: 32, version: 0x13 });
+    const legacyHash = `$argon2id$v=19,m=19456,t=2,p=1$${bytesToBase64url(salt)}$${bytesToBase64url(derived)}`;
+    expect(await verifyPassword("hunter2", legacyHash)).toBe(true);
+    expect(await verifyPassword("wrong", legacyHash)).toBe(false);
   });
 
   it("still verifies legacy scrypt hashes", async () => {
