@@ -932,17 +932,14 @@ export function nativeEmailAndPassword(
   async function generateBackupCodes(
     count = DEFAULT_TWO_FACTOR_BACKUP_CODES_COUNT,
   ): Promise<{ codes: string[]; hashes: string[] }> {
-    const pairs = await Promise.all(
-      Array.from({ length: count }, async () => {
-        const code = encodeBase32(generateSecret(DEFAULT_TWO_FACTOR_BACKUP_CODE_BYTES));
-        const hash = await hashPassword(code);
-        return { code, hash };
-      }),
-    );
-    return {
-      codes: pairs.map((p) => p.code),
-      hashes: pairs.map((p) => p.hash),
-    };
+    const codes: string[] = [];
+    const hashes: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const code = encodeBase32(generateSecret(DEFAULT_TWO_FACTOR_BACKUP_CODE_BYTES));
+      codes.push(code);
+      hashes.push(await hashPassword(code));
+    }
+    return { codes, hashes };
   }
 
   const twoFactorEnable = action({
