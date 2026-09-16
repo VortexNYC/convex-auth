@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { ConvexAuthProvider, type NativeAuthActions } from "@vortex-api/convex-auth/react";
-import { auth } from "../convex/auth";
+import { api } from "../convex/_generated/api";
 import App from "./App";
 import "./index.css";
 
@@ -20,7 +20,7 @@ if (!root) throw new Error("No root element");
 createRoot(root).render(
   <StrictMode>
     <ConvexProvider client={convex}>
-      <ConvexAuthProvider actions={auth as unknown as NativeAuthActions}>
+      <ConvexAuthProvider actions={api.auth as unknown as NativeAuthActions}>
         <App />
       </ConvexAuthProvider>
     </ConvexProvider>

@@ -1,6 +1,33 @@
+import fs from "node:fs/promises";
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
+  test: {
+    server: {
+      deps: {
+        // The package's dist imports `argon2_wasm_bg.wasm` directly; it must be
+        // transformed by the wasm plugin below instead of externalized to Node.
+        inline: ["argon2id-wasm"],
+      },
+    },
+  },
+  plugins: [
+    {
+      name: "wasm-as-bytes",
+      enforce: "pre",
+      async load(id) {
+        const path = id.split("?")[0];
+        if (!path || !path.endsWith(".wasm")) {
+          return null;
+        }
+        const bytes = await fs.readFile(path);
+        // Mirrors the Convex bundler's wasmPlugin exactly: default-export a
+        // compiled WebAssembly.Module so wasm-bindgen init takes the same
+        // code path under vitest as it does in production.
+        return `export default new WebAssembly.Module(new Uint8Array(Buffer.from(${JSON.stringify(bytes.toString("base64"))}, "base64")));`;
+      },
+    },
+  ],
   pack: [
     {
       name: "lib",
@@ -67,6 +94,7 @@ export default defineConfig({
           "use-sync-external-store",
           "@convex-dev/rate-limiter",
           "@noble/hashes",
+          "argon2id-wasm",
           "jose",
           "oauth4webapi",
           "otpauth",

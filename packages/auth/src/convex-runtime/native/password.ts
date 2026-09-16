@@ -1,4 +1,8 @@
 import { base64url } from "jose";
+import {
+  hashPassword as wasmHashPassword,
+  verifyPassword as wasmVerifyPassword,
+} from "argon2id-wasm";
 import { argon2id } from "@noble/hashes/argon2.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { scrypt } from "@noble/hashes/scrypt.js";
@@ -11,11 +15,6 @@ const ARGON2ID_PREFIX = "$argon2id$";
 const DEFAULT_DKLEN = 32;
 const DEFAULT_SALT_BYTES = 16;
 const DEFAULT_PBKDF2_ITERATIONS = 100_000;
-// OWASP-recommended baseline for argon2id: 19 MiB, 2 iterations, parallelism 1.
-const DEFAULT_ARGON2_T = 2;
-const DEFAULT_ARGON2_M = 19456;
-const DEFAULT_ARGON2_P = 1;
-const DEFAULT_ARGON2_VERSION = 0x13;
 // Better Auth's default scrypt config, used before migration to convex-auth.
 // It stores hashes as lowercase hex "salt:derivedKey" (salt = 16 bytes, dkLen = 64).
 const BETTER_AUTH_SCRYPT_N = 16384;
@@ -43,21 +42,10 @@ function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
   return result === 0;
 }
 
-function generateSalt(): Uint8Array {
-  return globalThis.crypto.getRandomValues(new Uint8Array(DEFAULT_SALT_BYTES));
-}
-
 export async function hashPassword(password: string): Promise<string> {
-  const salt = generateSalt();
-  const derived = argon2id(password, salt, {
-    t: DEFAULT_ARGON2_T,
-    m: DEFAULT_ARGON2_M,
-    p: DEFAULT_ARGON2_P,
-    dkLen: DEFAULT_DKLEN,
-    version: DEFAULT_ARGON2_VERSION,
-  });
-  const params = `v=${DEFAULT_ARGON2_VERSION},m=${DEFAULT_ARGON2_M},t=${DEFAULT_ARGON2_T},p=${DEFAULT_ARGON2_P}`;
-  return `${ARGON2ID_PREFIX}${params}$${bytesToBase64url(salt)}$${bytesToBase64url(derived)}`;
+  // Rust/WASM argon2id (~10x faster than pure JS in the isolate) emitting a
+  // standard PHC string: $argon2id$v=19$m=...,t=...,p=...$salt$hash.
+  return await wasmHashPassword(password);
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
@@ -120,6 +108,20 @@ function parseArgon2idHash(hash: string): {
 }
 
 async function verifyArgon2id(password: string, hash: string): Promise<boolean> {
+  // PHC format (argon2id-wasm output) has six "$"-separated segments with
+  // "v=19" alone in position 2; our legacy format packs all params there.
+  if (hash.split("$").length === 6) {
+    try {
+      return await wasmVerifyPassword(password, hash);
+    } catch (cause) {
+      // Only a malformed PHC string means "wrong hash". A WASM init failure is
+      // infrastructure — fail loudly, not as "wrong password".
+      if (cause instanceof Error && cause.message.includes("Failed to initialize")) {
+        throw cause;
+      }
+      return false;
+    }
+  }
   const parsed = parseArgon2idHash(hash);
   if (!parsed) {
     return false;

@@ -5,7 +5,7 @@ import {
   ExpoConvexAuthClientProvider,
   type NativeAuthActions,
 } from "@vortex-api/convex-auth/react-native";
-import { auth } from "../convex/auth";
+import { api } from "../convex/_generated/api";
 import App from "./App";
 
 const env = import.meta as unknown as { env: Record<string, string | undefined> };
@@ -35,7 +35,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ConvexProvider client={convex}>
       <ExpoConvexAuthClientProvider
-        actions={auth as unknown as NativeAuthActions}
+        actions={api.auth as unknown as NativeAuthActions}
         storage={storage}
       >
         <App />
