@@ -165,4 +165,66 @@ describe("admin users", () => {
         .mutation(makeFunctionReference<"mutation">("admin/users:removeUser"), { userId: adminId }),
     ).rejects.toThrow("Cannot remove yourself");
   });
+
+  it("allows the first user to claim super admin", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t, "first@example.com", "First");
+
+    const result = await t
+      .withIdentity({ subject: userId })
+      .mutation(makeFunctionReference<"mutation">("admin/users:claimSuperAdmin"), {});
+
+    expect(result.userId).toBe(userId);
+    const user = await t.run((ctx) => ctx.db.get("users", userId));
+    expect(user?.isSuperAdmin).toBe(true);
+  });
+
+  it("rejects claimSuperAdmin when a super admin already exists", async () => {
+    const t = convexTest(schema, modules);
+    await insertUser(t, "admin@example.com", "Admin", true);
+    const userId = await insertUser(t, "user@example.com", "User");
+
+    await expect(
+      t
+        .withIdentity({ subject: userId })
+        .mutation(makeFunctionReference<"mutation">("admin/users:claimSuperAdmin"), {}),
+    ).rejects.toThrow("A super admin already exists");
+  });
+
+  it("rejects claimSuperAdmin for an anonymous user", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t, "anon@example.com", "Anonymous");
+    await t.run((ctx) => ctx.db.patch(userId, { isAnonymous: true }));
+
+    await expect(
+      t
+        .withIdentity({ subject: userId })
+        .mutation(makeFunctionReference<"mutation">("admin/users:claimSuperAdmin"), {}),
+    ).rejects.toThrow("User is not eligible to claim super admin");
+  });
+
+  it("rejects claimSuperAdmin for an inactive user", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t, "inactive@example.com", "Inactive");
+    await t.run((ctx) => ctx.db.patch(userId, { isActive: false }));
+
+    await expect(
+      t
+        .withIdentity({ subject: userId })
+        .mutation(makeFunctionReference<"mutation">("admin/users:claimSuperAdmin"), {}),
+    ).rejects.toThrow("User is not eligible to claim super admin");
+  });
+
+  it("rejects claimSuperAdmin for a currently banned user", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t, "banned@example.com", "Banned");
+    const bannedUntil = Date.now() + 60_000;
+    await t.run((ctx) => ctx.db.patch(userId, { bannedUntil }));
+
+    await expect(
+      t
+        .withIdentity({ subject: userId })
+        .mutation(makeFunctionReference<"mutation">("admin/users:claimSuperAdmin"), {}),
+    ).rejects.toThrow("User is not eligible to claim super admin");
+  });
 });

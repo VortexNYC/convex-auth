@@ -22,6 +22,7 @@ import {
   useConvexOrganizationRefs,
   usePasskeys,
 } from "@vortex-api/convex-auth/react";
+import { AdminDashboardPanel } from "./AdminDashboardPanel";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import {
@@ -48,6 +49,7 @@ export function SignedInView() {
 
   const user = actions.user;
   const token = actions.token;
+  const claimAdmin = useMutation(api.admin.claimSuperAdmin);
 
   if (user === null) {
     return (
@@ -92,6 +94,32 @@ export function SignedInView() {
           </div>
         ) : null}
 
+        {!user.isSuperAdmin ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Admin demo</CardTitle>
+              <CardDescription>Claim super-admin access to test the dashboard.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      await claimAdmin({});
+                      setMessage("Admin access granted.");
+                    } catch (err) {
+                      setMessage(err instanceof Error ? err.message : "Could not claim admin");
+                    }
+                  })();
+                }}
+              >
+                Claim admin access
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full">
             <TabsTrigger value="profile">Profile</TabsTrigger>
@@ -102,6 +130,7 @@ export function SignedInView() {
             <TabsTrigger value="api-keys">API Keys</TabsTrigger>
             <TabsTrigger value="service-principals">Service Principals</TabsTrigger>
             <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+            {user.isSuperAdmin ? <TabsTrigger value="admin">Admin</TabsTrigger> : null}
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
@@ -156,6 +185,12 @@ export function SignedInView() {
           <TabsContent value="webhooks" className="space-y-4">
             <WebhooksPanel />
           </TabsContent>
+
+          {user.isSuperAdmin ? (
+            <TabsContent value="admin" className="space-y-4">
+              <AdminDashboardPanel />
+            </TabsContent>
+          ) : null}
         </Tabs>
       </div>
     </div>

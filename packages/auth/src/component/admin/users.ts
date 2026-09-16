@@ -1,7 +1,9 @@
+import { paginator } from "convex-helpers/server/pagination";
 import { query, mutation } from "../_generated/server.js";
 import { v } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel.js";
 import { createAdminAudit, requireSuperAdmin } from "../../convex-runtime/admin/admin.js";
+import schema from "../schema.js";
 
 const MAX_PAGE_LIMIT = 100;
 
@@ -51,10 +53,12 @@ export const listUsers = query({
     await requireSuperAdmin(ctx, identity.subject);
 
     const limit = Math.min(args.limit ?? 20, MAX_PAGE_LIMIT);
-    const q = ctx.db.query("users").order("desc");
-    const paginated = await q.paginate({ cursor: args.cursor ?? null, numItems: limit });
+    const { page, continueCursor, isDone } = await paginator(ctx.db, schema)
+      .query("users")
+      .order("desc")
+      .paginate({ cursor: args.cursor ?? null, numItems: limit });
 
-    const users: AdminUserListItem[] = paginated.page.map((user) => ({
+    const users: AdminUserListItem[] = page.map((user) => ({
       _id: user._id,
       email: user.email,
       name: user.name,
@@ -68,8 +72,8 @@ export const listUsers = query({
 
     return {
       users,
-      nextCursor: paginated.continueCursor,
-      hasNextPage: !paginated.isDone,
+      nextCursor: continueCursor,
+      hasNextPage: !isDone,
     };
   },
 });
@@ -181,6 +185,59 @@ export const unbanUser = mutation({
     });
 
     return { userId: args.userId };
+  },
+});
+
+export const claimSuperAdmin = mutation({
+  args: {},
+  returns: v.object({ userId: v.id("users") }),
+  handler: async (ctx): Promise<{ userId: Id<"users"> }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db.get("users", identity.subject as Id<"users">);
+    if (user === null) {
+      throw new Error("User not found");
+    }
+
+    const now = Date.now();
+    if (
+      user.isAnonymous ||
+      !user.isActive ||
+      (user.bannedUntil !== undefined && user.bannedUntil > now)
+    ) {
+      throw new Error("User is not eligible to claim super admin");
+    }
+
+    if (user.isSuperAdmin) {
+      return { userId: user._id };
+    }
+
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_super_admin", (q) => q.eq("isSuperAdmin", true))
+      .take(1);
+    if (existing.length > 0) {
+      throw new Error("A super admin already exists");
+    }
+
+    await ctx.db.patch(user._id, {
+      isSuperAdmin: true,
+      updatedAt: now,
+    });
+
+    await createAdminAudit(ctx, {
+      adminId: String(user._id),
+      action: "claimSuperAdmin",
+      target: { type: "user", id: String(user._id) },
+      result: "success",
+      payload: { email: user.email },
+      now,
+    });
+
+    return { userId: user._id };
   },
 });
 

@@ -23,6 +23,241 @@ import type { FunctionReference } from "convex/server";
  */
 export type ComponentApi<Name extends string | undefined = string | undefined> =
   {
+    admin: {
+      audit: {
+        listAdminAudits: FunctionReference<
+          "query",
+          "internal",
+          { cursor?: string; limit?: number },
+          {
+            audits: Array<{
+              _id: string;
+              action: string;
+              adminId: string;
+              createdAt: number;
+              result: string;
+              targetId: string;
+              targetType: string;
+            }>;
+            hasNextPage: boolean;
+            nextCursor?: string;
+          },
+          Name
+        >;
+      };
+      organisations: {
+        getOrganization: FunctionReference<
+          "query",
+          "internal",
+          { organizationId: string },
+          {
+            _id: string;
+            createdAt: number;
+            createdBy?: string;
+            imageUrl?: string;
+            name: string;
+            slug: string;
+            status: "active" | "suspended" | "deleted";
+            updatedAt: number;
+          } | null,
+          Name
+        >;
+        listMembers: FunctionReference<
+          "query",
+          "internal",
+          { cursor?: string; limit?: number; organizationId: string },
+          {
+            hasNextPage: boolean;
+            members: Array<{
+              _id: string;
+              createdAt: number;
+              invitedEmail?: string;
+              organizationId: string;
+              roleId: string;
+              status: "active" | "invited" | "suspended";
+              updatedAt: number;
+              userId?: string;
+            }>;
+            nextCursor?: string;
+          },
+          Name
+        >;
+        listOrganizations: FunctionReference<
+          "query",
+          "internal",
+          { cursor?: string; limit?: number },
+          {
+            hasNextPage: boolean;
+            nextCursor?: string;
+            organizations: Array<{
+              _id: string;
+              createdAt: number;
+              createdBy?: string;
+              imageUrl?: string;
+              name: string;
+              slug: string;
+              status: "active" | "suspended" | "deleted";
+              updatedAt: number;
+            }>;
+          },
+          Name
+        >;
+        listRoles: FunctionReference<
+          "query",
+          "internal",
+          { organizationId: string },
+          {
+            roles: Array<{
+              _id: string;
+              createdAt: number;
+              createdBy?: string;
+              description?: string;
+              isSystem: boolean;
+              key: string;
+              name: string;
+              organizationId: string;
+              permissions: Array<string>;
+              updatedAt: number;
+            }>;
+          },
+          Name
+        >;
+        removeMember: FunctionReference<
+          "mutation",
+          "internal",
+          { memberId: string },
+          { memberId: string; removed: boolean },
+          Name
+        >;
+        updateMemberRole: FunctionReference<
+          "mutation",
+          "internal",
+          { memberId: string; roleId: string },
+          { memberId: string; roleId: string },
+          Name
+        >;
+      };
+      sessions: {
+        getSession: FunctionReference<
+          "query",
+          "internal",
+          { sessionId: string },
+          {
+            _id: string;
+            createdAt: number;
+            expiresAt: number;
+            ipAddress?: string;
+            revokedAt?: number;
+            sessionId: string;
+            userAgent?: string;
+            userId: string;
+          } | null,
+          Name
+        >;
+        listSessions: FunctionReference<
+          "query",
+          "internal",
+          { cursor?: string; limit?: number; userId?: string },
+          {
+            hasNextPage: boolean;
+            nextCursor?: string;
+            sessions: Array<{
+              _id: string;
+              createdAt: number;
+              expiresAt: number;
+              ipAddress?: string;
+              revokedAt?: number;
+              sessionId: string;
+              userAgent?: string;
+              userId: string;
+            }>;
+          },
+          Name
+        >;
+        revokeAllSessionsForUser: FunctionReference<
+          "mutation",
+          "internal",
+          { userId: string },
+          { count: number },
+          Name
+        >;
+        revokeSession: FunctionReference<
+          "mutation",
+          "internal",
+          { sessionId: string },
+          { revoked: boolean; sessionId: string },
+          Name
+        >;
+      };
+      users: {
+        banUser: FunctionReference<
+          "mutation",
+          "internal",
+          { bannedUntil?: number; reason?: string; userId: string },
+          { bannedUntil?: number; userId: string },
+          Name
+        >;
+        claimSuperAdmin: FunctionReference<
+          "mutation",
+          "internal",
+          {},
+          { userId: string },
+          Name
+        >;
+        getUser: FunctionReference<
+          "query",
+          "internal",
+          { userId: string },
+          {
+            _id: string;
+            banReason?: string;
+            bannedUntil?: number;
+            createdAt: number;
+            email?: string;
+            image?: string;
+            isActive: boolean;
+            isSuperAdmin?: boolean;
+            name?: string;
+          } | null,
+          Name
+        >;
+        listUsers: FunctionReference<
+          "query",
+          "internal",
+          { cursor?: string; limit?: number },
+          {
+            hasNextPage: boolean;
+            nextCursor?: string;
+            users: Array<{
+              _id: string;
+              banReason?: string;
+              bannedUntil?: number;
+              createdAt: number;
+              email?: string;
+              image?: string;
+              isActive: boolean;
+              isSuperAdmin?: boolean;
+              name?: string;
+            }>;
+          },
+          Name
+        >;
+        removeUser: FunctionReference<
+          "mutation",
+          "internal",
+          { reason?: string; userId: string },
+          { deleted: boolean; userId: string },
+          Name
+        >;
+        unbanUser: FunctionReference<
+          "mutation",
+          "internal",
+          { userId: string },
+          { userId: string },
+          Name
+        >;
+      };
+    };
     agentAuth: {
       cleanupExpiredAgentHostReplayRecords: FunctionReference<
         "mutation",

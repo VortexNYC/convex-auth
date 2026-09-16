@@ -3,7 +3,7 @@ import { v } from "convex/values";
 
 import type { Doc, Id } from "./_generated/dataModel.js";
 import type { MutationCtx, QueryCtx } from "./_generated/server.js";
-import { getPage } from "convex-helpers/server/pagination";
+import { getPage, paginator } from "convex-helpers/server/pagination";
 import { getOneFrom } from "convex-helpers/server/relationships";
 import { mutation, query } from "./_generated/server.js";
 import { mintToken } from "../convex-runtime/native/jwt.js";
@@ -598,7 +598,7 @@ export const listByUser = query({
   },
   returns: paginationResultValidator(listedIdentityValidator),
   handler: async (ctx, { userId, paginationOpts }) => {
-    const result = await ctx.db
+    const result = await paginator(ctx.db, schema)
       .query("auth_identities")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .paginate(paginationOpts);

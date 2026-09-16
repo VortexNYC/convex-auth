@@ -8,6 +8,10 @@
  * @module
  */
 
+import type * as admin_audit from "../admin/audit.js";
+import type * as admin_organisations from "../admin/organisations.js";
+import type * as admin_sessions from "../admin/sessions.js";
+import type * as admin_users from "../admin/users.js";
 import type * as agentAuth from "../agentAuth.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as authMd from "../authMd.js";
@@ -27,6 +31,7 @@ import type * as native_users from "../native/users.js";
 import type * as native_verifiers from "../native/verifiers.js";
 import type * as organizations from "../organizations.js";
 import type * as passkeys from "../passkeys.js";
+import type * as schema_admin from "../schema/admin.js";
 import type * as schema_agents from "../schema/agents.js";
 import type * as schema_apiKeys from "../schema/apiKeys.js";
 import type * as schema_authMd from "../schema/authMd.js";
@@ -51,6 +56,10 @@ import type {
 import { anyApi, componentsGeneric } from "convex/server";
 
 const fullApi: ApiFromModules<{
+  "admin/audit": typeof admin_audit;
+  "admin/organisations": typeof admin_organisations;
+  "admin/sessions": typeof admin_sessions;
+  "admin/users": typeof admin_users;
   agentAuth: typeof agentAuth;
   apiKeys: typeof apiKeys;
   authMd: typeof authMd;
@@ -70,6 +79,7 @@ const fullApi: ApiFromModules<{
   "native/verifiers": typeof native_verifiers;
   organizations: typeof organizations;
   passkeys: typeof passkeys;
+  "schema/admin": typeof schema_admin;
   "schema/agents": typeof schema_agents;
   "schema/apiKeys": typeof schema_apiKeys;
   "schema/authMd": typeof schema_authMd;

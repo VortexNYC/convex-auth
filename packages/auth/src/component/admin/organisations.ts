@@ -1,7 +1,9 @@
+import { paginator } from "convex-helpers/server/pagination";
 import { query, mutation } from "../_generated/server.js";
 import { v } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel.js";
 import { createAdminAudit, requireSuperAdmin } from "../../convex-runtime/admin/admin.js";
+import schema from "../schema.js";
 import {
   organizationMemberStatusValidator,
   organizationStatusValidator,
@@ -100,10 +102,12 @@ export const listOrganizations = query({
     await requireSuperAdmin(ctx, identity.subject);
 
     const limit = Math.min(args.limit ?? 20, MAX_PAGE_LIMIT);
-    const q = ctx.db.query("organizations").order("desc");
-    const paginated = await q.paginate({ cursor: args.cursor ?? null, numItems: limit });
+    const { page, continueCursor, isDone } = await paginator(ctx.db, schema)
+      .query("organizations")
+      .order("desc")
+      .paginate({ cursor: args.cursor ?? null, numItems: limit });
 
-    const organizations: AdminOrganizationListItem[] = paginated.page.map((organization) => ({
+    const organizations: AdminOrganizationListItem[] = page.map((organization) => ({
       _id: organization._id,
       name: organization.name,
       slug: organization.slug,
@@ -116,8 +120,8 @@ export const listOrganizations = query({
 
     return {
       organizations,
-      nextCursor: paginated.continueCursor,
-      hasNextPage: !paginated.isDone,
+      nextCursor: continueCursor,
+      hasNextPage: !isDone,
     };
   },
 });
@@ -171,13 +175,13 @@ export const listMembers = query({
     await requireSuperAdmin(ctx, identity.subject);
 
     const limit = Math.min(args.limit ?? 20, MAX_PAGE_LIMIT);
-    const q = ctx.db
+    const { page, continueCursor, isDone } = await paginator(ctx.db, schema)
       .query("organization_members")
       .withIndex("by_organization", (index) => index.eq("organizationId", args.organizationId))
-      .order("desc");
-    const paginated = await q.paginate({ cursor: args.cursor ?? null, numItems: limit });
+      .order("desc")
+      .paginate({ cursor: args.cursor ?? null, numItems: limit });
 
-    const members: AdminMemberListItem[] = paginated.page.map((member) => ({
+    const members: AdminMemberListItem[] = page.map((member) => ({
       _id: member._id,
       organizationId: member.organizationId,
       userId: member.userId,
@@ -190,8 +194,8 @@ export const listMembers = query({
 
     return {
       members,
-      nextCursor: paginated.continueCursor,
-      hasNextPage: !paginated.isDone,
+      nextCursor: continueCursor,
+      hasNextPage: !isDone,
     };
   },
 });

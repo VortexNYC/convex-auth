@@ -29,6 +29,7 @@ export const users = defineTable({
   updatedAt: v.number(),
 })
   .index("by_email", ["email"])
+  .index("by_super_admin", ["isSuperAdmin"])
   .index("by_active_organization", ["activeOrganizationId"]);
 
 export const auth_identities = defineTable({
