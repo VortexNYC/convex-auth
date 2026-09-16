@@ -43,6 +43,7 @@ export interface PasskeyManagerProps {
   onAuthenticate: () => Promise<PublicKeyCredentialRequestOptionsJSON>;
   onVerifyAuthentication: (args: { response: AuthenticationResponseJSON }) => Promise<void>;
   onRevoke: (args: { credentialId: string }) => Promise<void>;
+  onRename?: (args: { credentialId: string; name: string }) => Promise<void>;
 }
 
 export function PasskeyManager({
@@ -54,10 +55,13 @@ export function PasskeyManager({
   onAuthenticate,
   onVerifyAuthentication,
   onRevoke,
+  onRename,
 }: PasskeyManagerProps) {
   const [name, setName] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [pending, setPending] = React.useState<"register" | "auth" | null>(null);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [editName, setEditName] = React.useState("");
 
   const supported = React.useMemo(() => browserSupportsWebAuthn(), []);
 
@@ -97,6 +101,19 @@ export function PasskeyManager({
       await onRevoke({ credentialId });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Revoke failed");
+    }
+  };
+
+  const handleRename = async (credentialId: string) => {
+    if (!onRename || !editName.trim()) {
+      return;
+    }
+    setError(null);
+    try {
+      await onRename({ credentialId, name: editName.trim() });
+      setEditingId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Rename failed");
     }
   };
 
@@ -153,7 +170,28 @@ export function PasskeyManager({
               className="flex items-center justify-between rounded-md border p-3"
             >
               <div className="flex flex-col gap-1">
-                <span className="font-medium">{pk.name || "Unnamed passkey"}</span>
+                {editingId === pk.credentialId ? (
+                  <span className="flex gap-2">
+                    <Input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="h-8 flex-1"
+                      autoFocus
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => void handleRename(pk.credentialId)}
+                      disabled={loading || !editName.trim()}
+                    >
+                      Save
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                      Cancel
+                    </Button>
+                  </span>
+                ) : (
+                  <span className="font-medium">{pk.name || "Unnamed passkey"}</span>
+                )}
                 <span className="text-xs text-muted-foreground">
                   Added {new Date(pk.createdAt).toLocaleDateString()}
                   {pk.revoked
@@ -168,14 +206,29 @@ export function PasskeyManager({
                   ))}
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => void handleRevoke(pk.credentialId)}
-                disabled={pk.revoked || loading}
-              >
-                {pk.revoked ? "Revoked" : "Revoke"}
-              </Button>
+              <span className="flex flex-col gap-1">
+                {onRename && !pk.revoked && editingId !== pk.credentialId && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEditingId(pk.credentialId);
+                      setEditName(pk.name ?? "");
+                    }}
+                    disabled={loading}
+                  >
+                    Rename
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void handleRevoke(pk.credentialId)}
+                  disabled={pk.revoked || loading}
+                >
+                  {pk.revoked ? "Revoked" : "Revoke"}
+                </Button>
+              </span>
             </div>
           ))}
         </div>

@@ -45,6 +45,7 @@ export default defineConfig({
         waitlist: "src/waitlist.tsx",
         react: "src/react.entry.ts",
         "react-native": "src/react-native.entry.ts",
+        "react-native-passkeys": "src/react-native/usePasskeys.ts",
         ui: "src/ui.entry.ts",
         mcp: "src/mcp.ts",
         "component/convex.config": "src/component/convex.config.ts",

@@ -12,6 +12,7 @@ import { mintToken } from "../convex-runtime/native/jwt.js";
 import { generateVerificationToken, hashToken } from "../convex-runtime/native/tokens.js";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+const MAX_PASSKEYS_PER_USER = 10;
 
 const registrationResponseValidator = v.object({
   id: v.string(),
@@ -42,6 +43,13 @@ export const generatePasskeyRegistrationOptions = mutation({
     authenticatorAttachment: v.optional(
       v.union(v.literal("platform"), v.literal("cross-platform")),
     ),
+    residentKey: v.optional(
+      v.union(v.literal("required"), v.literal("preferred"), v.literal("discouraged")),
+    ),
+    attestationType: v.optional(
+      v.union(v.literal("none"), v.literal("direct"), v.literal("enterprise")),
+    ),
+    maxPasskeys: v.optional(v.number()),
   },
   returns: v.any(),
   handler: async (ctx, args) => {
@@ -50,10 +58,16 @@ export const generatePasskeyRegistrationOptions = mutation({
     globalThis.crypto.getRandomValues(challengeBytes);
     const challenge = bytesToBase64url(challengeBytes);
 
+    const maxPasskeys = args.maxPasskeys ?? MAX_PASSKEYS_PER_USER;
     const existing = await ctx.db
       .query("auth_passkeys")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .take(100);
+      .take(maxPasskeys);
+
+    const active = existing.filter((pk) => !pk.revokedAt);
+    if (active.length >= maxPasskeys) {
+      throw new Error("Maximum number of passkeys reached for this user");
+    }
 
     const excludeCredentials = existing
       .filter((pk) => !pk.revokedAt)
@@ -68,10 +82,10 @@ export const generatePasskeyRegistrationOptions = mutation({
       userName: args.identifier,
       userDisplayName: args.displayName ?? args.identifier,
       challenge,
-      attestationType: "none",
+      attestationType: args.attestationType ?? "none",
       excludeCredentials,
       authenticatorSelection: {
-        residentKey: "preferred",
+        residentKey: args.residentKey ?? "preferred",
         userVerification: args.userVerification ?? "preferred",
         authenticatorAttachment: args.authenticatorAttachment ?? undefined,
       },
@@ -97,8 +111,10 @@ export const verifyPasskeyRegistration = mutation({
     challenge: v.string(),
     response: registrationResponseValidator,
     rpID: v.string(),
-    origin: v.string(),
+    origin: v.union(v.string(), v.array(v.string())),
     name: v.optional(v.string()),
+    requireUserVerification: v.optional(v.boolean()),
+    maxPasskeys: v.optional(v.number()),
   },
   returns: v.object({
     userId: v.id("users"),
@@ -118,11 +134,13 @@ export const verifyPasskeyRegistration = mutation({
     if (challengeRecord.userId !== args.userId) {
       throw new Error("Challenge does not belong to this user");
     }
+    if (challengeRecord.identifier !== args.identifier) {
+      throw new Error("Challenge does not belong to this identifier");
+    }
     if (challengeRecord.expiresAt < now) {
       await ctx.db.delete(challengeRecord._id);
       throw new Error("Registration challenge has expired");
     }
-    await ctx.db.delete(challengeRecord._id);
 
     const existing = await ctx.db
       .query("auth_passkeys")
@@ -133,17 +151,32 @@ export const verifyPasskeyRegistration = mutation({
       throw new Error("This passkey has already been registered");
     }
 
+    // Re-check the cap here, not only at options time — two parallel
+    // registration ceremonies must not both land past the limit.
+    const maxPasskeys = args.maxPasskeys ?? MAX_PASSKEYS_PER_USER;
+    const userPasskeys = await ctx.db
+      .query("auth_passkeys")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .take(maxPasskeys);
+    if (userPasskeys.filter((pk) => !pk.revokedAt).length >= maxPasskeys) {
+      throw new Error("Maximum number of passkeys reached for this user");
+    }
+
     const verification = await verifyRegistrationResponse({
       response: args.response as RegistrationResponseJSON,
       expectedChallenge: args.challenge,
       expectedOrigin: args.origin,
       expectedRPID: args.rpID,
-      requireUserVerification: true,
+      requireUserVerification: args.requireUserVerification ?? true,
     });
 
     if (!verification.verified) {
       throw new Error("Passkey registration could not be verified");
     }
+
+    // Single-use: burn the challenge only once the ceremony has verified, so a
+    // failed attempt can be retried but a successful one cannot be replayed.
+    await ctx.db.delete(challengeRecord._id);
 
     const { registrationInfo } = verification;
     const { credential } = registrationInfo;
@@ -176,6 +209,17 @@ export const verifyPasskeyRegistration = mutation({
       name: args.name,
       createdAt: now,
       lastUsedAt: now,
+    });
+
+    await ctx.db.insert("auth_audit_events", {
+      actorUserId: args.userId,
+      actorType: "user",
+      eventType: "passkey_registered",
+      targetType: "passkey",
+      targetId: credential.id,
+      organizationId: undefined,
+      metadataJson: undefined,
+      createdAt: now,
     });
 
     return { userId: args.userId, credentialId: credential.id };
@@ -218,6 +262,7 @@ export const listPasskeys = query({
 export const revokePasskey = mutation({
   args: {
     credentialId: v.string(),
+    userId: v.optional(v.id("users")),
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
@@ -229,8 +274,61 @@ export const revokePasskey = mutation({
     if (!passkey || passkey.revokedAt) {
       return false;
     }
+    if (args.userId && passkey.userId !== args.userId) {
+      throw new Error("Passkey does not belong to this user");
+    }
 
-    await ctx.db.patch(passkey._id, { revokedAt: Date.now() });
+    const now = Date.now();
+    await ctx.db.patch(passkey._id, { revokedAt: now });
+    await ctx.db.insert("auth_audit_events", {
+      actorUserId: passkey.userId,
+      actorType: "user",
+      eventType: "passkey_revoked",
+      targetType: "passkey",
+      targetId: passkey.credentialId,
+      organizationId: undefined,
+      metadataJson: undefined,
+      createdAt: now,
+    });
+    return true;
+  },
+});
+
+export const renamePasskey = mutation({
+  args: {
+    credentialId: v.string(),
+    userId: v.id("users"),
+    name: v.string(),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const passkey = await ctx.db
+      .query("auth_passkeys")
+      .withIndex("by_credentialId", (q) => q.eq("credentialId", args.credentialId))
+      .first();
+
+    if (!passkey || passkey.revokedAt) {
+      return false;
+    }
+    if (passkey.userId !== args.userId) {
+      throw new Error("Passkey does not belong to this user");
+    }
+
+    const name = args.name.trim();
+    if (!name) {
+      throw new Error("Passkey name cannot be empty");
+    }
+    await ctx.db.patch(passkey._id, { name });
+    await ctx.db.insert("auth_audit_events", {
+      actorUserId: args.userId,
+      actorType: "user",
+      eventType: "passkey_renamed",
+      targetType: "passkey",
+      targetId: passkey.credentialId,
+      organizationId: undefined,
+      metadataJson: undefined,
+      createdAt: Date.now(),
+    });
     return true;
   },
 });
@@ -257,6 +355,11 @@ export const generatePasskeyAuthenticationOptions = mutation({
     userVerification: v.optional(
       v.union(v.literal("required"), v.literal("preferred"), v.literal("discouraged")),
     ),
+    // Only when the caller is authenticated as `userId` may we echo that
+    // user's credential ids back — otherwise an unauthenticated caller could
+    // enumerate another user's passkeys. Discoverable-credential sign-in still
+    // works with an empty allowCredentials.
+    enumerateCredentials: v.optional(v.boolean()),
   },
   returns: v.record(v.string(), v.any()),
   handler: async (ctx, args) => {
@@ -281,7 +384,7 @@ export const generatePasskeyAuthenticationOptions = mutation({
           },
         ];
       }
-    } else if (args.userId) {
+    } else if (args.userId && args.enumerateCredentials === true) {
       const passkeys = await ctx.db
         .query("auth_passkeys")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId!))
@@ -318,12 +421,20 @@ export const generatePasskeyAuthenticationOptions = mutation({
 const SESSION_TTL_MS = 15 * 60 * 1000;
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
+// SimpleWebAuthn throws (rather than returning `verified: false`) when the
+// authenticator presents a non-increasing signature counter. Detect that
+// specific failure so the caller can treat it as cloned-credential evidence.
+export function isCounterRegressionError(err: unknown): boolean {
+  return err instanceof Error && /Response counter value .*lower than expected/.test(err.message);
+}
+
 export const verifyPasskeyAuthentication = mutation({
   args: {
     challenge: v.string(),
     response: authenticationResponseValidator,
     rpID: v.string(),
-    origin: v.string(),
+    origin: v.union(v.string(), v.array(v.string())),
+    requireUserVerification: v.optional(v.boolean()),
   },
   returns: v.object({
     token: v.string(),
@@ -348,7 +459,6 @@ export const verifyPasskeyAuthentication = mutation({
       await ctx.db.delete(challengeRecord._id);
       throw new Error("Authentication challenge has expired");
     }
-    await ctx.db.delete(challengeRecord._id);
 
     const passkey = await ctx.db
       .query("auth_passkeys")
@@ -359,23 +469,54 @@ export const verifyPasskeyAuthentication = mutation({
       throw new Error("Passkey not found or has been revoked");
     }
 
-    const verification = await verifyAuthenticationResponse({
-      response: args.response as AuthenticationResponseJSON,
-      expectedChallenge: args.challenge,
-      expectedOrigin: args.origin,
-      expectedRPID: args.rpID,
-      credential: {
-        id: passkey.credentialId,
-        publicKey: new Uint8Array(base64urlToBytes(passkey.publicKey)),
-        counter: passkey.counter,
-        transports: passkey.transports ?? [],
-      },
-      requireUserVerification: true,
-    });
+    // The challenge was scoped to a user when options were generated — the
+    // authenticating credential must belong to that same user.
+    if (challengeRecord.userId && passkey.userId !== challengeRecord.userId) {
+      throw new Error("Passkey does not match the user this challenge was issued for");
+    }
+
+    let verification;
+    try {
+      verification = await verifyAuthenticationResponse({
+        response: args.response as AuthenticationResponseJSON,
+        expectedChallenge: args.challenge,
+        expectedOrigin: args.origin,
+        expectedRPID: args.rpID,
+        credential: {
+          id: passkey.credentialId,
+          publicKey: new Uint8Array(base64urlToBytes(passkey.publicKey)),
+          counter: passkey.counter,
+          transports: passkey.transports ?? [],
+        },
+        requireUserVerification: args.requireUserVerification ?? true,
+      });
+    } catch (err) {
+      // SimpleWebAuthn throws on a non-increasing signature counter — a
+      // cloned authenticator signal. Revoke the credential and fail closed.
+      if (isCounterRegressionError(err)) {
+        await ctx.db.patch(passkey._id, { revokedAt: now });
+        await ctx.db.insert("auth_audit_events", {
+          actorUserId: passkey.userId,
+          actorType: "system",
+          eventType: "passkey_counter_regression",
+          targetType: "passkey",
+          targetId: passkey.credentialId,
+          organizationId: undefined,
+          metadataJson: JSON.stringify({ storedCounter: passkey.counter }),
+          createdAt: now,
+        });
+        throw new Error("Passkey counter regressed; the credential may have been cloned");
+      }
+      throw err;
+    }
 
     if (!verification.verified) {
       throw new Error("Passkey authentication could not be verified");
     }
+
+    // Single-use: burn the challenge only once the ceremony has verified, so a
+    // failed attempt can be retried but a successful one cannot be replayed.
+    await ctx.db.delete(challengeRecord._id);
 
     const { authenticationInfo } = verification;
 
@@ -407,6 +548,7 @@ export const verifyPasskeyAuthentication = mutation({
       tokenHash: refreshTokenHash,
       sessionId,
       userId: user._id,
+      familyId: sessionId,
       expiresAt: refreshTokenExpiresAt,
       revokedAt: undefined,
       createdAt: now,
@@ -417,12 +559,24 @@ export const verifyPasskeyAuthentication = mutation({
       sessionId,
       userId: user._id,
       token,
+      familyId: sessionId,
       expiresAt: sessionExpiresAt,
       ipAddress: undefined,
       userAgent: undefined,
       revokedAt: undefined,
       createdAt: now,
       updatedAt: now,
+    });
+
+    await ctx.db.insert("auth_audit_events", {
+      actorUserId: user._id,
+      actorType: "user",
+      eventType: "passkey_authenticated",
+      targetType: "session",
+      targetId: sessionId,
+      organizationId: undefined,
+      metadataJson: undefined,
+      createdAt: now,
     });
 
     return {

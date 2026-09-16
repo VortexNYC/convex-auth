@@ -11,8 +11,21 @@ import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simp
 
 export type NativePasskeyConfig = {
   rpID: string;
-  origin: string;
+  /** Accepted origin(s) — a single origin or every origin the app is served from. */
+  origin: string | string[];
   rpName?: string;
+  /** Maximum active passkeys per user. Defaults to 10. */
+  maxPasskeysPerUser?: number;
+  /** Attestation conveyance. Defaults to "none". */
+  attestationType?: "none" | "direct" | "enterprise";
+  /**
+   * User-verification policy. When "required" (the default), verification
+   * enforces UV; set "preferred" or "discouraged" explicitly to let
+   * authenticators that skip UV through.
+   */
+  userVerification?: "required" | "preferred" | "discouraged";
+  authenticatorAttachment?: "platform" | "cross-platform";
+  residentKey?: "required" | "preferred" | "discouraged";
 };
 
 export type PasskeyComponentApi = {
@@ -22,51 +35,73 @@ export type PasskeyComponentApi = {
   verifyPasskeyAuthentication: FunctionReference<"mutation", "public" | "internal">;
   listPasskeys: FunctionReference<"query", "public" | "internal">;
   revokePasskey: FunctionReference<"mutation", "public" | "internal">;
+  renamePasskey: FunctionReference<"mutation", "public" | "internal">;
 };
+
+// The authenticated user's id, or throw. `argUserId`, when provided by a
+// caller, must match the identity — never the other way around.
+async function requireUserId(
+  ctx: { auth: { getUserIdentity(): Promise<{ subject: string } | null> } },
+  argUserId?: string,
+): Promise<string> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Not authenticated");
+  }
+  const userId = identity.subject;
+  if (argUserId && argUserId !== userId) {
+    throw new Error("Passkey operations can only target the signed-in user");
+  }
+  return userId;
+}
 
 export function nativePasskey(component: PasskeyComponentApi, config: NativePasskeyConfig) {
   const rpID = config.rpID;
   const origin = config.origin;
   const rpName = config.rpName ?? "Convex Auth";
+  const maxPasskeys = config.maxPasskeysPerUser;
+  // Default to enforcing UV — matching the behavior before this was
+  // configurable. Only an explicit "preferred"/"discouraged" relaxes it.
+  const requireUserVerification = (config.userVerification ?? "required") === "required";
 
   const getPasskeyRegistrationOptions = action({
     args: {
-      userId: v.string(),
+      userId: v.optional(v.string()),
       identifier: v.string(),
       displayName: v.optional(v.string()),
-      rpName: v.optional(v.string()),
-      rpID: v.optional(v.string()),
     },
     returns: v.record(v.string(), v.any()),
     handler: async (
       ctx: GenericActionCtx<any>,
       args: {
-        userId: string;
+        userId?: string;
         identifier: string;
         displayName?: string;
-        rpName?: string;
-        rpID?: string;
       },
     ) => {
+      const userId = await requireUserId(ctx, args.userId);
       return await ctx.runMutation(component.generatePasskeyRegistrationOptions, {
-        userId: args.userId as unknown as GenericId<"users">,
+        userId: userId as unknown as GenericId<"users">,
         identifier: args.identifier,
         displayName: args.displayName,
-        rpName: args.rpName ?? rpName,
-        rpID: args.rpID ?? rpID,
+        rpName,
+        rpID,
+        userVerification: config.userVerification,
+        authenticatorAttachment: config.authenticatorAttachment,
+        residentKey: config.residentKey,
+        attestationType: config.attestationType,
+        maxPasskeys,
       });
     },
   });
 
   const verifyPasskeyRegistration = action({
     args: {
-      userId: v.string(),
+      userId: v.optional(v.string()),
       identifier: v.string(),
       challenge: v.string(),
       response: v.any(),
       name: v.optional(v.string()),
-      rpID: v.optional(v.string()),
-      origin: v.optional(v.string()),
     },
     returns: v.object({
       userId: v.string(),
@@ -75,23 +110,25 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
     handler: async (
       ctx: GenericActionCtx<any>,
       args: {
-        userId: string;
+        userId?: string;
         identifier: string;
         challenge: string;
         response: RegistrationResponseJSON;
         name?: string;
-        rpID?: string;
-        origin?: string;
       },
     ) => {
+      const userId = await requireUserId(ctx, args.userId);
+      // Origin/rpID always come from server config — never from the client.
       return await ctx.runMutation(component.verifyPasskeyRegistration, {
-        userId: args.userId as unknown as GenericId<"users">,
+        userId: userId as unknown as GenericId<"users">,
         identifier: args.identifier,
         challenge: args.challenge,
         response: args.response,
-        rpID: args.rpID ?? rpID,
-        origin: args.origin ?? origin,
+        rpID,
+        origin,
         name: args.name,
+        requireUserVerification,
+        maxPasskeys,
       });
     },
   });
@@ -100,17 +137,22 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
     args: {
       userId: v.optional(v.string()),
       credentialId: v.optional(v.string()),
-      rpID: v.optional(v.string()),
     },
     returns: v.record(v.string(), v.any()),
     handler: async (
       ctx: GenericActionCtx<any>,
-      args: { userId?: string; credentialId?: string; rpID?: string },
+      args: { userId?: string; credentialId?: string },
     ) => {
+      // Credential ids are echoed back (allowCredentials) only when the caller
+      // is authenticated as that user — unauthenticated callers get an empty
+      // list, which is the discoverable-credential (usernameless) flow.
+      const identity = await ctx.auth.getUserIdentity();
       return await ctx.runMutation(component.generatePasskeyAuthenticationOptions, {
         userId: args.userId as unknown as GenericId<"users"> | undefined,
         credentialId: args.credentialId,
-        rpID: args.rpID ?? rpID,
+        rpID,
+        userVerification: config.userVerification,
+        enumerateCredentials: !!args.userId && identity?.subject === args.userId,
       });
     },
   });
@@ -119,8 +161,6 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
     args: {
       challenge: v.string(),
       response: v.any(),
-      rpID: v.optional(v.string()),
-      origin: v.optional(v.string()),
     },
     returns: v.object({
       token: v.string(),
@@ -135,15 +175,15 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
       args: {
         challenge: string;
         response: AuthenticationResponseJSON;
-        rpID?: string;
-        origin?: string;
       },
     ) => {
+      // Origin/rpID always come from server config — never from the client.
       return await ctx.runMutation(component.verifyPasskeyAuthentication, {
         challenge: args.challenge,
         response: args.response,
-        rpID: args.rpID ?? rpID,
-        origin: args.origin ?? origin,
+        rpID,
+        origin,
+        requireUserVerification,
       });
     },
   });
@@ -160,8 +200,16 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
       }),
     ),
     handler: async (ctx: GenericQueryCtx<any>, args: { userId?: string }) => {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        return [];
+      }
+      const userId = args.userId ?? identity.subject;
+      if (userId !== identity.subject) {
+        throw new Error("Cannot list another user's passkeys");
+      }
       return await ctx.runQuery(component.listPasskeys, {
-        userId: args.userId ? (args.userId as unknown as GenericId<"users">) : undefined,
+        userId: userId as unknown as GenericId<"users">,
       });
     },
   });
@@ -170,7 +218,25 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
     args: { credentialId: v.string() },
     returns: v.object({ success: v.boolean() }),
     handler: async (ctx: GenericMutationCtx<any>, args: { credentialId: string }) => {
-      await ctx.runMutation(component.revokePasskey, { credentialId: args.credentialId });
+      const userId = await requireUserId(ctx);
+      await ctx.runMutation(component.revokePasskey, {
+        credentialId: args.credentialId,
+        userId: userId as unknown as GenericId<"users">,
+      });
+      return { success: true };
+    },
+  });
+
+  const renamePasskey = mutation({
+    args: { credentialId: v.string(), name: v.string() },
+    returns: v.object({ success: v.boolean() }),
+    handler: async (ctx: GenericMutationCtx<any>, args: { credentialId: string; name: string }) => {
+      const userId = await requireUserId(ctx);
+      await ctx.runMutation(component.renamePasskey, {
+        credentialId: args.credentialId,
+        userId: userId as unknown as GenericId<"users">,
+        name: args.name,
+      });
       return { success: true };
     },
   });
@@ -182,6 +248,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
     verifyPasskeyAuthentication,
     listPasskeys,
     revokePasskey,
+    renamePasskey,
   };
 }
 

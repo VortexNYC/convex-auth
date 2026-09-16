@@ -22,6 +22,7 @@ import {
   type ExpoConvexAuthStorage,
   type NativeAuthActions,
 } from "@vortex-api/convex-auth/react-native";
+import { usePasskeys } from "@vortex-api/convex-auth/react-native/passkeys";
 import { api } from "./convex/_generated/api";
 
 import { clsx } from "clsx";
@@ -391,6 +392,7 @@ function InnerApp() {
               description="Sign in with Google, GitHub, Discord, or email."
               socialProviders={socialProviders}
             />
+            <PasskeySignInButton />
             <Pressable
               onPress={async () => {
                 await authClient?.signIn.anonymous({});
@@ -450,6 +452,7 @@ function SignedInView({
       }
       footer={
         <>
+          <PasskeySection userId={user?.id} identifier={user?.email ?? undefined} />
           <Pressable
             onPress={onEnableTwoFactor}
             className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center border border-border bg-card"
@@ -473,5 +476,65 @@ function SignedInView({
         </>
       }
     />
+  );
+}
+
+function PasskeySection({ userId, identifier }: { userId?: string; identifier?: string }) {
+  const passkeys = usePasskeys({ userId, identifier });
+
+  if (!passkeys.supported) {
+    return null;
+  }
+
+  return (
+    <View className="w-full max-w-md self-center mt-4 rounded-xl border border-border bg-card p-4">
+      <Text className="text-sm font-semibold text-card-foreground">Passkeys</Text>
+      {passkeys.passkeys.map((passkey) => (
+        <View key={passkey.credentialId} className="mt-2 flex-row items-center justify-between">
+          <Text className="text-xs text-muted-foreground">
+            {passkey.name ?? passkey.credentialId}
+          </Text>
+          <Pressable
+            onPress={() => void passkeys.revoke(passkey.credentialId)}
+            accessibilityRole="button"
+            accessibilityLabel={`Revoke ${passkey.name ?? "passkey"}`}
+          >
+            <Text className="text-xs font-semibold text-destructive">Revoke</Text>
+          </Pressable>
+        </View>
+      ))}
+      {passkeys.error ? (
+        <Text className="mt-2 text-xs text-destructive">{passkeys.error}</Text>
+      ) : null}
+      <Pressable
+        onPress={() => void passkeys.register("This device")}
+        disabled={passkeys.loading}
+        className="mt-3 py-2 px-4 rounded-lg items-center bg-primary"
+        accessibilityRole="button"
+        accessibilityLabel="Register this device as a passkey"
+      >
+        <Text className="text-sm font-semibold text-primary-foreground">Register this device</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function PasskeySignInButton() {
+  const passkeys = usePasskeys({});
+
+  if (!passkeys.supported) {
+    return null;
+  }
+
+  return (
+    <Pressable
+      onPress={() => void passkeys.signIn()}
+      disabled={passkeys.loading}
+      className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center border border-border bg-card"
+      accessibilityRole="button"
+      accessibilityLabel="Sign in with passkey"
+    >
+      <Text className="text-sm font-semibold text-card-foreground">Sign in with passkey</Text>
+    </Pressable>
   );
 }

@@ -1,33 +1,63 @@
 import * as React from "react";
-import {
-  browserSupportsWebAuthn,
-  startAuthentication,
-  startRegistration,
-} from "@simplewebauthn/browser";
-import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simplewebauthn/browser";
+import { create, get, isSupported } from "react-native-passkeys";
 import { useAction, useMutation, useQuery } from "convex/react";
 import type { FunctionReference } from "convex/server";
 import { useContext } from "react";
 
-import { ConvexAuthContext } from "./ConvexAuthProvider.js";
-import type { PasskeyListItem } from "./passkey-manager.js";
+import { ConvexAuthContext } from "../react/ConvexAuthProvider.js";
+import type { PasskeyListItem } from "../react/passkey-manager.js";
 
-export interface UsePasskeysArgs {
+export interface UseNativePasskeysArgs {
   userId?: string;
   identifier?: string;
-  /**
-   * Enable WebAuthn conditional UI (browser autofill on an
-   * `autocomplete="username webauthn"` input). When true, `signIn` uses
-   * conditional mediation instead of a modal prompt.
-   */
-  autofill?: boolean;
 }
 
-type RegistrationOptions = Parameters<typeof startRegistration>[0]["optionsJSON"];
-type AuthenticationOptions = Parameters<typeof startAuthentication>[0]["optionsJSON"];
+type RegistrationOptions = Parameters<typeof create>[0];
+type AuthenticationOptions = Parameters<typeof get>[0];
 
-export function usePasskeys(args: UsePasskeysArgs) {
-  const { userId, identifier, autofill } = args;
+// iOS surfaces user cancellation as a thrown error (ASAuthorization
+// errorDomain 1001 / "cancelled"), Android Credential Manager returns null —
+// and may even yield a credential object with no response. Normalize all of
+// those to null so callers get one "cancelled" path.
+function isCancellationError(err: unknown): boolean {
+  return err instanceof Error && /cancel/i.test(`${err.name} ${err.message}`);
+}
+
+async function createCredential(options: RegistrationOptions) {
+  try {
+    const response = await create(options);
+    return response && response.response ? response : null;
+  } catch (err) {
+    if (isCancellationError(err)) return null;
+    throw err;
+  }
+}
+
+async function getCredential(options: AuthenticationOptions) {
+  try {
+    const response = await get(options);
+    return response && response.response ? response : null;
+  } catch (err) {
+    if (isCancellationError(err)) return null;
+    throw err;
+  }
+}
+
+/**
+ * React Native / Expo passkey hook backed by `react-native-passkeys`
+ * (ASAuthorizationController on iOS, Credential Manager on Android).
+ *
+ * Server verification is identical to web — the native ceremonies return
+ * SimpleWebAuthn-compatible JSON, and `rpID`/`origin` come from the
+ * `passkey` block in `convexAuth` (include every platform origin there: the
+ * web origin plus `android:apk-key-hash:<hash>` entries).
+ *
+ * `react-native-passkeys` is an optional peer dependency — this module is only
+ * reachable through the `@vortex-api/convex-auth/react-native/passkeys`
+ * subpath, so apps that don't use passkeys never bundle it.
+ */
+export function usePasskeys(args: UseNativePasskeysArgs) {
+  const { userId, identifier } = args;
   const ctx = useContext(ConvexAuthContext);
   if (ctx === null) {
     throw new Error("usePasskeys must be used within a ConvexAuthProvider");
@@ -71,7 +101,7 @@ export function usePasskeys(args: UsePasskeysArgs) {
     React.useState<AuthenticationOptions | null>(null);
 
   React.useEffect(() => {
-    setSupported(browserSupportsWebAuthn());
+    setSupported(isSupported());
   }, []);
 
   React.useEffect(() => {
@@ -95,8 +125,8 @@ export function usePasskeys(args: UsePasskeysArgs) {
           }),
         ]);
         if (!cancelled) {
-          setRegistrationOptions(regOpts);
-          setAuthenticationOptions(authOpts);
+          setRegistrationOptions(regOpts as RegistrationOptions | null);
+          setAuthenticationOptions(authOpts as AuthenticationOptions | null);
         }
       } catch (err) {
         if (!cancelled) {
@@ -124,7 +154,10 @@ export function usePasskeys(args: UsePasskeysArgs) {
       setLoading(true);
       setError(null);
       try {
-        const response = await startRegistration({ optionsJSON: registrationOptions });
+        const response = await createCredential(registrationOptions);
+        if (response === null) {
+          throw new Error("Passkey registration was cancelled");
+        }
         await verifyRegistration({
           userId,
           identifier,
@@ -132,8 +165,8 @@ export function usePasskeys(args: UsePasskeysArgs) {
           response,
           name,
         });
-        // Refresh registration options so another passkey can be registered,
-        // and auth options so the new credential lands in allowCredentials.
+        // Refresh both option sets — a new challenge for the next ceremony and
+        // fresh allowCredentials containing the just-registered credential.
         const [regOpts, authOpts] = await Promise.all([
           generateRegistrationOptions({
             userId,
@@ -142,8 +175,8 @@ export function usePasskeys(args: UsePasskeysArgs) {
           }),
           generateAuthenticationOptions({ userId }),
         ]);
-        setRegistrationOptions(regOpts);
-        setAuthenticationOptions(authOpts);
+        setRegistrationOptions(regOpts as RegistrationOptions | null);
+        setAuthenticationOptions(authOpts as AuthenticationOptions | null);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Registration failed";
         setError(message);
@@ -162,36 +195,33 @@ export function usePasskeys(args: UsePasskeysArgs) {
     ],
   );
 
-  const signIn = React.useCallback(
-    async (_credentialId?: string) => {
-      if (!authenticationOptions) {
-        throw new Error("Passkey authentication options are not ready");
+  const signIn = React.useCallback(async () => {
+    if (!authenticationOptions) {
+      throw new Error("Passkey authentication options are not ready");
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await getCredential(authenticationOptions);
+      if (response === null) {
+        throw new Error("Passkey authentication was cancelled");
       }
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await startAuthentication({
-          optionsJSON: authenticationOptions,
-          useBrowserAutofill: autofill ?? false,
-        });
-        const result = await verifyAuthentication({
-          challenge: authenticationOptions.challenge as string,
-          response,
-        });
-        ctx.setToken(result.token);
-        ctx.setRefreshToken(result.refreshToken);
-        ctx.setSessionId(result.sessionId);
-        return result;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Authentication failed";
-        setError(message);
-        throw new Error(message);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [authenticationOptions, verifyAuthentication, ctx, autofill],
-  );
+      const result = await verifyAuthentication({
+        challenge: authenticationOptions.challenge as string,
+        response,
+      });
+      ctx.setToken(result.token);
+      ctx.setRefreshToken(result.refreshToken);
+      ctx.setSessionId(result.sessionId);
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Authentication failed";
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [authenticationOptions, verifyAuthentication, ctx]);
 
   const revoke = React.useCallback(
     async (credentialId: string) => {
@@ -232,5 +262,3 @@ export function usePasskeys(args: UsePasskeysArgs) {
     supported,
   };
 }
-
-export type { AuthenticationResponseJSON, RegistrationResponseJSON };

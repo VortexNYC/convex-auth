@@ -256,12 +256,9 @@ function ImpersonationBanner() {
 
 function PasskeysPanel({ userId, email }: { userId: string; email: string }) {
   const [name, setName] = useState("");
-  const { passkeys, register, signIn, revoke, loading, error, supported } = usePasskeys({
+  const { passkeys, register, signIn, revoke, rename, loading, error, supported } = usePasskeys({
     userId,
     identifier: email,
-    rpName: "Convex Auth Demo",
-    rpID: "localhost",
-    origin: "http://localhost:5174",
   });
 
   return (
@@ -303,14 +300,29 @@ function PasskeysPanel({ userId, email }: { userId: string; email: string }) {
                 <p className="font-medium">{pk.name || "Unnamed"}</p>
                 <p className="text-muted-foreground text-xs">{pk.revoked ? "Revoked" : "Active"}</p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => void revoke(pk.credentialId)}
-                disabled={pk.revoked}
-              >
-                Revoke
-              </Button>
+              <span className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const next = window.prompt("Rename passkey", pk.name ?? "");
+                    if (next?.trim()) {
+                      void rename(pk.credentialId, next.trim());
+                    }
+                  }}
+                  disabled={pk.revoked}
+                >
+                  Rename
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void revoke(pk.credentialId)}
+                  disabled={pk.revoked}
+                >
+                  Revoke
+                </Button>
+              </span>
             </div>
           ))}
         </div>

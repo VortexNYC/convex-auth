@@ -2018,6 +2018,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "internal",
           {
             expiresAt: number;
+            familyId?: string;
             sessionId: string;
             tokenHash: string;
             userId: string;
@@ -2070,6 +2071,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "internal",
           {
             expiresAt: number;
+            familyId?: string;
             sessionId: string;
             token: string;
             userId: string;
@@ -2081,6 +2083,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "mutation",
           "internal",
           {
+            familyId?: string;
             refreshTokenExpiresAt: number;
             refreshTokenHash: string;
             sessionExpiresAt: number;
@@ -2978,9 +2981,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "mutation",
         "internal",
         {
+          attestationType?: "none" | "direct" | "enterprise";
           authenticatorAttachment?: "platform" | "cross-platform";
           displayName?: string;
           identifier: string;
+          maxPasskeys?: number;
+          residentKey?: "required" | "preferred" | "discouraged";
           rpID: string;
           rpName: string;
           userId: string;
@@ -3002,10 +3008,17 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         }>,
         Name
       >;
+      renamePasskey: FunctionReference<
+        "mutation",
+        "internal",
+        { credentialId: string; name: string; userId: string },
+        boolean,
+        Name
+      >;
       revokePasskey: FunctionReference<
         "mutation",
         "internal",
-        { credentialId: string },
+        { credentialId: string; userId?: string },
         boolean,
         Name
       >;
@@ -3014,7 +3027,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "internal",
         {
           challenge: string;
-          origin: string;
+          origin: string | Array<string>;
+          requireUserVerification?: boolean;
           response: {
             authenticatorAttachment?: string;
             clientExtensionResults?: Record<string, any>;
@@ -3047,7 +3061,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           challenge: string;
           identifier: string;
           name?: string;
-          origin: string;
+          origin: string | Array<string>;
+          requireUserVerification?: boolean;
           response: {
             authenticatorAttachment?: string;
             clientExtensionResults?: Record<string, any>;
