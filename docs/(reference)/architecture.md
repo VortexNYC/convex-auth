@@ -10,8 +10,8 @@ description: How convex-auth is designed around Convex's runtime constraints.
 Convex functions run in short-lived V8 isolates, not long-lived Node processes. Auth must fit that model:
 
 - **Auth state is Convex state.** Queries, mutations, and authorization rules read users, sessions, organizations, and roles directly from tables.
-- **Non-deterministic work is an action.** Password hashing, network calls, token generation, and OAuth callbacks run in Convex actions.
-- **Crypto is Web Crypto.** `crypto.subtle` and `jose` handle hashing, JWT minting, JWKS rotation, and randomness. No Node crypto modules are used at runtime.
+- **Non-deterministic work is an action.** Network calls, token generation, and OAuth callbacks run in Convex actions.
+- **Crypto is Web Crypto + WASM.** `crypto.subtle` and `jose` handle JWT minting, JWKS rotation, and randomness. Password hashing uses `argon2id-wasm` (Rust → WASM) — the same package upstream Convex Auth uses — emitting standard PHC strings (`$argon2id$v=19$m=19456,t=2,p=1$…`) fast enough to run inside mutations. No Node crypto modules are used at runtime.
 - **Bundle and heap discipline.** The runtime stays under Convex's source-code and heap limits by avoiding monolithic plugin systems and stateful middleware.
 
 ## Runtime layers
