@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./src/global.css";
+import { Uniwind } from "uniwind";
 import { AppState, Pressable, ScrollView, Text, View, useColorScheme } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
@@ -45,6 +46,11 @@ const socialProviders = [
 function useRootClassName() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+
+  useEffect(() => {
+    Uniwind.setTheme(isDark ? "dark" : "light");
+  }, [isDark]);
+
   return clsx("flex-1 bg-background", isDark && "dark");
 }
 
@@ -124,9 +130,10 @@ function AuthProviders({ children }: { children: React.ReactNode }) {
   }).current;
 
   const statusBarStyle = colorScheme === "dark" ? "light" : "dark";
+  const isDark = colorScheme === "dark";
 
   return (
-    <View style={{ flex: 1 }}>
+    <View className={clsx("flex-1 bg-background", isDark && "dark")} style={{ flex: 1 }}>
       <ConvexProvider client={convex}>
         <ExpoConvexAuthClientProvider
           actions={api.auth as unknown as NativeAuthActions}
@@ -333,8 +340,15 @@ function InnerApp() {
   }
 
   return (
-    <ScrollView style={{ flex: 1 }}>
-      <View className={clsx("w-full bg-background", isDark && "dark")} style={{ padding: 24 }}>
+    <ScrollView
+      style={{ flex: 1 }}
+      className={clsx("w-full bg-background", isDark && "dark")}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center" }}
+    >
+      <View
+        className={clsx("w-full max-w-md bg-background", isDark && "dark")}
+        style={{ padding: 24 }}
+      >
         {screen === "signUp" ? (
           <>
             <ExpoAuthClientSignUpScreen
@@ -432,13 +446,6 @@ function SignedInView({
           <Text className="text-lg font-bold text-foreground">Signed in</Text>
           {user?.name ? <Text className="text-base text-muted-foreground">{user.name}</Text> : null}
           {user?.email ? <Text className="text-sm text-muted-foreground">{user.email}</Text> : null}
-          <Text
-            className="text-xs mt-2 text-muted-foreground"
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            Token: {currentToken ?? "none"}
-          </Text>
         </View>
       }
       footer={

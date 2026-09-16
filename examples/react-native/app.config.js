@@ -22,6 +22,7 @@ const publicEnv = {
 
 module.exports = {
   ...expo,
+  plugins: ["expo-secure-store", "expo-web-browser"],
   extra: {
     ...expo.extra,
     ...publicEnv,
