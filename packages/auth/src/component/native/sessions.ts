@@ -313,12 +313,7 @@ export const rotateSession = mutation({
       return null;
     }
     if (refresh.revokedAt !== undefined) {
-      await revokeSessionFamily(
-        ctx,
-        refresh.familyId ?? refresh.sessionId,
-        refresh.userId,
-        now,
-      );
+      await revokeSessionFamily(ctx, refresh.familyId ?? refresh.sessionId, refresh.userId, now);
       return null;
     }
 

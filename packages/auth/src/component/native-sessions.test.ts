@@ -305,9 +305,7 @@ describe("native sessions", () => {
     expect(liveRefresh?.revokedAt).toBeDefined();
     expect(noSession3).toBeNull();
 
-    const auditEvents = await t.run(async (ctx) =>
-      ctx.db.query("auth_audit_events").take(10),
-    );
+    const auditEvents = await t.run(async (ctx) => ctx.db.query("auth_audit_events").take(10));
     expect(auditEvents).toHaveLength(1);
     expect(auditEvents[0]).toMatchObject({
       actorType: "system",
