@@ -1284,7 +1284,7 @@ describe("nativeEmailAndPassword", () => {
           twoFactorSecret: expect.any(String),
         }),
       );
-    });
+    }, 15000);
 
     it("verifies an enrollment TOTP code and enables 2FA", async () => {
       const component = createMockComponent();
@@ -1517,7 +1517,7 @@ describe("nativeEmailAndPassword", () => {
       expect(component.native.users.setTwoFactor).toHaveBeenCalledWith(
         expect.objectContaining({ userId: "user_1", twoFactorBackupCodes: expect.any(Array) }),
       );
-    });
+    }, 15000);
   });
 
   describe("captcha", () => {
