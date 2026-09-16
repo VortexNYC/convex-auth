@@ -22,6 +22,7 @@ import {
   useConvexOrganizationRefs,
   usePasskeys,
 } from "@vortex-api/convex-auth/react";
+import { AdminDashboardPanel } from "./AdminDashboardPanel";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import {
@@ -102,6 +103,7 @@ export function SignedInView() {
             <TabsTrigger value="api-keys">API Keys</TabsTrigger>
             <TabsTrigger value="service-principals">Service Principals</TabsTrigger>
             <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+            {user.isSuperAdmin ? <TabsTrigger value="admin">Admin</TabsTrigger> : null}
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
@@ -156,6 +158,12 @@ export function SignedInView() {
           <TabsContent value="webhooks" className="space-y-4">
             <WebhooksPanel />
           </TabsContent>
+
+          {user.isSuperAdmin ? (
+            <TabsContent value="admin" className="space-y-4">
+              <AdminDashboardPanel />
+            </TabsContent>
+          ) : null}
         </Tabs>
       </div>
     </div>

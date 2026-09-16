@@ -6,24 +6,34 @@ export type ConvexAdminDashboardUser = {
   _id: string;
   email?: string | null;
   name?: string | null;
-  isSuperAdmin?: boolean;
+  image?: string | null;
   isActive: boolean;
+  isSuperAdmin?: boolean;
   bannedUntil?: number;
   banReason?: string;
+  createdAt?: number;
 };
 
 export type ConvexAdminDashboardSession = {
   _id: string;
   sessionId: string;
   userId: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
   createdAt: number;
   expiresAt: number;
+  revokedAt?: number;
 };
 
 export type ConvexAdminDashboardOrganization = {
   _id: string;
   name: string;
   slug?: string | null;
+  imageUrl?: string | null;
+  status?: string;
+  createdBy?: string | null;
+  createdAt?: number;
+  updatedAt?: number;
 };
 
 export type ConvexAdminDashboardAudit = {
@@ -45,6 +55,7 @@ export type ConvexAdminDashboardClassNames = {
   navItem?: string;
   card?: string;
   row?: string;
+  loadMore?: string;
 };
 
 export type ConvexAdminDashboardCopy = {
@@ -57,6 +68,14 @@ export type ConvexAdminDashboardCopy = {
   removeLabel?: string;
   impersonateLabel?: string;
   revokeLabel?: string;
+  loadMoreLabel?: string;
+  loadingLabel?: string;
+};
+
+export type ConvexAdminDashboardPagination = {
+  canLoadMore?: boolean;
+  isLoading?: boolean;
+  loadMore?: (count: number) => void;
 };
 
 export type ConvexAdminDashboardProps = {
@@ -72,6 +91,10 @@ export type ConvexAdminDashboardProps = {
   onRemoveUser?: (userId: string) => void;
   onImpersonateUser?: (userId: string) => void;
   onRevokeSession?: (sessionId: string) => void;
+  usersPagination?: ConvexAdminDashboardPagination;
+  sessionsPagination?: ConvexAdminDashboardPagination;
+  organizationsPagination?: ConvexAdminDashboardPagination;
+  auditsPagination?: ConvexAdminDashboardPagination;
 };
 
 export function ConvexAdminDashboard({
@@ -87,6 +110,10 @@ export function ConvexAdminDashboard({
   onRemoveUser,
   onImpersonateUser,
   onRevokeSession,
+  usersPagination,
+  sessionsPagination,
+  organizationsPagination,
+  auditsPagination,
 }: ConvexAdminDashboardProps) {
   const [active, setActive] = React.useState<AdminSection>(defaultSection);
 
@@ -100,6 +127,8 @@ export function ConvexAdminDashboard({
     removeLabel: "Remove",
     impersonateLabel: "Impersonate",
     revokeLabel: "Revoke",
+    loadMoreLabel: "Load more",
+    loadingLabel: "Loading…",
     ...copy,
   };
 
@@ -109,6 +138,24 @@ export function ConvexAdminDashboard({
     { value: "organizations", label: c.organizationsTitle },
     { value: "audit", label: c.auditTitle },
   ];
+
+  const renderLoadMore = (pagination: ConvexAdminDashboardPagination | undefined) => {
+    if (!pagination?.loadMore || pagination.canLoadMore === false) {
+      return null;
+    }
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className={cn("mt-2 w-full", classNames?.loadMore)}
+        disabled={pagination.isLoading}
+        onClick={() => pagination.loadMore?.(20)}
+      >
+        {pagination.isLoading ? c.loadingLabel : c.loadMoreLabel}
+      </Button>
+    );
+  };
 
   return (
     <div className={cn("flex h-full w-full flex-col md:flex-row", classNames?.root)}>
@@ -199,6 +246,7 @@ export function ConvexAdminDashboard({
                   </div>
                 ))
               )}
+              {renderLoadMore(usersPagination)}
             </CardContent>
           </Card>
         )}
@@ -223,6 +271,14 @@ export function ConvexAdminDashboard({
                     <div className="min-w-0">
                       <p className="truncate font-mono text-sm">{session.sessionId}</p>
                       <p className="text-muted-foreground text-xs">User {session.userId}</p>
+                      {session.ipAddress !== undefined && (
+                        <p className="text-muted-foreground text-xs">{session.ipAddress}</p>
+                      )}
+                      {session.userAgent !== undefined && (
+                        <p className="text-muted-foreground truncate text-xs">
+                          {session.userAgent}
+                        </p>
+                      )}
                     </div>
                     {onRevokeSession && (
                       <Button
@@ -236,6 +292,7 @@ export function ConvexAdminDashboard({
                   </div>
                 ))
               )}
+              {renderLoadMore(sessionsPagination)}
             </CardContent>
           </Card>
         )}
@@ -256,9 +313,11 @@ export function ConvexAdminDashboard({
                   >
                     <p className="font-medium">{org.name}</p>
                     {org.slug && <p className="text-muted-foreground text-sm">{org.slug}</p>}
+                    {org.status && <p className="text-muted-foreground text-xs">{org.status}</p>}
                   </div>
                 ))
               )}
+              {renderLoadMore(organizationsPagination)}
             </CardContent>
           </Card>
         )}
@@ -287,6 +346,7 @@ export function ConvexAdminDashboard({
                   </div>
                 ))
               )}
+              {renderLoadMore(auditsPagination)}
             </CardContent>
           </Card>
         )}
