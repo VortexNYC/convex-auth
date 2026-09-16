@@ -385,7 +385,12 @@ export type NativeAuthActions = {
     { token: string },
     ConvexAuthSessionListItem[]
   >;
-  revokeSession?: FunctionReference<"action", "public", { token: string }, { success: boolean }>;
+  revokeSession?: FunctionReference<
+    "action",
+    "public",
+    { token: string; sessionId: string },
+    { success: boolean }
+  >;
   revokeOtherSessions?: FunctionReference<
     "action",
     "public",
@@ -1047,13 +1052,13 @@ export function useAuthActions() {
   }, [listSessionsAction, ctx.token]);
 
   const revokeSession = useCallback(
-    async (args: { token: string }) => {
-      if (revokeSessionAction === null) {
+    async (args: { sessionId: string }) => {
+      if (revokeSessionAction === null || ctx.token === null) {
         throw new Error("Revoke session is not configured");
       }
-      return await revokeSessionAction(args);
+      return await revokeSessionAction({ token: ctx.token, sessionId: args.sessionId });
     },
-    [revokeSessionAction],
+    [revokeSessionAction, ctx.token],
   );
 
   const revokeOtherSessions = useCallback(async () => {

@@ -435,11 +435,9 @@ function SignedInView({
   const authClient = useConvexAuthClientContext();
   const session = authClient?.useSession();
   const user = session?.data?.user;
-  const currentToken = session?.data?.session?.token;
 
   return (
     <ConvexSessionList
-      currentSessionToken={currentToken ?? null}
       styles={{ root: { flex: 1 } }}
       header={
         <View className="rounded-xl p-4 mb-4 bg-card">

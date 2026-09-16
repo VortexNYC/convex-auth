@@ -48,7 +48,6 @@ export function SignedInView() {
   const [message, setMessage] = useState<string | null>(null);
 
   const user = actions.user;
-  const token = actions.token;
   const claimAdmin = useMutation(api.admin.claimSuperAdmin);
 
   if (user === null) {
@@ -165,7 +164,7 @@ export function SignedInView() {
           </TabsContent>
 
           <TabsContent value="sessions">
-            <ConvexSessionList currentSessionToken={token} />
+            <ConvexSessionList />
           </TabsContent>
 
           <TabsContent value="passkeys">

@@ -87,7 +87,7 @@ export function useConvexAuthSessionList(
 }
 
 export type ConvexAuthRevokeSessionState = {
-  revokeSession: (args: { token: string }) => Promise<{ ok: boolean; error: string | null }>;
+  revokeSession: (args: { sessionId: string }) => Promise<{ ok: boolean; error: string | null }>;
   revokeOtherSessions: () => Promise<{ ok: boolean; error: string | null }>;
   isRevoking: boolean;
 };
@@ -98,7 +98,7 @@ export function useConvexAuthRevokeSession(
   const [isRevoking, setIsRevoking] = useState(false);
 
   const revokeSession = useCallback(
-    async (args: { token: string }) => {
+    async (args: { sessionId: string }) => {
       if (authClient?.revokeSession === undefined) {
         return {
           ok: false,

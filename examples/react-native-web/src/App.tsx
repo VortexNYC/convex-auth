@@ -96,7 +96,6 @@ function SignedInView({ onSignOut }: { onSignOut: () => void | Promise<void> }) 
   const authClient = useConvexAuthClientContext();
   const session = authClient?.useSession();
   const user = session?.data?.user;
-  const currentToken = session?.data?.session?.token;
 
   return (
     <View style={styles.signedIn}>
@@ -106,7 +105,7 @@ function SignedInView({ onSignOut }: { onSignOut: () => void | Promise<void> }) 
         <Text style={styles.buttonText}>Sign out</Text>
       </Pressable>
       <View style={styles.sessions}>
-        <ConvexSessionList currentSessionToken={currentToken} styles={sessionListStyles} />
+        <ConvexSessionList styles={sessionListStyles} />
       </View>
     </View>
   );

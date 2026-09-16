@@ -4,10 +4,7 @@
  * primitives (View/Text/Pressable/FlatList) instead of div/button.
  *
  * Consumer usage:
- *   <ConvexSessionList
- *     authClient={convexAuth.authClient}
- *     currentSessionToken={currentSessionToken}
- *   />
+ *   <ConvexSessionList authClient={convexAuth.authClient} />
  *
  * Same API as the web version. Style overrides go through the
  * `styles` prop (RN style objects) and `classNames` (Uniwind classes).
@@ -88,7 +85,6 @@ export type ExpoSessionListCopy = {
 
 export type ExpoSessionListProps = {
   authClient?: ConvexBetterAuthClient | null;
-  currentSessionToken?: string | null;
   showRevokeOthersAction?: boolean;
   styles?: ExpoSessionListStyles;
   classNames?: ExpoSessionListClassNames;
@@ -130,21 +126,19 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
 
   const { sessions, isLoading, error, refetch } = useConvexAuthSessionList(authClient);
   const { revokeSession, revokeOtherSessions, isRevoking } = useConvexAuthRevokeSession(authClient);
-  const [revokingToken, setRevokingToken] = useState<string | null>(null);
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const showRevokeOthers = props.showRevokeOthersAction ?? true;
-  const otherSessionCount = (sessions ?? []).filter(
-    (sess) => sess.token !== props.currentSessionToken,
-  ).length;
+  const otherSessionCount = (sessions ?? []).filter((sess) => !sess.isCurrent).length;
 
-  async function handleRevoke(token: string) {
-    setRevokingToken(token);
+  async function handleRevoke(sessionId: string) {
+    setRevokingSessionId(sessionId);
     setLocalError(null);
-    const result = await revokeSession({ token });
+    const result = await revokeSession({ sessionId });
     if (!result.ok) setLocalError(result.error);
     else await refetch();
-    setRevokingToken(null);
+    setRevokingSessionId(null);
   }
 
   async function handleRevokeOthers() {
@@ -230,21 +224,18 @@ export function ConvexSessionList(props: ExpoSessionListProps) {
           style={{ flex: 1 }}
           ListHeaderComponent={props.header}
           ListFooterComponent={props.footer}
-          renderItem={({ item }) => {
-            const isCurrent = item.token === props.currentSessionToken;
-            return (
-              <SessionRow
-                session={item}
-                isCurrent={isCurrent}
-                isRevoking={revokingToken === item.token}
-                copy={copy}
-                styles={s}
-                classNames={c}
-                onRevoke={() => void handleRevoke(item.token)}
-                formatTimestamp={fmt}
-              />
-            );
-          }}
+          renderItem={({ item }) => (
+            <SessionRow
+              session={item}
+              isCurrent={item.isCurrent}
+              isRevoking={revokingSessionId === item.id}
+              copy={copy}
+              styles={s}
+              classNames={c}
+              onRevoke={() => void handleRevoke(item.id)}
+              formatTimestamp={fmt}
+            />
+          )}
         />
       )}
       {localError !== null ? (

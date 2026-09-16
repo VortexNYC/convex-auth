@@ -7,10 +7,7 @@
  * useConvexAuthRevokeSession) so the component is purely presentational.
  *
  * Consumer usage:
- *   <ConvexSessionList
- *     authClient={authClient}
- *     currentSessionToken={currentSessionToken}
- *   />
+ *   <ConvexSessionList authClient={authClient} />
  *
  * That's the whole API. Copy + classNames slots are documented in
  * ConvexSessionListClassNames + ConvexSessionListCopy below. Pile's
@@ -54,13 +51,6 @@ export type ConvexSessionListCopy = {
 export type ConvexSessionListProps = {
   authClient?: ConvexBetterAuthClient | null;
   /**
-   * Token of the session currently powering this browser. Used to
-   * mark the row as the active session and to suppress the
-   * "revoke" button on it (revoking your own session is sign-out,
-   * which is a separate action from "revoke that other device").
-   */
-  currentSessionToken?: string | null;
-  /**
    * Render a "Revoke all other sessions" button next to the title.
    * Defaults to true. Hides when no other sessions exist.
    */
@@ -99,24 +89,22 @@ export function ConvexSessionList(props: ConvexSessionListProps) {
 
   const { sessions, isLoading, error, refetch } = useConvexAuthSessionList(authClient);
   const { revokeSession, revokeOtherSessions, isRevoking } = useConvexAuthRevokeSession(authClient);
-  const [revokingToken, setRevokingToken] = useState<string | null>(null);
+  const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const showRevokeOthers = props.showRevokeOthersAction ?? true;
-  const otherSessionCount = (sessions ?? []).filter(
-    (s) => s.token !== props.currentSessionToken,
-  ).length;
+  const otherSessionCount = (sessions ?? []).filter((s) => !s.isCurrent).length;
 
-  async function handleRevoke(token: string) {
-    setRevokingToken(token);
+  async function handleRevoke(sessionId: string) {
+    setRevokingSessionId(sessionId);
     setLocalError(null);
-    const result = await revokeSession({ token });
+    const result = await revokeSession({ sessionId });
     if (!result.ok) {
       setLocalError(result.error);
     } else {
       await refetch();
     }
-    setRevokingToken(null);
+    setRevokingSessionId(null);
   }
 
   async function handleRevokeOthers() {
@@ -156,27 +144,24 @@ export function ConvexSessionList(props: ConvexSessionListProps) {
           <div className={cn.emptyState}>{copy.empty}</div>
         ) : (
           <ul className={cn.list}>
-            {(sessions ?? []).map((session) => {
-              const isCurrent = session.token === props.currentSessionToken;
-              return (
-                <li
-                  key={session.id}
-                  className={[cn.item, isCurrent ? cn.itemCurrent : undefined]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  <SessionRow
-                    session={session}
-                    isCurrent={isCurrent}
-                    isRevoking={revokingToken === session.token}
-                    copy={copy}
-                    classNames={cn}
-                    onRevoke={() => void handleRevoke(session.token)}
-                    formatTimestamp={fmt}
-                  />
-                </li>
-              );
-            })}
+            {(sessions ?? []).map((session) => (
+              <li
+                key={session.id}
+                className={[cn.item, session.isCurrent ? cn.itemCurrent : undefined]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <SessionRow
+                  session={session}
+                  isCurrent={session.isCurrent}
+                  isRevoking={revokingSessionId === session.id}
+                  copy={copy}
+                  classNames={cn}
+                  onRevoke={() => void handleRevoke(session.id)}
+                  formatTimestamp={fmt}
+                />
+              </li>
+            ))}
           </ul>
         )}
         {localError !== null ? (
