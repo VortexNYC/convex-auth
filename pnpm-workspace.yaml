@@ -15,6 +15,9 @@ auditConfig:
 onlyBuiltDependencies:
   - argon2
 
+patchedDependencies:
+  uniwind: patches/uniwind.patch
+
 overrides:
   "@better-auth/utils": 0.5.0
   "@vitest/browser-preview": ^4.1.11
