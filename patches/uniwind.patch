@@ -1,0 +1,16 @@
+diff --git a/src/core/native/store.ts b/src/core/native/store.ts
+index ce9c12a039f7a7598f7888137ab46ba9b4f71e11..e9cf9ca45d739631f2146527acb87179fd4c9980 100644
+--- a/src/core/native/store.ts
++++ b/src/core/native/store.ts
+@@ -187,8 +187,10 @@ class UniwindStoreBuilder {
+             }
+         }
+ 
++        const toCamelCase = (property: string) => property.replace(/-([a-z])/g, (_, char) => char.toUpperCase())
++
+         const result = Object.fromEntries(
+-            Object.entries(resultGetters).map(([property, valueGetter]) => [property, valueGetter(vars)]),
++            Object.entries(resultGetters).map(([property, valueGetter]) => [toCamelCase(property), valueGetter(vars)]),
+         ) as Record<string, any>
+ 
+         if (result.lineHeight !== undefined && result.lineHeight < 6) {

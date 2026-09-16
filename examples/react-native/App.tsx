@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./src/global.css";
+import { Uniwind } from "uniwind";
 import { AppState, Pressable, ScrollView, Text, View, useColorScheme } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
@@ -45,6 +46,11 @@ const socialProviders = [
 function useRootClassName() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+
+  useEffect(() => {
+    Uniwind.setTheme(isDark ? "dark" : "light");
+  }, [isDark]);
+
   return clsx("flex-1 bg-background", isDark && "dark");
 }
 
