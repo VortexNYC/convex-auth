@@ -7,7 +7,11 @@ import { bytesToBase64url, hashPassword, legacyPbkdf2Hash, verifyPassword } from
 describe("password", () => {
   it("hashes and verifies a password with argon2id", async () => {
     const hash = await hashPassword("hunter2");
-    expect(hash.startsWith("$argon2id$")).toBe(true);
+    // PHC contract: $argon2id$v=19$m=...,t=...,p=...$salt$hash (6 segments).
+    const parts = hash.split("$");
+    expect(parts.length).toBe(6);
+    expect(parts[2]).toBe("v=19");
+    expect(parts[3]).toMatch(/^m=\d+,t=\d+,p=\d+$/);
     expect(await verifyPassword("hunter2", hash)).toBe(true);
     expect(await verifyPassword("wrong", hash)).toBe(false);
   });

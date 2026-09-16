@@ -113,7 +113,12 @@ async function verifyArgon2id(password: string, hash: string): Promise<boolean> 
   if (hash.split("$").length === 6) {
     try {
       return await wasmVerifyPassword(password, hash);
-    } catch {
+    } catch (cause) {
+      // Only a malformed PHC string means "wrong hash". A WASM init failure is
+      // infrastructure — fail loudly, not as "wrong password".
+      if (cause instanceof Error && cause.message.includes("Failed to initialize")) {
+        throw cause;
+      }
       return false;
     }
   }
