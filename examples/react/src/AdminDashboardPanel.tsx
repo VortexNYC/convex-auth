@@ -1,4 +1,5 @@
-import { useMutation, usePaginatedQuery } from "convex/react";
+import { useState } from "react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 
 import { ConvexAdminDashboard, useAuthActions } from "@vortex-api/convex-auth/react";
 
@@ -15,7 +16,14 @@ type StoredAdminSession = {
 
 export function AdminDashboardPanel() {
   const actions = useAuthActions();
-  const users = usePaginatedQuery(api.admin.listUsers, {}, { initialNumItems: PAGE_SIZE });
+  const [search, setSearch] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  const users = usePaginatedQuery(
+    api.admin.listUsers,
+    { search: search.trim() || undefined },
+    { initialNumItems: PAGE_SIZE },
+  );
   const sessions = usePaginatedQuery(api.admin.listSessions, {}, { initialNumItems: PAGE_SIZE });
   const organizations = usePaginatedQuery(
     api.admin.listOrganizations,
@@ -23,6 +31,10 @@ export function AdminDashboardPanel() {
     { initialNumItems: PAGE_SIZE },
   );
   const audits = usePaginatedQuery(api.admin.listAdminAudits, {}, { initialNumItems: PAGE_SIZE });
+  const selectedUser = useQuery(
+    api.admin.getUser,
+    selectedUserId ? { userId: selectedUserId } : "skip",
+  );
 
   const banUser = useMutation(api.admin.banUser);
   const unbanUser = useMutation(api.admin.unbanUser);
@@ -45,6 +57,11 @@ export function AdminDashboardPanel() {
       sessions={sessions.results}
       organizations={organizations.results}
       audits={audits.results}
+      usersSearch={search}
+      onUsersSearchChange={setSearch}
+      onViewUser={setSelectedUserId}
+      selectedUser={selectedUser ?? undefined}
+      onCloseUserDetail={() => setSelectedUserId(null)}
       usersPagination={{
         canLoadMore: users.status === "CanLoadMore",
         isLoading: users.isLoading,

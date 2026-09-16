@@ -1,6 +1,23 @@
 import * as React from "react";
 
-import { cn, Button, Card, CardContent, CardHeader, CardTitle } from "./lib/ui";
+import {
+  cn,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Separator,
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "./lib/ui";
 
 export type ConvexAdminDashboardUser = {
   _id: string;
@@ -9,6 +26,7 @@ export type ConvexAdminDashboardUser = {
   image?: string | null;
   isActive: boolean;
   isSuperAdmin?: boolean;
+  roles?: string[] | null;
   bannedUntil?: number;
   banReason?: string;
   createdAt?: number;
@@ -56,6 +74,7 @@ export type ConvexAdminDashboardClassNames = {
   card?: string;
   row?: string;
   loadMore?: string;
+  search?: string;
 };
 
 export type ConvexAdminDashboardCopy = {
@@ -70,6 +89,14 @@ export type ConvexAdminDashboardCopy = {
   revokeLabel?: string;
   loadMoreLabel?: string;
   loadingLabel?: string;
+  viewLabel?: string;
+  searchPlaceholder?: string;
+  userSinceLabel?: string;
+  activeLabel?: string;
+  inactiveLabel?: string;
+  superAdminLabel?: string;
+  bannedLabel?: string;
+  rolesLabel?: string;
 };
 
 export type ConvexAdminDashboardPagination = {
@@ -86,6 +113,11 @@ export type ConvexAdminDashboardProps = {
   defaultSection?: AdminSection;
   classNames?: ConvexAdminDashboardClassNames;
   copy?: ConvexAdminDashboardCopy;
+  usersSearch?: string;
+  onUsersSearchChange?: (value: string) => void;
+  onViewUser?: (userId: string) => void;
+  selectedUser?: ConvexAdminDashboardUser | null;
+  onCloseUserDetail?: () => void;
   onBanUser?: (userId: string, reason: string, until: number) => void;
   onUnbanUser?: (userId: string) => void;
   onRemoveUser?: (userId: string) => void;
@@ -105,6 +137,11 @@ export function ConvexAdminDashboard({
   defaultSection = "users",
   classNames,
   copy,
+  usersSearch,
+  onUsersSearchChange,
+  onViewUser,
+  selectedUser,
+  onCloseUserDetail,
   onBanUser,
   onUnbanUser,
   onRemoveUser,
@@ -129,6 +166,14 @@ export function ConvexAdminDashboard({
     revokeLabel: "Revoke",
     loadMoreLabel: "Load more",
     loadingLabel: "Loading…",
+    viewLabel: "View",
+    searchPlaceholder: "Search by name or email…",
+    userSinceLabel: "Created",
+    activeLabel: "Active",
+    inactiveLabel: "Inactive",
+    superAdminLabel: "Super Admin",
+    bannedLabel: "Banned",
+    rolesLabel: "Roles",
     ...copy,
   };
 
@@ -187,64 +232,84 @@ export function ConvexAdminDashboard({
               <CardTitle>{c.usersTitle}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
+              {onUsersSearchChange && (
+                <Input
+                  type="search"
+                  placeholder={c.searchPlaceholder}
+                  value={usersSearch ?? ""}
+                  className={cn("h-9", classNames?.search)}
+                  onChange={(event) => onUsersSearchChange(event.target.value)}
+                />
+              )}
               {users.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No users.</p>
               ) : (
-                users.map((user) => (
-                  <div
-                    key={user._id}
-                    className={cn(
-                      "flex items-center justify-between gap-4 border-b border-border py-2 last:border-0",
-                      classNames?.row,
-                    )}
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{user.name ?? user.email ?? user._id}</p>
-                      <p className="text-muted-foreground text-sm">{user.email ?? user._id}</p>
-                      {user.bannedUntil !== undefined && (
-                        <p className="text-destructive text-xs">
-                          Banned until {new Date(user.bannedUntil).toLocaleString()}
+                users.map((user) => {
+                  const bannedUntil = user.bannedUntil ?? 0;
+                  const isBanned = bannedUntil > Date.now();
+                  return (
+                    <div
+                      key={user._id}
+                      className={cn(
+                        "flex items-center justify-between gap-4 border-b border-border py-2 last:border-0",
+                        classNames?.row,
+                      )}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">
+                          {user.name ?? user.email ?? user._id}
                         </p>
-                      )}
+                        <p className="text-muted-foreground text-sm">{user.email ?? user._id}</p>
+                        {isBanned && (
+                          <p className="text-destructive text-xs">
+                            Banned until {new Date(bannedUntil).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        {onViewUser && (
+                          <Button size="sm" variant="outline" onClick={() => onViewUser(user._id)}>
+                            {c.viewLabel}
+                          </Button>
+                        )}
+                        {onImpersonateUser && (
+                          <Button size="sm" onClick={() => onImpersonateUser(user._id)}>
+                            {c.impersonateLabel}
+                          </Button>
+                        )}
+                        {!isBanned
+                          ? onBanUser && (
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  onBanUser(user._id, "", Date.now() + 24 * 60 * 60 * 1000)
+                                }
+                              >
+                                {c.banLabel}
+                              </Button>
+                            )
+                          : onUnbanUser && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onUnbanUser(user._id)}
+                              >
+                                {c.unbanLabel}
+                              </Button>
+                            )}
+                        {onRemoveUser && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => onRemoveUser(user._id)}
+                          >
+                            {c.removeLabel}
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                      {onImpersonateUser && (
-                        <Button size="sm" onClick={() => onImpersonateUser(user._id)}>
-                          {c.impersonateLabel}
-                        </Button>
-                      )}
-                      {user.bannedUntil === undefined
-                        ? onBanUser && (
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                onBanUser(user._id, "", Date.now() + 24 * 60 * 60 * 1000)
-                              }
-                            >
-                              {c.banLabel}
-                            </Button>
-                          )
-                        : onUnbanUser && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => onUnbanUser(user._id)}
-                            >
-                              {c.unbanLabel}
-                            </Button>
-                          )}
-                      {onRemoveUser && (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => onRemoveUser(user._id)}
-                        >
-                          {c.removeLabel}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
               {renderLoadMore(usersPagination)}
             </CardContent>
@@ -351,6 +416,122 @@ export function ConvexAdminDashboard({
           </Card>
         )}
       </main>
+
+      {selectedUser && onCloseUserDetail && (
+        <UserDetailSheet
+          c={c}
+          user={selectedUser}
+          onCloseUserDetail={onCloseUserDetail}
+          onImpersonateUser={onImpersonateUser}
+          onBanUser={onBanUser}
+          onUnbanUser={onUnbanUser}
+          onRemoveUser={onRemoveUser}
+        />
+      )}
     </div>
+  );
+}
+
+function UserDetailSheet({
+  c,
+  user,
+  onCloseUserDetail,
+  onImpersonateUser,
+  onBanUser,
+  onUnbanUser,
+  onRemoveUser,
+}: {
+  c: Required<ConvexAdminDashboardCopy>;
+  user: ConvexAdminDashboardUser;
+  onCloseUserDetail?: () => void;
+  onImpersonateUser?: (userId: string) => void;
+  onBanUser?: (userId: string, reason: string, until: number) => void;
+  onUnbanUser?: (userId: string) => void;
+  onRemoveUser?: (userId: string) => void;
+}) {
+  const BAN_DURATION_MS = 24 * 60 * 60 * 1000;
+  const bannedUntil = user.bannedUntil ?? 0;
+  const isBanned = bannedUntil > Date.now();
+
+  return (
+    <Sheet
+      open
+      onOpenChange={(open) => {
+        if (!open) onCloseUserDetail?.();
+      }}
+    >
+      <SheetContent side="right">
+        <SheetHeader>
+          <SheetTitle>{user.name ?? user.email ?? user._id}</SheetTitle>
+          <SheetDescription>{user.email}</SheetDescription>
+        </SheetHeader>
+        <SheetBody className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant={user.isActive ? "success" : "neutral"}>
+              {user.isActive ? c.activeLabel : c.inactiveLabel}
+            </Badge>
+            {user.isSuperAdmin && <Badge variant="primary">{c.superAdminLabel}</Badge>}
+            {isBanned && <Badge variant="destructive">{c.bannedLabel}</Badge>}
+            {user.roles &&
+              user.roles.map((role) => (
+                <Badge key={role} variant="outline">
+                  {role}
+                </Badge>
+              ))}
+          </div>
+          <Separator />
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">User ID</dt>
+              <dd className="font-mono truncate">{user._id}</dd>
+            </div>
+            {isBanned && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Banned until</dt>
+                <dd>{new Date(bannedUntil).toLocaleString()}</dd>
+              </div>
+            )}
+            {user.banReason && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Ban reason</dt>
+                <dd>{user.banReason}</dd>
+              </div>
+            )}
+            {user.createdAt !== undefined && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">{c.userSinceLabel}</dt>
+                <dd>{new Date(user.createdAt).toLocaleString()}</dd>
+              </div>
+            )}
+          </dl>
+        </SheetBody>
+        <SheetFooter>
+          {onImpersonateUser && (
+            <Button size="sm" onClick={() => onImpersonateUser(user._id)}>
+              {c.impersonateLabel}
+            </Button>
+          )}
+          {!isBanned
+            ? onBanUser && (
+                <Button
+                  size="sm"
+                  onClick={() => onBanUser(user._id, "", Date.now() + BAN_DURATION_MS)}
+                >
+                  {c.banLabel}
+                </Button>
+              )
+            : onUnbanUser && (
+                <Button size="sm" variant="outline" onClick={() => onUnbanUser(user._id)}>
+                  {c.unbanLabel}
+                </Button>
+              )}
+          {onRemoveUser && (
+            <Button size="sm" variant="destructive" onClick={() => onRemoveUser(user._id)}>
+              {c.removeLabel}
+            </Button>
+          )}
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
