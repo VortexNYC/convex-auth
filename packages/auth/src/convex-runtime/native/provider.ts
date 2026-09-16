@@ -1333,7 +1333,7 @@ export function nativeEmailAndPassword(
     returns: v.array(
       v.object({
         id: v.string(),
-        token: v.string(),
+        isCurrent: v.boolean(),
         userId: v.string(),
         expiresAt: v.string(),
         ipAddress: v.optional(v.union(v.string(), v.null())),
@@ -1353,7 +1353,7 @@ export function nativeEmailAndPassword(
         .filter((s) => (s.expiresAt ?? 0) >= now && s.revokedAt === undefined)
         .map((s) => ({
           id: s.sessionId,
-          token: s.token,
+          isCurrent: s.token === args.token,
           userId: s.userId,
           expiresAt: new Date(s.expiresAt).toISOString(),
           ipAddress: s.ipAddress ?? null,
@@ -1365,13 +1365,15 @@ export function nativeEmailAndPassword(
   });
 
   const revokeSession = action({
-    args: { token: v.string() },
+    args: { token: v.string(), sessionId: v.string() },
     returns: v.object({ success: v.boolean() }),
     handler: async (ctx, args) => {
-      const session = await ctx.runQuery(component.native.sessions.getSessionByToken, {
-        token: args.token,
+      const resolved = await resolveSessionUser(ctx, args.token);
+      if (!resolved) return { success: false };
+      const session = await ctx.runQuery(component.native.sessions.getSessionBySessionId, {
+        sessionId: args.sessionId,
       });
-      if (!session || session.revokedAt !== undefined) {
+      if (!session || session.userId !== resolved.userId || session.revokedAt !== undefined) {
         return { success: true };
       }
       await ctx.runMutation(component.native.sessions.revokeSession, {

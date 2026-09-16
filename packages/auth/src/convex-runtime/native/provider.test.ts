@@ -1572,4 +1572,89 @@ describe("nativeEmailAndPassword", () => {
       expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe("listSessions", () => {
+    it("returns sessions without tokens and flags the caller's session", async () => {
+      const component = createMockComponent();
+      component.native.sessions.getSessionByToken.mockResolvedValue(makeSession());
+      component.native.users.getUserById.mockResolvedValue(makeUser());
+      component.native.sessions.listSessionsByUser.mockResolvedValue([
+        makeSession(),
+        makeSession({ sessionId: "session_2", token: "other-token" }),
+      ]);
+
+      const { listSessions } = createActions(component);
+      const result = (await exec(listSessions).handler(createContext(), {
+        token: defaultToken,
+      })) as Array<{ id: string; isCurrent: boolean; token?: string }>;
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({ id: "session_1", isCurrent: true });
+      expect(result[1]).toMatchObject({ id: "session_2", isCurrent: false });
+      for (const item of result) {
+        expect(item).not.toHaveProperty("token");
+      }
+    });
+
+    it("returns an empty list when the caller's token does not resolve", async () => {
+      const component = createMockComponent();
+      component.native.sessions.getSessionByToken.mockResolvedValue(null);
+
+      const { listSessions } = createActions(component);
+      const result = await exec(listSessions).handler(createContext(), { token: defaultToken });
+      expect(result).toEqual([]);
+      expect(component.native.sessions.listSessionsByUser).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("revokeSession", () => {
+    it("revokes a session owned by the caller", async () => {
+      const component = createMockComponent();
+      component.native.sessions.getSessionByToken.mockResolvedValue(makeSession());
+      component.native.users.getUserById.mockResolvedValue(makeUser());
+      component.native.sessions.getSessionBySessionId.mockResolvedValue(
+        makeSession({ sessionId: "session_2", token: "other-token" }),
+      );
+
+      const { revokeSession } = createActions(component);
+      const result = await exec(revokeSession).handler(createContext(), {
+        token: defaultToken,
+        sessionId: "session_2",
+      });
+      expect(result).toEqual({ success: true });
+      expect(component.native.sessions.revokeSession).toHaveBeenCalledWith({
+        sessionId: "session_2",
+      });
+    });
+
+    it("refuses to revoke a session owned by a different user", async () => {
+      const component = createMockComponent();
+      component.native.sessions.getSessionByToken.mockResolvedValue(makeSession());
+      component.native.users.getUserById.mockResolvedValue(makeUser());
+      component.native.sessions.getSessionBySessionId.mockResolvedValue(
+        makeSession({ sessionId: "victim_session", userId: "user_2" as unknown as Id<"users"> }),
+      );
+
+      const { revokeSession } = createActions(component);
+      const result = await exec(revokeSession).handler(createContext(), {
+        token: defaultToken,
+        sessionId: "victim_session",
+      });
+      expect(result).toEqual({ success: true });
+      expect(component.native.sessions.revokeSession).not.toHaveBeenCalled();
+    });
+
+    it("fails when the caller's token does not resolve", async () => {
+      const component = createMockComponent();
+      component.native.sessions.getSessionByToken.mockResolvedValue(null);
+
+      const { revokeSession } = createActions(component);
+      const result = await exec(revokeSession).handler(createContext(), {
+        token: defaultToken,
+        sessionId: "session_2",
+      });
+      expect(result).toEqual({ success: false });
+      expect(component.native.sessions.revokeSession).not.toHaveBeenCalled();
+    });
+  });
 });

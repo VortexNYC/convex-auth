@@ -1389,19 +1389,14 @@ No props.
 
 **Props**
 
-| Name                  | Type                          | Optional | Description                                                   |
-| --------------------- | ----------------------------- | -------- | ------------------------------------------------------------- |
-| `authClient`          | `ConvexAuthClient \| None`    | Yes      |                                                               |
-| `classNames`          | `ConvexSessionListClassNames` | Yes      |                                                               |
-| `copy`                | `ConvexSessionListCopy`       | Yes      |                                                               |
-| `currentSessionToken` | `string \| None`              | Yes      | Token of the session currently powering this browser. Used to |
-
-mark the row as the active session and to suppress the
-"revoke" button on it (revoking your own session is sign-out,
-which is a separate action from "revoke that other device"). |
-| `formatTimestamp` | `(value: string \| Date) => string` | Yes | |
-| `showRevokeOthersAction` | `boolean` | Yes | Render a "Revoke all other sessions" button next to the title.
-Defaults to true. Hides when no other sessions exist. |
+| Name                                                  | Type                                | Optional | Description                                                    |
+| ----------------------------------------------------- | ----------------------------------- | -------- | -------------------------------------------------------------- |
+| `authClient`                                          | `ConvexAuthClient \| None`          | Yes      |                                                                |
+| `classNames`                                          | `ConvexSessionListClassNames`       | Yes      |                                                                |
+| `copy`                                                | `ConvexSessionListCopy`             | Yes      |                                                                |
+| `formatTimestamp`                                     | `(value: string \| Date) => string` | Yes      |                                                                |
+| `showRevokeOthersAction`                              | `boolean`                           | Yes      | Render a "Revoke all other sessions" button next to the title. |
+| Defaults to true. Hides when no other sessions exist. |
 
 **classNames keys**
 

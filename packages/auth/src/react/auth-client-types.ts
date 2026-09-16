@@ -93,7 +93,7 @@ export type ConvexBetterAuthClient = {
     data?: ConvexAuthSessionListItem[] | null;
     error?: unknown;
   }>;
-  revokeSession?: (args: { token: string }) => Promise<{
+  revokeSession?: (args: { sessionId: string }) => Promise<{
     data?: { status?: boolean } | null;
     error?: unknown;
   }>;
@@ -156,7 +156,7 @@ export type ConvexBetterAuthTwoFactorApi = {
 
 export type ConvexAuthSessionListItem = {
   id: string;
-  token: string;
+  isCurrent: boolean;
   userId: string;
   expiresAt: string | Date;
   ipAddress?: string | null;
