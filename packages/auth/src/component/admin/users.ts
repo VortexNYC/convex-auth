@@ -184,6 +184,59 @@ export const unbanUser = mutation({
   },
 });
 
+export const claimSuperAdmin = mutation({
+  args: {},
+  returns: v.object({ userId: v.id("users") }),
+  handler: async (ctx): Promise<{ userId: Id<"users"> }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db.get("users", identity.subject as Id<"users">);
+    if (user === null) {
+      throw new Error("User not found");
+    }
+
+    const now = Date.now();
+    if (
+      user.isAnonymous ||
+      !user.isActive ||
+      (user.bannedUntil !== undefined && user.bannedUntil > now)
+    ) {
+      throw new Error("User is not eligible to claim super admin");
+    }
+
+    if (user.isSuperAdmin) {
+      return { userId: user._id };
+    }
+
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_super_admin", (q) => q.eq("isSuperAdmin", true))
+      .take(1);
+    if (existing.length > 0) {
+      throw new Error("A super admin already exists");
+    }
+
+    await ctx.db.patch(user._id, {
+      isSuperAdmin: true,
+      updatedAt: now,
+    });
+
+    await createAdminAudit(ctx, {
+      adminId: String(user._id),
+      action: "claimSuperAdmin",
+      target: { type: "user", id: String(user._id) },
+      result: "success",
+      payload: { email: user.email },
+      now,
+    });
+
+    return { userId: user._id };
+  },
+});
+
 export const removeUser = mutation({
   args: { userId: v.id("users"), reason: v.optional(v.string()) },
   returns: v.object({ deleted: v.boolean(), userId: v.id("users") }),

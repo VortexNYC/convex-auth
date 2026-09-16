@@ -181,6 +181,25 @@ export const removeUser = mutation({
   },
 });
 
+export const claimSuperAdmin = mutation({
+  args: {},
+  returns: v.object({ userId: v.string() }),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, {
+      userId: identity.subject as Id<"users">,
+    });
+    if (user === null) {
+      throw new Error("User not found");
+    }
+    const result = await ctx.runMutation(components.convexAuth.admin.users.claimSuperAdmin, {});
+    return { userId: String(result.userId) };
+  },
+});
+
 export const revokeSession = mutation({
   args: { sessionId: v.string() },
   returns: v.null(),

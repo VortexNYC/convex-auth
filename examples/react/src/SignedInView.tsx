@@ -49,6 +49,7 @@ export function SignedInView() {
 
   const user = actions.user;
   const token = actions.token;
+  const claimAdmin = useMutation(api.admin.claimSuperAdmin);
 
   if (user === null) {
     return (
@@ -91,6 +92,32 @@ export function SignedInView() {
           <div className="bg-muted text-foreground rounded-lg p-3 text-sm" role="status">
             {message}
           </div>
+        ) : null}
+
+        {!user.isSuperAdmin ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Admin demo</CardTitle>
+              <CardDescription>Claim super-admin access to test the dashboard.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      await claimAdmin({});
+                      setMessage("Admin access granted.");
+                    } catch (err) {
+                      setMessage(err instanceof Error ? err.message : "Could not claim admin");
+                    }
+                  })();
+                }}
+              >
+                Claim admin access
+              </Button>
+            </CardContent>
+          </Card>
         ) : null}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>

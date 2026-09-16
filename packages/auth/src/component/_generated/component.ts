@@ -197,6 +197,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           { bannedUntil?: number; userId: string },
           Name
         >;
+        claimSuperAdmin: FunctionReference<
+          "mutation",
+          "internal",
+          {},
+          { userId: string },
+          Name
+        >;
         getUser: FunctionReference<
           "query",
           "internal",
