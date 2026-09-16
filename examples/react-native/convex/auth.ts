@@ -41,6 +41,13 @@ export const auth = convexAuth({
     emailDomain: "guest.convex-auth-demo.local",
     generateName: () => `Guest ${Math.random().toString(36).slice(2, 10)}`,
   },
+  passkey: {
+    rpID: process.env.PASSKEY_RP_ID ?? "example.com",
+    // Comma-separated list covering every origin native platforms may emit:
+    // the web origin plus "android:apk-key-hash:<sha256-of-signing-cert>".
+    origin: (process.env.PASSKEY_ORIGINS ?? "https://example.com").split(","),
+    rpName: "Convex Auth Demo",
+  },
   oauth: {
     github: {
       clientId: process.env.GITHUB_CLIENT_ID ?? "",

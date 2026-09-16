@@ -133,3 +133,36 @@ When `passkey` is configured, `auth` exposes:
 - `auth.renamePasskey`
 
 Use `useAuthActions()` to call them from React. Registration, listing, revoking, and renaming are bound to `ctx.auth.getUserIdentity()` — a caller can only manage their own passkeys. Authentication challenges generated for a specific user can only be completed by a credential belonging to that user, and a passkey whose signature counter regresses is revoked automatically (cloned-authenticator detection). All lifecycle events write `auth_audit_events` rows (`passkey_registered`, `passkey_authenticated`, `passkey_renamed`, `passkey_revoked`, `passkey_counter_regression`).
+
+## React Native / Expo
+
+Native passkey ceremonies run through the optional [`react-native-passkeys`](https://github.com/peterferguson/react-native-passkeys) peer dependency (ASAuthorizationController on iOS, Credential Manager on Android). Install it explicitly and import the hook from the dedicated subpath so apps that don't use passkeys never bundle it:
+
+```sh
+pnpm add react-native-passkeys
+```
+
+```tsx
+import { usePasskeys } from "@vortex-api/convex-auth/react-native/passkeys";
+
+const passkeys = usePasskeys({
+  userId: user.id, // for management + registration
+  identifier: user.email ?? "",
+  rpName: "Example",
+  rpID: "example.com",
+  origin: ["https://example.com", "android:apk-key-hash:<sha256-of-signing-cert>"],
+});
+
+await passkeys.register("My iPhone");
+await passkeys.signIn();
+```
+
+The hook exposes the same surface as web — `register`, `signIn`, `revoke`, `rename`, `passkeys`, `loading`, `error`, plus `supported` (false on devices without passkey capability). A user cancelling the ceremony rejects with a "cancelled" error. Server verification is identical to web: the native responses are SimpleWebAuthn-compatible JSON verified by the same actions.
+
+### iOS
+
+Add the associated domain entitlement for your `rpID` (`webcredentials:example.com`) in `app.json`/`app.config.ts` under `ios.associatedDomains`, and serve an AASA file at `https://<rpID>/.well-known/apple-app-site-association` listing your app's `webcredentials` app ID. This requires a development build — passkeys do not work in Expo Go.
+
+### Android
+
+Serve `https://<rpID>/.well-known/assetlinks.json` granting your package `delegate_permission/common.get_login_creds` with your SHA-256 signing-certificate fingerprint. The assertion's origin arrives as `android:apk-key-hash:<base64url-sha256-of-cert>` — include it in `passkey.origin` (the array form) so verification accepts it. Android may cache the assetlinks lookup for up to 24 hours; reinstall or wait after changing it.
