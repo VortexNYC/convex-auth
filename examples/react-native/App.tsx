@@ -446,13 +446,6 @@ function SignedInView({
           <Text className="text-lg font-bold text-foreground">Signed in</Text>
           {user?.name ? <Text className="text-base text-muted-foreground">{user.name}</Text> : null}
           {user?.email ? <Text className="text-sm text-muted-foreground">{user.email}</Text> : null}
-          <Text
-            className="text-xs mt-2 text-muted-foreground"
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            Token: {currentToken ?? "none"}
-          </Text>
         </View>
       }
       footer={
