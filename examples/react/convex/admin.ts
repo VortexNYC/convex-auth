@@ -156,6 +156,94 @@ export const listOrganizations = query({
   },
 });
 
+export const getOrganization = query({
+  args: { organizationId: v.string() },
+  returns: v.union(adminOrganizationValidator, v.null()),
+  handler: async (ctx, { organizationId }) => {
+    await requireSuperAdmin(ctx);
+    return await ctx.runQuery(components.convexAuth.admin.organisations.getOrganization, {
+      organizationId: organizationId as Id<"organizations">,
+    });
+  },
+});
+
+const adminMemberValidator = v.object({
+  _id: v.string(),
+  organizationId: v.string(),
+  userId: v.optional(v.string()),
+  roleId: v.string(),
+  status: v.string(),
+  invitedEmail: v.optional(v.string()),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
+export const listMembers = query({
+  args: { organizationId: v.string(), paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(adminMemberValidator),
+  handler: async (ctx, { organizationId, paginationOpts }) => {
+    await requireSuperAdmin(ctx);
+    const result = await ctx.runQuery(components.convexAuth.admin.organisations.listMembers, {
+      organizationId: organizationId as Id<"organizations">,
+      limit: Math.min(paginationOpts.numItems, PAGE_LIMIT),
+      cursor: paginationOpts.cursor ?? undefined,
+    });
+    return {
+      page: result.members,
+      continueCursor: result.nextCursor ?? "",
+      isDone: !result.hasNextPage,
+    };
+  },
+});
+
+const adminRoleValidator = v.object({
+  _id: v.string(),
+  organizationId: v.string(),
+  key: v.string(),
+  name: v.string(),
+  description: v.optional(v.string()),
+  permissions: v.array(v.string()),
+  isSystem: v.boolean(),
+  createdBy: v.optional(v.string()),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
+export const listRoles = query({
+  args: { organizationId: v.string() },
+  returns: v.object({ roles: v.array(adminRoleValidator) }),
+  handler: async (ctx, { organizationId }) => {
+    await requireSuperAdmin(ctx);
+    const result = await ctx.runQuery(components.convexAuth.admin.organisations.listRoles, {
+      organizationId: organizationId as Id<"organizations">,
+    });
+    return { roles: result.roles };
+  },
+});
+
+export const updateMemberRole = mutation({
+  args: { memberId: v.string(), roleId: v.string() },
+  returns: v.object({ memberId: v.string(), roleId: v.string() }),
+  handler: async (ctx, { memberId, roleId }) => {
+    await requireSuperAdmin(ctx);
+    return await ctx.runMutation(components.convexAuth.admin.organisations.updateMemberRole, {
+      memberId: memberId as Id<"organization_members">,
+      roleId: roleId as Id<"organization_roles">,
+    });
+  },
+});
+
+export const removeMember = mutation({
+  args: { memberId: v.string() },
+  returns: v.object({ removed: v.boolean(), memberId: v.string() }),
+  handler: async (ctx, { memberId }) => {
+    await requireSuperAdmin(ctx);
+    return await ctx.runMutation(components.convexAuth.admin.organisations.removeMember, {
+      memberId: memberId as Id<"organization_members">,
+    });
+  },
+});
+
 const adminAuditValidator = v.object({
   _id: v.string(),
   adminId: v.string(),
