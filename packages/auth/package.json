@@ -233,7 +233,7 @@
     "@types/react-dom": "^19.0.0",
     "@vitest/coverage-v8": "4.1.10",
     "convex": "^1.45.0",
-    "convex-test": "0.0.56",
+    "convex-test": "0.0.58",
     "happy-dom": "^20.14.3",
     "typescript": "^5.7.0",
     "vite": "^8.2.2",

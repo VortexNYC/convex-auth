@@ -394,8 +394,8 @@ importers:
         specifier: ^1.45.0
         version: 1.45.0(react@19.2.8)
       convex-test:
-        specifier: 0.0.56
-        version: 0.0.56(convex@1.45.0(react@19.2.8))
+        specifier: 0.0.58
+        version: 0.0.58(convex@1.45.0(react@19.2.8))
       happy-dom:
         specifier: ^20.14.3
         version: 20.14.5
@@ -5606,8 +5606,8 @@ packages:
       zod:
         optional: true
 
-  convex-test@0.0.56:
-    resolution: {integrity: sha512-dLYXlQjKFoGqvjAmPzyLgb2HsYI7iLo1iuNTU2DZmSrMRLWosYk94erjSU67GG5ovfP6+MjX8RJO+ebhmL6QYA==}
+  convex-test@0.0.58:
+    resolution: {integrity: sha512-VZ9VNrWZkdlWMmudnoOdiqTk8oc6r9pCcnxxPq1Kh/tt4dX9cyA7kJWFZ9LrAgEUxGcg2iPkiOb+bBvHfy3ihA==}
     peerDependencies:
       convex: ^1.43.0
 
@@ -15582,7 +15582,7 @@ snapshots:
       typescript: 5.9.3
       zod: 4.5.4
 
-  convex-test@0.0.56(convex@1.45.0(react@19.2.8)):
+  convex-test@0.0.58(convex@1.45.0(react@19.2.8)):
     dependencies:
       convex: 1.45.0(react@19.2.8)
 
