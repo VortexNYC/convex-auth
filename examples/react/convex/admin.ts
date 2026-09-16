@@ -30,17 +30,35 @@ const adminUserValidator = v.object({
   image: v.optional(v.string()),
   isActive: v.boolean(),
   isSuperAdmin: v.optional(v.boolean()),
+  roles: v.optional(v.array(v.string())),
   bannedUntil: v.optional(v.number()),
   banReason: v.optional(v.string()),
   createdAt: v.number(),
 });
 
 export const listUsers = query({
-  args: { paginationOpts: paginationOptsValidator },
+  args: {
+    search: v.optional(v.string()),
+    isActive: v.optional(v.boolean()),
+    isSuperAdmin: v.optional(v.boolean()),
+    banned: v.optional(v.boolean()),
+    sortBy: v.optional(v.union(v.literal("createdAt"), v.literal("email"), v.literal("name"))),
+    sortDirection: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+    paginationOpts: paginationOptsValidator,
+  },
   returns: paginationResultValidator(adminUserValidator),
-  handler: async (ctx, { paginationOpts }) => {
+  handler: async (
+    ctx,
+    { search, isActive, isSuperAdmin, banned, sortBy, sortDirection, paginationOpts },
+  ) => {
     await requireSuperAdmin(ctx);
     const result = await ctx.runQuery(components.convexAuth.admin.users.listUsers, {
+      search: search?.trim() || undefined,
+      isActive,
+      isSuperAdmin,
+      banned,
+      sortBy,
+      sortDirection,
       limit: Math.min(paginationOpts.numItems, PAGE_LIMIT),
       cursor: paginationOpts.cursor ?? undefined,
     });
@@ -48,6 +66,32 @@ export const listUsers = query({
       page: result.users,
       continueCursor: result.nextCursor ?? "",
       isDone: !result.hasNextPage,
+    };
+  },
+});
+
+export const getUser = query({
+  args: { userId: v.string() },
+  returns: v.union(adminUserValidator, v.null()),
+  handler: async (ctx, { userId }) => {
+    await requireSuperAdmin(ctx);
+    const result = await ctx.runQuery(components.convexAuth.admin.users.getUser, {
+      userId: userId as Id<"users">,
+    });
+    if (result === null) {
+      return null;
+    }
+    return {
+      _id: String(result._id),
+      email: result.email,
+      name: result.name,
+      image: result.image,
+      isActive: result.isActive,
+      isSuperAdmin: result.isSuperAdmin,
+      roles: result.roles,
+      bannedUntil: result.bannedUntil,
+      banReason: result.banReason,
+      createdAt: result.createdAt,
     };
   },
 });
