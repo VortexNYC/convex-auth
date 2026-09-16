@@ -2,7 +2,14 @@ import { paginator } from "convex-helpers/server/pagination";
 import { query, mutation } from "../_generated/server.js";
 import { v } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel.js";
-import { createAdminAudit, requireSuperAdmin } from "../../convex-runtime/admin/admin.js";
+import {
+  createAdminAudit,
+  getImpersonationSessionDuration,
+  isUserBanned,
+  requireSuperAdmin,
+} from "../../convex-runtime/admin/admin.js";
+import { mintToken } from "../../convex-runtime/native/jwt.js";
+import { generateVerificationToken, hashToken } from "../../convex-runtime/native/tokens.js";
 import schema from "../schema.js";
 
 const MAX_PAGE_LIMIT = 100;
@@ -143,7 +150,7 @@ export const revokeSession = mutation({
     }
 
     await createAdminAudit(ctx, {
-      adminId: admin._id,
+      adminId: String(admin._id),
       action: "revokeSession",
       target: { type: "session", id: session.sessionId },
       result: "success",
@@ -191,7 +198,7 @@ export const revokeAllSessionsForUser = mutation({
     }
 
     await createAdminAudit(ctx, {
-      adminId: admin._id,
+      adminId: String(admin._id),
       action: "revokeAllSessionsForUser",
       target: { type: "user", id: String(args.userId) },
       result: "success",
@@ -200,5 +207,158 @@ export const revokeAllSessionsForUser = mutation({
     });
 
     return { count };
+  },
+});
+
+export const impersonateUser = mutation({
+  args: { userId: v.id("users") },
+  returns: v.object({
+    token: v.string(),
+    refreshToken: v.string(),
+    sessionId: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    const admin = await requireSuperAdmin(ctx, identity.subject);
+
+    const target = await ctx.db.get("users", args.userId);
+    if (target === null) {
+      throw new Error("User not found");
+    }
+    if (isUserBanned(target)) {
+      throw new Error("Cannot impersonate a banned or inactive user");
+    }
+    if (target.isSuperAdmin) {
+      throw new Error("Cannot impersonate another super admin");
+    }
+    if (String(args.userId) === String(admin._id)) {
+      throw new Error("Cannot impersonate yourself");
+    }
+
+    const identityRecord = await ctx.db
+      .query("auth_identities")
+      .withIndex("by_user_provider_issuer", (q) =>
+        q.eq("userId", args.userId).eq("provider", "password").eq("issuer", "native"),
+      )
+      .unique();
+    if (identityRecord === null) {
+      throw new Error("Cannot impersonate a user without a native identity");
+    }
+
+    const now = Date.now();
+    const sessionTtl = getImpersonationSessionDuration();
+    const sessionId = crypto.randomUUID();
+    const refreshToken = generateVerificationToken();
+    const refreshTokenHash = await hashToken(refreshToken);
+    const expiresAt = now + sessionTtl;
+
+    const token = await mintToken(
+      String(args.userId),
+      sessionId,
+      { identityId: String(identityRecord._id) },
+      { expiresInSeconds: Math.floor(sessionTtl / 1000) },
+    );
+
+    await ctx.db.insert("authSessions", {
+      sessionId,
+      userId: args.userId,
+      token,
+      expiresAt,
+      impersonatedBy: admin._id,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("authRefreshTokens", {
+      tokenHash: refreshTokenHash,
+      sessionId,
+      userId: args.userId,
+      expiresAt,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await createAdminAudit(ctx, {
+      adminId: String(admin._id),
+      action: "impersonateUser",
+      target: { type: "user", id: String(args.userId) },
+      result: "success",
+      payload: { sessionId, email: target.email },
+      now,
+    });
+
+    return { token, refreshToken, sessionId };
+  },
+});
+
+export const getImpersonationState = query({
+  args: { sessionId: v.string() },
+  returns: v.object({
+    impersonatedBy: v.optional(v.string()),
+    userId: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return { impersonatedBy: undefined, userId: undefined };
+    }
+    const session = await ctx.db
+      .query("authSessions")
+      .withIndex("by_session_id", (q) => q.eq("sessionId", args.sessionId))
+      .unique();
+    if (
+      session === null ||
+      String(session.userId) !== identity.subject ||
+      session.impersonatedBy === undefined ||
+      session.revokedAt !== undefined ||
+      session.expiresAt <= Date.now()
+    ) {
+      return { impersonatedBy: undefined, userId: undefined };
+    }
+    return {
+      impersonatedBy: String(session.impersonatedBy),
+      userId: identity.subject,
+    };
+  },
+});
+
+export const stopImpersonation = mutation({
+  args: { sessionId: v.string() },
+  returns: v.object({ revoked: v.boolean() }),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    const session = await ctx.db
+      .query("authSessions")
+      .withIndex("by_session_id", (q) => q.eq("sessionId", args.sessionId))
+      .unique();
+    if (
+      session === null ||
+      String(session.userId) !== identity.subject ||
+      session.impersonatedBy === undefined
+    ) {
+      throw new Error("Impersonation session not found");
+    }
+    const now = Date.now();
+    await ctx.db.patch(session._id, { revokedAt: now, updatedAt: now });
+    for await (const token of ctx.db
+      .query("authRefreshTokens")
+      .withIndex("by_session", (q) => q.eq("sessionId", session.sessionId))) {
+      await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
+    }
+    await createAdminAudit(ctx, {
+      adminId: String(session.impersonatedBy),
+      action: "stopImpersonation",
+      target: { type: "session", id: session.sessionId },
+      result: "success",
+      payload: { userId: session.userId },
+      now,
+    });
+    return { revoked: true };
   },
 });

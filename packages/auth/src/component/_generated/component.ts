@@ -138,6 +138,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         >;
       };
       sessions: {
+        getImpersonationState: FunctionReference<
+          "query",
+          "internal",
+          { sessionId: string },
+          { impersonatedBy?: string; userId?: string },
+          Name
+        >;
         getSession: FunctionReference<
           "query",
           "internal",
@@ -152,6 +159,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             userAgent?: string;
             userId: string;
           } | null,
+          Name
+        >;
+        impersonateUser: FunctionReference<
+          "mutation",
+          "internal",
+          { userId: string },
+          { refreshToken: string; sessionId: string; token: string },
           Name
         >;
         listSessions: FunctionReference<
@@ -188,6 +202,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           { revoked: boolean; sessionId: string },
           Name
         >;
+        stopImpersonation: FunctionReference<
+          "mutation",
+          "internal",
+          { sessionId: string },
+          { revoked: boolean },
+          Name
+        >;
       };
       users: {
         banUser: FunctionReference<
@@ -204,6 +225,31 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           { userId: string },
           Name
         >;
+        createUser: FunctionReference<
+          "mutation",
+          "internal",
+          {
+            email: string;
+            emailVerified?: boolean;
+            image?: string;
+            name: string;
+            password: string;
+            role?: string | Array<string>;
+          },
+          {
+            _id: string;
+            banReason?: string;
+            bannedUntil?: number;
+            createdAt: number;
+            email?: string;
+            image?: string;
+            isActive: boolean;
+            isSuperAdmin?: boolean;
+            name?: string;
+            roles?: Array<string>;
+          },
+          Name
+        >;
         getUser: FunctionReference<
           "query",
           "internal",
@@ -218,13 +264,23 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             isActive: boolean;
             isSuperAdmin?: boolean;
             name?: string;
+            roles?: Array<string>;
           } | null,
           Name
         >;
         listUsers: FunctionReference<
           "query",
           "internal",
-          { cursor?: string; limit?: number },
+          {
+            banned?: boolean;
+            cursor?: string;
+            isActive?: boolean;
+            isSuperAdmin?: boolean;
+            limit?: number;
+            search?: string;
+            sortBy?: "createdAt" | "email" | "name";
+            sortDirection?: "asc" | "desc";
+          },
           {
             hasNextPage: boolean;
             nextCursor?: string;
@@ -238,6 +294,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               isActive: boolean;
               isSuperAdmin?: boolean;
               name?: string;
+              roles?: Array<string>;
             }>;
           },
           Name
@@ -247,6 +304,31 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "internal",
           { reason?: string; userId: string },
           { deleted: boolean; userId: string },
+          Name
+        >;
+        setRole: FunctionReference<
+          "mutation",
+          "internal",
+          { role: string | Array<string>; userId: string },
+          {
+            _id: string;
+            banReason?: string;
+            bannedUntil?: number;
+            createdAt: number;
+            email?: string;
+            image?: string;
+            isActive: boolean;
+            isSuperAdmin?: boolean;
+            name?: string;
+            roles?: Array<string>;
+          },
+          Name
+        >;
+        setUserPassword: FunctionReference<
+          "mutation",
+          "internal",
+          { password: string; userId: string },
+          { userId: string },
           Name
         >;
         unbanUser: FunctionReference<

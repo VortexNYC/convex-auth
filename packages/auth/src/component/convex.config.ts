@@ -7,6 +7,7 @@ const component = defineComponent("convexAuth", {
   env: {
     JWT_PRIVATE_KEY: v.string(),
     JWKS: v.string(),
+    IMPERSONATION_SESSION_DURATION_MS: v.optional(v.string()),
   },
 });
 

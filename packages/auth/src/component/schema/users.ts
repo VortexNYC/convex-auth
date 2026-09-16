@@ -20,6 +20,7 @@ export const users = defineTable({
   activeOrganizationId: v.optional(v.id("organizations")),
   isActive: v.boolean(),
   isSuperAdmin: v.optional(v.boolean()),
+  roles: v.optional(v.array(v.string())),
   isAnonymous: v.optional(v.boolean()),
   bannedAt: v.optional(v.number()),
   bannedUntil: v.optional(v.number()),
@@ -29,6 +30,8 @@ export const users = defineTable({
   updatedAt: v.number(),
 })
   .index("by_email", ["email"])
+  .index("by_name", ["name"])
+  .index("by_active", ["isActive"])
   .index("by_super_admin", ["isSuperAdmin"])
   .index("by_active_organization", ["activeOrganizationId"]);
 
