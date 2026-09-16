@@ -124,9 +124,10 @@ function AuthProviders({ children }: { children: React.ReactNode }) {
   }).current;
 
   const statusBarStyle = colorScheme === "dark" ? "light" : "dark";
+  const isDark = colorScheme === "dark";
 
   return (
-    <View style={{ flex: 1 }}>
+    <View className={clsx("flex-1 bg-background", isDark && "dark")} style={{ flex: 1 }}>
       <ConvexProvider client={convex}>
         <ExpoConvexAuthClientProvider
           actions={api.auth as unknown as NativeAuthActions}
@@ -333,8 +334,15 @@ function InnerApp() {
   }
 
   return (
-    <ScrollView style={{ flex: 1 }}>
-      <View className={clsx("w-full bg-background", isDark && "dark")} style={{ padding: 24 }}>
+    <ScrollView
+      style={{ flex: 1 }}
+      className={clsx("w-full bg-background", isDark && "dark")}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center" }}
+    >
+      <View
+        className={clsx("w-full max-w-md bg-background", isDark && "dark")}
+        style={{ padding: 24 }}
+      >
         {screen === "signUp" ? (
           <>
             <ExpoAuthClientSignUpScreen
