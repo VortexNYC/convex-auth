@@ -89,4 +89,11 @@ export const {
   callback,
   signInAnonymous,
   linkAnonymousAccount,
+  getPasskeyRegistrationOptions,
+  verifyPasskeyRegistration,
+  getPasskeyAuthenticationOptions,
+  verifyPasskeyAuthentication,
+  listPasskeys,
+  revokePasskey,
+  renamePasskey,
 } = auth;

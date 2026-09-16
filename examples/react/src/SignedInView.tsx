@@ -259,9 +259,6 @@ function PasskeysPanel({ userId, email }: { userId: string; email: string }) {
   const { passkeys, register, signIn, revoke, rename, loading, error, supported } = usePasskeys({
     userId,
     identifier: email,
-    rpName: "Convex Auth Demo",
-    rpID: "localhost",
-    origin: "http://localhost:5174",
   });
 
   return (

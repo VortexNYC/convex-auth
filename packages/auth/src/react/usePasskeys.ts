@@ -15,9 +15,6 @@ import type { PasskeyListItem } from "./passkey-manager.js";
 export interface UsePasskeysArgs {
   userId?: string;
   identifier?: string;
-  rpName: string;
-  rpID: string;
-  origin: string;
   /**
    * Enable WebAuthn conditional UI (browser autofill on an
    * `autocomplete="username webauthn"` input). When true, `signIn` uses
@@ -30,7 +27,7 @@ type RegistrationOptions = Parameters<typeof startRegistration>[0]["optionsJSON"
 type AuthenticationOptions = Parameters<typeof startAuthentication>[0]["optionsJSON"];
 
 export function usePasskeys(args: UsePasskeysArgs) {
-  const { userId, identifier, rpName, rpID, origin, autofill } = args;
+  const { userId, identifier, autofill } = args;
   const ctx = useContext(ConvexAuthContext);
   if (ctx === null) {
     throw new Error("usePasskeys must be used within a ConvexAuthProvider");
@@ -89,15 +86,12 @@ export function usePasskeys(args: UsePasskeysArgs) {
                 userId,
                 identifier,
                 displayName: identifier,
-                rpName,
-                rpID,
               })
             : Promise.resolve(null);
         const [regOpts, authOpts] = await Promise.all([
           regPromise,
           generateAuthenticationOptions({
             userId,
-            rpID,
           }),
         ]);
         if (!cancelled) {
@@ -117,14 +111,7 @@ export function usePasskeys(args: UsePasskeysArgs) {
     return () => {
       cancelled = true;
     };
-  }, [
-    userId,
-    identifier,
-    rpName,
-    rpID,
-    generateRegistrationOptions,
-    generateAuthenticationOptions,
-  ]);
+  }, [userId, identifier, generateRegistrationOptions, generateAuthenticationOptions]);
 
   const register = React.useCallback(
     async (name: string) => {
@@ -143,20 +130,20 @@ export function usePasskeys(args: UsePasskeysArgs) {
           identifier,
           challenge: registrationOptions.challenge as string,
           response,
-          rpID,
-          origin,
           name,
         });
-        // Refresh registration options so another passkey can be registered.
-        setRegistrationOptions(
-          await generateRegistrationOptions({
+        // Refresh registration options so another passkey can be registered,
+        // and auth options so the new credential lands in allowCredentials.
+        const [regOpts, authOpts] = await Promise.all([
+          generateRegistrationOptions({
             userId,
             identifier,
             displayName: identifier,
-            rpName,
-            rpID,
           }),
-        );
+          generateAuthenticationOptions({ userId }),
+        ]);
+        setRegistrationOptions(regOpts);
+        setAuthenticationOptions(authOpts);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Registration failed";
         setError(message);
@@ -170,10 +157,8 @@ export function usePasskeys(args: UsePasskeysArgs) {
       verifyRegistration,
       userId,
       identifier,
-      rpID,
-      origin,
-      rpName,
       generateRegistrationOptions,
+      generateAuthenticationOptions,
     ],
   );
 
@@ -192,8 +177,6 @@ export function usePasskeys(args: UsePasskeysArgs) {
         const result = await verifyAuthentication({
           challenge: authenticationOptions.challenge as string,
           response,
-          rpID,
-          origin,
         });
         ctx.setToken(result.token);
         ctx.setRefreshToken(result.refreshToken);
@@ -207,7 +190,7 @@ export function usePasskeys(args: UsePasskeysArgs) {
         setLoading(false);
       }
     },
-    [authenticationOptions, verifyAuthentication, rpID, origin, ctx, autofill],
+    [authenticationOptions, verifyAuthentication, ctx, autofill],
   );
 
   const revoke = React.useCallback(

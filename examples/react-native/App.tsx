@@ -479,22 +479,10 @@ function SignedInView({
   );
 }
 
-const passkeyRpID = process.env.EXPO_PUBLIC_PASSKEY_RP_ID ?? "";
-const passkeyOrigins = (process.env.EXPO_PUBLIC_PASSKEY_ORIGINS ?? "")
-  .split(",")
-  .map((origin: string) => origin.trim())
-  .filter(Boolean);
-
 function PasskeySection({ userId, identifier }: { userId?: string; identifier?: string }) {
-  const passkeys = usePasskeys({
-    userId,
-    identifier,
-    rpName: "Convex Auth Demo",
-    rpID: passkeyRpID,
-    origin: passkeyOrigins,
-  });
+  const passkeys = usePasskeys({ userId, identifier });
 
-  if (!passkeyRpID || !passkeys.supported) {
+  if (!passkeys.supported) {
     return null;
   }
 
@@ -532,13 +520,9 @@ function PasskeySection({ userId, identifier }: { userId?: string; identifier?: 
 }
 
 function PasskeySignInButton() {
-  const passkeys = usePasskeys({
-    rpName: "Convex Auth Demo",
-    rpID: passkeyRpID,
-    origin: passkeyOrigins,
-  });
+  const passkeys = usePasskeys({});
 
-  if (!passkeyRpID || !passkeys.supported) {
+  if (!passkeys.supported) {
     return null;
   }
 

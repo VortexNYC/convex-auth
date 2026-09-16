@@ -24,14 +24,14 @@ export const auth = convexAuth({
     maxPasskeysPerUser: 10,
     // optional WebAuthn policy knobs
     attestationType: "none", // "none" | "direct" | "enterprise"
-    userVerification: "preferred", // "required" enforces UV at verify time
+    userVerification: "required", // the default — enforces UV at verify time
     residentKey: "preferred",
     authenticatorAttachment: undefined, // "platform" | "cross-platform"
   },
 });
 ```
 
-`rpID` must match the registrable domain users authenticate from. `origin` accepts a single origin or an array — every origin must be the exact origin the browser sees. `maxPasskeysPerUser` caps active (non-revoked) passkeys per user. When `userVerification` is `"required"`, verification enforces the UV flag; `"preferred"`/`"discouraged"` let authenticators that skip UV through.
+`rpID` must match the registrable domain users authenticate from. `origin` accepts a single origin or an array — every origin must be the exact origin the platform reports (browser origins and `android:apk-key-hash:<hash>` for native Android). `maxPasskeysPerUser` caps active (non-revoked) passkeys per user, enforced at both options and verify time. `userVerification` defaults to `"required"` — verification rejects assertions without the UV flag unless you explicitly set `"preferred"` or `"discouraged"`. Origin and rpID are always taken from this server config; clients cannot override them at verify time.
 
 ## React
 
@@ -48,9 +48,6 @@ export function Passkeys() {
   const passkeys = usePasskeys({
     userId: user.id,
     identifier: user.email ?? "",
-    rpName: "Example",
-    rpID: "example.com",
-    origin: "https://example.com",
   });
 
   return (
@@ -76,7 +73,7 @@ export function Passkeys() {
 Pass `autofill: true` to `usePasskeys` and add `autocomplete="username webauthn"` to your username input — the browser offers passkeys inside the autofill sheet instead of a modal:
 
 ```tsx
-const passkeys = usePasskeys({ rpName, rpID, origin, autofill: true });
+const passkeys = usePasskeys({ autofill: true });
 
 <input autoComplete="username webauthn" ... />
 await passkeys.signIn(); // resolves when the user picks a passkey from autofill
@@ -148,16 +145,13 @@ import { usePasskeys } from "@vortex-api/convex-auth/react-native/passkeys";
 const passkeys = usePasskeys({
   userId: user.id, // for management + registration
   identifier: user.email ?? "",
-  rpName: "Example",
-  rpID: "example.com",
-  origin: ["https://example.com", "android:apk-key-hash:<sha256-of-signing-cert>"],
 });
 
 await passkeys.register("My iPhone");
 await passkeys.signIn();
 ```
 
-The hook exposes the same surface as web — `register`, `signIn`, `revoke`, `rename`, `passkeys`, `loading`, `error`, plus `supported` (false on devices without passkey capability). A user cancelling the ceremony rejects with a "cancelled" error. Server verification is identical to web: the native responses are SimpleWebAuthn-compatible JSON verified by the same actions.
+The hook exposes the same surface as web — `register`, `signIn`, `revoke`, `rename`, `passkeys`, `loading`, `error`, plus `supported` (false on devices without passkey capability). A user cancelling the ceremony rejects with a "cancelled" error (normalized across iOS's thrown cancellation and Android's `null` return). Server verification is identical to web: the native responses are SimpleWebAuthn-compatible JSON verified by the same actions, against the `rpID`/`origin` from `convexAuth` config — for Android include `android:apk-key-hash:<base64url-sha256-of-signing-cert>` in `passkey.origin`.
 
 ### iOS
 

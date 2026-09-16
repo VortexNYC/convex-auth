@@ -84,9 +84,6 @@ function wrapper(ctx: unknown) {
 const args = {
   userId: "user_1",
   identifier: "user@example.com",
-  rpName: "Example",
-  rpID: "example.com",
-  origin: "https://example.com",
 };
 
 afterEach(() => {
@@ -108,12 +105,9 @@ describe("react-native usePasskeys", () => {
       userId: "user_1",
       identifier: "user@example.com",
       displayName: "user@example.com",
-      rpName: "Example",
-      rpID: "example.com",
     });
     expect(generateAuthenticationOptions).toHaveBeenCalledWith({
       userId: "user_1",
-      rpID: "example.com",
     });
   });
 
@@ -135,8 +129,6 @@ describe("react-native usePasskeys", () => {
       identifier: "user@example.com",
       challenge: "reg-challenge",
       response: ceremonyResponse,
-      rpID: "example.com",
-      origin: "https://example.com",
       name: "My iPhone",
     });
   });
@@ -159,8 +151,6 @@ describe("react-native usePasskeys", () => {
     expect(verifyAuthentication).toHaveBeenCalledWith({
       challenge: "auth-challenge",
       response: ceremonyResponse,
-      rpID: "example.com",
-      origin: "https://example.com",
     });
     expect((ctx as { setToken: ReturnType<typeof vi.fn> }).setToken).toHaveBeenCalledWith("tok");
     expect(
@@ -191,6 +181,29 @@ describe("react-native usePasskeys", () => {
 
     await expect(result.current.signIn()).rejects.toThrow("cancelled");
     expect(verifyAuthentication).not.toHaveBeenCalled();
+  });
+
+  it("treats an iOS-style thrown cancellation as cancelled", async () => {
+    const err = new Error("The operation was cancelled by the user");
+    err.name = "UserCancelledException";
+    getMock.mockRejectedValue(err);
+    const { result } = renderHook(() => usePasskeys(args), {
+      wrapper: wrapper(makeCtx()),
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await expect(result.current.signIn()).rejects.toThrow("cancelled");
+    expect(verifyAuthentication).not.toHaveBeenCalled();
+  });
+
+  it("rethrows non-cancellation native errors", async () => {
+    getMock.mockRejectedValue(new Error("Credential Manager unavailable"));
+    const { result } = renderHook(() => usePasskeys(args), {
+      wrapper: wrapper(makeCtx()),
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await expect(result.current.signIn()).rejects.toThrow("Credential Manager unavailable");
   });
 
   it("reports unsupported devices", async () => {

@@ -4,6 +4,7 @@ import { describe, expect, it, beforeAll } from "vitest";
 import { convexTest } from "convex-test";
 import { api } from "./_generated/api.js";
 import schema from "./schema.js";
+import { isCounterRegressionError } from "./passkeys.js";
 
 const modules = import.meta.glob("./**/*.*s");
 
@@ -387,5 +388,162 @@ describe("passkeys", () => {
         origin: ORIGIN,
       }),
     ).rejects.toThrow("does not match the user");
+  });
+
+  it("detects SimpleWebAuthn counter-regression errors", () => {
+    expect(
+      isCounterRegressionError(new Error("Response counter value 4 was lower than expected 9")),
+    ).toBe(true);
+    expect(isCounterRegressionError(new Error("Unexpected origin"))).toBe(false);
+    expect(isCounterRegressionError("not an error")).toBe(false);
+    expect(isCounterRegressionError(null)).toBe(false);
+  });
+
+  it("keeps the authentication challenge alive when verification fails", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_passkeys", {
+        userId,
+        credentialId: "cred-1",
+        publicKey: "fake-public-key",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      }),
+    );
+
+    const options = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
+      userId,
+      rpID: RP_ID,
+    })) as { challenge: string };
+
+    await expect(
+      t.mutation(api.passkeys.verifyPasskeyAuthentication, {
+        challenge: options.challenge,
+        response: {
+          id: "cred-1",
+          rawId: "cred-1",
+          response: {
+            clientDataJSON: "fake",
+            authenticatorData: "fake",
+            signature: "fake",
+          },
+          type: "public-key",
+        },
+        rpID: RP_ID,
+        origin: ORIGIN,
+      }),
+    ).rejects.toThrow();
+
+    // The challenge was not burned — the user can retry the ceremony.
+    const challenges = await t.run(async (ctx) =>
+      ctx.db
+        .query("auth_passkey_challenges")
+        .withIndex("by_challenge", (q) => q.eq("challenge", options.challenge))
+        .take(10),
+    );
+    expect(challenges).toHaveLength(1);
+  });
+
+  it("rejects a registration verify whose identifier does not match the challenge", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    const options = (await t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
+      userId,
+      identifier: "shlomo@example.com",
+      rpName: RP_NAME,
+      rpID: RP_ID,
+    })) as { challenge: string };
+
+    await expect(
+      t.mutation(api.passkeys.verifyPasskeyRegistration, {
+        userId,
+        identifier: "attacker@example.com",
+        challenge: options.challenge,
+        response: {
+          id: "fake-credential",
+          rawId: "fake-credential",
+          response: { clientDataJSON: "fake", attestationObject: "fake" },
+          type: "public-key",
+        },
+        rpID: RP_ID,
+        origin: ORIGIN,
+      }),
+    ).rejects.toThrow("does not belong to this identifier");
+  });
+
+  it("does not enumerate a user's credentials unless explicitly authorized", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_passkeys", {
+        userId,
+        credentialId: "victim-credential",
+        publicKey: "fake-public-key",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      }),
+    );
+
+    const unscoped = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
+      userId,
+      rpID: RP_ID,
+    })) as { allowCredentials: Array<{ id: string }> };
+    expect(unscoped.allowCredentials).toHaveLength(0);
+
+    const authorized = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
+      userId,
+      rpID: RP_ID,
+      enumerateCredentials: true,
+    })) as { allowCredentials: Array<{ id: string }> };
+    expect(authorized.allowCredentials).toHaveLength(1);
+    expect(authorized.allowCredentials[0]!.id).toBe("victim-credential");
+  });
+
+  it("re-checks the per-user cap at verify time, not only at options time", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    const options = (await t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
+      userId,
+      identifier: "shlomo@example.com",
+      rpName: RP_NAME,
+      rpID: RP_ID,
+      maxPasskeys: 1,
+    })) as { challenge: string };
+
+    // Another ceremony lands a passkey before this one verifies.
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_passkeys", {
+        userId,
+        credentialId: "parallel-credential",
+        publicKey: "fake-public-key",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      }),
+    );
+
+    await expect(
+      t.mutation(api.passkeys.verifyPasskeyRegistration, {
+        userId,
+        identifier: "shlomo@example.com",
+        challenge: options.challenge,
+        response: {
+          id: "new-credential",
+          rawId: "new-credential",
+          response: { clientDataJSON: "fake", attestationObject: "fake" },
+          type: "public-key",
+        },
+        rpID: RP_ID,
+        origin: ORIGIN,
+        maxPasskeys: 1,
+      }),
+    ).rejects.toThrow("Maximum number of passkeys");
   });
 });

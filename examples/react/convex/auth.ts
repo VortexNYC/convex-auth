@@ -138,6 +138,7 @@ export const {
   verifyPasskeyAuthentication,
   listPasskeys,
   revokePasskey,
+  renamePasskey,
   verifySession,
   signInWithRedirect,
   callback,

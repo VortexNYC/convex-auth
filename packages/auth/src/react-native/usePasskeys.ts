@@ -10,28 +10,54 @@ import type { PasskeyListItem } from "../react/passkey-manager.js";
 export interface UseNativePasskeysArgs {
   userId?: string;
   identifier?: string;
-  rpName: string;
-  rpID: string;
-  origin: string | string[];
 }
 
 type RegistrationOptions = Parameters<typeof create>[0];
 type AuthenticationOptions = Parameters<typeof get>[0];
+
+// iOS surfaces user cancellation as a thrown error (ASAuthorization
+// errorDomain 1001 / "cancelled"), Android Credential Manager returns null —
+// and may even yield a credential object with no response. Normalize all of
+// those to null so callers get one "cancelled" path.
+function isCancellationError(err: unknown): boolean {
+  return err instanceof Error && /cancel/i.test(`${err.name} ${err.message}`);
+}
+
+async function createCredential(options: RegistrationOptions) {
+  try {
+    const response = await create(options);
+    return response && response.response ? response : null;
+  } catch (err) {
+    if (isCancellationError(err)) return null;
+    throw err;
+  }
+}
+
+async function getCredential(options: AuthenticationOptions) {
+  try {
+    const response = await get(options);
+    return response && response.response ? response : null;
+  } catch (err) {
+    if (isCancellationError(err)) return null;
+    throw err;
+  }
+}
 
 /**
  * React Native / Expo passkey hook backed by `react-native-passkeys`
  * (ASAuthorizationController on iOS, Credential Manager on Android).
  *
  * Server verification is identical to web — the native ceremonies return
- * SimpleWebAuthn-compatible JSON. Configure `passkey.origin` with every origin
- * platforms may emit (web origin plus `android:apk-key-hash:<hash>` entries).
+ * SimpleWebAuthn-compatible JSON, and `rpID`/`origin` come from the
+ * `passkey` block in `convexAuth` (include every platform origin there: the
+ * web origin plus `android:apk-key-hash:<hash>` entries).
  *
  * `react-native-passkeys` is an optional peer dependency — this module is only
  * reachable through the `@vortex-api/convex-auth/react-native/passkeys`
  * subpath, so apps that don't use passkeys never bundle it.
  */
 export function usePasskeys(args: UseNativePasskeysArgs) {
-  const { userId, identifier, rpName, rpID, origin } = args;
+  const { userId, identifier } = args;
   const ctx = useContext(ConvexAuthContext);
   if (ctx === null) {
     throw new Error("usePasskeys must be used within a ConvexAuthProvider");
@@ -90,15 +116,12 @@ export function usePasskeys(args: UseNativePasskeysArgs) {
                 userId,
                 identifier,
                 displayName: identifier,
-                rpName,
-                rpID,
               })
             : Promise.resolve(null);
         const [regOpts, authOpts] = await Promise.all([
           regPromise,
           generateAuthenticationOptions({
             userId,
-            rpID,
           }),
         ]);
         if (!cancelled) {
@@ -118,14 +141,7 @@ export function usePasskeys(args: UseNativePasskeysArgs) {
     return () => {
       cancelled = true;
     };
-  }, [
-    userId,
-    identifier,
-    rpName,
-    rpID,
-    generateRegistrationOptions,
-    generateAuthenticationOptions,
-  ]);
+  }, [userId, identifier, generateRegistrationOptions, generateAuthenticationOptions]);
 
   const register = React.useCallback(
     async (name: string) => {
@@ -138,7 +154,7 @@ export function usePasskeys(args: UseNativePasskeysArgs) {
       setLoading(true);
       setError(null);
       try {
-        const response = await create(registrationOptions);
+        const response = await createCredential(registrationOptions);
         if (response === null) {
           throw new Error("Passkey registration was cancelled");
         }
@@ -147,20 +163,20 @@ export function usePasskeys(args: UseNativePasskeysArgs) {
           identifier,
           challenge: registrationOptions.challenge as string,
           response,
-          rpID,
-          origin,
           name,
         });
-        // Refresh registration options so another passkey can be registered.
-        setRegistrationOptions(
-          (await generateRegistrationOptions({
+        // Refresh both option sets — a new challenge for the next ceremony and
+        // fresh allowCredentials containing the just-registered credential.
+        const [regOpts, authOpts] = await Promise.all([
+          generateRegistrationOptions({
             userId,
             identifier,
             displayName: identifier,
-            rpName,
-            rpID,
-          })) as RegistrationOptions | null,
-        );
+          }),
+          generateAuthenticationOptions({ userId }),
+        ]);
+        setRegistrationOptions(regOpts as RegistrationOptions | null);
+        setAuthenticationOptions(authOpts as AuthenticationOptions | null);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Registration failed";
         setError(message);
@@ -174,10 +190,8 @@ export function usePasskeys(args: UseNativePasskeysArgs) {
       verifyRegistration,
       userId,
       identifier,
-      rpID,
-      origin,
-      rpName,
       generateRegistrationOptions,
+      generateAuthenticationOptions,
     ],
   );
 
@@ -188,15 +202,13 @@ export function usePasskeys(args: UseNativePasskeysArgs) {
     setLoading(true);
     setError(null);
     try {
-      const response = await get(authenticationOptions);
+      const response = await getCredential(authenticationOptions);
       if (response === null) {
         throw new Error("Passkey authentication was cancelled");
       }
       const result = await verifyAuthentication({
         challenge: authenticationOptions.challenge as string,
         response,
-        rpID,
-        origin,
       });
       ctx.setToken(result.token);
       ctx.setRefreshToken(result.refreshToken);
@@ -209,7 +221,7 @@ export function usePasskeys(args: UseNativePasskeysArgs) {
     } finally {
       setLoading(false);
     }
-  }, [authenticationOptions, verifyAuthentication, rpID, origin, ctx]);
+  }, [authenticationOptions, verifyAuthentication, ctx]);
 
   const revoke = React.useCallback(
     async (credentialId: string) => {
