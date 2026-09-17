@@ -121,6 +121,7 @@ export type NativeVerificationCodeDoc = {
   type: VerificationCodeType;
   tokenHash: string;
   identityId?: string;
+  credentialId?: string;
   rememberMe?: boolean;
   expiresAt: number;
   consumedAt?: number;
@@ -400,8 +401,10 @@ export type NativeEmailAndPasswordComponentHandle = {
         "public" | "internal",
         {
           sessionId: string;
+          familyId?: string;
           userId: string;
           token: string;
+          credentialId?: string;
           sessionExpiresAt: number;
           refreshTokenHash: string;
           refreshTokenExpiresAt: number;
@@ -579,6 +582,7 @@ export type NativeEmailAndPasswordComponentHandle = {
           type: VerificationCodeType;
           tokenHash: string;
           identityId?: string;
+          credentialId?: string;
           rememberMe?: boolean;
           expiresAt: number;
         },

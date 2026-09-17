@@ -1,5 +1,5 @@
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server.js";
-import type { DataModel, Doc } from "./_generated/dataModel.js";
+import type { DataModel, Doc, Id } from "./_generated/dataModel.js";
 import { v } from "convex/values";
 import { getPage, type PageRequest } from "convex-helpers/server/pagination";
 import {
@@ -78,7 +78,7 @@ function sessionTokenIdentityId(token: string): string | undefined {
 
 async function revokePasskeySessions(
   ctx: { db: MutationCtx["db"] },
-  passkey: { userId: string; credentialId: string; identityId?: string },
+  passkey: { userId: Id<"users">; credentialId: string; identityId?: string },
   now: number,
 ) {
   const userSessions = await getAllRows(ctx, {
@@ -142,6 +142,22 @@ async function revokePasskeySessions(
   for (const token of tokensToRevoke.values()) {
     if (!token.revokedAt) {
       await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
+    }
+  }
+
+  const pendingCodes = await ctx.db
+    .query("authVerificationCodes")
+    .withIndex("by_user_type", (q) =>
+      q.eq("userId", passkey.userId).eq("type", "two_factor_pending"),
+    )
+    .take(100);
+  for (const code of pendingCodes) {
+    if (
+      code.consumedAt === undefined &&
+      (code.credentialId === passkey.credentialId ||
+        (passkey.identityId !== undefined && code.identityId === passkey.identityId))
+    ) {
+      await ctx.db.patch(code._id, { consumedAt: now, updatedAt: now });
     }
   }
   return sessionsToRevoke.size + tokensToRevoke.size;
@@ -691,13 +707,14 @@ export const verifyPasskeyAuthentication = mutation({
       const pendingCodes = await ctx.db
         .query("authVerificationCodes")
         .withIndex("by_user_type", (q) => q.eq("userId", user._id).eq("type", "two_factor_pending"))
-        .take(10);
+        .take(100);
       await Promise.all(pendingCodes.map((code) => ctx.db.patch(code._id, { consumedAt: now })));
       await ctx.db.insert("authVerificationCodes", {
         userId: user._id,
         type: "two_factor_pending",
         tokenHash,
         identityId: passkey.identityId,
+        credentialId: passkey.credentialId,
         expiresAt: now + TWO_FACTOR_PENDING_TTL_MS,
         consumedAt: undefined,
         createdAt: now,

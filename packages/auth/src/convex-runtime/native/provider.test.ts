@@ -1402,6 +1402,7 @@ describe("nativeEmailAndPassword", () => {
         type: "two_factor_pending",
         tokenHash: await hashToken(challengeToken),
         identityId: "identity_1",
+        credentialId: "passkey-cred-1",
         rememberMe: true,
         expiresAt: Date.now() + 60_000,
         createdAt: 0,
@@ -1426,6 +1427,9 @@ describe("nativeEmailAndPassword", () => {
       const minted = await verifyToken(result.token as string);
       expect(minted.sub).toBe("user_1");
       expect(minted.identityId).toBe("identity_1");
+      expect(component.native.sessions.createSessionAndRefreshToken).toHaveBeenCalledWith(
+        expect.objectContaining({ credentialId: "passkey-cred-1" }),
+      );
     });
 
     it("rejects a pending challenge that has no stored code row", async () => {

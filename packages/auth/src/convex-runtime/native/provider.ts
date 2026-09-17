@@ -260,6 +260,7 @@ export function nativeEmailAndPassword(
       userId: string;
       identityId: string;
       rememberMe: boolean | undefined;
+      credentialId?: string;
     },
   ): Promise<{ sessionId: string; token: string; refreshToken: string }> {
     const now = Date.now();
@@ -279,6 +280,7 @@ export function nativeEmailAndPassword(
       sessionId,
       userId: args.userId,
       token,
+      credentialId: args.credentialId,
       sessionExpiresAt: expiresAt,
       refreshTokenHash,
       refreshTokenExpiresAt: now + refreshTokenTtlMs,
@@ -1013,7 +1015,7 @@ export function nativeEmailAndPassword(
     if (!user) return null;
     const identityId = typeof code.identityId === "string" ? code.identityId : userId;
     const rememberMe = code.rememberMe === true;
-    return { user, userId, identityId, rememberMe };
+    return { user, userId, identityId, rememberMe, credentialId: code.credentialId };
   }
 
   async function verifyTwoFactorCode(
@@ -1077,11 +1079,13 @@ export function nativeEmailAndPassword(
     identityId: string,
     rememberMe: boolean | undefined,
     trustDevice: boolean | undefined,
+    credentialId?: string,
   ): Promise<NativeAuthSession> {
     const { sessionId, token, refreshToken } = await createSessionAndRefreshToken(ctx, {
       userId,
       identityId,
       rememberMe,
+      credentialId,
     });
     let trustDeviceResult: { trustDeviceToken: string; trustDeviceMaxAgeMs: number } | undefined;
     if (trustDevice) {
@@ -1118,6 +1122,7 @@ export function nativeEmailAndPassword(
           resolved.identityId,
           resolved.rememberMe,
           args.trustDevice,
+          resolved.credentialId,
         );
       }
 
@@ -1174,6 +1179,7 @@ export function nativeEmailAndPassword(
         resolved.identityId,
         resolved.rememberMe,
         args.trustDevice,
+        resolved.credentialId,
       );
     },
   });

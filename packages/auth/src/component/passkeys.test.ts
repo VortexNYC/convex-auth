@@ -704,6 +704,67 @@ describe("passkeys", () => {
     ).toBeUndefined();
   });
 
+  it("consumes in-flight two-factor challenges tied to the revoked passkey", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      const identityId = await ctx.db.insert("auth_identities", {
+        identityId: "passkey:test.example.com:cred-pending",
+        userId,
+        provider: "passkey",
+        issuer: "test.example.com",
+        subject: "cred-pending",
+        tokenIdentifier: "cred-pending",
+        email: "shlomo@example.com",
+        emailVerified: false,
+        sessionId: null,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("auth_passkeys", {
+        userId,
+        identityId,
+        credentialId: "cred-pending",
+        publicKey: "fake-public-key",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      });
+      await ctx.db.insert("authVerificationCodes", {
+        userId,
+        type: "two_factor_pending",
+        tokenHash: "pending-passkey",
+        identityId,
+        credentialId: "cred-pending",
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("authVerificationCodes", {
+        userId,
+        type: "two_factor_pending",
+        tokenHash: "pending-password",
+        identityId: "identity_other",
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+    });
+
+    await t.mutation(api.passkeys.revokePasskey, { credentialId: "cred-pending", userId });
+
+    const codes = await t.run(async (ctx) =>
+      ctx.db
+        .query("authVerificationCodes")
+        .withIndex("by_user_type", (q) => q.eq("userId", userId).eq("type", "two_factor_pending"))
+        .take(10),
+    );
+    expect(codes.find((c) => c.tokenHash === "pending-passkey")?.consumedAt).toBeDefined();
+    expect(codes.find((c) => c.tokenHash === "pending-password")?.consumedAt).toBeUndefined();
+  });
+
   it("revokes every family member even beyond a single page of results", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
