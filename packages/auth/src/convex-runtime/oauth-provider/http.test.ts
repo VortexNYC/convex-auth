@@ -20,7 +20,7 @@ describe("createOidcProviderHttpHandlers", () => {
       issuer: "https://example.com",
       clients: [testClient],
       storage: {
-        getSessionByToken: async () => ({ userId: "user_123" }),
+        getSessionByToken: async () => ({ userId: "user_123", expiresAt: Date.now() + 60_000 }),
         getUserById: async () => ({ _id: "user_123" }),
         createAuthorizationCode: async (input) => {
           createdCodes.push(input);
@@ -251,7 +251,7 @@ describe("createOidcProviderHttpHandlers", () => {
       issuer: "https://example.com",
       clients: [testClient],
       storage: {
-        getSessionByToken: async () => ({ userId: "user_123" }),
+        getSessionByToken: async () => ({ userId: "user_123", expiresAt: Date.now() + 60_000 }),
         getUserById: async () => ({ _id: "user_123" }),
         createAuthorizationCode: async () => {},
         consumeAuthorizationCode: async () => null,
@@ -287,7 +287,7 @@ describe("createOidcProviderHttpHandlers", () => {
       issuer: "https://example.com",
       clients: [testClient],
       storage: {
-        getSessionByToken: async () => ({ userId: "user_123" }),
+        getSessionByToken: async () => ({ userId: "user_123", expiresAt: Date.now() + 60_000 }),
         getUserById: async () => ({ _id: "user_123" }),
         createAuthorizationCode: async () => {},
         consumeAuthorizationCode: async () => null,
@@ -324,7 +324,7 @@ describe("createOidcProviderHttpHandlers", () => {
       clients: [{ ...testClient, allowedScopes: ["openid", "email"] }],
       supportedScopes: ["openid", "email", "profile"],
       storage: {
-        getSessionByToken: async () => ({ userId: "user_123" }),
+        getSessionByToken: async () => ({ userId: "user_123", expiresAt: Date.now() + 60_000 }),
         getUserById: async () => ({ _id: "user_123" }),
         createAuthorizationCode: async () => {},
         consumeAuthorizationCode: async () => null,
@@ -360,7 +360,7 @@ describe("createOidcProviderHttpHandlers", () => {
       clients: [testClient],
       supportedScopes: ["openid", "email", "profile"],
       storage: {
-        getSessionByToken: async () => ({ userId: "user_123" }),
+        getSessionByToken: async () => ({ userId: "user_123", expiresAt: Date.now() + 60_000 }),
         getUserById: async () => ({ _id: "user_123" }),
         createAuthorizationCode: async () => {},
         consumeAuthorizationCode: async () => null,

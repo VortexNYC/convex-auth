@@ -62,6 +62,8 @@ export const authVerificationCodes = defineTable({
   userId: v.id("users"),
   type: verificationCodeTypeValidator,
   tokenHash: v.string(),
+  identityId: v.optional(v.string()),
+  rememberMe: v.optional(v.boolean()),
   expiresAt: v.number(),
   consumedAt: v.optional(v.number()),
   createdAt: v.number(),

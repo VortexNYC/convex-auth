@@ -120,6 +120,8 @@ export type NativeVerificationCodeDoc = {
   userId: string;
   type: VerificationCodeType;
   tokenHash: string;
+  identityId?: string;
+  rememberMe?: boolean;
   expiresAt: number;
   consumedAt?: number;
   createdAt: number;
@@ -576,6 +578,8 @@ export type NativeEmailAndPasswordComponentHandle = {
           userId: string;
           type: VerificationCodeType;
           tokenHash: string;
+          identityId?: string;
+          rememberMe?: boolean;
           expiresAt: number;
         },
         string,

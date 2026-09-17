@@ -1,6 +1,7 @@
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server.js";
+import type { DataModel, Doc } from "./_generated/dataModel.js";
 import { v } from "convex/values";
-import { getPage } from "convex-helpers/server/pagination";
+import { getPage, type PageRequest } from "convex-helpers/server/pagination";
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
@@ -27,58 +28,123 @@ async function deleteExpiredChallenges(ctx: { db: MutationCtx["db"] }, now: numb
   await Promise.all(expired.map((row) => ctx.db.delete(row._id)));
 }
 
+async function getAllRows<T extends "authSessions" | "authRefreshTokens" | "auth_passkeys">(
+  ctx: { db: QueryCtx["db"] },
+  request: Omit<PageRequest<DataModel, T>, "schema" | "index"> & { index: string },
+): Promise<Doc<T>[]> {
+  const rows: Doc<T>[] = [];
+  let startIndexKey = request.startIndexKey;
+  for (;;) {
+    const { page, hasMore, indexKeys } = await getPage(ctx, {
+      ...request,
+      startIndexKey,
+      schema,
+    } as PageRequest<DataModel, T>);
+    rows.push(...page);
+    const lastKey = indexKeys[indexKeys.length - 1];
+    if (!hasMore || lastKey === undefined) {
+      return rows;
+    }
+    startIndexKey = lastKey;
+  }
+}
+
 async function getUserPasskeys(ctx: { db: QueryCtx["db"] }, userId: string) {
-  const { page } = await getPage(ctx, {
+  return await getAllRows(ctx, {
     table: "auth_passkeys",
     index: "by_userId",
     startIndexKey: [userId],
     endIndexKey: [userId],
     absoluteMaxRows: MAX_USER_PASSKEY_ROWS,
-    schema,
   });
-  return page;
+}
+
+function sessionTokenIdentityId(token: string): string | undefined {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    return undefined;
+  }
+  try {
+    const payload: unknown = JSON.parse(new TextDecoder().decode(base64urlToBytes(parts[1])));
+    if (payload !== null && typeof payload === "object" && "identityId" in payload) {
+      const identityId = (payload as { identityId: unknown }).identityId;
+      return typeof identityId === "string" ? identityId : undefined;
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 async function revokePasskeySessions(
   ctx: { db: MutationCtx["db"] },
-  passkey: { userId: string; credentialId: string },
+  passkey: { userId: string; credentialId: string; identityId?: string },
   now: number,
 ) {
-  const { page: credentialSessions } = await getPage(ctx, {
+  const userSessions = await getAllRows(ctx, {
     table: "authSessions",
-    index: "by_credential_id",
-    startIndexKey: [passkey.credentialId],
-    endIndexKey: [passkey.credentialId],
+    index: "by_user",
+    startIndexKey: [passkey.userId],
+    endIndexKey: [passkey.userId],
     absoluteMaxRows: MAX_USER_PASSKEY_ROWS,
-    schema,
   });
-  const familyIds = new Set(credentialSessions.map((s) => s.familyId ?? s.sessionId));
+  const belongsToPasskey = (session: (typeof userSessions)[number]) =>
+    session.credentialId === passkey.credentialId ||
+    (session.credentialId === undefined &&
+      passkey.identityId !== undefined &&
+      sessionTokenIdentityId(session.token) === passkey.identityId);
+  const matchedSessions = userSessions.filter(belongsToPasskey);
+  const familyIds = new Set(matchedSessions.map((s) => s.familyId ?? s.sessionId));
+
+  const sessionsToRevoke = new Map(matchedSessions.map((s) => [s._id, s]));
+  const tokensToRevoke = new Map<string, Doc<"authRefreshTokens">>();
   for (const familyId of familyIds) {
-    const [{ page: familySessions }, { page: familyTokens }] = await Promise.all([
-      getPage(ctx, {
+    const [familySessions, familyTokens] = await Promise.all([
+      getAllRows(ctx, {
         table: "authSessions",
         index: "by_family",
         startIndexKey: [familyId],
         endIndexKey: [familyId],
         absoluteMaxRows: MAX_FAMILY_MEMBERS,
-        schema,
       }),
-      getPage(ctx, {
+      getAllRows(ctx, {
         table: "authRefreshTokens",
         index: "by_family",
         startIndexKey: [familyId],
         endIndexKey: [familyId],
         absoluteMaxRows: MAX_FAMILY_MEMBERS,
-        schema,
       }),
     ]);
-    for (const doc of [...familySessions, ...familyTokens]) {
-      if (!doc.revokedAt) {
-        await ctx.db.patch(doc._id, { revokedAt: now, updatedAt: now });
-      }
+    for (const session of familySessions) {
+      sessionsToRevoke.set(session._id, session);
+    }
+    for (const token of familyTokens) {
+      tokensToRevoke.set(token._id, token);
     }
   }
-  return familyIds.size;
+  for (const session of matchedSessions) {
+    const sessionTokens = await getAllRows(ctx, {
+      table: "authRefreshTokens",
+      index: "by_session",
+      startIndexKey: [session.sessionId],
+      endIndexKey: [session.sessionId],
+      absoluteMaxRows: MAX_FAMILY_MEMBERS,
+    });
+    for (const token of sessionTokens) {
+      tokensToRevoke.set(token._id, token);
+    }
+  }
+  for (const session of sessionsToRevoke.values()) {
+    if (!session.revokedAt) {
+      await ctx.db.patch(session._id, { revokedAt: now, updatedAt: now });
+    }
+  }
+  for (const token of tokensToRevoke.values()) {
+    if (!token.revokedAt) {
+      await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
+    }
+  }
+  return sessionsToRevoke.size + tokensToRevoke.size;
 }
 
 const registrationResponseValidator = v.object({
@@ -487,7 +553,6 @@ export const generatePasskeyAuthenticationOptions = mutation({
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const TWO_FACTOR_PENDING_TTL_MS = 10 * 60 * 1000;
-const TWO_FACTOR_SESSION_ID = "__two_factor";
 
 // SimpleWebAuthn throws (rather than returning `verified: false`) when the
 // authenticator presents a non-increasing signature counter. Detect that
@@ -621,17 +686,18 @@ export const verifyPasskeyAuthentication = mutation({
     // config time and the user has TOTP 2FA enabled, gate the session on the
     // same pending-challenge flow password sign-in uses.
     if (user.twoFactorEnabled && !authenticationInfo.userVerified) {
-      const challengeToken = await mintToken(
-        user._id,
-        TWO_FACTOR_SESSION_ID,
-        { identityId: passkey.identityId, twoFactor: true },
-        { expiresInSeconds: Math.floor(TWO_FACTOR_PENDING_TTL_MS / 1000) },
-      );
+      const challengeToken = generateVerificationToken();
       const tokenHash = await hashToken(challengeToken);
+      const pendingCodes = await ctx.db
+        .query("authVerificationCodes")
+        .withIndex("by_user_type", (q) => q.eq("userId", user._id).eq("type", "two_factor_pending"))
+        .take(10);
+      await Promise.all(pendingCodes.map((code) => ctx.db.patch(code._id, { consumedAt: now })));
       await ctx.db.insert("authVerificationCodes", {
         userId: user._id,
         type: "two_factor_pending",
         tokenHash,
+        identityId: passkey.identityId,
         expiresAt: now + TWO_FACTOR_PENDING_TTL_MS,
         consumedAt: undefined,
         createdAt: now,

@@ -235,7 +235,16 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
       if (accessToken) {
         try {
           const payload = await verifyToken(accessToken);
-          if (typeof payload.sub === "string") {
+          const session = await ctx.runQuery(config.component.native.sessions.getSessionByToken, {
+            token: accessToken,
+          });
+          if (
+            typeof payload.sub === "string" &&
+            session &&
+            session.revokedAt === undefined &&
+            (session.expiresAt ?? 0) > Date.now() &&
+            session.sessionId === payload.sessionId
+          ) {
             linkingUserId = payload.sub;
           }
         } catch {
