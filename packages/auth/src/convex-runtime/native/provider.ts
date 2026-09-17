@@ -1014,7 +1014,7 @@ export function nativeEmailAndPassword(
     const user = await ctx.runQuery(component.native.users.getUserById, { userId });
     if (!user) return null;
     const identityId = typeof code.identityId === "string" ? code.identityId : userId;
-    const rememberMe = code.rememberMe === true;
+    const rememberMe = code.rememberMe;
     return { user, userId, identityId, rememberMe, credentialId: code.credentialId };
   }
 
@@ -1299,7 +1299,7 @@ export function nativeEmailAndPassword(
       type: "two_factor_pending",
       tokenHash,
       identityId,
-      rememberMe: rememberMe === true,
+      rememberMe,
       expiresAt: Date.now() + DEFAULT_TWO_FACTOR_PENDING_TTL_MS,
     });
 

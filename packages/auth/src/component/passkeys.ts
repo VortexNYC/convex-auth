@@ -28,7 +28,9 @@ async function deleteExpiredChallenges(ctx: { db: MutationCtx["db"] }, now: numb
   await Promise.all(expired.map((row) => ctx.db.delete(row._id)));
 }
 
-async function getAllRows<T extends "authSessions" | "authRefreshTokens" | "auth_passkeys">(
+async function getAllRows<
+  T extends "authSessions" | "authRefreshTokens" | "auth_passkeys" | "authVerificationCodes",
+>(
   ctx: { db: QueryCtx["db"] },
   request: Omit<PageRequest<DataModel, T>, "schema" | "index"> & { index: string },
 ): Promise<Doc<T>[]> {
@@ -145,12 +147,13 @@ async function revokePasskeySessions(
     }
   }
 
-  const pendingCodes = await ctx.db
-    .query("authVerificationCodes")
-    .withIndex("by_user_type", (q) =>
-      q.eq("userId", passkey.userId).eq("type", "two_factor_pending"),
-    )
-    .take(100);
+  const pendingCodes = await getAllRows(ctx, {
+    table: "authVerificationCodes",
+    index: "by_user_type",
+    startIndexKey: [passkey.userId, "two_factor_pending"],
+    endIndexKey: [passkey.userId, "two_factor_pending"],
+    absoluteMaxRows: MAX_FAMILY_MEMBERS,
+  });
   for (const code of pendingCodes) {
     if (
       code.consumedAt === undefined &&
@@ -652,11 +655,6 @@ export const verifyPasskeyAuthentication = mutation({
         requireUserVerification,
       });
     } catch (err) {
-      // SimpleWebAuthn throws on a non-increasing signature counter — a
-      // cloned authenticator signal. Only that post-signature error is
-      // trustworthy here: bytes decoded from an unverified response are
-      // attacker-controlled and would turn revocation into a DoS vector.
-      // Revoke the credential, retire the sessions it minted, and fail closed.
       if (isCounterRegressionError(err)) {
         await ctx.db.patch(passkey._id, { revokedAt: now });
         await revokePasskeySessions(ctx, passkey, now);
@@ -697,18 +695,23 @@ export const verifyPasskeyAuthentication = mutation({
       throw new Error("User not found");
     }
 
-    // A passkey ceremony that verified the user (UV flag set) already delivers
-    // possession + verification — it satisfies 2FA. When UV was relaxed at
-    // config time and the user has TOTP 2FA enabled, gate the session on the
-    // same pending-challenge flow password sign-in uses.
     if (user.twoFactorEnabled && !authenticationInfo.userVerified) {
       const challengeToken = generateVerificationToken();
       const tokenHash = await hashToken(challengeToken);
-      const pendingCodes = await ctx.db
-        .query("authVerificationCodes")
-        .withIndex("by_user_type", (q) => q.eq("userId", user._id).eq("type", "two_factor_pending"))
-        .take(100);
-      await Promise.all(pendingCodes.map((code) => ctx.db.patch(code._id, { consumedAt: now })));
+      const pendingCodes = await getAllRows(ctx, {
+        table: "authVerificationCodes",
+        index: "by_user_type",
+        startIndexKey: [user._id, "two_factor_pending"],
+        endIndexKey: [user._id, "two_factor_pending"],
+        absoluteMaxRows: MAX_FAMILY_MEMBERS,
+      });
+      await Promise.all(
+        pendingCodes.map((code) =>
+          code.consumedAt === undefined
+            ? ctx.db.patch(code._id, { consumedAt: now })
+            : Promise.resolve(),
+        ),
+      );
       await ctx.db.insert("authVerificationCodes", {
         userId: user._id,
         type: "two_factor_pending",

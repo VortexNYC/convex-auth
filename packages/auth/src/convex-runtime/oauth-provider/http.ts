@@ -188,7 +188,9 @@ export function createOidcProviderHttpHandlers<TClient extends OidcProviderClien
         resolveRequestedScopes,
         resolveSessionFromToken: async (token) => {
           const session = await args.storage.getSessionByToken(token);
-          return session && session.revokedAt === undefined && (session.expiresAt ?? 0) > Date.now()
+          return session &&
+            session.revokedAt === undefined &&
+            (session.expiresAt === undefined || session.expiresAt > Date.now())
             ? { subjectId: session.userId }
             : null;
         },

@@ -1368,8 +1368,6 @@ describe("nativeEmailAndPassword", () => {
       expect(result.twoFactorRedirect).toBe(true);
       expect(result.twoFactorMethods).toEqual(["totp"]);
       expect(result.twoFactorChallengeToken).toEqual(expect.any(String));
-      // The pending challenge must be opaque — a signed JWT carrying the user id
-      // would be accepted as a real Convex identity before 2FA completes.
       await expect(verifyToken(result.twoFactorChallengeToken)).rejects.toThrow();
       expect(component.native.codes.createVerificationCode).toHaveBeenCalledWith(
         expect.objectContaining({
