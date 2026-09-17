@@ -181,6 +181,8 @@ export function usePasskeys(args: UseNativePasskeysArgs) {
         ctx.setToken(result.token);
         ctx.setRefreshToken(result.refreshToken);
         ctx.setSessionId(result.sessionId);
+      } else if (result.twoFactorRedirect === true) {
+        ctx.setTwoFactorChallengeToken(result.twoFactorChallengeToken ?? null);
       }
       return result;
     } catch (err) {

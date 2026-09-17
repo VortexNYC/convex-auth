@@ -67,6 +67,7 @@ function makeCtx(overrides: Record<string, unknown> = {}) {
     setToken: vi.fn(),
     setRefreshToken: vi.fn(),
     setSessionId: vi.fn(),
+    setTwoFactorChallengeToken: vi.fn(),
     ...overrides,
   } as never;
 }
@@ -175,6 +176,28 @@ describe("react-native usePasskeys", () => {
     expect((ctx as { setSessionId: ReturnType<typeof vi.fn> }).setSessionId).toHaveBeenCalledWith(
       "sess",
     );
+  });
+
+  it("stores the pending challenge token when sign-in resolves to a 2FA redirect", async () => {
+    getMock.mockResolvedValue({ id: "cred_1", rawId: "cred_1", response: {} });
+    verifyAuthentication.mockResolvedValue({
+      token: undefined,
+      refreshToken: undefined,
+      sessionId: undefined,
+      twoFactorRedirect: true,
+      twoFactorChallengeToken: "pending-token",
+      twoFactorMethods: ["totp"],
+    });
+    const ctx = makeCtx();
+    const { result } = renderHook(() => usePasskeys(args), { wrapper: wrapper(ctx) });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(() => result.current.signIn());
+
+    expect(
+      (ctx as { setTwoFactorChallengeToken: ReturnType<typeof vi.fn> }).setTwoFactorChallengeToken,
+    ).toHaveBeenCalledWith("pending-token");
+    expect((ctx as { setToken: ReturnType<typeof vi.fn> }).setToken).not.toHaveBeenCalled();
   });
 
   it("surfaces a cancelled registration ceremony as an error", async () => {

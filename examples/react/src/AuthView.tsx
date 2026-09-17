@@ -179,7 +179,7 @@ export function AuthView() {
               }
             />
             <AnonymousSignIn setStatus={setStatus} setIsSubmitting={setIsSubmitting} />
-            <PasskeySignIn />
+            <PasskeySignIn onTwoFactorRedirect={() => setMode("verifyTwoFactor")} />
           </>
         )}
       </div>
@@ -226,7 +226,7 @@ function AnonymousSignIn({
   );
 }
 
-function PasskeySignIn() {
+function PasskeySignIn({ onTwoFactorRedirect }: { onTwoFactorRedirect: () => void }) {
   const { signIn, loading, error, supported } = usePasskeys({});
 
   if (!supported) {
@@ -243,7 +243,13 @@ function PasskeySignIn() {
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
         <Button
           variant="outline"
-          onClick={() => void signIn()}
+          onClick={() =>
+            void signIn().then((result) => {
+              if (result?.twoFactorRedirect) {
+                onTwoFactorRedirect();
+              }
+            })
+          }
           disabled={loading}
           className="w-full"
         >

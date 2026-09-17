@@ -105,6 +105,9 @@ export const auth = convexAuth({
 - Refresh tokens are long-lived (default 30 days).
 - Revoke sessions from the client with the session-list hooks.
 - Password reset revokes all sessions by default.
+- Revocation is enforced on every validation path — a revoked session's token is rejected by session resolution, token verification, the bearer HTTP endpoints, OAuth account linking, and MCP authorization immediately, not just at expiry.
+- Session listings never expose raw tokens; `listSessions` returns `isCurrent` instead.
+- Revoking a passkey revokes every session and refresh token it created, including sessions minted after a two-factor challenge.
 
 ## Security checklist
 

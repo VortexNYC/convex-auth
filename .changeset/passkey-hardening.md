@@ -19,6 +19,7 @@ Harden and extend passkeys: ownership enforcement, cloned-credential detection, 
 - **Security:** when `userVerification` is relaxed and the account has TOTP 2FA enabled, passkey sign-in returns the standard `twoFactorRedirect` challenge instead of minting a session — UV-verified ceremonies still satisfy 2FA on their own. The pending challenge carries `credentialId`, so the session minted after TOTP stays bound to the passkey and remains revocable with it.
 - **Security:** passkey revocation paginates all session/refresh-token lookups to exhaustion and attributes pre-`credentialId` sessions by decoding the `identityId` embedded in the stored session JWT — revocation covers legacy rows and arbitrarily large session families without touching unrelated password sessions.
 - **Security:** revoking a passkey consumes its in-flight two-factor pending challenges, closing the race where a challenge issued before revocation could mint a session after it.
+- `usePasskeys().signIn` now stores the two-factor challenge token when the result is a `twoFactorRedirect`, so `ConvexVerifyTwoFactorForm` completes passkey-originated 2FA the same way it does password sign-in.
 - Expired passkey challenges are garbage-collected when new options are generated.
 - `usePasskeys` (web and React Native) fetches ceremony options when `register`/`signIn` is invoked instead of on mount — challenges can no longer go stale in component state.
 - Audit events are written for `passkey_registered`, `passkey_authenticated`, `passkey_renamed`, and `passkey_revoked`.

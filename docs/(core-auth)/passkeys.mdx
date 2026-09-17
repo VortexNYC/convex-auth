@@ -214,3 +214,5 @@ echo "AA:BB:CC:..." | tr -d ':' | xxd -r -p | base64 | tr '+/' '-_' | tr -d '='
 ```
 
 Include it in `passkey.origin` (array form) alongside the web origin. Android caches the assetlinks lookup for up to 24 hours — reinstall or wait after changing it.
+
+**Emulator caveat:** an Android emulator needs a screen lock and an enabled credential provider before Credential Manager offers passkeys. Google's built-in provider only appears once a Google account is signed in — on a bare emulator nothing does. For local validation, install a test provider such as the [Android Identity `MyVault` sample](https://github.com/android/identity-samples) and enable it under Settings → Security → More settings → Passwords, passkeys & accounts. A physical device with Google Play services needs none of this.

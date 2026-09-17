@@ -200,6 +200,25 @@ export function Reset({ token }: { token: string }) {
 }
 ```
 
+## Passkeys
+
+Native passkey ceremonies use the optional `react-native-passkeys` peer dependency and the dedicated subpath export:
+
+```sh
+pnpm add react-native-passkeys
+```
+
+```tsx
+import { usePasskeys } from "@vortex-api/convex-auth/react-native/passkeys";
+
+const passkeys = usePasskeys({ userId: user.id, identifier: user.email ?? "" });
+
+await passkeys.register("This device"); // requires a signed-in user
+await passkeys.signIn();
+```
+
+Both platforms need a domain-association file served from your `rpID` — the Apple App Site Association file on iOS and `assetlinks.json` on Android — plus the platform origin entries in `passkey.origin`. If a passkey sign-in resolves to `twoFactorRedirect` (relaxed `userVerification` on a 2FA-enabled account), render `ConvexVerifyTwoFactorForm` to complete the challenge. The full setup — entitlements, AASA/assetlinks hosting, signing-fingerprint origins, and emulator caveats — is in the Passkeys guide.
+
 ## Styling
 
 The screen components support a `styles` prop for every keyed element (`root`, `title`, `input`, `submitButton`, etc.). The components also use Uniwind `className` strings internally, so styling works out of the box if you imported the convex-auth CSS.
