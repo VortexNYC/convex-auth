@@ -1085,7 +1085,12 @@ export function addNativeAuthHttpRoutes(
       }
 
       const session = await ctx.runQuery(component.native.sessions.getSessionByToken, { token });
-      if (!session || session.sessionId !== sessionId || (session.expiresAt ?? 0) < Date.now()) {
+      if (
+        !session ||
+        session.sessionId !== sessionId ||
+        session.revokedAt !== undefined ||
+        (session.expiresAt ?? 0) < Date.now()
+      ) {
         return new Response(JSON.stringify({ error: "unauthorized" }), {
           status: 401,
           headers: { "Content-Type": "application/json" },
@@ -1145,7 +1150,12 @@ export function addNativeAuthHttpRoutes(
     }
 
     const session = await ctx.runQuery(component.native.sessions.getSessionByToken, { token });
-    if (!session || session.sessionId !== sessionId || (session.expiresAt ?? 0) < Date.now()) {
+    if (
+      !session ||
+      session.sessionId !== sessionId ||
+      session.revokedAt !== undefined ||
+      (session.expiresAt ?? 0) < Date.now()
+    ) {
       return new Response(JSON.stringify({ user: null, sessionId: null }), {
         status: 200,
         headers: { "Content-Type": "application/json" },

@@ -43,6 +43,9 @@ export const createVerificationCode = mutation({
     userId: v.id("users"),
     type: verificationCodeTypeValidator,
     tokenHash: v.string(),
+    identityId: v.optional(v.string()),
+    credentialId: v.optional(v.string()),
+    rememberMe: v.optional(v.boolean()),
     expiresAt: v.number(),
   },
   handler: async (ctx, args) => {

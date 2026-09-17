@@ -27,11 +27,16 @@ export const auth = convexAuth({
     userVerification: "required", // the default — enforces UV at verify time
     residentKey: "preferred",
     authenticatorAttachment: undefined, // "platform" | "cross-platform"
+    // optional session lifetimes for passkey sign-ins (match native auth defaults)
+    sessionTtlMs: 7 * 24 * 60 * 60 * 1000,
+    refreshTokenTtlMs: 30 * 24 * 60 * 60 * 1000,
   },
 });
 ```
 
 `rpID` must match the registrable domain users authenticate from. `origin` accepts a single origin or an array — every origin must be the exact origin the platform reports (browser origins and `android:apk-key-hash:<hash>` for native Android). `maxPasskeysPerUser` caps active (non-revoked) passkeys per user, enforced at both options and verify time. `userVerification` defaults to `"required"` — verification rejects assertions without the UV flag unless you explicitly set `"preferred"` or `"discouraged"`. Origin and rpID are always taken from this server config; clients cannot override them at verify time.
+
+Two interactions worth knowing: a UV-verified ceremony already proves possession plus user verification, so passkey sign-in satisfies 2FA on its own — but if you relax `userVerification` and the account has TOTP 2FA enabled, `signIn` resolves to the standard `twoFactorRedirect` challenge instead of a session. And revoking a passkey revokes every session that passkey created, not just the credential.
 
 ## React
 
@@ -209,3 +214,5 @@ echo "AA:BB:CC:..." | tr -d ':' | xxd -r -p | base64 | tr '+/' '-_' | tr -d '='
 ```
 
 Include it in `passkey.origin` (array form) alongside the web origin. Android caches the assetlinks lookup for up to 24 hours — reinstall or wait after changing it.
+
+**Emulator caveat:** an Android emulator needs a screen lock and an enabled credential provider before Credential Manager offers passkeys. Google's built-in provider only appears once a Google account is signed in — on a bare emulator nothing does. For local validation, install a test provider such as the [Android Identity `MyVault` sample](https://github.com/android/identity-samples) and enable it under Settings → Security → More settings → Passwords, passkeys & accounts. A physical device with Google Play services needs none of this.

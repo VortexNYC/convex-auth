@@ -260,6 +260,7 @@ export function nativeEmailAndPassword(
       userId: string;
       identityId: string;
       rememberMe: boolean | undefined;
+      credentialId?: string;
     },
   ): Promise<{ sessionId: string; token: string; refreshToken: string }> {
     const now = Date.now();
@@ -279,6 +280,7 @@ export function nativeEmailAndPassword(
       sessionId,
       userId: args.userId,
       token,
+      credentialId: args.credentialId,
       sessionExpiresAt: expiresAt,
       refreshTokenHash,
       refreshTokenExpiresAt: now + refreshTokenTtlMs,
@@ -862,7 +864,12 @@ export function nativeEmailAndPassword(
       const session = await ctx.runQuery(component.native.sessions.getSessionByToken, {
         token: args.token,
       });
-      if (!session || session.sessionId !== sessionId || (session.expiresAt ?? 0) < Date.now()) {
+      if (
+        !session ||
+        session.sessionId !== sessionId ||
+        session.revokedAt !== undefined ||
+        (session.expiresAt ?? 0) < Date.now()
+      ) {
         return { success: false };
       }
 
@@ -914,14 +921,24 @@ export function nativeEmailAndPassword(
   }
 
   async function resolveSessionUser(ctx: GenericActionCtx<DataModel>, token: string) {
-    const payload = await verifyToken(token);
+    let payload;
+    try {
+      payload = await verifyToken(token);
+    } catch {
+      return null;
+    }
     const userId = payload.sub;
     const sessionId = payload.sessionId;
     if (typeof userId !== "string" || typeof sessionId !== "string") {
       return null;
     }
     const session = await ctx.runQuery(component.native.sessions.getSessionByToken, { token });
-    if (!session || session.sessionId !== sessionId || (session.expiresAt ?? 0) < Date.now()) {
+    if (
+      !session ||
+      session.sessionId !== sessionId ||
+      session.revokedAt !== undefined ||
+      (session.expiresAt ?? 0) < Date.now()
+    ) {
       return null;
     }
     const user = await ctx.runQuery(component.native.users.getUserById, { userId });
@@ -984,18 +1001,7 @@ export function nativeEmailAndPassword(
     },
   });
 
-  const TWO_FACTOR_SESSION_ID = "__two_factor";
-
   async function resolveTwoFactorChallengeToken(ctx: GenericActionCtx<DataModel>, token: string) {
-    const payload = await verifyToken(token);
-    const userId = payload.sub;
-    if (
-      typeof userId !== "string" ||
-      payload.sessionId !== TWO_FACTOR_SESSION_ID ||
-      payload.twoFactor !== true
-    ) {
-      return null;
-    }
     const tokenHash = await hashToken(token);
     const code = await ctx.runMutation(component.native.codes.consumeVerificationCode, {
       tokenHash,
@@ -1004,11 +1010,12 @@ export function nativeEmailAndPassword(
     if (!code || (code.expiresAt ?? 0) < Date.now()) {
       return null;
     }
+    const userId = code.userId;
     const user = await ctx.runQuery(component.native.users.getUserById, { userId });
     if (!user) return null;
-    const identityId = typeof payload.identityId === "string" ? payload.identityId : userId;
-    const rememberMe = payload.rememberMe === true;
-    return { user, userId, identityId, rememberMe };
+    const identityId = typeof code.identityId === "string" ? code.identityId : userId;
+    const rememberMe = code.rememberMe;
+    return { user, userId, identityId, rememberMe, credentialId: code.credentialId };
   }
 
   async function verifyTwoFactorCode(
@@ -1072,11 +1079,13 @@ export function nativeEmailAndPassword(
     identityId: string,
     rememberMe: boolean | undefined,
     trustDevice: boolean | undefined,
+    credentialId?: string,
   ): Promise<NativeAuthSession> {
     const { sessionId, token, refreshToken } = await createSessionAndRefreshToken(ctx, {
       userId,
       identityId,
       rememberMe,
+      credentialId,
     });
     let trustDeviceResult: { trustDeviceToken: string; trustDeviceMaxAgeMs: number } | undefined;
     if (trustDevice) {
@@ -1113,6 +1122,7 @@ export function nativeEmailAndPassword(
           resolved.identityId,
           resolved.rememberMe,
           args.trustDevice,
+          resolved.credentialId,
         );
       }
 
@@ -1169,6 +1179,7 @@ export function nativeEmailAndPassword(
         resolved.identityId,
         resolved.rememberMe,
         args.trustDevice,
+        resolved.credentialId,
       );
     },
   });
@@ -1281,17 +1292,14 @@ export function nativeEmailAndPassword(
       }
     }
 
-    const challengeToken = await mintToken(
-      user._id,
-      TWO_FACTOR_SESSION_ID,
-      { identityId, rememberMe: rememberMe === true, twoFactor: true },
-      { expiresInSeconds: Math.floor(DEFAULT_TWO_FACTOR_PENDING_TTL_MS / 1000) },
-    );
+    const challengeToken = generateVerificationToken();
     const tokenHash = await hashToken(challengeToken);
     await ctx.runMutation(component.native.codes.createVerificationCode, {
       userId: user._id,
       type: "two_factor_pending",
       tokenHash,
+      identityId,
+      rememberMe,
       expiresAt: Date.now() + DEFAULT_TWO_FACTOR_PENDING_TTL_MS,
     });
 

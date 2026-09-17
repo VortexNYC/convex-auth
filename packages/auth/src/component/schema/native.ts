@@ -30,6 +30,7 @@ export const authSessions = defineTable({
   ipAddress: v.optional(v.string()),
   userAgent: v.optional(v.string()),
   impersonatedBy: v.optional(v.id("users")),
+  credentialId: v.optional(v.string()),
   revokedAt: v.optional(v.number()),
   createdAt: v.number(),
   updatedAt: v.number(),
@@ -38,6 +39,7 @@ export const authSessions = defineTable({
   .index("by_family", ["familyId"])
   .index("by_token", ["token"])
   .index("by_user", ["userId"])
+  .index("by_credential_id", ["credentialId"])
   .index("by_expires_at", ["expiresAt"]);
 
 export const authRefreshTokens = defineTable({
@@ -60,6 +62,9 @@ export const authVerificationCodes = defineTable({
   userId: v.id("users"),
   type: verificationCodeTypeValidator,
   tokenHash: v.string(),
+  identityId: v.optional(v.string()),
+  credentialId: v.optional(v.string()),
+  rememberMe: v.optional(v.boolean()),
   expiresAt: v.number(),
   consumedAt: v.optional(v.number()),
   createdAt: v.number(),

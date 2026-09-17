@@ -68,6 +68,26 @@ describe("passkeys", () => {
     expect(challenges[0]!.identifier).toBe("shlomo@example.com");
   });
 
+  it("binds the challenge identifier to the server-side user record", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    const options = (await t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
+      userId,
+      identifier: "attacker-supplied@example.com",
+      rpName: RP_NAME,
+      rpID: RP_ID,
+    })) as { challenge: string };
+
+    const challenge = await t.run(async (ctx) =>
+      ctx.db
+        .query("auth_passkey_challenges")
+        .withIndex("by_challenge", (q) => q.eq("challenge", options.challenge))
+        .first(),
+    );
+    expect(challenge?.identifier).toBe("shlomo@example.com");
+  });
+
   it("lists and revokes passkeys for a user", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
@@ -77,6 +97,7 @@ describe("passkeys", () => {
 
     const revoked = await t.mutation(api.passkeys.revokePasskey, {
       credentialId: "nonexistent",
+      userId,
     });
     expect(revoked).toBe(false);
   });
@@ -194,7 +215,7 @@ describe("passkeys", () => {
     expect(listBefore).toHaveLength(1);
     expect(listBefore[0]!.revoked).toBe(false);
 
-    const revoked = await t.mutation(api.passkeys.revokePasskey, { credentialId });
+    const revoked = await t.mutation(api.passkeys.revokePasskey, { credentialId, userId });
     expect(revoked).toBe(true);
 
     const listAfter = await t.query(api.passkeys.listPasskeys, { userId });
@@ -447,7 +468,7 @@ describe("passkeys", () => {
     expect(challenges).toHaveLength(1);
   });
 
-  it("rejects a registration verify whose identifier does not match the challenge", async () => {
+  it("ignores a caller-supplied identifier that differs from the challenge-bound one", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
 
@@ -458,8 +479,8 @@ describe("passkeys", () => {
       rpID: RP_ID,
     })) as { challenge: string };
 
-    await expect(
-      t.mutation(api.passkeys.verifyPasskeyRegistration, {
+    const err = await t
+      .mutation(api.passkeys.verifyPasskeyRegistration, {
         userId,
         identifier: "attacker@example.com",
         challenge: options.challenge,
@@ -471,8 +492,10 @@ describe("passkeys", () => {
         },
         rpID: RP_ID,
         origin: ORIGIN,
-      }),
-    ).rejects.toThrow("does not belong to this identifier");
+      })
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).not.toContain("identifier");
   });
 
   it("does not enumerate a user's credentials unless explicitly authorized", async () => {
@@ -503,6 +526,384 @@ describe("passkeys", () => {
     })) as { allowCredentials: Array<{ id: string }> };
     expect(authorized.allowCredentials).toHaveLength(1);
     expect(authorized.allowCredentials[0]!.id).toBe("victim-credential");
+  });
+
+  it("revoking a passkey revokes the sessions and refresh tokens it minted", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("auth_passkeys", {
+        userId,
+        credentialId: "cred-with-session",
+        publicKey: "fake-public-key",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      });
+      await ctx.db.insert("authSessions", {
+        sessionId: "sess-passkey",
+        userId,
+        token: "jwt",
+        familyId: "fam-1",
+        expiresAt: now + 60_000,
+        credentialId: "cred-with-session",
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("authSessions", {
+        sessionId: "sess-password",
+        userId,
+        token: "jwt2",
+        familyId: "fam-2",
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-1",
+        sessionId: "sess-passkey",
+        userId,
+        familyId: "fam-1",
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-2",
+        sessionId: "sess-password",
+        userId,
+        familyId: "fam-2",
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+    });
+
+    const revoked = await t.mutation(api.passkeys.revokePasskey, {
+      credentialId: "cred-with-session",
+      userId,
+    });
+    expect(revoked).toBe(true);
+
+    const sessions = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(10),
+    );
+    const refreshTokens = await t.run(async (ctx) =>
+      ctx.db
+        .query("authRefreshTokens")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(10),
+    );
+
+    const passkeySession = sessions.find((s) => s.sessionId === "sess-passkey");
+    const passwordSession = sessions.find((s) => s.sessionId === "sess-password");
+    expect(passkeySession?.revokedAt).toBeDefined();
+    expect(passwordSession?.revokedAt).toBeUndefined();
+
+    const passkeyRefresh = refreshTokens.find((r) => r.familyId === "fam-1");
+    const passwordRefresh = refreshTokens.find((r) => r.familyId === "fam-2");
+    expect(passkeyRefresh?.revokedAt).toBeDefined();
+    expect(passwordRefresh?.revokedAt).toBeUndefined();
+  });
+
+  it("revokes legacy sessions that carry the passkey identity inside the stored token", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+    const fakeJwt = (identityId: string) =>
+      `h.${Buffer.from(JSON.stringify({ identityId })).toString("base64url")}.s`;
+
+    await t.run(async (ctx) => {
+      const identityId = await ctx.db.insert("auth_identities", {
+        identityId: "passkey:test.example.com:legacy-cred",
+        userId,
+        provider: "passkey",
+        issuer: "test.example.com",
+        subject: "legacy-cred",
+        tokenIdentifier: "legacy-cred",
+        email: "shlomo@example.com",
+        emailVerified: false,
+        sessionId: null,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("auth_passkeys", {
+        userId,
+        identityId,
+        credentialId: "legacy-cred",
+        publicKey: "fake-public-key",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      });
+      await ctx.db.insert("authSessions", {
+        sessionId: "sess-legacy-passkey",
+        userId,
+        token: fakeJwt(identityId),
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-legacy",
+        sessionId: "sess-legacy-passkey",
+        userId,
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("authSessions", {
+        sessionId: "sess-legacy-password",
+        userId,
+        token: fakeJwt("identity_other"),
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-password",
+        sessionId: "sess-legacy-password",
+        userId,
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+    });
+
+    const revoked = await t.mutation(api.passkeys.revokePasskey, {
+      credentialId: "legacy-cred",
+      userId,
+    });
+    expect(revoked).toBe(true);
+
+    const sessions = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(10),
+    );
+    const refreshTokens = await t.run(async (ctx) =>
+      ctx.db
+        .query("authRefreshTokens")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(10),
+    );
+
+    expect(sessions.find((s) => s.sessionId === "sess-legacy-passkey")?.revokedAt).toBeDefined();
+    expect(sessions.find((s) => s.sessionId === "sess-legacy-password")?.revokedAt).toBeUndefined();
+    expect(
+      refreshTokens.find((r) => r.sessionId === "sess-legacy-passkey")?.revokedAt,
+    ).toBeDefined();
+    expect(
+      refreshTokens.find((r) => r.sessionId === "sess-legacy-password")?.revokedAt,
+    ).toBeUndefined();
+  });
+
+  it("consumes in-flight two-factor challenges tied to the revoked passkey", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      const identityId = await ctx.db.insert("auth_identities", {
+        identityId: "passkey:test.example.com:cred-pending",
+        userId,
+        provider: "passkey",
+        issuer: "test.example.com",
+        subject: "cred-pending",
+        tokenIdentifier: "cred-pending",
+        email: "shlomo@example.com",
+        emailVerified: false,
+        sessionId: null,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("auth_passkeys", {
+        userId,
+        identityId,
+        credentialId: "cred-pending",
+        publicKey: "fake-public-key",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      });
+      await ctx.db.insert("authVerificationCodes", {
+        userId,
+        type: "two_factor_pending",
+        tokenHash: "pending-passkey",
+        identityId,
+        credentialId: "cred-pending",
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("authVerificationCodes", {
+        userId,
+        type: "two_factor_pending",
+        tokenHash: "pending-password",
+        identityId: "identity_other",
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+    });
+
+    await t.mutation(api.passkeys.revokePasskey, { credentialId: "cred-pending", userId });
+
+    const codes = await t.run(async (ctx) =>
+      ctx.db
+        .query("authVerificationCodes")
+        .withIndex("by_user_type", (q) => q.eq("userId", userId).eq("type", "two_factor_pending"))
+        .take(10),
+    );
+    expect(codes.find((c) => c.tokenHash === "pending-passkey")?.consumedAt).toBeDefined();
+    expect(codes.find((c) => c.tokenHash === "pending-password")?.consumedAt).toBeUndefined();
+  });
+
+  it("revokes every family member even beyond a single page of results", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+    const familySize = 1005;
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("auth_passkeys", {
+        userId,
+        credentialId: "cred-big-family",
+        publicKey: "fake-public-key",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      });
+      await ctx.db.insert("authSessions", {
+        sessionId: "sess-big-family",
+        userId,
+        token: "jwt",
+        familyId: "fam-big",
+        expiresAt: now + 60_000,
+        credentialId: "cred-big-family",
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      for (let i = 0; i < familySize; i++) {
+        await ctx.db.insert("authRefreshTokens", {
+          tokenHash: `hash-big-${i}`,
+          sessionId: `sess-big-${i}`,
+          userId,
+          familyId: "fam-big",
+          expiresAt: now + 60_000,
+          createdAt: 0,
+          updatedAt: 0,
+        });
+      }
+    });
+
+    const revoked = await t.mutation(api.passkeys.revokePasskey, {
+      credentialId: "cred-big-family",
+      userId,
+    });
+    expect(revoked).toBe(true);
+
+    const activeTokens = await t.run(async (ctx) =>
+      (
+        await ctx.db
+          .query("authRefreshTokens")
+          .withIndex("by_family", (q) => q.eq("familyId", "fam-big"))
+          .take(familySize + 10)
+      ).filter((r) => r.revokedAt === undefined),
+    );
+    expect(activeTokens).toHaveLength(0);
+  });
+
+  it("counts only active passkeys toward the cap even when revoked rows outnumber them", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 10; i++) {
+        await ctx.db.insert("auth_passkeys", {
+          userId,
+          credentialId: `revoked-${i}`,
+          publicKey: "fake",
+          counter: 0,
+          revokedAt: 1,
+          createdAt: 0,
+          lastUsedAt: 0,
+        });
+      }
+      await ctx.db.insert("auth_passkeys", {
+        userId,
+        credentialId: "active-credential",
+        publicKey: "fake",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      });
+    });
+
+    await expect(
+      t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
+        userId,
+        identifier: "shlomo@example.com",
+        rpName: RP_NAME,
+        rpID: RP_ID,
+        maxPasskeys: 1,
+      }),
+    ).rejects.toThrow("Maximum number of passkeys");
+  });
+
+  it("garbage-collects expired challenges when generating options", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_passkey_challenges", {
+        challenge: "stale-challenge",
+        type: "authentication",
+        userId,
+        expiresAt: now - 1000,
+        createdAt: now - 10_000,
+      }),
+    );
+
+    await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
+      userId,
+      rpID: RP_ID,
+    });
+
+    const stale = await t.run(async (ctx) =>
+      ctx.db
+        .query("auth_passkey_challenges")
+        .withIndex("by_challenge", (q) => q.eq("challenge", "stale-challenge"))
+        .first(),
+    );
+    expect(stale).toBeNull();
+  });
+
+  it("binds rpID and origin to the challenge record at creation", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    const options = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
+      userId,
+      rpID: RP_ID,
+      origin: [ORIGIN, "https://other.example.com"],
+    })) as { challenge: string };
+
+    const challenge = await t.run(async (ctx) =>
+      ctx.db
+        .query("auth_passkey_challenges")
+        .withIndex("by_challenge", (q) => q.eq("challenge", options.challenge))
+        .first(),
+    );
+    expect(challenge?.rpID).toBe(RP_ID);
+    expect(challenge?.origin).toEqual([ORIGIN, "https://other.example.com"]);
   });
 
   it("re-checks the per-user cap at verify time, not only at options time", async () => {

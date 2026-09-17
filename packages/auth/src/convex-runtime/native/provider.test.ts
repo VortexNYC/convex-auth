@@ -1168,6 +1168,26 @@ describe("nativeEmailAndPassword", () => {
       });
       expect(result).toEqual({ success: true });
     });
+
+    it("rejects a session that has been revoked", async () => {
+      const component = createMockComponent();
+      const sessionToken = await mintToken("user_1", "session_1");
+      component.native.sessions.getSessionByToken.mockResolvedValue({
+        _id: "session_doc_1",
+        sessionId: "session_1",
+        userId: "user_1",
+        token: sessionToken,
+        expiresAt: Date.now() + 60_000,
+        revokedAt: Date.now() - 1_000,
+      });
+
+      const { verifyPassword } = createActions(component);
+      const result = await exec(verifyPassword).handler(createContext(), {
+        token: sessionToken,
+        password: DEFAULT_PASSWORD,
+      });
+      expect(result).toEqual({ success: false });
+    });
   });
 
   describe("updateSession", () => {
@@ -1348,6 +1368,14 @@ describe("nativeEmailAndPassword", () => {
       expect(result.twoFactorRedirect).toBe(true);
       expect(result.twoFactorMethods).toEqual(["totp"]);
       expect(result.twoFactorChallengeToken).toEqual(expect.any(String));
+      await expect(verifyToken(result.twoFactorChallengeToken)).rejects.toThrow();
+      expect(component.native.codes.createVerificationCode).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "user_1",
+          type: "two_factor_pending",
+          identityId: "identity_1",
+        }),
+      );
       expect(component.native.sessions.createSessionAndRefreshToken).not.toHaveBeenCalled();
     });
 
@@ -1358,16 +1386,7 @@ describe("nativeEmailAndPassword", () => {
       const secret = encodeBase32(generateSecret());
       const code = await generateTOTP(decodeBase32(secret), getCurrentTOTPCounter());
 
-      const challengeToken = await mintToken(
-        "user_1",
-        "__two_factor",
-        {
-          identityId: "identity_1",
-          twoFactor: true,
-          rememberMe: true,
-        },
-        { expiresInSeconds: 600 },
-      );
+      const challengeToken = "opaque-pending-challenge";
 
       component.native.users.getUserById.mockResolvedValue({
         ...user,
@@ -1380,6 +1399,9 @@ describe("nativeEmailAndPassword", () => {
         userId: "user_1",
         type: "two_factor_pending",
         tokenHash: await hashToken(challengeToken),
+        identityId: "identity_1",
+        credentialId: "passkey-cred-1",
+        rememberMe: true,
         expiresAt: Date.now() + 60_000,
         createdAt: 0,
         updatedAt: 0,
@@ -1400,6 +1422,34 @@ describe("nativeEmailAndPassword", () => {
 
       expect(result.token).toEqual(expect.any(String));
       expect(result.refreshToken).toEqual(expect.any(String));
+      const minted = await verifyToken(result.token as string);
+      expect(minted.sub).toBe("user_1");
+      expect(minted.identityId).toBe("identity_1");
+      expect(component.native.sessions.createSessionAndRefreshToken).toHaveBeenCalledWith(
+        expect.objectContaining({ credentialId: "passkey-cred-1" }),
+      );
+    });
+
+    it("rejects a pending challenge that has no stored code row", async () => {
+      const component = createMockComponent();
+      const challengeToken = await mintToken(
+        "user_1",
+        "__two_factor",
+        { identityId: "identity_1", twoFactor: true },
+        { expiresInSeconds: 600 },
+      );
+
+      component.native.codes.consumeVerificationCode.mockResolvedValue(null);
+      component.native.sessions.getSessionByToken.mockResolvedValue(null);
+
+      const { twoFactorVerifyTOTP } = createActions(component);
+      await expect(
+        exec(twoFactorVerifyTOTP).handler(createContext(), {
+          token: challengeToken,
+          code: "000000",
+        }),
+      ).rejects.toThrow("Unauthorized");
+      expect(component.native.sessions.createSessionAndRefreshToken).not.toHaveBeenCalled();
     });
 
     it("completes sign-in with a backup code", async () => {
@@ -1409,16 +1459,7 @@ describe("nativeEmailAndPassword", () => {
       const backupCode = "BACKUP123";
       const backupCodeHash = await hashPassword(backupCode);
 
-      const challengeToken = await mintToken(
-        "user_1",
-        "__two_factor",
-        {
-          identityId: "identity_1",
-          twoFactor: true,
-          rememberMe: false,
-        },
-        { expiresInSeconds: 600 },
-      );
+      const challengeToken = "opaque-pending-challenge";
 
       component.native.users.getUserById.mockResolvedValue({
         ...user,
@@ -1431,6 +1472,7 @@ describe("nativeEmailAndPassword", () => {
         userId: "user_1",
         type: "two_factor_pending",
         tokenHash: await hashToken(challengeToken),
+        identityId: "identity_1",
         expiresAt: Date.now() + 60_000,
         createdAt: 0,
         updatedAt: 0,
@@ -1485,6 +1527,20 @@ describe("nativeEmailAndPassword", () => {
       expect(component.native.codes.revokeVerificationCodesForUser).toHaveBeenCalledWith(
         expect.objectContaining({ userId: "user_1", type: "two_factor_trusted_device" }),
       );
+    });
+
+    it("refuses session-backed actions when the session is revoked", async () => {
+      const component = createMockComponent();
+      component.native.sessions.getSessionByToken.mockResolvedValue(
+        makeSession({ revokedAt: Date.now() - 1_000 }),
+      );
+
+      const { twoFactorDisable } = createActions(component);
+      const result = (await exec(twoFactorDisable).handler(createContext(), {
+        token: defaultToken,
+        password: DEFAULT_PASSWORD,
+      })) as { success: boolean };
+      expect(result.success).toBe(false);
     });
 
     it("regenerates backup codes", async () => {

@@ -16,6 +16,10 @@ export type NativePasskeyConfig = {
   rpName?: string;
   /** Maximum active passkeys per user. Defaults to 10. */
   maxPasskeysPerUser?: number;
+  /** Session JWT lifetime for passkey sign-ins. Defaults to 7 days. */
+  sessionTtlMs?: number;
+  /** Refresh token lifetime for passkey sign-ins. Defaults to 30 days. */
+  refreshTokenTtlMs?: number;
   /** Attestation conveyance. Defaults to "none". */
   attestationType?: "none" | "direct" | "enterprise";
   /**
@@ -60,9 +64,12 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
   const origin = config.origin;
   const rpName = config.rpName ?? "Convex Auth";
   const maxPasskeys = config.maxPasskeysPerUser;
+  const sessionTtlMs = config.sessionTtlMs;
+  const refreshTokenTtlMs = config.refreshTokenTtlMs;
   // Default to enforcing UV — matching the behavior before this was
   // configurable. Only an explicit "preferred"/"discouraged" relaxes it.
   const requireUserVerification = (config.userVerification ?? "required") === "required";
+  const userVerification = config.userVerification ?? "required";
 
   const getPasskeyRegistrationOptions = action({
     args: {
@@ -86,7 +93,8 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
         displayName: args.displayName,
         rpName,
         rpID,
-        userVerification: config.userVerification,
+        origin,
+        userVerification,
         authenticatorAttachment: config.authenticatorAttachment,
         residentKey: config.residentKey,
         attestationType: config.attestationType,
@@ -151,7 +159,8 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
         userId: args.userId as unknown as GenericId<"users"> | undefined,
         credentialId: args.credentialId,
         rpID,
-        userVerification: config.userVerification,
+        origin,
+        userVerification,
         enumerateCredentials: !!args.userId && identity?.subject === args.userId,
       });
     },
@@ -163,12 +172,16 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
       response: v.any(),
     },
     returns: v.object({
-      token: v.string(),
-      refreshToken: v.string(),
+      token: v.optional(v.string()),
+      refreshToken: v.optional(v.string()),
       userId: v.string(),
       identityId: v.optional(v.string()),
-      sessionId: v.string(),
-      expiresAt: v.number(),
+      sessionId: v.optional(v.string()),
+      expiresAt: v.optional(v.number()),
+      twoFactorRedirect: v.optional(v.boolean()),
+      twoFactorChallengeToken: v.optional(v.string()),
+      twoFactorMethods: v.optional(v.array(v.string())),
+      twoFactorCookieMaxAgeMs: v.optional(v.number()),
     }),
     handler: async (
       ctx: GenericActionCtx<any>,
@@ -184,6 +197,8 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
         rpID,
         origin,
         requireUserVerification,
+        sessionTtlMs,
+        refreshTokenTtlMs,
       });
     },
   });

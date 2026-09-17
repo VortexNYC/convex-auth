@@ -14,6 +14,7 @@ import {
   ConvexResetPasswordForm,
   ConvexSessionList,
   ConvexVerifyEmailScreen,
+  ConvexVerifyTwoFactorForm,
   ExpoAuthClientSignInScreen,
   ExpoAuthClientSignUpScreen,
   ExpoConvexAuthClientProvider,
@@ -27,7 +28,14 @@ import { api } from "./convex/_generated/api";
 
 import { clsx } from "clsx";
 
-type Screen = "signIn" | "signUp" | "forgot" | "reset" | "verify" | "enableTwoFactor";
+type Screen =
+  | "signIn"
+  | "signUp"
+  | "forgot"
+  | "reset"
+  | "verify"
+  | "verifyTwoFactor"
+  | "enableTwoFactor";
 
 const TOKEN_KEYS = ["convex-auth-token", "convex-auth-refresh-token", "convex-auth-session-id"];
 
@@ -305,6 +313,23 @@ function InnerApp() {
     );
   }
 
+  if (screen === "verifyTwoFactor") {
+    return (
+      <View className={clsx(rootClassName, "justify-center p-6")}>
+        <View className="w-full max-w-md self-center p-4 rounded-xl bg-card">
+          <ConvexVerifyTwoFactorForm onVerified={() => setScreen("signIn")} />
+          <View className="px-4 pt-4 items-center">
+            <FooterLink
+              label="Sign in"
+              onPress={() => setScreen("signIn")}
+              className="text-primary"
+            />
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   if (screen === "verify") {
     return (
       <View className={clsx(rootClassName, "justify-center p-6")}>
@@ -392,7 +417,7 @@ function InnerApp() {
               description="Sign in with Google, GitHub, Discord, or email."
               socialProviders={socialProviders}
             />
-            <PasskeySignInButton />
+            <PasskeySignInButton onTwoFactorRedirect={() => setScreen("verifyTwoFactor")} />
             <Pressable
               onPress={async () => {
                 await authClient?.signIn.anonymous({});
@@ -519,7 +544,7 @@ function PasskeySection({ userId, identifier }: { userId?: string; identifier?: 
   );
 }
 
-function PasskeySignInButton() {
+function PasskeySignInButton({ onTwoFactorRedirect }: { onTwoFactorRedirect: () => void }) {
   const passkeys = usePasskeys({});
 
   if (!passkeys.supported) {
@@ -528,7 +553,13 @@ function PasskeySignInButton() {
 
   return (
     <Pressable
-      onPress={() => void passkeys.signIn()}
+      onPress={() =>
+        void passkeys.signIn().then((result) => {
+          if (result?.twoFactorRedirect) {
+            onTwoFactorRedirect();
+          }
+        })
+      }
       disabled={passkeys.loading}
       className="w-full max-w-md self-center mt-4 py-3 px-6 rounded-lg items-center border border-border bg-card"
       accessibilityRole="button"

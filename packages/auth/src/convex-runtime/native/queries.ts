@@ -1,7 +1,7 @@
 import { query, type QueryCtx } from "../../component/_generated/server.js";
 import { v } from "convex/values";
 import { verifyToken } from "./jwt.js";
-import type { NativeEmailAndPasswordComponentHandle, NativeSessionDoc } from "./types.js";
+import type { NativeEmailAndPasswordComponentHandle } from "./types.js";
 import { nativeAuthUserValidator, toNativeAuthUser } from "./types.js";
 
 export function nativeAuthQueries(component: NativeEmailAndPasswordComponentHandle) {
@@ -18,7 +18,9 @@ export function nativeAuthQueries(component: NativeEmailAndPasswordComponentHand
       const identity = await ctx.auth.getUserIdentity();
       if (identity) {
         const userId = identity.subject;
-        const session = await resolveSessionFromAuth(ctx, component, userId, args.sessionId);
+        const sessionId =
+          typeof identity.sessionId === "string" ? identity.sessionId : args.sessionId;
+        const session = await resolveSessionFromAuth(ctx, component, userId, sessionId);
         if (!session) {
           return {};
         }
@@ -99,14 +101,7 @@ async function resolveSessionFromAuth(
     return null;
   }
 
-  const sessions = await ctx.runQuery(component.native.sessions.listSessionsByUser, {
-    userId,
-  });
-  const now = Date.now();
-  const active = sessions.find(
-    (s: NativeSessionDoc) => (s.expiresAt ?? 0) >= now && s.revokedAt === undefined,
-  );
-  return active ?? null;
+  return null;
 }
 
 export type NativeAuthQueries = ReturnType<typeof nativeAuthQueries>;

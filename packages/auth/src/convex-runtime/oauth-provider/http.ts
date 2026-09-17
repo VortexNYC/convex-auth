@@ -40,7 +40,10 @@ export type OidcProviderConfig = {
 export type OidcProviderStorageAdapter<TClient extends OidcProviderClient> = {
   getSessionByToken: (
     token: string,
-  ) => Promise<{ userId: string } | null> | { userId: string } | null;
+  ) =>
+    | Promise<{ userId: string; revokedAt?: number; expiresAt?: number } | null>
+    | { userId: string; revokedAt?: number; expiresAt?: number }
+    | null;
   getUserById: (
     userId: string,
   ) =>
@@ -185,7 +188,11 @@ export function createOidcProviderHttpHandlers<TClient extends OidcProviderClien
         resolveRequestedScopes,
         resolveSessionFromToken: async (token) => {
           const session = await args.storage.getSessionByToken(token);
-          return session ? { subjectId: session.userId } : null;
+          return session &&
+            session.revokedAt === undefined &&
+            (session.expiresAt === undefined || session.expiresAt > Date.now())
+            ? { subjectId: session.userId }
+            : null;
         },
         resolveIdentityForSession: async (session) => {
           const user = await args.storage.getUserById(session.subjectId);
