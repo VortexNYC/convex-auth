@@ -169,7 +169,9 @@ Two sides to wire:
 { "webcredentials": { "apps": ["TEAMID.com.example.app"] } }
 ```
 
-You can host this on your own domain, or on the Convex site deployment itself — `examples/react-native/convex/http.ts` serves it from the `PASSKEY_IOS_APP_ID` env var, which lets `rpID` be `<deployment>.convex.site` with no external website. Passkeys require a development build; they do not work in Expo Go.
+You can host this on your own domain, or on the Convex site deployment itself — `examples/react-native/convex/http.ts` serves it from the `PASSKEY_IOS_APP_ID` env var, which lets `rpID` be `<deployment>.convex.site` with no external website. The `appID` prefix must be the **signing** team ID of the built app — check `codesign -dvvv` on the produced binary, not the team that happens to own the developer account. Passkeys require a development build; they do not work in Expo Go.
+
+**Simulator caveat:** the iOS Simulator only fetches the AASA file when the entitlement carries `?mode=developer`, and Face ID simulation requires a recent runtime (verified working on iOS 26.x; older runtimes may lack biometric simulation). The example's `app.config.js` adds both `webcredentials:<rpID>` and `webcredentials:<rpID>?mode=developer` automatically.
 
 ### Android
 

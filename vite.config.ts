@@ -2,7 +2,13 @@ import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   fmt: {
-    ignorePatterns: ["**/dist/**", "**/node_modules/**", "**/_generated/**", "pnpm-lock.yaml"],
+    ignorePatterns: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "**/_generated/**",
+      "pnpm-lock.yaml",
+      "**/uniwind-types.d.ts",
+    ],
   },
   lint: {
     ignorePatterns: ["**/dist/**", "**/node_modules/**", "**/_generated/**"],

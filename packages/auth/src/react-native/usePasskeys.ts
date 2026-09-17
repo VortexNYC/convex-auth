@@ -23,6 +23,14 @@ function isCancellationError(err: unknown): boolean {
   return err instanceof Error && /cancel/i.test(`${err.name} ${err.message}`);
 }
 
+function toSerializableCredential<T extends { response: object }>(credential: T): T {
+  const clean = <O extends object>(obj: O) =>
+    Object.fromEntries(
+      Object.entries(obj).filter(([, v]) => v != null && typeof v !== "function"),
+    ) as O;
+  return { ...clean(credential), response: clean(credential.response) };
+}
+
 async function createCredential(options: RegistrationOptions) {
   try {
     const response = await create(options);
@@ -162,7 +170,7 @@ export function usePasskeys(args: UseNativePasskeysArgs) {
           userId,
           identifier,
           challenge: registrationOptions.challenge as string,
-          response,
+          response: toSerializableCredential(response),
           name,
         });
         // Refresh both option sets — a new challenge for the next ceremony and
@@ -208,7 +216,7 @@ export function usePasskeys(args: UseNativePasskeysArgs) {
       }
       const result = await verifyAuthentication({
         challenge: authenticationOptions.challenge as string,
-        response,
+        response: toSerializableCredential(response),
       });
       ctx.setToken(result.token);
       ctx.setRefreshToken(result.refreshToken);

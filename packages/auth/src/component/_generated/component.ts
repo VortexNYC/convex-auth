@@ -2970,6 +2970,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "internal",
         {
           credentialId?: string;
+          enumerateCredentials?: boolean;
           rpID: string;
           userId?: string;
           userVerification?: "required" | "preferred" | "discouraged";
@@ -3060,6 +3061,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         {
           challenge: string;
           identifier: string;
+          maxPasskeys?: number;
           name?: string;
           origin: string | Array<string>;
           requireUserVerification?: boolean;
