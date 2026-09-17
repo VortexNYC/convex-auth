@@ -28,6 +28,11 @@ const passkeyRpId =
     ? new URL(process.env.EXPO_PUBLIC_CONVEX_SITE_URL).hostname
     : undefined);
 
+// `?mode=developer` bypasses Apple's AASA CDN notarization so simulators and
+// dev builds fetch the file directly. It must not ship in release entitlements.
+const includeDeveloperMode =
+  !process.env.EAS_BUILD_PROFILE || process.env.EAS_BUILD_PROFILE.includes("development");
+
 module.exports = {
   ...expo,
   ios: {
@@ -36,9 +41,7 @@ module.exports = {
     associatedDomains: passkeyRpId
       ? [
           `webcredentials:${passkeyRpId}`,
-          // `?mode=developer` bypasses Apple's AASA CDN notarization so
-          // simulators/dev builds fetch the file directly from the domain.
-          `webcredentials:${passkeyRpId}?mode=developer`,
+          ...(includeDeveloperMode ? [`webcredentials:${passkeyRpId}?mode=developer`] : []),
         ]
       : [],
   },

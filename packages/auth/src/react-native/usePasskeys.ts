@@ -23,11 +23,6 @@ function isCancellationError(err: unknown): boolean {
   return err instanceof Error && /cancel/i.test(`${err.name} ${err.message}`);
 }
 
-// Native ceremony results can't cross the Convex wire verbatim:
-// react-native-passkeys decorates the attestation response with a
-// `getPublicKey()` method (functions aren't serializable), and both platforms
-// return optional fields as explicit `null` — which fails `v.optional()`
-// validators server-side. Drop functions and null/undefined keys.
 function toSerializableCredential<T extends { response: object }>(credential: T): T {
   const clean = <O extends object>(obj: O) =>
     Object.fromEntries(
