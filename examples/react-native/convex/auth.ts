@@ -48,7 +48,10 @@ export const auth = convexAuth({
     rpID: process.env.PASSKEY_RP_ID ?? new URL(siteUrl).hostname,
     // Comma-separated list covering every origin platforms may emit: the site
     // origin plus "android:apk-key-hash:<base64url-sha256-of-signing-cert>".
-    origin: (process.env.PASSKEY_ORIGINS ?? new URL(siteUrl).origin).split(","),
+    origin: (process.env.PASSKEY_ORIGINS ?? new URL(siteUrl).origin)
+      .split(",")
+      .map((o: string) => o.trim())
+      .filter(Boolean),
     rpName: "Convex Auth Demo",
   },
   oauth: {

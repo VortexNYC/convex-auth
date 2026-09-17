@@ -30,6 +30,7 @@ export const authSessions = defineTable({
   ipAddress: v.optional(v.string()),
   userAgent: v.optional(v.string()),
   impersonatedBy: v.optional(v.id("users")),
+  credentialId: v.optional(v.string()),
   revokedAt: v.optional(v.number()),
   createdAt: v.number(),
   updatedAt: v.number(),

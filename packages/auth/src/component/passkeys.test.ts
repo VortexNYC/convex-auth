@@ -4,7 +4,7 @@ import { describe, expect, it, beforeAll } from "vitest";
 import { convexTest } from "convex-test";
 import { api } from "./_generated/api.js";
 import schema from "./schema.js";
-import { isCounterRegressionError } from "./passkeys.js";
+import { isClonedCredentialError, isCounterRegressionError } from "./passkeys.js";
 
 const modules = import.meta.glob("./**/*.*s");
 
@@ -77,6 +77,7 @@ describe("passkeys", () => {
 
     const revoked = await t.mutation(api.passkeys.revokePasskey, {
       credentialId: "nonexistent",
+      userId,
     });
     expect(revoked).toBe(false);
   });
@@ -194,7 +195,7 @@ describe("passkeys", () => {
     expect(listBefore).toHaveLength(1);
     expect(listBefore[0]!.revoked).toBe(false);
 
-    const revoked = await t.mutation(api.passkeys.revokePasskey, { credentialId });
+    const revoked = await t.mutation(api.passkeys.revokePasskey, { credentialId, userId });
     expect(revoked).toBe(true);
 
     const listAfter = await t.query(api.passkeys.listPasskeys, { userId });
@@ -503,6 +504,202 @@ describe("passkeys", () => {
     })) as { allowCredentials: Array<{ id: string }> };
     expect(authorized.allowCredentials).toHaveLength(1);
     expect(authorized.allowCredentials[0]!.id).toBe("victim-credential");
+  });
+
+  it("revoking a passkey revokes the sessions and refresh tokens it minted", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("auth_passkeys", {
+        userId,
+        credentialId: "cred-with-session",
+        publicKey: "fake-public-key",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      });
+      await ctx.db.insert("authSessions", {
+        sessionId: "sess-passkey",
+        userId,
+        token: "jwt",
+        familyId: "fam-1",
+        expiresAt: now + 60_000,
+        credentialId: "cred-with-session",
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("authSessions", {
+        sessionId: "sess-password",
+        userId,
+        token: "jwt2",
+        familyId: "fam-2",
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-1",
+        sessionId: "sess-passkey",
+        userId,
+        familyId: "fam-1",
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-2",
+        sessionId: "sess-password",
+        userId,
+        familyId: "fam-2",
+        expiresAt: now + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+    });
+
+    const revoked = await t.mutation(api.passkeys.revokePasskey, {
+      credentialId: "cred-with-session",
+      userId,
+    });
+    expect(revoked).toBe(true);
+
+    const sessions = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(10),
+    );
+    const refreshTokens = await t.run(async (ctx) =>
+      ctx.db
+        .query("authRefreshTokens")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .take(10),
+    );
+
+    const passkeySession = sessions.find((s) => s.sessionId === "sess-passkey");
+    const passwordSession = sessions.find((s) => s.sessionId === "sess-password");
+    expect(passkeySession?.revokedAt).toBeDefined();
+    expect(passwordSession?.revokedAt).toBeUndefined();
+
+    const passkeyRefresh = refreshTokens.find((r) => r.familyId === "fam-1");
+    const passwordRefresh = refreshTokens.find((r) => r.familyId === "fam-2");
+    expect(passkeyRefresh?.revokedAt).toBeDefined();
+    expect(passwordRefresh?.revokedAt).toBeUndefined();
+  });
+
+  it("counts only active passkeys toward the cap even when revoked rows outnumber them", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 10; i++) {
+        await ctx.db.insert("auth_passkeys", {
+          userId,
+          credentialId: `revoked-${i}`,
+          publicKey: "fake",
+          counter: 0,
+          revokedAt: 1,
+          createdAt: 0,
+          lastUsedAt: 0,
+        });
+      }
+      await ctx.db.insert("auth_passkeys", {
+        userId,
+        credentialId: "active-credential",
+        publicKey: "fake",
+        counter: 0,
+        createdAt: 0,
+        lastUsedAt: 0,
+      });
+    });
+
+    await expect(
+      t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
+        userId,
+        identifier: "shlomo@example.com",
+        rpName: RP_NAME,
+        rpID: RP_ID,
+        maxPasskeys: 1,
+      }),
+    ).rejects.toThrow("Maximum number of passkeys");
+  });
+
+  it("garbage-collects expired challenges when generating options", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_passkey_challenges", {
+        challenge: "stale-challenge",
+        type: "authentication",
+        userId,
+        expiresAt: now - 1000,
+        createdAt: now - 10_000,
+      }),
+    );
+
+    await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
+      userId,
+      rpID: RP_ID,
+    });
+
+    const stale = await t.run(async (ctx) =>
+      ctx.db
+        .query("auth_passkey_challenges")
+        .withIndex("by_challenge", (q) => q.eq("challenge", "stale-challenge"))
+        .first(),
+    );
+    expect(stale).toBeNull();
+  });
+
+  it("binds rpID and origin to the challenge record at creation", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    const options = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
+      userId,
+      rpID: RP_ID,
+      origin: [ORIGIN, "https://other.example.com"],
+    })) as { challenge: string };
+
+    const challenge = await t.run(async (ctx) =>
+      ctx.db
+        .query("auth_passkey_challenges")
+        .withIndex("by_challenge", (q) => q.eq("challenge", options.challenge))
+        .first(),
+    );
+    expect(challenge?.rpID).toBe(RP_ID);
+    expect(challenge?.origin).toEqual([ORIGIN, "https://other.example.com"]);
+  });
+
+  it("detects cloned credentials from the decoded sign counter", () => {
+    const authDataWithCounter = (counter: number) => {
+      const bytes = new Uint8Array(37);
+      new DataView(bytes.buffer).setUint32(33, counter, false);
+      let binary = "";
+      for (const b of bytes) binary += String.fromCharCode(b);
+      return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+    };
+    const response = (counter: number) => ({
+      response: { authenticatorData: authDataWithCounter(counter) },
+    });
+
+    expect(
+      isClonedCredentialError(
+        new Error("Response counter value 4 was lower than expected 9"),
+        9,
+        response(4),
+      ),
+    ).toBe(true);
+    expect(isClonedCredentialError(new Error("some unknown failure"), 9, response(4))).toBe(true);
+    expect(
+      isClonedCredentialError(new Error("signature verification failed"), 9, response(4)),
+    ).toBe(false);
+    expect(isClonedCredentialError(new Error("unknown"), 0, response(0))).toBe(false);
+    expect(isClonedCredentialError(new Error("unknown"), 9, response(10))).toBe(false);
   });
 
   it("re-checks the per-user cap at verify time, not only at options time", async () => {

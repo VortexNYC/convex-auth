@@ -25,6 +25,8 @@ export const auth_passkey_challenges = defineTable({
   type: v.union(v.literal("registration"), v.literal("authentication")),
   userId: v.optional(v.id("users")),
   identifier: v.optional(v.string()),
+  rpID: v.optional(v.string()),
+  origin: v.optional(v.array(v.string())),
   expiresAt: v.number(),
   createdAt: v.number(),
 })

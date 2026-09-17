@@ -23,9 +23,6 @@ export interface UsePasskeysArgs {
   autofill?: boolean;
 }
 
-type RegistrationOptions = Parameters<typeof startRegistration>[0]["optionsJSON"];
-type AuthenticationOptions = Parameters<typeof startAuthentication>[0]["optionsJSON"];
-
 export function usePasskeys(args: UsePasskeysArgs) {
   const { userId, identifier, autofill } = args;
   const ctx = useContext(ConvexAuthContext);
@@ -64,86 +61,32 @@ export function usePasskeys(args: UsePasskeysArgs) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [supported, setSupported] = React.useState(false);
-  const [registrationOptions, setRegistrationOptions] = React.useState<RegistrationOptions | null>(
-    null,
-  );
-  const [authenticationOptions, setAuthenticationOptions] =
-    React.useState<AuthenticationOptions | null>(null);
 
   React.useEffect(() => {
     setSupported(browserSupportsWebAuthn());
   }, []);
 
-  React.useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    void (async () => {
-      try {
-        const regPromise =
-          userId && identifier
-            ? generateRegistrationOptions({
-                userId,
-                identifier,
-                displayName: identifier,
-              })
-            : Promise.resolve(null);
-        const [regOpts, authOpts] = await Promise.all([
-          regPromise,
-          generateAuthenticationOptions({
-            userId,
-          }),
-        ]);
-        if (!cancelled) {
-          setRegistrationOptions(regOpts);
-          setAuthenticationOptions(authOpts);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load passkey options");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, identifier, generateRegistrationOptions, generateAuthenticationOptions]);
-
   const register = React.useCallback(
     async (name: string) => {
-      if (!registrationOptions) {
-        throw new Error("Passkey registration options are not ready");
-      }
       if (!userId || !identifier) {
         throw new Error("Passkey registration requires a user and identifier");
       }
       setLoading(true);
       setError(null);
       try {
-        const response = await startRegistration({ optionsJSON: registrationOptions });
+        const options = await generateRegistrationOptions({
+          userId,
+          identifier,
+          displayName: identifier,
+        });
+        const response = await startRegistration({ optionsJSON: options });
         await verifyRegistration({
           userId,
           identifier,
-          challenge: registrationOptions.challenge as string,
+          challenge: options.challenge as string,
           response,
           name,
         });
-        // Refresh registration options so another passkey can be registered,
-        // and auth options so the new credential lands in allowCredentials.
-        const [regOpts, authOpts] = await Promise.all([
-          generateRegistrationOptions({
-            userId,
-            identifier,
-            displayName: identifier,
-          }),
-          generateAuthenticationOptions({ userId }),
-        ]);
-        setRegistrationOptions(regOpts);
-        setAuthenticationOptions(authOpts);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Registration failed";
         setError(message);
@@ -152,35 +95,28 @@ export function usePasskeys(args: UsePasskeysArgs) {
         setLoading(false);
       }
     },
-    [
-      registrationOptions,
-      verifyRegistration,
-      userId,
-      identifier,
-      generateRegistrationOptions,
-      generateAuthenticationOptions,
-    ],
+    [generateRegistrationOptions, verifyRegistration, userId, identifier],
   );
 
   const signIn = React.useCallback(
-    async (_credentialId?: string) => {
-      if (!authenticationOptions) {
-        throw new Error("Passkey authentication options are not ready");
-      }
+    async (credentialId?: string) => {
       setLoading(true);
       setError(null);
       try {
+        const options = await generateAuthenticationOptions({ userId, credentialId });
         const response = await startAuthentication({
-          optionsJSON: authenticationOptions,
+          optionsJSON: options,
           useBrowserAutofill: autofill ?? false,
         });
         const result = await verifyAuthentication({
-          challenge: authenticationOptions.challenge as string,
+          challenge: options.challenge as string,
           response,
         });
-        ctx.setToken(result.token);
-        ctx.setRefreshToken(result.refreshToken);
-        ctx.setSessionId(result.sessionId);
+        if (result.token && result.refreshToken && result.sessionId) {
+          ctx.setToken(result.token);
+          ctx.setRefreshToken(result.refreshToken);
+          ctx.setSessionId(result.sessionId);
+        }
         return result;
       } catch (err) {
         const message = err instanceof Error ? err.message : "Authentication failed";
@@ -190,7 +126,7 @@ export function usePasskeys(args: UsePasskeysArgs) {
         setLoading(false);
       }
     },
-    [authenticationOptions, verifyAuthentication, ctx, autofill],
+    [generateAuthenticationOptions, verifyAuthentication, ctx, autofill, userId],
   );
 
   const revoke = React.useCallback(

@@ -94,21 +94,37 @@ afterEach(() => {
 });
 
 describe("react-native usePasskeys", () => {
-  it("reports support and fetches registration + authentication options", async () => {
+  it("reports support without fetching ceremony options on mount", async () => {
     const { result } = renderHook(() => usePasskeys(args), {
       wrapper: wrapper(makeCtx()),
     });
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.supported).toBe(true);
-    expect(generateRegistrationOptions).toHaveBeenCalledWith({
-      userId: "user_1",
-      identifier: "user@example.com",
-      displayName: "user@example.com",
+    await waitFor(() => expect(result.current.supported).toBe(true));
+    expect(generateRegistrationOptions).not.toHaveBeenCalled();
+    expect(generateAuthenticationOptions).not.toHaveBeenCalled();
+  });
+
+  it("fetches a fresh challenge for each ceremony", async () => {
+    createMock.mockResolvedValue({ id: "cred_1", rawId: "cred_1", response: {} });
+    generateRegistrationOptions
+      .mockResolvedValueOnce({ ...registrationOptions, challenge: "reg-challenge-1" })
+      .mockResolvedValueOnce({ ...registrationOptions, challenge: "reg-challenge-2" });
+    const { result } = renderHook(() => usePasskeys(args), {
+      wrapper: wrapper(makeCtx()),
     });
-    expect(generateAuthenticationOptions).toHaveBeenCalledWith({
-      userId: "user_1",
-    });
+    await waitFor(() => expect(result.current.supported).toBe(true));
+
+    await act(() => result.current.register("One"));
+    await act(() => result.current.register("Two"));
+
+    expect(verifyRegistration).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ challenge: "reg-challenge-1" }),
+    );
+    expect(verifyRegistration).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ challenge: "reg-challenge-2" }),
+    );
   });
 
   it("forwards the native registration ceremony response to verification", async () => {

@@ -23,12 +23,32 @@ function isCancellationError(err: unknown): boolean {
   return err instanceof Error && /cancel/i.test(`${err.name} ${err.message}`);
 }
 
+function cleanValue(value: unknown): unknown {
+  if (value == null || typeof value === "function") {
+    return undefined;
+  }
+  if (typeof value !== "object") {
+    return value;
+  }
+  const withJson = value as { toJSON?: () => unknown };
+  if (typeof withJson.toJSON === "function") {
+    return cleanValue(withJson.toJSON());
+  }
+  if (Array.isArray(value)) {
+    return value.map(cleanValue).filter((v) => v !== undefined);
+  }
+  if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([k, v]) => [k, cleanValue(v)] as const)
+      .filter(([, v]) => v !== undefined),
+  );
+}
+
 function toSerializableCredential<T extends { response: object }>(credential: T): T {
-  const clean = <O extends object>(obj: O) =>
-    Object.fromEntries(
-      Object.entries(obj).filter(([, v]) => v != null && typeof v !== "function"),
-    ) as O;
-  return { ...clean(credential), response: clean(credential.response) };
+  return cleanValue(credential) as T;
 }
 
 async function createCredential(options: RegistrationOptions) {
@@ -102,89 +122,35 @@ export function usePasskeys(args: UseNativePasskeysArgs) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [supported, setSupported] = React.useState(false);
-  const [registrationOptions, setRegistrationOptions] = React.useState<RegistrationOptions | null>(
-    null,
-  );
-  const [authenticationOptions, setAuthenticationOptions] =
-    React.useState<AuthenticationOptions | null>(null);
 
   React.useEffect(() => {
     setSupported(isSupported());
   }, []);
 
-  React.useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    void (async () => {
-      try {
-        const regPromise =
-          userId && identifier
-            ? generateRegistrationOptions({
-                userId,
-                identifier,
-                displayName: identifier,
-              })
-            : Promise.resolve(null);
-        const [regOpts, authOpts] = await Promise.all([
-          regPromise,
-          generateAuthenticationOptions({
-            userId,
-          }),
-        ]);
-        if (!cancelled) {
-          setRegistrationOptions(regOpts as RegistrationOptions | null);
-          setAuthenticationOptions(authOpts as AuthenticationOptions | null);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load passkey options");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, identifier, generateRegistrationOptions, generateAuthenticationOptions]);
-
   const register = React.useCallback(
     async (name: string) => {
-      if (!registrationOptions) {
-        throw new Error("Passkey registration options are not ready");
-      }
       if (!userId || !identifier) {
         throw new Error("Passkey registration requires a user and identifier");
       }
       setLoading(true);
       setError(null);
       try {
-        const response = await createCredential(registrationOptions);
+        const options = (await generateRegistrationOptions({
+          userId,
+          identifier,
+          displayName: identifier,
+        })) as RegistrationOptions;
+        const response = await createCredential(options);
         if (response === null) {
           throw new Error("Passkey registration was cancelled");
         }
         await verifyRegistration({
           userId,
           identifier,
-          challenge: registrationOptions.challenge as string,
+          challenge: options.challenge as string,
           response: toSerializableCredential(response),
           name,
         });
-        // Refresh both option sets — a new challenge for the next ceremony and
-        // fresh allowCredentials containing the just-registered credential.
-        const [regOpts, authOpts] = await Promise.all([
-          generateRegistrationOptions({
-            userId,
-            identifier,
-            displayName: identifier,
-          }),
-          generateAuthenticationOptions({ userId }),
-        ]);
-        setRegistrationOptions(regOpts as RegistrationOptions | null);
-        setAuthenticationOptions(authOpts as AuthenticationOptions | null);
       } catch (err) {
         const message = err instanceof Error ? err.message : "Registration failed";
         setError(message);
@@ -193,34 +159,29 @@ export function usePasskeys(args: UseNativePasskeysArgs) {
         setLoading(false);
       }
     },
-    [
-      registrationOptions,
-      verifyRegistration,
-      userId,
-      identifier,
-      generateRegistrationOptions,
-      generateAuthenticationOptions,
-    ],
+    [generateRegistrationOptions, verifyRegistration, userId, identifier],
   );
 
   const signIn = React.useCallback(async () => {
-    if (!authenticationOptions) {
-      throw new Error("Passkey authentication options are not ready");
-    }
     setLoading(true);
     setError(null);
     try {
-      const response = await getCredential(authenticationOptions);
+      const options = (await generateAuthenticationOptions({
+        userId,
+      })) as AuthenticationOptions;
+      const response = await getCredential(options);
       if (response === null) {
         throw new Error("Passkey authentication was cancelled");
       }
       const result = await verifyAuthentication({
-        challenge: authenticationOptions.challenge as string,
+        challenge: options.challenge as string,
         response: toSerializableCredential(response),
       });
-      ctx.setToken(result.token);
-      ctx.setRefreshToken(result.refreshToken);
-      ctx.setSessionId(result.sessionId);
+      if (result.token && result.refreshToken && result.sessionId) {
+        ctx.setToken(result.token);
+        ctx.setRefreshToken(result.refreshToken);
+        ctx.setSessionId(result.sessionId);
+      }
       return result;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Authentication failed";
@@ -229,7 +190,7 @@ export function usePasskeys(args: UseNativePasskeysArgs) {
     } finally {
       setLoading(false);
     }
-  }, [authenticationOptions, verifyAuthentication, ctx]);
+  }, [generateAuthenticationOptions, verifyAuthentication, ctx, userId]);
 
   const revoke = React.useCallback(
     async (credentialId: string) => {
