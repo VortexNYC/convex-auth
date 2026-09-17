@@ -487,20 +487,22 @@ function PasskeySection({ userId, identifier }: { userId?: string; identifier?: 
   return (
     <View className="w-full max-w-md self-center mt-4 rounded-xl border border-border bg-card p-4">
       <Text className="text-sm font-semibold text-card-foreground">Passkeys</Text>
-      {passkeys.passkeys.map((passkey) => (
-        <View key={passkey.credentialId} className="mt-2 flex-row items-center justify-between">
-          <Text className="text-xs text-muted-foreground">
-            {passkey.name ?? passkey.credentialId}
-          </Text>
-          <Pressable
-            onPress={() => void passkeys.revoke(passkey.credentialId)}
-            accessibilityRole="button"
-            accessibilityLabel={`Revoke ${passkey.name ?? "passkey"}`}
-          >
-            <Text className="text-xs font-semibold text-destructive">Revoke</Text>
-          </Pressable>
-        </View>
-      ))}
+      {passkeys.passkeys
+        .filter((passkey) => !passkey.revoked)
+        .map((passkey) => (
+          <View key={passkey.credentialId} className="mt-2 flex-row items-center justify-between">
+            <Text className="text-xs text-muted-foreground">
+              {passkey.name ?? passkey.credentialId}
+            </Text>
+            <Pressable
+              onPress={() => void passkeys.revoke(passkey.credentialId)}
+              accessibilityRole="button"
+              accessibilityLabel={`Revoke ${passkey.name ?? "passkey"}`}
+            >
+              <Text className="text-xs font-semibold text-destructive">Revoke</Text>
+            </Pressable>
+          </View>
+        ))}
       {passkeys.error ? (
         <Text className="mt-2 text-xs text-destructive">{passkeys.error}</Text>
       ) : null}

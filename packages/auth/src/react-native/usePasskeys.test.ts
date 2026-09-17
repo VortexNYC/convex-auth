@@ -206,6 +206,42 @@ describe("react-native usePasskeys", () => {
     await expect(result.current.signIn()).rejects.toThrow("Credential Manager unavailable");
   });
 
+  it("strips functions and null fields from ceremony responses before verification", async () => {
+    const ceremonyResponse = {
+      id: "cred_1",
+      rawId: "cred_1",
+      authenticatorAttachment: null,
+      response: {
+        clientDataJSON: "client",
+        attestationObject: "attestation",
+        transports: null,
+        getPublicKey: () => "pk",
+      },
+    };
+    createMock.mockResolvedValue(ceremonyResponse);
+    const { result } = renderHook(() => usePasskeys(args), {
+      wrapper: wrapper(makeCtx()),
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(() => result.current.register("My iPhone"));
+
+    expect(verifyRegistration).toHaveBeenCalledWith({
+      userId: "user_1",
+      identifier: "user@example.com",
+      challenge: "reg-challenge",
+      response: {
+        id: "cred_1",
+        rawId: "cred_1",
+        response: {
+          clientDataJSON: "client",
+          attestationObject: "attestation",
+        },
+      },
+      name: "My iPhone",
+    });
+  });
+
   it("reports unsupported devices", async () => {
     isSupportedMock.mockReturnValueOnce(false);
     const { result } = renderHook(() => usePasskeys(args), {
