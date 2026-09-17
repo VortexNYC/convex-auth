@@ -41,6 +41,13 @@ vi.mock("convex/react", () => ({
 import { ConvexAuthContext } from "./ConvexAuthProvider.js";
 import { usePasskeys } from "./usePasskeys";
 
+const registrationOptions = {
+  challenge: "reg-challenge",
+  rp: { id: "example.com", name: "Example" },
+  user: { id: "dXNlcjE", name: "user@example.com", displayName: "user@example.com" },
+  pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+};
+
 const authenticationOptions = {
   challenge: "auth-challenge",
   rpId: "example.com",
@@ -80,6 +87,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   browserSupportsWebAuthnMock.mockReturnValue(true);
+  generateRegistrationOptions.mockResolvedValue(registrationOptions);
   generateAuthenticationOptions.mockResolvedValue(authenticationOptions);
 });
 
@@ -90,6 +98,39 @@ describe("web usePasskeys", () => {
     await waitFor(() => expect(result.current.supported).toBe(true));
     expect(generateRegistrationOptions).not.toHaveBeenCalled();
     expect(generateAuthenticationOptions).not.toHaveBeenCalled();
+  });
+
+  it("fetches a fresh challenge for each registration ceremony", async () => {
+    startRegistrationMock.mockResolvedValue({ id: "cred_1", rawId: "cred_1", response: {} });
+    generateRegistrationOptions
+      .mockResolvedValueOnce({ ...registrationOptions, challenge: "reg-challenge-1" })
+      .mockResolvedValueOnce({ ...registrationOptions, challenge: "reg-challenge-2" });
+    const { result } = renderHook(() => usePasskeys(args), { wrapper: wrapper(makeCtx()) });
+    await waitFor(() => expect(result.current.supported).toBe(true));
+
+    await act(() => result.current.register("One"));
+    await act(() => result.current.register("Two"));
+
+    expect(startRegistrationMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        optionsJSON: expect.objectContaining({ challenge: "reg-challenge-1" }),
+      }),
+    );
+    expect(startRegistrationMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        optionsJSON: expect.objectContaining({ challenge: "reg-challenge-2" }),
+      }),
+    );
+    expect(verifyRegistration).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ challenge: "reg-challenge-1" }),
+    );
+    expect(verifyRegistration).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ challenge: "reg-challenge-2" }),
+    );
   });
 
   it("signs in through the browser ceremony and stores the session tokens", async () => {
