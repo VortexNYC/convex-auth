@@ -44,19 +44,15 @@ async function revokePasskeySessions(
   passkey: { userId: string; credentialId: string },
   now: number,
 ) {
-  const { page: userSessions } = await getPage(ctx, {
+  const { page: credentialSessions } = await getPage(ctx, {
     table: "authSessions",
-    index: "by_user",
-    startIndexKey: [passkey.userId],
-    endIndexKey: [passkey.userId],
-    absoluteMaxRows: MAX_FAMILY_MEMBERS,
+    index: "by_credential_id",
+    startIndexKey: [passkey.credentialId],
+    endIndexKey: [passkey.credentialId],
+    absoluteMaxRows: MAX_USER_PASSKEY_ROWS,
     schema,
   });
-  const familyIds = new Set(
-    userSessions
-      .filter((s) => s.credentialId === passkey.credentialId)
-      .map((s) => s.familyId ?? s.sessionId),
-  );
+  const familyIds = new Set(credentialSessions.map((s) => s.familyId ?? s.sessionId));
   for (const familyId of familyIds) {
     const [{ page: familySessions }, { page: familyTokens }] = await Promise.all([
       getPage(ctx, {
@@ -83,16 +79,6 @@ async function revokePasskeySessions(
     }
   }
   return familyIds.size;
-}
-
-function signCountFromAuthData(authenticatorData: string): number | null {
-  try {
-    const bytes = base64urlToBytes(authenticatorData);
-    if (bytes.length < 37) return null;
-    return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(33, false);
-  } catch {
-    return null;
-  }
 }
 
 const registrationResponseValidator = v.object({
@@ -160,6 +146,8 @@ export const generatePasskeyRegistrationOptions = mutation({
       transports: pk.transports ?? [],
     }));
 
+    const userVerification = args.userVerification ?? "required";
+
     const options = await generateRegistrationOptions({
       rpName: args.rpName,
       rpID: args.rpID,
@@ -170,7 +158,7 @@ export const generatePasskeyRegistrationOptions = mutation({
       excludeCredentials,
       authenticatorSelection: {
         residentKey: args.residentKey ?? "preferred",
-        userVerification: args.userVerification ?? "required",
+        userVerification,
         authenticatorAttachment: args.authenticatorAttachment ?? undefined,
       },
     });
@@ -182,6 +170,7 @@ export const generatePasskeyRegistrationOptions = mutation({
       identifier,
       rpID: args.rpID,
       origin: args.origin === undefined ? undefined : [args.origin].flat(),
+      userVerification,
       expiresAt: now + CHALLENGE_TTL_MS,
       createdAt: now,
     });
@@ -220,13 +209,6 @@ export const verifyPasskeyRegistration = mutation({
     if (challengeRecord.userId !== args.userId) {
       throw new Error("Challenge does not belong to this user");
     }
-    if (
-      args.identifier !== undefined &&
-      challengeRecord.identifier !== undefined &&
-      args.identifier !== challengeRecord.identifier
-    ) {
-      throw new Error("Challenge does not belong to this identifier");
-    }
     if (challengeRecord.expiresAt < now) {
       await ctx.db.delete(challengeRecord._id);
       throw new Error("Registration challenge has expired");
@@ -252,13 +234,16 @@ export const verifyPasskeyRegistration = mutation({
     const expectedRPID = challengeRecord.rpID ?? args.rpID;
     const expectedOrigin = challengeRecord.origin ?? args.origin;
     const identifier = challengeRecord.identifier ?? args.identifier ?? "";
+    const requireUserVerification = challengeRecord.userVerification
+      ? challengeRecord.userVerification === "required"
+      : (args.requireUserVerification ?? true);
 
     const verification = await verifyRegistrationResponse({
       response: args.response as RegistrationResponseJSON,
       expectedChallenge: args.challenge,
       expectedOrigin,
       expectedRPID,
-      requireUserVerification: args.requireUserVerification ?? true,
+      requireUserVerification,
     });
 
     if (!verification.verified) {
@@ -474,11 +459,13 @@ export const generatePasskeyAuthenticationOptions = mutation({
         }));
     }
 
+    const userVerification = args.userVerification ?? "required";
+
     const options = await generateAuthenticationOptions({
       rpID: args.rpID,
       challenge,
       allowCredentials,
-      userVerification: args.userVerification ?? "required",
+      userVerification,
     });
 
     await ctx.db.insert("auth_passkey_challenges", {
@@ -488,6 +475,7 @@ export const generatePasskeyAuthenticationOptions = mutation({
       identifier: undefined,
       rpID: args.rpID,
       origin: args.origin === undefined ? undefined : [args.origin].flat(),
+      userVerification,
       expiresAt: now + CHALLENGE_TTL_MS,
       createdAt: now,
     });
@@ -506,24 +494,6 @@ const TWO_FACTOR_SESSION_ID = "__two_factor";
 // specific failure so the caller can treat it as cloned-credential evidence.
 export function isCounterRegressionError(err: unknown): boolean {
   return err instanceof Error && /Response counter value .*lower than expected/.test(err.message);
-}
-
-const NON_COUNTER_VERIFY_ERROR =
-  /signature|challenge|origin|rp.?id|user.?verification|ceremony|attestation|fmt|unsupported/i;
-
-export function isClonedCredentialError(
-  err: unknown,
-  storedCounter: number,
-  response: { response: { authenticatorData: string } },
-): boolean {
-  if (isCounterRegressionError(err)) {
-    return true;
-  }
-  if (!(err instanceof Error) || NON_COUNTER_VERIFY_ERROR.test(err.message)) {
-    return false;
-  }
-  const presented = signCountFromAuthData(response.response.authenticatorData);
-  return presented !== null && storedCounter > 0 && presented <= storedCounter;
 }
 
 export const verifyPasskeyAuthentication = mutation({
@@ -581,6 +551,9 @@ export const verifyPasskeyAuthentication = mutation({
 
     const expectedRPID = challengeRecord.rpID ?? args.rpID;
     const expectedOrigin = challengeRecord.origin ?? args.origin;
+    const requireUserVerification = challengeRecord.userVerification
+      ? challengeRecord.userVerification === "required"
+      : (args.requireUserVerification ?? true);
 
     let verification;
     try {
@@ -595,13 +568,15 @@ export const verifyPasskeyAuthentication = mutation({
           counter: passkey.counter,
           transports: passkey.transports ?? [],
         },
-        requireUserVerification: args.requireUserVerification ?? true,
+        requireUserVerification,
       });
     } catch (err) {
       // SimpleWebAuthn throws on a non-increasing signature counter — a
-      // cloned authenticator signal. Revoke the credential, retire the
-      // sessions it minted, and fail closed.
-      if (isClonedCredentialError(err, passkey.counter, args.response)) {
+      // cloned authenticator signal. Only that post-signature error is
+      // trustworthy here: bytes decoded from an unverified response are
+      // attacker-controlled and would turn revocation into a DoS vector.
+      // Revoke the credential, retire the sessions it minted, and fail closed.
+      if (isCounterRegressionError(err)) {
         await ctx.db.patch(passkey._id, { revokedAt: now });
         await revokePasskeySessions(ctx, passkey, now);
         await ctx.db.insert("auth_audit_events", {

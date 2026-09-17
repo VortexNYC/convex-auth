@@ -244,6 +244,55 @@ describe("native sessions", () => {
     expect(newRefresh?.familyId).toBe("session-1");
   });
 
+  it("rotateSession carries credentialId onto the rotated-in session", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    await insertIdentity(t, userId);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authSessions", {
+        sessionId: "session-1",
+        userId,
+        token: "token-1",
+        familyId: "fam-1",
+        expiresAt: now + 1_000_000,
+        credentialId: "cred-1",
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "old-hash",
+        sessionId: "session-1",
+        userId,
+        familyId: "fam-1",
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "old-hash",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "new-hash",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+
+    const newSession = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-2"))
+        .unique(),
+    );
+    expect(newSession?.credentialId).toBe("cred-1");
+    expect(newSession?.familyId).toBe("fam-1");
+  });
+
   it("replaying a rotated-out refresh token revokes the whole session family", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);

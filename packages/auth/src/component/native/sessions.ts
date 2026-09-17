@@ -358,6 +358,7 @@ export const rotateSession = mutation({
       expiresAt: args.newSessionExpiresAt,
       ipAddress: args.newSessionIpAddress,
       userAgent: args.newSessionUserAgent,
+      credentialId: session.credentialId,
       revokedAt: undefined,
       createdAt: now,
       updatedAt: now,

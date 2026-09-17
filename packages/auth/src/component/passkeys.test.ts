@@ -4,7 +4,7 @@ import { describe, expect, it, beforeAll } from "vitest";
 import { convexTest } from "convex-test";
 import { api } from "./_generated/api.js";
 import schema from "./schema.js";
-import { isClonedCredentialError, isCounterRegressionError } from "./passkeys.js";
+import { isCounterRegressionError } from "./passkeys.js";
 
 const modules = import.meta.glob("./**/*.*s");
 
@@ -66,6 +66,26 @@ describe("passkeys", () => {
     expect(challenges).toHaveLength(1);
     expect(challenges[0]!.type).toBe("registration");
     expect(challenges[0]!.identifier).toBe("shlomo@example.com");
+  });
+
+  it("binds the challenge identifier to the server-side user record", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    const options = (await t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
+      userId,
+      identifier: "attacker-supplied@example.com",
+      rpName: RP_NAME,
+      rpID: RP_ID,
+    })) as { challenge: string };
+
+    const challenge = await t.run(async (ctx) =>
+      ctx.db
+        .query("auth_passkey_challenges")
+        .withIndex("by_challenge", (q) => q.eq("challenge", options.challenge))
+        .first(),
+    );
+    expect(challenge?.identifier).toBe("shlomo@example.com");
   });
 
   it("lists and revokes passkeys for a user", async () => {
@@ -448,7 +468,7 @@ describe("passkeys", () => {
     expect(challenges).toHaveLength(1);
   });
 
-  it("rejects a registration verify whose identifier does not match the challenge", async () => {
+  it("ignores a caller-supplied identifier that differs from the challenge-bound one", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
 
@@ -459,8 +479,8 @@ describe("passkeys", () => {
       rpID: RP_ID,
     })) as { challenge: string };
 
-    await expect(
-      t.mutation(api.passkeys.verifyPasskeyRegistration, {
+    const err = await t
+      .mutation(api.passkeys.verifyPasskeyRegistration, {
         userId,
         identifier: "attacker@example.com",
         challenge: options.challenge,
@@ -472,8 +492,10 @@ describe("passkeys", () => {
         },
         rpID: RP_ID,
         origin: ORIGIN,
-      }),
-    ).rejects.toThrow("does not belong to this identifier");
+      })
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).not.toContain("identifier");
   });
 
   it("does not enumerate a user's credentials unless explicitly authorized", async () => {
@@ -673,33 +695,6 @@ describe("passkeys", () => {
     );
     expect(challenge?.rpID).toBe(RP_ID);
     expect(challenge?.origin).toEqual([ORIGIN, "https://other.example.com"]);
-  });
-
-  it("detects cloned credentials from the decoded sign counter", () => {
-    const authDataWithCounter = (counter: number) => {
-      const bytes = new Uint8Array(37);
-      new DataView(bytes.buffer).setUint32(33, counter, false);
-      let binary = "";
-      for (const b of bytes) binary += String.fromCharCode(b);
-      return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-    };
-    const response = (counter: number) => ({
-      response: { authenticatorData: authDataWithCounter(counter) },
-    });
-
-    expect(
-      isClonedCredentialError(
-        new Error("Response counter value 4 was lower than expected 9"),
-        9,
-        response(4),
-      ),
-    ).toBe(true);
-    expect(isClonedCredentialError(new Error("some unknown failure"), 9, response(4))).toBe(true);
-    expect(
-      isClonedCredentialError(new Error("signature verification failed"), 9, response(4)),
-    ).toBe(false);
-    expect(isClonedCredentialError(new Error("unknown"), 0, response(0))).toBe(false);
-    expect(isClonedCredentialError(new Error("unknown"), 9, response(10))).toBe(false);
   });
 
   it("re-checks the per-user cap at verify time, not only at options time", async () => {

@@ -39,6 +39,7 @@ export const authSessions = defineTable({
   .index("by_family", ["familyId"])
   .index("by_token", ["token"])
   .index("by_user", ["userId"])
+  .index("by_credential_id", ["credentialId"])
   .index("by_expires_at", ["expiresAt"]);
 
 export const authRefreshTokens = defineTable({
