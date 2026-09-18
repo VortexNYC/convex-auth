@@ -413,8 +413,12 @@ Adapter-level (upstream's bar is `test-nextjs/e2e-tests` — match it):
    fields, so `familyId`/`rotatedAt`/`graceRedemptions` rows threw
    `ReturnsValidationError` at the function boundary — action-level tests
    dispatch `runQuery` to raw handlers and never see returns validation.
-   Fixed in `bd99c20`; the adapter E2E items below remain the only open
-   proof tier.
+   Fixed in `bd99c20`. The live-session cap was exercised the same way:
+   a second race on a rotated sibling drove the family to exactly ten
+   live sessions, after which further converges were refused without
+   harming the family. All grace bounds (8 redemptions, 10 live, 15s
+   window) are now proven on real OCC; the adapter E2E items below remain
+   the only open proof tier.
 
 3. Next.js adapter (#321) — delegated, using upstream's layout as the
    template and this contract for the deltas.

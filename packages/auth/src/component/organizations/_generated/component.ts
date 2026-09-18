@@ -499,7 +499,10 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             _id: string;
             createdAt: number;
             expiresAt: number;
+            familyId?: string;
+            graceRedemptions?: number;
             revokedAt?: number;
+            rotatedAt?: number;
             sessionId: string;
             tokenHash: string;
             updatedAt: number;
@@ -528,7 +531,10 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             _id: string;
             createdAt: number;
             expiresAt: number;
+            familyId?: string;
+            graceRedemptions?: number;
             revokedAt?: number;
+            rotatedAt?: number;
             sessionId: string;
             tokenHash: string;
             updatedAt: number;
