@@ -216,7 +216,7 @@ describe("admin sessions", () => {
     const t = convexTest(schema, modules);
     const adminId = await insertUser(t, "admin@example.com", "Admin", true);
     const userId = await insertUser(t, "user@example.com", "User");
-    await insertNativeIdentity(t, userId);
+    const identityDocId = await insertNativeIdentity(t, userId);
 
     const result = await t
       .withIdentity({ subject: adminId })
@@ -233,6 +233,16 @@ describe("admin sessions", () => {
       });
     expect(session?.impersonatedBy).toBe(String(adminId));
     expect(session?.userId).toBe(String(userId));
+
+    // The impersonated session carries the impersonated user's identity so
+    // the refresh path can resolve it column-first.
+    const sessionRow = await t.run((ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", result.sessionId))
+        .unique(),
+    );
+    expect(sessionRow?.identityId).toBe(identityDocId);
 
     const audits = await t.run((ctx) =>
       ctx.db

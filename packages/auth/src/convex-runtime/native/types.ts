@@ -408,7 +408,7 @@ export type NativeEmailAndPasswordComponentHandle = {
           sessionId: string;
           familyId?: string;
           userId: string;
-          identityId?: string;
+          identityId: string;
           token: string;
           credentialId?: string;
           sessionExpiresAt: number;

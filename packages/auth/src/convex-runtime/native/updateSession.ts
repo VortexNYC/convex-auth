@@ -19,9 +19,11 @@ function identityIdFromSessionToken(token: string): Id<"auth_identities"> | unde
   }
   try {
     const payload = JSON.parse(new TextDecoder().decode(base64urlToBytes(parts[1]))) as {
-      identityId?: string;
+      identityId?: unknown;
     };
-    return payload.identityId as Id<"auth_identities"> | undefined;
+    return typeof payload.identityId === "string"
+      ? (payload.identityId as Id<"auth_identities">)
+      : undefined;
   } catch {
     return undefined;
   }
@@ -71,8 +73,9 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
   if (!user) {
     throw new Error("User not found");
   }
-  // The identity claim must belong to the refresh token's user — the
-  // converge path never re-checks this inside the component.
+  // The identity must belong to the refresh token's user. convergeSession
+  // re-checks this inside the mutation; this earlier check keeps the action
+  // from minting a candidate pair it can never commit.
   if (!identity || identity.userId !== refresh.userId) {
     throw new Error("Identity not found");
   }

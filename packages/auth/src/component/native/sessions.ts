@@ -26,9 +26,11 @@ function identityIdFromSessionToken(token: string): Id<"auth_identities"> | unde
   }
   try {
     const payload = JSON.parse(new TextDecoder().decode(base64urlToBytes(parts[1]))) as {
-      identityId?: string;
+      identityId?: unknown;
     };
-    return payload.identityId as Id<"auth_identities"> | undefined;
+    return typeof payload.identityId === "string"
+      ? (payload.identityId as Id<"auth_identities">)
+      : undefined;
   } catch {
     return undefined;
   }
@@ -103,7 +105,7 @@ export const createSessionAndRefreshToken = mutation({
     sessionId: v.string(),
     familyId: v.optional(v.string()),
     userId: v.id("users"),
-    identityId: v.optional(v.id("auth_identities")),
+    identityId: v.id("auth_identities"),
     token: v.string(),
     credentialId: v.optional(v.string()),
     sessionExpiresAt: v.number(),
@@ -522,6 +524,25 @@ export const convergeSession = mutation({
       return null;
     }
 
+    // Same resolution as rotateSession — the converged row feeds the next
+    // rotation, so an absent or foreign identity here would stick. Resolve
+    // the predecessor's column, then its JWT claim, verify the identity
+    // belongs to this user, and fail closed rather than mint an identity-
+    // less sibling.
+    const sessionIdentityId =
+      session?.identityId ?? (session ? identityIdFromSessionToken(session.token) : undefined);
+    let identity: Doc<"auth_identities"> | null = null;
+    if (sessionIdentityId) {
+      try {
+        identity = await ctx.db.get("auth_identities", sessionIdentityId);
+      } catch {
+        identity = null;
+      }
+    }
+    if (!identity || identity.userId !== refresh.userId) {
+      return null;
+    }
+
     await ctx.db.patch(refresh._id, {
       graceRedemptions: (refresh.graceRedemptions ?? 0) + 1,
       updatedAt: now,
@@ -530,8 +551,7 @@ export const convergeSession = mutation({
       sessionId: args.newSessionId,
       familyId,
       userId: refresh.userId,
-      identityId:
-        session?.identityId ?? (session ? identityIdFromSessionToken(session.token) : undefined),
+      identityId: identity._id,
       token: args.newSessionToken,
       expiresAt: args.newSessionExpiresAt,
       ipAddress: args.newSessionIpAddress,

@@ -79,7 +79,7 @@ describe("deleteUser", () => {
   it("deletes direct auth records owned by a user", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t, "alice@example.com", "Alice");
-    await insertIdentity(t, userId, "alice-subject");
+    const identityDocId = await insertIdentity(t, userId, "alice-subject");
     await t.mutation(api.native.accounts.createAccount, {
       userId,
       provider: "password",
@@ -90,6 +90,7 @@ describe("deleteUser", () => {
     await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
       sessionId: "session-1",
       userId,
+      identityId: identityDocId,
       token: "session-token",
       sessionExpiresAt: 1_000_000,
       refreshTokenHash: "refresh-hash",

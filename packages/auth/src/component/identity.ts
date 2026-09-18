@@ -279,6 +279,7 @@ export const provisionFromIdentity = mutation({
       await ctx.db.insert("authSessions", {
         sessionId: args.initialSession.sessionId,
         userId,
+        identityId,
         token,
         expiresAt: args.initialSession.sessionExpiresAt,
         ipAddress: undefined,

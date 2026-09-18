@@ -602,7 +602,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "mutation",
           "internal",
           {
-            identityId?: string;
+            identityId: string;
             refreshTokenExpiresAt: number;
             refreshTokenHash: string;
             sessionExpiresAt: number;

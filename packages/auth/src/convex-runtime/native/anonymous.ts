@@ -68,7 +68,7 @@ export type NativeAnonymousComponentHandle = {
         {
           sessionId: string;
           userId: string;
-          identityId?: string;
+          identityId: string;
           token: string;
           sessionExpiresAt: number;
           refreshTokenHash: string;
