@@ -329,8 +329,10 @@ items landed in PR #343:
   unauthenticated even when the JWT is structurally valid and unexpired.
 - ~~Provider-agnostic refresh: a session minted via a non-password identity
   (OAuth/passkey) rotates successfully through the refresh path~~ ✅ —
-  `authSessions` stores `identityId` at mint; pre-column rows resolve via the
-  session-JWT claim; `getIdentityById` resolves the doc.
+  `authSessions` stores `identityId` at every mint site and rotates it
+  forward; pre-column rows resolve via the session-JWT claim as a
+  transitional path; `getIdentityById` resolves the doc; sessions with
+  neither source fail closed — no provider/issuer guessing.
 - Session-minting action → token pair round-trips through an HTTP transport
   client, identical to websocket behavior.
 - 2FA pending token: mint → proxy-style substitution → verify → session;
@@ -373,13 +375,20 @@ Adapter-level (upstream's bar is `test-nextjs/e2e-tests` — match it):
    refresh; interacts with Convex prefetch and request fan-out.
 4. **JWT/session TTL decoupling** — only if refresh-on-expiry is ever in
    scope; out of scope for the first adapters.
+5. **`authSessions.identityId` optional → required** — optional now because
+   existing deployments hold pre-column rows; rotation propagates the column
+   forward, so ~one refresh-TTL (30d) after release every live session
+   carries it. Follow-up: backfill live rows or flip the validator to
+   required in a breaking release, then delete the JWT-claim transitional
+   path.
 
 ## Sequencing
 
 1. This contract reviewed (Cursor — done; CodeRabbit on PR #342).
 2. ~~**Blocking component work**~~ — landed in PR #343: `rotateSession`
    convergence + `convergeSession` + provider-agnostic refresh via the
-   session-JWT identity claim, with the component-level tests above.
+   `authSessions.identityId` column (JWT claim is the transitional path for
+   pre-column rows), with the component-level tests above.
    Remaining before adapters: the HTTP-transport round-trip and 2FA
    pending-token items in the test plan.
 3. Next.js adapter (#321) — delegated, using upstream's layout as the
