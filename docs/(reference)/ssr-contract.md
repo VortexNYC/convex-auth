@@ -399,10 +399,23 @@ Adapter-level (upstream's bar is `test-nextjs/e2e-tests` — match it):
    convergence + `convergeSession` + provider-agnostic refresh via the
    `authSessions.identityId` column (JWT claim is the transitional path for
    pre-column rows), with the component-level tests above. All
-   component-level contract items are now covered; the adapter-level E2E
-   items remain — including the two-parallel-SSR-requests race proof, which
-   is where true OCC contention gets exercised (convex-test serializes
-   mutations, so the race is only provable against a real deployment).
+   component-level contract items are now covered.
+
+   **Real-deployment validation (fast-gopher-450, 2026-09-18):** the
+   parallel-refresh race was exercised over HTTP on a live Convex
+   deployment — eight simultaneous `update-session` calls on one refresh
+   token produced one rotation and seven converged siblings, all bound to
+   the correct identity. The grace cap refused the ninth in-window
+   presentation without revoking the family, and an out-of-window replay
+   revoked the family end-to-end (subsequent session verification returned
+   null). It also caught a bug no in-repo test could:
+   `getRefreshTokenByTokenHash`'s returns validator predated the rotation
+   fields, so `familyId`/`rotatedAt`/`graceRedemptions` rows threw
+   `ReturnsValidationError` at the function boundary — action-level tests
+   dispatch `runQuery` to raw handlers and never see returns validation.
+   Fixed in `bd99c20`; the adapter E2E items below remain the only open
+   proof tier.
+
 3. Next.js adapter (#321) — delegated, using upstream's layout as the
    template and this contract for the deltas.
 4. TanStack Start adapter — after the Router example (#341) merges and the
