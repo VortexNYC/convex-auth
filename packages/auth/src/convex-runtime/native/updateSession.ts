@@ -9,10 +9,9 @@ import { toNativeAuthUser } from "./types.js";
 const DEFAULT_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-// The session JWT carries the identity it was minted with as a claim, so any
-// provider's session (password, OAuth, passkey) can resolve it without
-// guessing provider/issuer. Sessions minted before the claim existed fall
-// back to the password/native lookup below.
+// The session JWT carries the identity it was minted with as a claim — the
+// transitional resolution path for sessions minted before authSessions gained
+// the identityId column.
 function identityIdFromSessionToken(token: string): Id<"auth_identities"> | undefined {
   const parts = token.split(".");
   if (parts.length !== 3) {
