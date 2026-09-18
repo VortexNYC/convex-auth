@@ -210,6 +210,7 @@ export type NativeRefreshTokenDoc = {
   _creationTime?: number;
   tokenHash: string;
   sessionId: string;
+  familyId?: string;
   userId: string;
   expiresAt: number;
   revokedAt?: number;

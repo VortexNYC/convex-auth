@@ -264,6 +264,7 @@ export const impersonateUser = mutation({
 
     await ctx.db.insert("authSessions", {
       sessionId,
+      familyId: sessionId,
       userId: args.userId,
       identityId: identityRecord._id,
       token,
@@ -276,6 +277,7 @@ export const impersonateUser = mutation({
     await ctx.db.insert("authRefreshTokens", {
       tokenHash: refreshTokenHash,
       sessionId,
+      familyId: sessionId,
       userId: args.userId,
       expiresAt,
       createdAt: now,

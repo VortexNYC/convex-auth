@@ -270,6 +270,7 @@ export const provisionFromIdentity = mutation({
       await ctx.db.insert("authRefreshTokens", {
         tokenHash: args.initialSession.refreshTokenHash,
         sessionId: args.initialSession.sessionId,
+        familyId: args.initialSession.sessionId,
         userId,
         expiresAt: args.initialSession.refreshTokenExpiresAt,
         revokedAt: undefined,
@@ -278,6 +279,7 @@ export const provisionFromIdentity = mutation({
       });
       await ctx.db.insert("authSessions", {
         sessionId: args.initialSession.sessionId,
+        familyId: args.initialSession.sessionId,
         userId,
         identityId,
         token,

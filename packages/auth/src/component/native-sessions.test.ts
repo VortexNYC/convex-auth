@@ -1176,6 +1176,88 @@ describe("native sessions", () => {
     expect(predecessor?.graceRedemptions ?? 0).toBe(0);
   });
 
+  it("propagates impersonatedBy through rotation and convergence", async () => {
+    // An impersonated session must not silently lose impersonation on
+    // refresh — getImpersonationState reads it off the session row.
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const adminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "admin@example.com",
+        name: "Admin",
+        emailVerified: true,
+        isActive: true,
+        isSuperAdmin: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authSessions", {
+        sessionId: "session-1",
+        familyId: "session-1",
+        userId,
+        identityId: identityDocId,
+        impersonatedBy: adminId,
+        token: "token-1",
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-1",
+        sessionId: "session-1",
+        userId,
+        familyId: "session-1",
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const rotated = await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+    expect(rotated).not.toBeNull();
+
+    const rotatedSession = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-2"))
+        .unique(),
+    );
+    expect(rotatedSession?.impersonatedBy).toBe(adminId);
+
+    // A converged sibling of the impersonated session keeps it too.
+    const converged = await t.mutation(api.native.sessions.convergeSession, {
+      predecessorRefreshTokenHash: "hash-1",
+      newSessionId: "session-3",
+      newSessionToken: "token-3",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-3",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+    });
+    expect(converged).not.toBeNull();
+
+    const siblingSession = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-3"))
+        .unique(),
+    );
+    expect(siblingSession?.impersonatedBy).toBe(adminId);
+  });
+
   it("refuses convergence when the family exceeds the scan budget", async () => {
     // A truncated family scan cannot prove liveness or the live-session cap
     // exactly — the converge must refuse rather than mint on an undercount.
