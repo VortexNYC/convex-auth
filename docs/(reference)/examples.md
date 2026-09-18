@@ -35,6 +35,35 @@ const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
 </ConvexProvider>;
 ```
 
+## TanStack Router
+
+`examples/tanstack-router` is a Vite + React app using `@tanstack/react-router` with file-based routing. It shows the client-side auth integration pattern: `useSession()` state is mirrored into the router `context`, a pathless `_authed` layout guards protected routes in `beforeLoad` (redirecting to `/sign-in?redirect=…`), and `router.invalidate()` re-runs the guards on sign-in/sign-out.
+
+```tsx
+function InnerApp() {
+  const { isLoading, isAuthenticated } = useSession();
+  useEffect(() => {
+    void router.invalidate();
+  }, [isLoading, isAuthenticated]);
+  return <RouterProvider router={router} context={{ auth: { isLoading, isAuthenticated } }} />;
+}
+
+export const Route = createFileRoute("/_authed")({
+  beforeLoad: ({ context, location }) => {
+    if (context.auth.isLoading) return;
+    if (!context.auth.isAuthenticated) {
+      throw redirect({ to: "/sign-in", search: { redirect: location.href } });
+    }
+  },
+});
+```
+
+```bash
+cd examples/tanstack-router
+pnpm install
+pnpm run dev
+```
+
 ## Server with Hono
 
 `examples/server` shows email/password sign-in and OAuth redirect from a server using `hono` and `ConvexHttpClient`.
