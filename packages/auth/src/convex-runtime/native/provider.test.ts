@@ -1368,9 +1368,9 @@ describe("nativeEmailAndPassword", () => {
       component.native.sessions.convergeSession.mockResolvedValue(null);
 
       const { updateSession } = createActions(component);
-      await expect(
-        exec(updateSession).handler(createContext(), { refreshToken }),
-      ).rejects.toThrow("Invalid refresh token");
+      await expect(exec(updateSession).handler(createContext(), { refreshToken })).rejects.toThrow(
+        "Invalid refresh token",
+      );
     });
 
     it("rejects an unknown refresh token", async () => {
