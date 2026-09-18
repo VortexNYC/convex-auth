@@ -158,12 +158,13 @@ describe("native sessions", () => {
   it("rotateSession consumes the old refresh token and session and creates a new pair", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
-    await insertIdentity(t, userId);
+    const identityDocId = await insertIdentity(t, userId);
     const now = Date.now();
 
     await t.mutation(api.native.sessions.createSession, {
       sessionId: "session-1",
       userId,
+      identityId: identityDocId,
       token: "token-1",
       expiresAt: now + 1_000_000,
     });
@@ -226,12 +227,13 @@ describe("native sessions", () => {
   it("rotateSession propagates familyId to the rotated-in session and token", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
-    await insertIdentity(t, userId);
+    const identityDocId = await insertIdentity(t, userId);
     const now = Date.now();
 
     await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
       sessionId: "session-1",
       userId,
+      identityId: identityDocId,
       token: "token-1",
       sessionExpiresAt: now + 1_000_000,
       refreshTokenHash: "old-hash",
@@ -269,13 +271,14 @@ describe("native sessions", () => {
   it("rotateSession carries credentialId onto the rotated-in session", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
-    await insertIdentity(t, userId);
+    const identityDocId = await insertIdentity(t, userId);
     const now = Date.now();
 
     await t.run(async (ctx) => {
       await ctx.db.insert("authSessions", {
         sessionId: "session-1",
         userId,
+        identityId: identityDocId,
         token: "token-1",
         familyId: "fam-1",
         expiresAt: now + 1_000_000,
@@ -315,15 +318,16 @@ describe("native sessions", () => {
     expect(newSession?.familyId).toBe("fam-1");
   });
 
-  it("replaying a rotated-out refresh token revokes the whole session family", async () => {
+  it("replaying a rotated-out refresh token outside the grace window revokes the whole session family", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
-    await insertIdentity(t, userId);
+    const identityDocId = await insertIdentity(t, userId);
     const now = Date.now();
 
     await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
       sessionId: "session-1",
       userId,
+      identityId: identityDocId,
       token: "token-1",
       sessionExpiresAt: now + 1_000_000,
       refreshTokenHash: "hash-1",
@@ -341,7 +345,16 @@ describe("native sessions", () => {
       issuer: "native",
     });
 
-    // Attacker replays the spent token.
+    // Attacker replays the spent token after the rotation grace window has
+    // closed — inside the window it would converge instead (see tests below).
+    await t.run(async (ctx) => {
+      const spent = await ctx.db
+        .query("authRefreshTokens")
+        .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
+        .unique();
+      await ctx.db.patch(spent!._id, { rotatedAt: now - 60_000 });
+    });
+
     const replay = await t.mutation(api.native.sessions.rotateSession, {
       oldRefreshTokenHash: "hash-1",
       newSessionId: "session-3",
@@ -460,13 +473,14 @@ describe("native sessions", () => {
   it("replaying a rotated-out token does not touch other sessions for the user", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
-    await insertIdentity(t, userId);
+    const identityDocId = await insertIdentity(t, userId);
     const now = Date.now();
 
     // A second, unrelated sign-in (different device / family).
     await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
       sessionId: "other-session",
       userId,
+      identityId: identityDocId,
       token: "other-token",
       sessionExpiresAt: now + 1_000_000,
       refreshTokenHash: "other-hash",
@@ -476,6 +490,7 @@ describe("native sessions", () => {
     await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
       sessionId: "session-1",
       userId,
+      identityId: identityDocId,
       token: "token-1",
       sessionExpiresAt: now + 1_000_000,
       refreshTokenHash: "hash-1",
@@ -490,6 +505,14 @@ describe("native sessions", () => {
       newRefreshTokenExpiresAt: now + 1_000_000,
       provider: "password",
       issuer: "native",
+    });
+    // Age the spent token past the grace window so the replay revokes.
+    await t.run(async (ctx) => {
+      const spent = await ctx.db
+        .query("authRefreshTokens")
+        .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
+        .unique();
+      await ctx.db.patch(spent!._id, { rotatedAt: now - 60_000 });
     });
     await t.mutation(api.native.sessions.rotateSession, {
       oldRefreshTokenHash: "hash-1",
@@ -509,5 +532,825 @@ describe("native sessions", () => {
         .unique(),
     );
     expect(otherSession?.revokedAt).toBeUndefined();
+  });
+
+  it("re-presenting a just-rotated token inside the grace window converges instead of revoking", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+      sessionId: "session-1",
+      userId,
+      identityId: identityDocId,
+      token: "token-1",
+      sessionExpiresAt: now + 1_000_000,
+      refreshTokenHash: "hash-1",
+      refreshTokenExpiresAt: now + 1_000_000,
+    });
+    await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+
+    // The concurrent loser presents the same predecessor token.
+    const loser = await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-3",
+      newSessionToken: "token-3",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-3",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+    expect(loser).toBe("converge");
+
+    // The family must be intact: no mint happened yet, nothing revoked.
+    const [winner, winnerToken, noSession3] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-2"))
+          .unique(),
+        ctx.db
+          .query("authRefreshTokens")
+          .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-2"))
+          .unique(),
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-3"))
+          .unique(),
+      ]),
+    );
+    expect(winner?.revokedAt).toBeUndefined();
+    expect(winnerToken?.revokedAt).toBeUndefined();
+    expect(noSession3).toBeNull();
+  });
+
+  it("convergeSession mints a sibling pair in the family and audits the redemption", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+      sessionId: "session-1",
+      userId,
+      identityId: identityDocId,
+      token: "token-1",
+      sessionExpiresAt: now + 1_000_000,
+      refreshTokenHash: "hash-1",
+      refreshTokenExpiresAt: now + 1_000_000,
+    });
+    await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+
+    const converged = await t.mutation(api.native.sessions.convergeSession, {
+      predecessorRefreshTokenHash: "hash-1",
+      newSessionId: "session-3",
+      newSessionToken: "token-3",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-3",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+    });
+    expect(converged).toMatchObject({ user: { _id: userId } });
+
+    const [sibling, siblingToken, predecessor] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-3"))
+          .unique(),
+        ctx.db
+          .query("authRefreshTokens")
+          .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-3"))
+          .unique(),
+        ctx.db
+          .query("authRefreshTokens")
+          .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
+          .unique(),
+      ]),
+    );
+    expect(sibling?.familyId).toBe("session-1");
+    expect(sibling?.identityId).toBe(identityDocId);
+    expect(siblingToken?.familyId).toBe("session-1");
+    expect(predecessor?.graceRedemptions).toBe(1);
+
+    const auditEvents = await t.run(async (ctx) => ctx.db.query("auth_audit_events").take(10));
+    expect(auditEvents).toHaveLength(1);
+    expect(auditEvents[0]).toMatchObject({
+      actorType: "system",
+      eventType: "refresh_token_converged",
+      targetType: "session",
+      targetId: "session-1",
+      actorUserId: userId,
+    });
+  });
+
+  it("convergeSession returns null once the redemption cap is exhausted and keeps the family alive", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+      sessionId: "session-1",
+      userId,
+      identityId: identityDocId,
+      token: "token-1",
+      sessionExpiresAt: now + 1_000_000,
+      refreshTokenHash: "hash-1",
+      refreshTokenExpiresAt: now + 1_000_000,
+    });
+    await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+
+    // Simulate a predecessor that already converged the maximum number of
+    // parallel losers.
+    await t.run(async (ctx) => {
+      const spent = await ctx.db
+        .query("authRefreshTokens")
+        .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
+        .unique();
+      await ctx.db.patch(spent!._id, { graceRedemptions: 8 });
+    });
+
+    const overCap = await t.mutation(api.native.sessions.convergeSession, {
+      predecessorRefreshTokenHash: "hash-1",
+      newSessionId: "session-3",
+      newSessionToken: "token-3",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-3",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+    });
+    expect(overCap).toBeNull();
+
+    // Fail-soft: the cap must not take down the legitimate family.
+    const winner = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-2"))
+        .unique(),
+    );
+    expect(winner?.revokedAt).toBeUndefined();
+  });
+
+  it("convergeSession refuses to mint into a dead family", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+      sessionId: "session-1",
+      userId,
+      identityId: identityDocId,
+      token: "token-1",
+      sessionExpiresAt: now + 1_000_000,
+      refreshTokenHash: "hash-1",
+      refreshTokenExpiresAt: now + 1_000_000,
+    });
+    await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+
+    // Sign-out lands inside the grace window: every family session dies while
+    // the predecessor's rotatedAt is still fresh.
+    await t.run(async (ctx) => {
+      const winner = await ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-2"))
+        .unique();
+      await ctx.db.patch(winner!._id, { revokedAt: now });
+    });
+
+    const result = await t.mutation(api.native.sessions.convergeSession, {
+      predecessorRefreshTokenHash: "hash-1",
+      newSessionId: "session-3",
+      newSessionToken: "token-3",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-3",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+    });
+    expect(result).toBeNull();
+
+    // No resurrection: session-3 must not exist.
+    const noSession3 = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-3"))
+        .unique(),
+    );
+    expect(noSession3).toBeNull();
+  });
+
+  it("convergeSession stops minting once the family hits the live-session cap", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+      sessionId: "session-1",
+      userId,
+      identityId: identityDocId,
+      token: "token-1",
+      sessionExpiresAt: now + 1_000_000,
+      refreshTokenHash: "hash-1",
+      refreshTokenExpiresAt: now + 1_000_000,
+    });
+    await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+
+    // A family that already holds 10 live sessions (the winner plus 9
+    // siblings) is at the bound — no more converge mints.
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 9; i++) {
+        await ctx.db.insert("authSessions", {
+          sessionId: `sibling-${i}`,
+          userId,
+          token: `token-sibling-${i}`,
+          familyId: "session-1",
+          expiresAt: now + 1_000_000,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    });
+
+    const result = await t.mutation(api.native.sessions.convergeSession, {
+      predecessorRefreshTokenHash: "hash-1",
+      newSessionId: "session-3",
+      newSessionToken: "token-3",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-3",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+    });
+    expect(result).toBeNull();
+  });
+
+  it("an over-cap convergence refusal writes a grace_exhausted audit event", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+      sessionId: "session-1",
+      userId,
+      identityId: identityDocId,
+      token: "token-1",
+      sessionExpiresAt: now + 1_000_000,
+      refreshTokenHash: "hash-1",
+      refreshTokenExpiresAt: now + 1_000_000,
+    });
+    await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+    await t.run(async (ctx) => {
+      const spent = await ctx.db
+        .query("authRefreshTokens")
+        .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
+        .unique();
+      await ctx.db.patch(spent!._id, { graceRedemptions: 8 });
+    });
+
+    const hint = await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-3",
+      newSessionToken: "token-3",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-3",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+    expect(hint).toBeNull();
+
+    const auditEvents = await t.run(async (ctx) => ctx.db.query("auth_audit_events").take(10));
+    expect(auditEvents).toHaveLength(1);
+    expect(auditEvents[0]).toMatchObject({
+      actorType: "system",
+      eventType: "refresh_token_grace_exhausted",
+      targetType: "session",
+      targetId: "session-1",
+      actorUserId: userId,
+    });
+  });
+
+  it("convergeSession revokes the family for a token revoked without rotation", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+      sessionId: "session-1",
+      userId,
+      identityId: identityDocId,
+      token: "token-1",
+      sessionExpiresAt: now + 1_000_000,
+      refreshTokenHash: "hash-1",
+      refreshTokenExpiresAt: now + 1_000_000,
+    });
+    // Sign-out / manual revocation — never rotated through.
+    await t.run(async (ctx) => {
+      const token = await ctx.db
+        .query("authRefreshTokens")
+        .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
+        .unique();
+      await ctx.db.patch(token!._id, { revokedAt: now });
+    });
+
+    const result = await t.mutation(api.native.sessions.convergeSession, {
+      predecessorRefreshTokenHash: "hash-1",
+      newSessionId: "session-3",
+      newSessionToken: "token-3",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-3",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+    });
+    expect(result).toBeNull();
+
+    const [session, refresh] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-1"))
+          .unique(),
+        ctx.db
+          .query("authRefreshTokens")
+          .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
+          .unique(),
+      ]),
+    );
+    expect(session?.revokedAt).toBeDefined();
+    expect(refresh?.revokedAt).toBeDefined();
+  });
+
+  it("rotateSession resolves identity from the session JWT for non-password providers", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    // OAuth-style identity — provider is the OAuth provider id, not "password".
+    const oauthDocId = await insertIdentity(t, userId, {
+      identityId: "github_subject_1",
+      provider: "github",
+      subject: "github_subject_1",
+      tokenIdentifier: "github_subject_1",
+    });
+    const now = Date.now();
+
+    // The session token is a JWT whose payload carries the identity doc id —
+    // decode (not verify) is enough to resolve which identity minted it.
+    const payload = Buffer.from(JSON.stringify({ identityId: oauthDocId })).toString("base64url");
+    const sessionJwt = `header.${payload}.signature`;
+
+    // The row deliberately lacks the identityId column (a pre-column session):
+    // resolution must fall through to the JWT claim. Direct inserts, since
+    // createSessionAndRefreshToken now requires the column on new mints.
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authSessions", {
+        sessionId: "session-1",
+        userId,
+        token: sessionJwt,
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-1",
+        sessionId: "session-1",
+        userId,
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+    const result = await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+    expect(result).toMatchObject({ identityId: oauthDocId });
+  });
+
+  it("rotateSession fails closed for a session with no resolvable identity", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    // Neither the column nor a JWT claim — the provider/issuer args must NOT
+    // be used to guess an identity (a non-password session would silently
+    // bind the password identity to the rotated token). Direct inserts, since
+    // createSessionAndRefreshToken now requires the column on new mints.
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authSessions", {
+        sessionId: "session-1",
+        userId,
+        token: "opaque-token",
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-1",
+        sessionId: "session-1",
+        userId,
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const result = await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+    expect(result).toBeNull();
+
+    // And the identity that does exist must not have been touched — no
+    // session minted against it either.
+    const [session2, identity] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-2"))
+          .unique(),
+        ctx.db.get("auth_identities", identityDocId),
+      ]),
+    );
+    expect(session2).toBeNull();
+    expect(identity).not.toBeNull();
+  });
+
+  it("convergeSession resolves a claim-only predecessor and writes the identity doc id on the sibling", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const oauthDocId = await insertIdentity(t, userId, {
+      identityId: "github_subject_2",
+      provider: "github",
+      subject: "github_subject_2",
+      tokenIdentifier: "github_subject_2",
+    });
+    const now = Date.now();
+
+    // Pre-column predecessor: no identityId column, JWT claim only.
+    const payload = Buffer.from(JSON.stringify({ identityId: oauthDocId })).toString("base64url");
+    const sessionJwt = `header.${payload}.signature`;
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authSessions", {
+        sessionId: "session-1",
+        userId,
+        token: sessionJwt,
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-1",
+        sessionId: "session-1",
+        userId,
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    // Winning rotation resolves the claim and mints the live family member.
+    const rotated = await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+    expect(rotated).toMatchObject({ identityId: oauthDocId });
+
+    const result = await t.mutation(api.native.sessions.convergeSession, {
+      predecessorRefreshTokenHash: "hash-1",
+      newSessionId: "session-3",
+      newSessionToken: "token-3",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-3",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+    });
+    expect(result).not.toBeNull();
+
+    // The sibling carries the resolved doc id — not the raw claim string.
+    const sibling = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-3"))
+        .unique(),
+    );
+    expect(sibling?.identityId).toBe(oauthDocId);
+  });
+
+  it("convergeSession fails closed instead of minting an identity-less sibling", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    await insertIdentity(t, userId);
+    const now = Date.now();
+
+    // All grace conditions pass — rotatedAt fresh, a live family member,
+    // under every cap — but the predecessor session has neither column nor
+    // claim. The mutation must refuse rather than write identityId: undefined.
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authSessions", {
+        sessionId: "session-1",
+        userId,
+        token: "opaque-token",
+        expiresAt: now + 1_000_000,
+        revokedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("authSessions", {
+        sessionId: "session-2",
+        userId,
+        token: "token-2",
+        familyId: "session-1",
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-1",
+        sessionId: "session-1",
+        userId,
+        familyId: "session-1",
+        expiresAt: now + 1_000_000,
+        revokedAt: now,
+        rotatedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const result = await t.mutation(api.native.sessions.convergeSession, {
+      predecessorRefreshTokenHash: "hash-1",
+      newSessionId: "session-3",
+      newSessionToken: "token-3",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-3",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+    });
+    expect(result).toBeNull();
+
+    const [noSession3, predecessor] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-3"))
+          .unique(),
+        ctx.db
+          .query("authRefreshTokens")
+          .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
+          .unique(),
+      ]),
+    );
+    expect(noSession3).toBeNull();
+    // The refusal must not consume a redemption — the predecessor stays
+    // convergable for the legitimate parallel request.
+    expect(predecessor?.graceRedemptions ?? 0).toBe(0);
+  });
+
+  it("propagates impersonatedBy through rotation and convergence", async () => {
+    // An impersonated session must not silently lose impersonation on
+    // refresh — getImpersonationState reads it off the session row.
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const adminId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "admin@example.com",
+        name: "Admin",
+        emailVerified: true,
+        isActive: true,
+        isSuperAdmin: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authSessions", {
+        sessionId: "session-1",
+        familyId: "session-1",
+        userId,
+        identityId: identityDocId,
+        impersonatedBy: adminId,
+        token: "token-1",
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-1",
+        sessionId: "session-1",
+        userId,
+        familyId: "session-1",
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const rotated = await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+    expect(rotated).not.toBeNull();
+
+    const rotatedSession = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-2"))
+        .unique(),
+    );
+    expect(rotatedSession?.impersonatedBy).toBe(adminId);
+
+    // A converged sibling of the impersonated session keeps it too.
+    const converged = await t.mutation(api.native.sessions.convergeSession, {
+      predecessorRefreshTokenHash: "hash-1",
+      newSessionId: "session-3",
+      newSessionToken: "token-3",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-3",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+    });
+    expect(converged).not.toBeNull();
+
+    const siblingSession = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-3"))
+        .unique(),
+    );
+    expect(siblingSession?.impersonatedBy).toBe(adminId);
+  });
+
+  it("refuses convergence when the family exceeds the scan budget", async () => {
+    // A truncated family scan cannot prove liveness or the live-session cap
+    // exactly — the converge must refuse rather than mint on an undercount.
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    const identityDocId = await insertIdentity(t, userId);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authSessions", {
+        sessionId: "session-1",
+        familyId: "session-1",
+        userId,
+        identityId: identityDocId,
+        token: "token-1",
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+      // One live member keeps the family alive; the remaining rows push the
+      // family past the scan budget so the count cannot be proven exact.
+      for (let i = 0; i < 2000; i++) {
+        await ctx.db.insert("authSessions", {
+          sessionId: `dead-${i}`,
+          familyId: "session-1",
+          userId,
+          token: `token-dead-${i}`,
+          expiresAt: now + 1_000_000,
+          revokedAt: now - 60_000,
+          createdAt: now - 60_000,
+          updatedAt: now - 60_000,
+        });
+      }
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-1",
+        sessionId: "session-1",
+        userId,
+        familyId: "session-1",
+        expiresAt: now + 1_000_000,
+        revokedAt: now,
+        rotatedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const result = await t.mutation(api.native.sessions.convergeSession, {
+      predecessorRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+    });
+    expect(result).toBeNull();
+
+    const sibling = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-2"))
+        .unique(),
+    );
+    expect(sibling).toBeNull();
+  });
+
+  it("returns rotated refresh token rows through the public query", async () => {
+    // Rows carrying familyId/rotatedAt/graceRedemptions must survive the
+    // query's returns validator — a real deployment enforces it even though
+    // action-level mocks dispatch to the raw handler.
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-rotated",
+        sessionId: "session-1",
+        userId,
+        familyId: "session-1",
+        expiresAt: now + 1_000_000,
+        revokedAt: now,
+        rotatedAt: now,
+        graceRedemptions: 3,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const row = await t.query(api.native.refreshTokens.getRefreshTokenByTokenHash, {
+      tokenHash: "hash-rotated",
+    });
+    expect(row?.familyId).toBe("session-1");
+    expect(row?.rotatedAt).toBe(now);
+    expect(row?.graceRedemptions).toBe(3);
   });
 });

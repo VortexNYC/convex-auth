@@ -22,6 +22,13 @@ export const getNativeIdentityByUser = query({
   },
 });
 
+export const getIdentityById = query({
+  args: { identityId: v.id("auth_identities") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get("auth_identities", args.identityId);
+  },
+});
+
 export const createIdentity = mutation({
   args: {
     userId: v.id("users"),

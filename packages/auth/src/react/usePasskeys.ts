@@ -9,7 +9,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import type { FunctionReference } from "convex/server";
 import { useContext } from "react";
 
-import { ConvexAuthContext } from "./ConvexAuthProvider.js";
+import { callAuthProxy, ConvexAuthContext } from "./ConvexAuthProvider.js";
 import type { PasskeyListItem } from "./passkey-manager.js";
 
 export interface UsePasskeysArgs {
@@ -108,14 +108,34 @@ export function usePasskeys(args: UsePasskeysArgs) {
           optionsJSON: options,
           useBrowserAutofill: autofill ?? false,
         });
-        const result = await verifyAuthentication({
+        const cookieMode = ctx.storageMode === "cookies";
+        const verifyArgs = {
           challenge: options.challenge as string,
           response,
-        });
-        if (result.token && result.refreshToken && result.sessionId) {
+        };
+        // Cookie mode routes the mint through the adapter proxy so the session
+        // lands in HttpOnly cookies — the client cannot set them itself.
+        const result = cookieMode
+          ? ((await callAuthProxy(
+              ctx.apiRoute ?? "/api/auth",
+              "verifyPasskeyAuthentication",
+              verifyArgs,
+            )) as {
+              token?: string;
+              refreshToken?: string;
+              sessionId?: string;
+              twoFactorRedirect?: boolean;
+              twoFactorChallengeToken?: string;
+            })
+          : await verifyAuthentication(verifyArgs);
+        if (result.token && (cookieMode || (result.refreshToken && result.sessionId))) {
           ctx.setToken(result.token);
-          ctx.setRefreshToken(result.refreshToken);
-          ctx.setSessionId(result.sessionId);
+          if (!cookieMode && result.refreshToken) {
+            ctx.setRefreshToken(result.refreshToken);
+          }
+          if (result.sessionId) {
+            ctx.setSessionId(result.sessionId);
+          }
         } else if (result.twoFactorRedirect === true) {
           ctx.setTwoFactorChallengeToken(result.twoFactorChallengeToken ?? null);
         }

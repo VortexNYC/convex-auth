@@ -219,6 +219,8 @@ await passkeys.signIn();
 
 Both platforms need a domain-association file served from your `rpID` — the Apple App Site Association file on iOS and `assetlinks.json` on Android — plus the platform origin entries in `passkey.origin`. If a passkey sign-in resolves to `twoFactorRedirect` (relaxed `userVerification` on a 2FA-enabled account), render `ConvexVerifyTwoFactorForm` to complete the challenge. The full setup — entitlements, AASA/assetlinks hosting, signing-fingerprint origins, and emulator caveats — is in the Passkeys guide.
 
+`react-native-passkeys` decorates credential responses with methods such as `getPublicKey()`; `usePasskeys` strips function-valued properties before sending them over the wire. This is required, not cosmetic: upstream `convex-js` currently crashes while formatting the "unsupported type" error for function-valued arguments (`JSON.stringify` returns `undefined` and `.length` throws), masking the real message — [get-convex/convex-js#190](https://github.com/get-convex/convex-js/issues/190). If you build a custom passkey call path, strip functions the same way rather than passing credential objects through verbatim.
+
 ## Styling
 
 The screen components support a `styles` prop for every keyed element (`root`, `title`, `input`, `submitButton`, etc.). The components also use Uniwind `className` strings internally, so styling works out of the box if you imported the convex-auth CSS.

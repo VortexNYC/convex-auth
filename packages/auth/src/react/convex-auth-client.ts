@@ -56,6 +56,16 @@ export function useConvexAuthClient() {
   const currentToken = () => actions.token;
 
   const resolveTwoFactorToken = () => actions.twoFactorChallengeToken ?? actions.token;
+  // Cookie mode holds no challenge token — the pending value lives in an
+  // HttpOnly cookie and the proxy substitutes it. `token` is optional on the
+  // verify args precisely so this path can call through without one.
+  const challengeTokenOptional = actions.storageMode === "cookies";
+  const twoFactorVerifyArgs = <T extends Record<string, unknown>>(
+    args: T,
+  ): T & { token?: string } => {
+    const token = resolveTwoFactorToken();
+    return token === null ? args : { ...args, token };
+  };
 
   return {
     useSession: () => session,
@@ -298,11 +308,11 @@ export function useConvexAuthClient() {
       },
       verifyTotp: async (args) => {
         const token = resolveTwoFactorToken();
-        if (token === null) {
+        if (token === null && !challengeTokenOptional) {
           return { data: null, error: toError("No two-factor challenge in progress") };
         }
         try {
-          const result = await actions.twoFactor.verifyTotp({ ...args, token });
+          const result = await actions.twoFactor.verifyTotp(twoFactorVerifyArgs(args));
           if (result.token !== null) {
             actions.setToken(result.token);
             actions.setSessionId(result.sessionId ?? null);
@@ -317,11 +327,11 @@ export function useConvexAuthClient() {
       },
       verifyBackupCode: async (args) => {
         const token = resolveTwoFactorToken();
-        if (token === null) {
+        if (token === null && !challengeTokenOptional) {
           return { data: null, error: toError("No two-factor challenge in progress") };
         }
         try {
-          const result = await actions.twoFactor.verifyBackupCode({ ...args, token });
+          const result = await actions.twoFactor.verifyBackupCode(twoFactorVerifyArgs(args));
           if (result.token !== null) {
             actions.setToken(result.token);
             actions.setSessionId(result.sessionId ?? null);

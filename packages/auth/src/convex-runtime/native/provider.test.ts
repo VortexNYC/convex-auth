@@ -117,6 +117,7 @@ function createMockComponent(): MockedComponent {
         getSessionBySessionId: vi.fn(),
         revokeSessionsForUser: vi.fn(),
         rotateSession: vi.fn(),
+        convergeSession: vi.fn(),
       },
       refreshTokens: {
         getRefreshTokenByTokenHash: vi.fn(),
@@ -125,6 +126,7 @@ function createMockComponent(): MockedComponent {
         revokeRefreshTokensForUser: vi.fn(),
       },
       identities: {
+        getIdentityById: vi.fn(),
         getNativeIdentityByUser: vi.fn(),
         markEmailVerified: vi.fn(),
       },
@@ -1213,13 +1215,14 @@ describe("nativeEmailAndPassword", () => {
         _creationTime: 0,
         sessionId: "session_1",
         userId: "user_1",
+        identityId: identity._id,
         token: "old-token",
         expiresAt: Date.now() + 60_000,
         createdAt: 0,
         updatedAt: 0,
       });
       component.native.users.getUserById.mockResolvedValue(user);
-      component.native.identities.getNativeIdentityByUser.mockResolvedValue(identity);
+      component.native.identities.getIdentityById.mockResolvedValue(identity);
       component.native.sessions.rotateSession.mockResolvedValue({
         user,
         identityId: "identity_1",
@@ -1258,6 +1261,116 @@ describe("nativeEmailAndPassword", () => {
       expect(payload.sub).toBe("user_1");
       expect(payload.sessionId).toBe(result.sessionId);
       expect(payload.identityId).toBe("identity_1");
+    });
+
+    it("converges a parallel rotation into a sibling session instead of failing", async () => {
+      const component = createMockComponent();
+      const user = makeUser();
+      const identity = makeIdentity();
+      const refreshToken = "refresh-token";
+      const refreshTokenHash = await hashToken(refreshToken);
+
+      component.native.refreshTokens.getRefreshTokenByTokenHash.mockResolvedValue({
+        _id: "refresh_doc_1",
+        _creationTime: 0,
+        tokenHash: refreshTokenHash,
+        sessionId: "session_1",
+        userId: "user_1",
+        expiresAt: Date.now() + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      // The session is already revoked — the winning parallel request rotated
+      // it between our query and our mutation. The action must still converge.
+      component.native.sessions.getSessionBySessionId.mockResolvedValue({
+        _id: "session_doc_1",
+        _creationTime: 0,
+        sessionId: "session_1",
+        userId: "user_1",
+        identityId: identity._id,
+        token: "old-token",
+        expiresAt: Date.now() + 60_000,
+        revokedAt: Date.now(),
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      component.native.users.getUserById.mockResolvedValue(user);
+      component.native.identities.getIdentityById.mockResolvedValue(identity);
+      // rotateSession reports the token was just rotated by a parallel request.
+      component.native.sessions.rotateSession.mockResolvedValue("converge");
+      component.native.sessions.convergeSession.mockResolvedValue({ user });
+
+      const { updateSession } = createActions(component);
+      const result = (await exec(updateSession).handler(createContext(), {
+        refreshToken,
+      })) as {
+        token: string;
+        refreshToken: string;
+        userId: string;
+        sessionId: string;
+        identityId: string;
+      };
+
+      expect(result).toMatchObject({
+        token: expect.any(String),
+        refreshToken: expect.any(String),
+        userId: "user_1",
+        identityId: "identity_1",
+        sessionId: expect.any(String),
+      });
+
+      // The sibling mint goes through convergeSession keyed on the SAME
+      // predecessor hash — not through a second rotation.
+      const convergeCall = component.native.sessions.convergeSession.mock.calls[0]?.[0];
+      expect(convergeCall.predecessorRefreshTokenHash).toBe(refreshTokenHash);
+      expect(convergeCall.newSessionId).toBe(result.sessionId);
+      expect(convergeCall.newSessionToken).toBe(result.token);
+      expect(convergeCall.newRefreshTokenHash).toBe(await hashToken(result.refreshToken));
+
+      const payload = await verifyToken(result.token);
+      expect(payload.sessionId).toBe(result.sessionId);
+      expect(payload.identityId).toBe("identity_1");
+    });
+
+    it("fails refresh when a converge refusal is returned", async () => {
+      const component = createMockComponent();
+      const user = makeUser();
+      const identity = makeIdentity();
+      const refreshToken = "refresh-token";
+      const refreshTokenHash = await hashToken(refreshToken);
+
+      component.native.refreshTokens.getRefreshTokenByTokenHash.mockResolvedValue({
+        _id: "refresh_doc_1",
+        _creationTime: 0,
+        tokenHash: refreshTokenHash,
+        sessionId: "session_1",
+        userId: "user_1",
+        expiresAt: Date.now() + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      component.native.sessions.getSessionBySessionId.mockResolvedValue({
+        _id: "session_doc_1",
+        _creationTime: 0,
+        sessionId: "session_1",
+        userId: "user_1",
+        identityId: identity._id,
+        token: "old-token",
+        expiresAt: Date.now() + 60_000,
+        revokedAt: Date.now(),
+        createdAt: 0,
+        updatedAt: 0,
+      });
+      component.native.users.getUserById.mockResolvedValue(user);
+      component.native.identities.getIdentityById.mockResolvedValue(identity);
+      component.native.sessions.rotateSession.mockResolvedValue("converge");
+      // The mutation re-validated and refused (dead family, caps, or identity).
+      component.native.sessions.convergeSession.mockResolvedValue(null);
+
+      const { updateSession } = createActions(component);
+      await expect(exec(updateSession).handler(createContext(), { refreshToken })).rejects.toThrow(
+        "Invalid refresh token",
+      );
     });
 
     it("rejects an unknown refresh token", async () => {

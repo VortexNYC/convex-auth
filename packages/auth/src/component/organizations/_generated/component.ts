@@ -427,6 +427,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         >;
       };
       identities: {
+        getIdentityById: FunctionReference<
+          "query",
+          "internal",
+          { identityId: string },
+          any,
+          Name
+        >;
         getNativeIdentityByUser: FunctionReference<
           "query",
           "internal",
@@ -492,7 +499,10 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             _id: string;
             createdAt: number;
             expiresAt: number;
+            familyId?: string;
+            graceRedemptions?: number;
             revokedAt?: number;
+            rotatedAt?: number;
             sessionId: string;
             tokenHash: string;
             updatedAt: number;
@@ -521,7 +531,10 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             _id: string;
             createdAt: number;
             expiresAt: number;
+            familyId?: string;
+            graceRedemptions?: number;
             revokedAt?: number;
+            rotatedAt?: number;
             sessionId: string;
             tokenHash: string;
             updatedAt: number;
@@ -545,6 +558,32 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         >;
       };
       sessions: {
+        convergeSession: FunctionReference<
+          "mutation",
+          "internal",
+          {
+            newRefreshTokenExpiresAt: number;
+            newRefreshTokenHash: string;
+            newSessionExpiresAt: number;
+            newSessionId: string;
+            newSessionIpAddress?: string;
+            newSessionToken: string;
+            newSessionUserAgent?: string;
+            predecessorRefreshTokenHash: string;
+          },
+          null | {
+            user: {
+              _id: string;
+              createdAt: number;
+              email?: string;
+              emailVerified: boolean;
+              image?: string;
+              name?: string;
+              updatedAt: number;
+            };
+          },
+          Name
+        >;
         cleanupExpiredSessions: FunctionReference<
           "mutation",
           "internal",
@@ -557,6 +596,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "internal",
           {
             expiresAt: number;
+            identityId?: string;
             sessionId: string;
             token: string;
             userId: string;
@@ -568,6 +608,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "mutation",
           "internal",
           {
+            identityId: string;
             refreshTokenExpiresAt: number;
             refreshTokenHash: string;
             sessionExpiresAt: number;
@@ -628,18 +669,20 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             oldRefreshTokenHash: string;
             provider: string;
           },
-          null | {
-            identityId: string;
-            user: {
-              _id: string;
-              createdAt: number;
-              email?: string;
-              emailVerified: boolean;
-              image?: string;
-              name?: string;
-              updatedAt: number;
-            };
-          },
+          | null
+          | "converge"
+          | {
+              identityId: string;
+              user: {
+                _id: string;
+                createdAt: number;
+                email?: string;
+                emailVerified: boolean;
+                image?: string;
+                name?: string;
+                updatedAt: number;
+              };
+            },
           Name
         >;
       };

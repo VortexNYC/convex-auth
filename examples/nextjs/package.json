@@ -1,0 +1,26 @@
+{
+  "name": "examples-nextjs",
+  "version": "0.0.20",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "codegen": "convex codegen"
+  },
+  "dependencies": {
+    "@vortex-api/convex-auth": "workspace:*",
+    "convex": "^1.46.0",
+    "next": "^15.5.25",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0"
+  }
+}
