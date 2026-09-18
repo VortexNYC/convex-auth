@@ -1,0 +1,269 @@
+// @vitest-environment happy-dom
+
+import * as React from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, waitFor } from "@testing-library/react";
+
+const actionMocks = new Map<string, ReturnType<typeof vi.fn>>();
+const mockClient = {
+  setAuth: vi.fn(),
+  clearAuth: vi.fn(),
+  action: vi.fn(),
+};
+
+vi.mock("convex/react", () => ({
+  useConvex: () => mockClient,
+  // Stable per-ref identity — the real useAction memoizes; a fresh vi.fn()
+  // per render would retrigger the provider's effects forever.
+  useAction: (ref: unknown) => {
+    const key = ref as string;
+    if (!actionMocks.has(key)) {
+      actionMocks.set(key, vi.fn().mockName(key));
+    }
+    return actionMocks.get(key)!;
+  },
+  useQuery: () => undefined,
+}));
+
+const fetchMock = vi.fn();
+vi.stubGlobal("fetch", fetchMock);
+
+import {
+  ConvexAuthProvider,
+  useAuthActions,
+  type ConvexAuthProviderProps,
+  type NativeAuthActions,
+} from "./ConvexAuthProvider.js";
+
+const ref = (name: string) => name as never;
+
+const baseActions = {
+  signUp: ref("signUp"),
+  signIn: ref("signIn"),
+  signOut: ref("signOut"),
+  sendEmailVerification: ref("sendEmailVerification"),
+  verifyEmail: ref("verifyEmail"),
+  sendPasswordReset: ref("sendPasswordReset"),
+  resetPassword: ref("resetPassword"),
+  verifyPassword: ref("verifyPassword"),
+  updateSession: ref("updateSession"),
+  verifySession: ref("verifySession"),
+  twoFactorVerifyTOTP: ref("twoFactorVerifyTOTP"),
+} as NativeAuthActions;
+
+const sessionResult = {
+  token: "minted-token",
+  sessionId: "minted-session",
+  user: { id: "u1", email: "a@b.c" },
+};
+
+function proxyOk(body: unknown = sessionResult) {
+  fetchMock.mockResolvedValue(
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+}
+
+let latestActions: ReturnType<typeof useAuthActions> | null = null;
+
+function Probe() {
+  latestActions = useAuthActions();
+  return null;
+}
+
+function renderProvider(props: Partial<ConvexAuthProviderProps> = {}) {
+  return render(
+    React.createElement(
+      ConvexAuthProvider,
+      { actions: baseActions, ...props },
+      React.createElement(Probe),
+    ),
+  );
+}
+
+function proxyCalls() {
+  return fetchMock.mock.calls.map(([url, init]) => ({
+    url: url as string,
+    body: JSON.parse((init as RequestInit).body as string) as {
+      intent: string;
+      args: Record<string, unknown>;
+    },
+    credentials: (init as RequestInit).credentials,
+  }));
+}
+
+beforeEach(() => {
+  actionMocks.clear();
+  fetchMock.mockReset();
+  mockClient.setAuth.mockClear();
+  window.localStorage.clear();
+  latestActions = null;
+});
+
+afterEach(cleanup);
+
+describe("ConvexAuthProvider cookie mode", () => {
+  it("hydrates from server state without touching storage", async () => {
+    renderProvider({
+      storageMode: "cookies",
+      initialToken: "server-token",
+      initialSessionId: "server-session",
+      initialUser: { id: "u1" } as never,
+    });
+    await waitFor(() => expect(latestActions?.token).toBe("server-token"));
+    expect(latestActions?.sessionId).toBe("server-session");
+    expect(latestActions?.isAuthenticated).toBe(true);
+    // No browser persistence in cookie mode
+    expect(window.localStorage.length).toBe(0);
+    expect(latestActions?.refreshToken).toBeNull();
+  });
+
+  it("does not ingest tokens from the URL", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/?token=url-token&refreshToken=url-refresh&sessionId=url-session",
+    );
+    renderProvider({ storageMode: "cookies" });
+    await waitFor(() => expect(latestActions).not.toBeNull());
+    expect(latestActions?.token).toBeNull();
+    // The URL is left for the middleware to strip — the client never
+    // touches it in cookie mode.
+    expect(window.location.search).toContain("token=url-token");
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("routes signIn through the proxy and keeps the refresh token server-side", async () => {
+    proxyOk(sessionResult);
+    renderProvider({ storageMode: "cookies" });
+    await waitFor(() => expect(latestActions).not.toBeNull());
+
+    await act(() =>
+      latestActions!.signIn({ email: "a@b.c", password: "pw" } as never),
+    );
+
+    const [call] = proxyCalls();
+    expect(call.url).toBe("/api/auth");
+    expect(call.body).toEqual({
+      intent: "signIn",
+      args: { email: "a@b.c", password: "pw" },
+    });
+    expect(call.credentials).toBe("same-origin");
+    expect(latestActions?.token).toBe("minted-token");
+    expect(latestActions?.sessionId).toBe("minted-session");
+    // The proxy strips refreshToken from the JSON body; state never holds it.
+    expect(latestActions?.refreshToken).toBeNull();
+    expect(window.localStorage.length).toBe(0);
+    // The direct action was never invoked
+    expect(actionMocks.get("signIn")).not.toHaveBeenCalled();
+  });
+
+  it("routes updateSession through the proxy without a refresh token arg", async () => {
+    proxyOk(sessionResult);
+    renderProvider({
+      storageMode: "cookies",
+      initialToken: "t",
+      initialSessionId: "s",
+    });
+    await waitFor(() => expect(latestActions?.token).toBe("t"));
+
+    await act(() => latestActions!.updateSession());
+
+    const [call] = proxyCalls();
+    expect(call.body.intent).toBe("updateSession");
+    expect(call.body.args).toEqual({});
+    expect(latestActions?.token).toBe("minted-token");
+  });
+
+  it("routes 2FA verification through the proxy without a challenge token", async () => {
+    proxyOk(sessionResult);
+    renderProvider({ storageMode: "cookies" });
+    await waitFor(() => expect(latestActions).not.toBeNull());
+
+    await act(() => latestActions!.twoFactor.verifyTotp({ code: "123456" }));
+
+    const [call] = proxyCalls();
+    expect(call.body.intent).toBe("twoFactorVerifyTOTP");
+    expect(call.body.args).toEqual({ code: "123456" });
+    expect(latestActions?.token).toBe("minted-token");
+  });
+
+  it("always proxies signOut and clears local state even when the proxy fails", async () => {
+    fetchMock.mockRejectedValue(new Error("network down"));
+    renderProvider({
+      storageMode: "cookies",
+      initialToken: "t",
+      initialSessionId: "s",
+      initialUser: { id: "u1" } as never,
+    });
+    await waitFor(() => expect(latestActions?.isAuthenticated).toBe(true));
+
+    await act(async () => {
+      await expect(latestActions!.signOut()).rejects.toThrow("network down");
+    });
+
+    const [call] = proxyCalls();
+    expect(call.body.intent).toBe("signOut");
+    await waitFor(() => expect(latestActions?.token).toBeNull());
+    expect(latestActions?.isAuthenticated).toBe(false);
+  });
+
+  it("fires onAuthChange on transitions, not on mount", async () => {
+    const onAuthChange = vi.fn();
+    proxyOk(sessionResult);
+    renderProvider({ storageMode: "cookies", onAuthChange });
+    await waitFor(() => expect(latestActions).not.toBeNull());
+    expect(onAuthChange).not.toHaveBeenCalled();
+
+    await act(() =>
+      latestActions!.signIn({ email: "a@b.c", password: "pw" } as never),
+    );
+    await waitFor(() => expect(onAuthChange).toHaveBeenCalledWith(true));
+    expect(onAuthChange).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ConvexAuthProvider localStorage mode (regression)", () => {
+  it("still calls the action directly and persists the refresh token", async () => {
+    const signInMock = vi.fn().mockResolvedValue({
+      ...sessionResult,
+      refreshToken: "client-refresh",
+    });
+    actionMocks.set("signIn", signInMock);
+    renderProvider();
+    await waitFor(() => expect(latestActions).not.toBeNull());
+
+    await act(() =>
+      latestActions!.signIn({ email: "a@b.c", password: "pw" } as never),
+    );
+
+    expect(signInMock).toHaveBeenCalledWith({
+      email: "a@b.c",
+      password: "pw",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(latestActions?.token).toBe("minted-token");
+    expect(latestActions?.refreshToken).toBe("client-refresh");
+    expect(window.localStorage.getItem("convex-auth-token")).toBe(
+      "minted-token",
+    );
+    expect(window.localStorage.getItem("convex-auth-refresh-token")).toBe(
+      "client-refresh",
+    );
+  });
+
+  it("still ingests tokens from the URL", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/?token=url-token&refreshToken=url-refresh&sessionId=url-session",
+    );
+    renderProvider();
+    await waitFor(() => expect(latestActions?.token).toBe("url-token"));
+    expect(latestActions?.refreshToken).toBe("url-refresh");
+    expect(window.location.search).not.toContain("token=");
+    window.history.replaceState(null, "", "/");
+  });
+});

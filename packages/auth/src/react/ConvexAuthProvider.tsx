@@ -201,7 +201,12 @@ export type NativeAuthTwoFactorEnableArgs = {
 };
 
 export type NativeAuthTwoFactorVerifyArgs = {
-  token: string;
+  /**
+   * The pending challenge token returned by the sign-in attempt. Required
+   * unless the session is stored in cookies (`storageMode: "cookies"`), where
+   * the SSR proxy substitutes it from the HttpOnly pending cookie.
+   */
+  token?: string;
   code: string;
   trustDevice?: boolean;
 };
@@ -431,6 +436,17 @@ type ConvexAuthContextValue = NativeAuthActions & {
   twoFactorChallengeToken: string | null;
   setTwoFactorChallengeToken: (token: string | null) => void;
   isAuthReady: boolean;
+  /**
+   * `"cookies"` when the session is stored in HttpOnly cookies managed by an
+   * SSR adapter (e.g. `@vortex-api/convex-auth/nextjs`). The access token is
+   * held in memory only and every session-minting write goes through the
+   * adapter's proxy endpoint.
+   */
+  storageMode?: "cookies";
+  /** Proxy endpoint for session-minting actions in cookie mode. */
+  apiRoute?: string;
+  /** Server-resolved user for a no-flash first paint in cookie mode. */
+  initialUser?: NativeAuthUser | null;
 };
 
 export const ConvexAuthContext = createContext<ConvexAuthContextValue | null>(null);
@@ -439,23 +455,48 @@ export type ConvexAuthProviderProps = {
   actions: NativeAuthActions;
   children: ReactNode;
   storage?: "local" | "session" | TokenStorage;
+  /**
+   * `"cookies"` stores the session in HttpOnly cookies managed by an SSR
+   * adapter. The access token lives in memory only, the refresh token never
+   * reaches the browser, and session-minting writes go through the adapter's
+   * proxy endpoint (`apiRoute`). `storage` and URL token ingestion are
+   * disabled in this mode.
+   */
+  storageMode?: "cookies";
+  /** Proxy endpoint for session-minting actions in cookie mode. Defaults to `/api/auth`. */
+  apiRoute?: string;
+  /** Server-resolved user, so `isAuthenticated` is correct on first paint. */
+  initialUser?: NativeAuthUser | null;
   initialToken?: string | null;
   initialRefreshToken?: string | null;
   initialSessionId?: string | null;
+  /**
+   * Called when the session transitions between authenticated and
+   * unauthenticated (not on mount). SSR adapters use it to invalidate
+   * framework caches — e.g. Next.js's Router Cache — after sign-in/sign-out.
+   */
+  onAuthChange?: (authenticated: boolean) => unknown;
 };
 
 export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
   const client = useConvex();
   const updateSessionAction = useAction(props.actions.updateSession);
-  const [token, setToken] = useState<string | null>(null);
+  const cookieMode = props.storageMode === "cookies";
+  const [token, setToken] = useState<string | null>(props.initialToken ?? null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(props.initialSessionId ?? null);
   const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState<string | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [storage, setStorage] = useState<TokenStorage | null>(null);
   const isHydrating = useRef(true);
 
   useEffect(() => {
+    if (cookieMode) {
+      // Cookie mode: the server middleware owns refresh and the token lives
+      // in memory only. No storage, no URL ingestion, no mount-time refresh.
+      isHydrating.current = false;
+      return;
+    }
     const resolved = resolveStorage(props.storage);
     setStorage(resolved);
 
@@ -515,6 +556,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
     }
     isHydrating.current = false;
   }, [
+    cookieMode,
     props.storage,
     props.initialToken,
     props.initialRefreshToken,
@@ -541,7 +583,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
   }, [client]);
 
   useEffect(() => {
-    if (storage === null || isHydrating.current) {
+    if (cookieMode || storage === null || isHydrating.current) {
       return;
     }
     if (token) {
@@ -559,10 +601,10 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
     } else {
       storage.remove(SESSION_ID_KEY);
     }
-  }, [storage, token, refreshToken, sessionId]);
+  }, [cookieMode, storage, token, refreshToken, sessionId]);
 
   useEffect(() => {
-    if (!token || !refreshToken) {
+    if (cookieMode || !token || !refreshToken) {
       return;
     }
     const expiry = getTokenExpiry(token);
@@ -584,7 +626,22 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
         });
     }, delay);
     return () => clearTimeout(timeout);
-  }, [token, refreshToken, updateSessionAction]);
+  }, [cookieMode, token, refreshToken, updateSessionAction]);
+
+  const onAuthChangeRef = useRef(props.onAuthChange);
+  onAuthChangeRef.current = props.onAuthChange;
+  const wasAuthenticated = useRef<boolean | null>(null);
+  useEffect(() => {
+    const authenticated = token !== null;
+    if (wasAuthenticated.current === null) {
+      wasAuthenticated.current = authenticated;
+      return;
+    }
+    if (wasAuthenticated.current !== authenticated) {
+      wasAuthenticated.current = authenticated;
+      void onAuthChangeRef.current?.(authenticated);
+    }
+  }, [token]);
 
   const value = useMemo(() => {
     const state = {
@@ -597,6 +654,9 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
       twoFactorChallengeToken,
       setTwoFactorChallengeToken,
       isAuthReady,
+      storageMode: cookieMode ? ("cookies" as const) : undefined,
+      apiRoute: props.apiRoute,
+      initialUser: props.initialUser,
     };
     return new Proxy(props.actions, {
       get(target, prop, receiver) {
@@ -606,9 +666,53 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
         return Reflect.get(target, prop, receiver);
       },
     }) as unknown as ConvexAuthContextValue;
-  }, [props.actions, token, refreshToken, sessionId, twoFactorChallengeToken, isAuthReady]);
+  }, [
+    props.actions,
+    props.apiRoute,
+    props.initialUser,
+    cookieMode,
+    token,
+    refreshToken,
+    sessionId,
+    twoFactorChallengeToken,
+    isAuthReady,
+  ]);
   return <ConvexAuthContext.Provider value={value}>{props.children}</ConvexAuthContext.Provider>;
 }
+
+/**
+ * POST a session-minting intent to the SSR adapter's proxy endpoint. The
+ * server substitutes confidential values (refresh token, 2FA pending token,
+ * trusted-device token) from HttpOnly cookies and writes result cookies on
+ * the response.
+ */
+export async function callAuthProxy(
+  apiRoute: string,
+  intent: string,
+  args: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const res = await fetch(apiRoute, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intent, args }),
+  });
+  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) {
+    throw new Error(
+      typeof body.error === "string" ? body.error : `Auth request failed (${res.status})`,
+    );
+  }
+  return body;
+}
+
+type SessionLike = {
+  token?: string | null;
+  refreshToken?: string | null;
+  sessionId?: string | null;
+  twoFactorChallengeToken?: string | null;
+  twoFactorRedirect?: boolean;
+};
 
 export function useAuthActions() {
   const ctx = useContext(ConvexAuthContext);
@@ -655,40 +759,56 @@ export function useAuthActions() {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  const cookieMode = ctx.storageMode === "cookies";
+  const apiRoute = ctx.apiRoute ?? "/api/auth";
+  const callProxy = useCallback(
+    <T = SessionLike>(intent: string, args: Record<string, unknown>) =>
+      callAuthProxy(apiRoute, intent, args) as Promise<T>,
+    [apiRoute],
+  );
+  // Apply a minted session to state. In cookie mode the refresh token never
+  // reaches the browser — the proxy already wrote it to an HttpOnly cookie.
+  const applySession = useCallback(
+    (session: SessionLike) => {
+      ctx.setToken(session.token ?? null);
+      ctx.setSessionId(session.sessionId ?? null);
+      if (!cookieMode && session.refreshToken) {
+        ctx.setRefreshToken(session.refreshToken);
+      }
+    },
+    [cookieMode, ctx],
+  );
+
   const signUp = useCallback(
     async (args: NativeAuthSignUpArgs) => {
       setIsLoading(true);
       try {
-        const session = await signUpAction(args);
-        ctx.setToken(session.token ?? null);
-        ctx.setSessionId(session.sessionId ?? null);
-        if (session.refreshToken) {
-          ctx.setRefreshToken(session.refreshToken);
-        }
+        const session = cookieMode
+          ? await callProxy<NativeAuthSession>("signUp", args)
+          : await signUpAction(args);
+        applySession(session);
         return session;
       } finally {
         setIsLoading(false);
       }
     },
-    [signUpAction, ctx],
+    [cookieMode, callProxy, signUpAction, applySession],
   );
 
   const signIn = useCallback(
     async (args: NativeAuthSignInArgs) => {
       setIsLoading(true);
       try {
-        const session = await signInAction(args);
-        ctx.setToken(session.token ?? null);
-        ctx.setSessionId(session.sessionId ?? null);
-        if (session.refreshToken) {
-          ctx.setRefreshToken(session.refreshToken);
-        }
+        const session = cookieMode
+          ? await callProxy<NativeAuthSession>("signIn", args)
+          : await signInAction(args);
+        applySession(session);
         return session;
       } finally {
         setIsLoading(false);
       }
     },
-    [signInAction, ctx],
+    [cookieMode, callProxy, signInAction, applySession],
   );
 
   const signInAnonymous = useCallback(
@@ -698,18 +818,16 @@ export function useAuthActions() {
       }
       setIsLoading(true);
       try {
-        const session = await signInAnonymousAction(args);
-        ctx.setToken(session.token ?? null);
-        ctx.setSessionId(session.sessionId ?? null);
-        if (session.refreshToken) {
-          ctx.setRefreshToken(session.refreshToken);
-        }
+        const session = cookieMode
+          ? await callProxy<NativeAuthSession>("signInAnonymous", args)
+          : await signInAnonymousAction(args);
+        applySession(session);
         return session;
       } finally {
         setIsLoading(false);
       }
     },
-    [signInAnonymousAction, ctx],
+    [cookieMode, callProxy, signInAnonymousAction, applySession],
   );
 
   const linkAnonymousAccount = useCallback(
@@ -719,18 +837,16 @@ export function useAuthActions() {
       }
       setIsLoading(true);
       try {
-        const session = await linkAnonymousAccountAction(args);
-        ctx.setToken(session.token ?? null);
-        ctx.setSessionId(session.sessionId ?? null);
-        if (session.refreshToken) {
-          ctx.setRefreshToken(session.refreshToken);
-        }
+        const session = cookieMode
+          ? await callProxy<NativeAuthSession>("linkAnonymousAccount", args)
+          : await linkAnonymousAccountAction(args);
+        applySession(session);
         return session;
       } finally {
         setIsLoading(false);
       }
     },
-    [linkAnonymousAccountAction, ctx],
+    [cookieMode, callProxy, linkAnonymousAccountAction, applySession],
   );
 
   const signInWithMagicLink = useCallback(
@@ -770,18 +886,22 @@ export function useAuthActions() {
       }
       setIsLoading(true);
       try {
-        const result = await client.action(ctx.callback, args);
+        const result = cookieMode
+          ? await callProxy<NativeAuthOAuthCallbackResult>("callback", args)
+          : await client.action(ctx.callback, args);
         if ("token" in result) {
           ctx.setToken(result.token);
           ctx.setSessionId(result.sessionId);
-          ctx.setRefreshToken(result.refreshToken);
+          if (!cookieMode) {
+            ctx.setRefreshToken(result.refreshToken);
+          }
         }
         return result;
       } finally {
         setIsLoading(false);
       }
     },
-    [client, ctx.callback],
+    [client, cookieMode, callProxy, ctx],
   );
 
   const signInWithEmailOtp = useCallback(
@@ -843,11 +963,13 @@ export function useAuthActions() {
       }
       setIsLoading(true);
       try {
-        const result = await verifyEmailOtpAction(args);
-        if ("token" in result && "refreshToken" in result) {
+        const result = cookieMode
+          ? await callProxy<NativeAuthVerifyEmailOtpResult>("verifyEmailOtp", args)
+          : await verifyEmailOtpAction(args);
+        if ("token" in result && (cookieMode || "refreshToken" in result)) {
           ctx.setToken(result.token ?? null);
           ctx.setSessionId(result.sessionId ?? null);
-          if (result.refreshToken) {
+          if (!cookieMode && result.refreshToken) {
             ctx.setRefreshToken(result.refreshToken);
           }
         }
@@ -856,10 +978,27 @@ export function useAuthActions() {
         setIsLoading(false);
       }
     },
-    [verifyEmailOtpAction, ctx],
+    [cookieMode, callProxy, verifyEmailOtpAction, ctx],
   );
   const signOut = useCallback(
     async (args?: { callbackURL?: string }): Promise<NativeAuthSignOutResult> => {
+      if (cookieMode) {
+        // Cookie mode always proxies — only the server can clear HttpOnly
+        // cookies — even when no access token is held in memory. Local state
+        // clears regardless of the result so a proxy failure can't leave the
+        // client half-authenticated while the cookies are gone.
+        setIsLoading(true);
+        try {
+          return await callProxy<NativeAuthSignOutResult>("signOut", {
+            callbackURL: args?.callbackURL,
+          });
+        } finally {
+          ctx.setToken(null);
+          ctx.setSessionId(null);
+          ctx.setTwoFactorChallengeToken(null);
+          setIsLoading(false);
+        }
+      }
       if (ctx.token === null) {
         ctx.setRefreshToken(null);
         return { success: true };
@@ -875,26 +1014,32 @@ export function useAuthActions() {
         setIsLoading(false);
       }
     },
-    [signOutAction, ctx],
+    [cookieMode, callProxy, signOutAction, ctx],
   );
 
   const updateSession = useCallback(async () => {
+    if (cookieMode) {
+      setIsLoading(true);
+      try {
+        const session = await callProxy<NativeAuthSession>("updateSession", {});
+        applySession(session);
+        return session;
+      } finally {
+        setIsLoading(false);
+      }
+    }
     if (ctx.refreshToken === null) {
       throw new Error("No refresh token available");
     }
     setIsLoading(true);
     try {
       const session = await updateSessionAction({ refreshToken: ctx.refreshToken });
-      ctx.setToken(session.token ?? null);
-      ctx.setSessionId(session.sessionId ?? null);
-      if (session.refreshToken) {
-        ctx.setRefreshToken(session.refreshToken);
-      }
+      applySession(session);
       return session;
     } finally {
       setIsLoading(false);
     }
-  }, [updateSessionAction, ctx]);
+  }, [cookieMode, callProxy, updateSessionAction, applySession, ctx]);
 
   const sendEmailVerification = useCallback(
     async (args: { email: string; callbackURL?: string }) => {
@@ -993,22 +1138,32 @@ export function useAuthActions() {
         : notAvailable,
       verifyTotp: twoFactorVerifyTOTPAction
         ? async (args: NativeAuthTwoFactorVerifyArgs) => {
-            const session = await twoFactorVerifyTOTPAction(args);
+            const session = cookieMode
+              ? await callProxy<NativeAuthTwoFactorVerifyResult>("twoFactorVerifyTOTP", args)
+              : await twoFactorVerifyTOTPAction(args);
             if (session.token) {
               ctx.setToken(session.token);
-              ctx.setRefreshToken(session.refreshToken ?? null);
               ctx.setSessionId(session.sessionId ?? null);
+              if (!cookieMode) {
+                ctx.setRefreshToken(session.refreshToken ?? null);
+              }
+              ctx.setTwoFactorChallengeToken(null);
             }
             return session;
           }
         : notAvailable,
       verifyBackupCode: twoFactorVerifyBackupCodeAction
         ? async (args: NativeAuthTwoFactorVerifyArgs) => {
-            const session = await twoFactorVerifyBackupCodeAction(args);
+            const session = cookieMode
+              ? await callProxy<NativeAuthTwoFactorVerifyResult>("twoFactorVerifyBackupCode", args)
+              : await twoFactorVerifyBackupCodeAction(args);
             if (session.token) {
               ctx.setToken(session.token);
-              ctx.setRefreshToken(session.refreshToken ?? null);
               ctx.setSessionId(session.sessionId ?? null);
+              if (!cookieMode) {
+                ctx.setRefreshToken(session.refreshToken ?? null);
+              }
+              ctx.setTwoFactorChallengeToken(null);
             }
             return session;
           }
@@ -1038,6 +1193,8 @@ export function useAuthActions() {
     };
   }, [
     ctx,
+    cookieMode,
+    callProxy,
     twoFactorEnableAction,
     twoFactorVerifyTOTPAction,
     twoFactorVerifyBackupCodeAction,
@@ -1074,8 +1231,17 @@ export function useAuthActions() {
     ctx.token ? { token: ctx.token, sessionId: ctx.sessionId ?? undefined } : "skip",
   );
   const isSessionLoading = ctx.token !== null && session === undefined;
-  const user = session?.user ?? null;
-  const sessionId = session?.sessionId ?? null;
+  // While the live query resolves, fall back to the server-provided user so
+  // the first paint is already authenticated (cookie mode no-flash). The
+  // fallback only applies while a token exists — after sign-out the query
+  // skips and the user must be null.
+  const user =
+    session === undefined
+      ? ctx.token !== null
+        ? (ctx.initialUser ?? null)
+        : null
+      : (session?.user ?? null);
+  const sessionId = session?.sessionId ?? ctx.sessionId;
 
   return {
     signUp,
@@ -1130,7 +1296,12 @@ export function useSession(): {
     ctx.token ? { token: ctx.token, sessionId: ctx.sessionId ?? undefined } : "skip",
   );
   const isLoading = ctx.token !== null && (session === undefined || !ctx.isAuthReady);
-  const user = session?.user ?? null;
+  const user =
+    session === undefined
+      ? ctx.token !== null
+        ? (ctx.initialUser ?? null)
+        : null
+      : (session?.user ?? null);
   return {
     user,
     sessionId: session?.sessionId ?? null,
