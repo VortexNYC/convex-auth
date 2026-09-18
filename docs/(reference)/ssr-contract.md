@@ -5,7 +5,9 @@ Start, and any future framework adapter). This document is the spec an adapter
 must satisfy — it is framework-neutral on purpose, so each adapter stays a thin
 shell over shared semantics.
 
-Status: draft. No adapter code has been written from this contract yet.
+Status: draft, revised after read-only review against the actual provider and
+component code (`ConvexAuthProvider.tsx`, `provider.ts`, `http.ts`,
+`native/sessions.ts`). No adapter code has been written from this contract yet.
 
 ## What the three references establish
 
@@ -48,6 +50,13 @@ From the official authentication guide:
 - **`cookies()` API**: `HttpOnly`, `Secure`, `SameSite`, bounded `Max-Age`.
 - **`taintUniqueValue`** to keep sensitive session fields off the client.
 
+**Tension we must own:** upstream puts a Convex mutation (token refresh, code
+exchange) inside the proxy/middleware boundary — a documented exception to
+Next's "no DB in proxy" rule. We do the same, and the doc must say so plainly:
+the proxy performs at most one refresh per request, must not run on prefetch
+where avoidable, and must coalesce concurrent refreshes for the same session
+(§4).
+
 ### What TanStack Start expects
 
 From the official authentication + server-primitives guides:
@@ -80,37 +89,59 @@ From the official authentication + server-primitives guides:
 
 ## The contract
 
-Any adapter named `convex-auth/<framework>` must implement these six pieces.
+Any adapter named `convex-auth/<framework>` must implement these seven pieces.
 
 ### 1. Cookie schema
 
-Three `HttpOnly; Secure; SameSite=Lax; Path=/` cookies, `__Host-` prefixed in
-production:
+Our HTTP auth layer already sets cookies — `convex-auth-token`,
+`convex-auth-refresh-token`, `convex-auth-session-id`,
+`convex-auth-two-factor`, `convex-auth-trusted-device`
+(`convex-runtime/native/http.ts`) — but those live on the **Convex origin**
+(`.convex.site`) for the component's own HTTP endpoints. SSR cookies are a
+**separate, app-origin set** the adapter owns. Naming should stay parallel so
+the two origins are unambiguous:
 
-| Cookie                        | Contents                                         | Lifetime                     |
-| ----------------------------- | ------------------------------------------------ | ---------------------------- |
-| `__Host-convex-auth-token`    | Session JWT (access token)                       | JWT lifetime                 |
-| `__Host-convex-auth-refresh`  | Opaque refresh token                             | Refresh TTL                  |
-| `__Host-convex-auth-verifier` | PKCE verifier, only during OAuth/magic-link flow | Minutes, deleted on exchange |
+| Cookie                              | Contents                                                                   | Lifetime                     |
+| ----------------------------------- | -------------------------------------------------------------------------- | ---------------------------- |
+| `__Host-convex-auth-token`          | Session JWT (access token)                                                 | JWT lifetime                 |
+| `__Host-convex-auth-refresh`        | Opaque refresh token                                                       | Refresh TTL                  |
+| `__Host-convex-auth-2fa-pending`    | Opaque 2FA pending token, only mid-challenge                               | Challenge TTL (minutes)      |
+| `__Host-convex-auth-trusted-device` | Trusted-device token after 2FA                                             | Trusted-device TTL           |
+| `__Host-convex-auth-oauth`          | Short-lived OAuth attempt state (state/PKCE binding), only during the flow | Minutes, deleted on exchange |
 
-The refresh token MUST NOT be exposed to JavaScript. In SSR mode the client
-provider never holds it (see §5).
+All `HttpOnly; Secure; SameSite=Lax; Path=/`; `__Host-` prefix in production.
+
+Two corrections from the first draft, both verified against the code:
+
+- **The access token is the cookie; the refresh token is the secret.** The
+  client provider holds the short-lived JWT in memory for its Convex websocket
+  auth and client-direct calls — that is normal and matches upstream (they
+  pass `token` into client state; only `refreshToken` is stubbed). What MUST
+  NOT reach JavaScript is the refresh token.
+- **The 2FA pending token belongs in a cookie** for SSR — a reload-safe
+  challenge form needs it, and our HTTP layer already cookies it on the Convex
+  origin. It is short-lived and single-use; it is not "transient JS state."
+- **Org context needs no cookie** — `activeOrganizationId` lives on the user
+  row; SSR resolves it through `verifySession`.
 
 ### 2. Optimistic session resolution
 
 A request-boundary helper that reads the token cookie and returns a cheap
 verdict: `{ hasSessionCookie: boolean, tokenExpired: boolean }` — JWT `exp`
 decode only, **no Convex call**. Feeds redirect pre-filtering (Next `proxy.ts`,
-Start `beforeLoad`, middleware). Must document that this verdict is not
-authorization.
+Start `beforeLoad`). Must document that this verdict is not authorization —
+revocation-blind within token lifetime.
 
 ### 3. Verified session resolution
 
-A server helper that calls a component query over HTTP transport:
+A server helper calling the component's **existing `verifySession` query**
+(`convex-runtime/native/queries.ts`) over HTTP transport — it already performs
+the revocation-aware session lookup and returns user + session id. No new
+component query is needed for the adapter API; `verifySession` is the stable
+surface.
 
-- `fetchQuery(componentAuth.isSessionActive, { token })` — returns whether the
-  session exists, is unrevoked, and is unexpired. Our sessions are DB-primary
-  (`authSessions.revokedAt`), so JWT-valid-but-revoked MUST resolve to false.
+- JWT-valid-but-revoked (`authSessions.revokedAt` set) MUST resolve to
+  unauthenticated — `verifySession` already does this.
 - Adapter memoizes per request (React `cache()` on Next; request-scoped
   middleware context on Start).
 
@@ -118,122 +149,224 @@ A server helper that calls a component query over HTTP transport:
 
 At the request boundary (before rendering):
 
-1. If token cookie missing/expired and refresh cookie present → call the
-   component's session-update action with the refresh token → write the new
+1. If the token cookie is **near expiry** (proactive window, e.g. <60s of life)
+   and a refresh cookie is present → call the refresh action → write the new
    `{token, refreshToken}` pair to response cookies.
-2. On GET navigations carrying a `code` param → exchange via the component's
-   sign-in action (with the verifier cookie for PKCE) → set cookies → redirect
-   with the param stripped.
+   - **Refresh must be proactive, not reactive.** Session rotation refuses
+     already-expired sessions, and the JWT `exp` is coupled to the session
+     row's `expiresAt` — a "refresh after expiry" path mostly cannot succeed.
+     If SSR refresh-on-expiry is ever required, the component must decouple
+     JWT TTL from session TTL first.
+   - **Current blocker:** `updateSession` (`provider.ts:581`) resolves the
+     caller through `provider: "password", issuer: "native"` identity. The
+     refresh path the adapter calls must be provider-agnostic — this is
+     component work, part of the blocking pre-adapter item below.
+2. Code exchange runs as **two distinct exchangers**, not one:
+   - **OAuth**: `code` param on a GET navigation → exchange with the attempt
+     cookie (our verifier is embedded in the OAuth state token) → set cookies
+     → redirect, param stripped.
+   - **Magic link**: `token` param arriving at the app's verify route →
+     exchange → set cookies → redirect. Different param, different endpoint
+     shape — do not conflate with the OAuth path.
 
-This is where our **family rotation** semantics apply: rotation updates the
-family head; a refresh token that's already been rotated is replay, and the
-component revokes the family. The adapter MUST serialize refreshes per cookie
-pair (see "Refresh races" below) rather than retry-and-hope.
+#### Refresh races — the design load-bearing decision
+
+Our component treats a presented-but-rotated refresh token as **replay and
+revokes the whole session family** (`native/sessions.ts` — fail closed,
+commented as deliberate). Convex OCC makes the concurrent case deterministic:
+two requests holding the same old refresh cookie both read `revokedAt ===
+undefined`; the winner commits rotation; the loser retries, sees `revokedAt`,
+and kills the family — including the pair the winner just minted.
+
+**"Serialize at the adapter + loser re-reads cookies" cannot work.** The
+losing request arrived with the old cookie baked into its request headers —
+there is no shared jar to re-read, and HttpOnly means client JS can't re-read
+either. Adapter-side request dedup helps within one request but cannot
+synchronize two independent requests.
+
+**The fix belongs in `rotateSession`**: a bounded grace on the
+immediately-preceding family token. When a presented refresh token was rotated
+within a short window (target: seconds, covering a request burst) and is the
+family's direct predecessor, the component returns the family's **current live
+pair** instead of revoking — idempotent convergence, not a second rotation.
+Tokens older than the window, or not the direct predecessor, still revoke the
+family. Tradeoff to document plainly: a stolen token replayed inside the grace
+window receives the live pair rather than triggering revocation — the same
+leeway Auth0-style rotation accepts; the window stays narrow and configurable.
 
 ### 5. Auth-action proxy
 
-An endpoint the client provider POSTs to for session-mutating actions. On the
-server it:
+An endpoint the client POSTs to for session-mutating actions. On the server it:
 
-- Rejects non-POST and cross-origin requests.
-- Enforces an **action allowlist** — see below.
-- Substitutes the real `refreshToken` from the cookie (the client sends a
-  placeholder).
-- Forwards to the component action over HTTP transport, writes result cookies
+- Rejects non-POST and applies **`validateCsrfHeaders`**
+  (`convex-runtime/native/csrf.ts`) — our existing CSRF primitive, stronger
+  than a bare cross-origin check.
+- Enforces an **action allowlist**.
+- Substitutes server-confidential fields from cookies — `refreshToken`, and
+  the 2FA pending token where the action consumes it — the client never sends
+  the real values.
+- Forwards to the component action over HTTP transport; writes result cookies
   on the response.
+- **Sign-out is a required entry**: clears all auth cookies AND revokes the
+  session server-side (the component's `signOut` revokes by JWT `sessionId`).
+  The client-only helper is insufficient in cookie mode — it cannot clear
+  HttpOnly cookies.
 
-Upstream allowlists `signIn`/`signOut`. Ours must additionally cover, at
-minimum: two-factor challenge resolution, passkey assertion completion, and
-email/phone verification that mints a session — because all of these produce a
-session that must land in cookies. Design principle: the allowlist enumerates
-_session-minting_ actions; profile/org/api-key mutations stay client-direct
-with the access token.
+Upstream allowlists `signIn`/`signOut`. Ours is a designed surface because our
+mint sites are wider:
+
+| Action                                                      | Why it must proxy                                           |
+| ----------------------------------------------------------- | ----------------------------------------------------------- |
+| `signIn` / `signUp`                                         | Mints a session — or returns a 2FA pending challenge        |
+| `verifyTwoFactor*` (TOTP, backup)                           | Mints a session from a pending token                        |
+| `verifyPasskeyAuthentication`                               | Mints a session; ceremony options fetch stays client-direct |
+| Email/phone OTP verify, magic-link verify, OAuth `callback` | Mint sessions                                               |
+| `linkAnonymousAccount`                                      | Replaces the session                                        |
+| `updateSession`-equivalent refresh                          | Server substitutes the real refresh token                   |
+| `signOut`                                                   | Clears cookies + revokes                                    |
+
+Session-read and non-minting mutations (profile, org, api-key operations) stay
+client-direct with the in-memory access token.
 
 ### 6. Cookie-mode client provider
 
-`ConvexAuthProvider` gains a storage mode (working name:
-`storage: "cookies"`):
+`ConvexAuthProvider` gains a **mode flag** (working name:
+`storageMode: "cookies"`) — NOT a sentinel refresh token. A truthy sentinel
+(`"dummy"`, `"cookie-managed"`) is a landmine: the auto-refresh timer and
+`if (refreshToken)` sites would treat it as a real token and sign the user out
+when it fails.
 
-- Holds `{ token, refreshToken: "cookie-managed" }` — a sentinel, not a real
-  token.
-- `isLoading`/`isAuthenticated` hydrate from server-provided state (no flash).
-- Refresh goes through the proxy endpoint, not the component directly.
-- Sign-out POSTs to the proxy (server clears cookies AND revokes the session).
-- `localStorage` mode stays the default for pure-CSR apps; the two modes share
-  every hook surface so app code is identical.
+In cookie mode the provider:
+
+- Holds the access token **in memory only** (`useState`, never written to
+  `localStorage`/`sessionStorage`); `refreshToken` state is always `null`.
+- Initializes `token` state from the server-provided prop at construction —
+  `useState(initialToken)`, not a post-mount effect — plus an `initialUser`
+  so `isAuthenticated`/`isLoading` are correct on first paint. Current
+  post-hydrate token loading produces a signed-out flash, then a loading
+  flash; that is the no-flash bug to design against.
+- **Disables the client refresh timer** and the mount-time refresh — all
+  rotation goes through the boundary/proxy.
+- **Disables URL token ingestion** — the `?token=&refreshToken=&sessionId=`
+  search-param branch must not run in cookie mode (OAuth/magic-link HTTP
+  redirects place the refresh token in the query string today; that path is
+  replaced by cookie writes).
+- Sign-out POSTs to the proxy (clears cookies + revokes + clears
+  `twoFactorChallengeToken` state).
+- **Every session-minting write path routes through the proxy**, not just
+  `useAuthActions`: `usePasskeys` calls `verifyPasskeyAuthentication` and
+  writes tokens directly today; OAuth callback, OTP verify, and 2FA verify do
+  the same. Cookie mode is a write-path change at every mint site, with the
+  hook surface kept identical so app code doesn't change.
+
+`localStorage` mode stays the default for pure-CSR apps.
+
+### 7. SSR Convex transport binding
+
+How the adapter authenticates Convex calls on each side:
+
+- **Server**: binds the token cookie to `fetchQuery`/`fetchMutation`/
+  `fetchAction` (Next) or `ConvexHttpClient` (Start) per request — the token
+  authenticates the HTTP call the same way it authenticates the websocket.
+- **Client**: `client.setAuth` with the in-memory token, as today.
+- **Cache discipline**: session-bearing responses are
+  `Cache-Control: private, no-store`; on Next, `cookies()` already opts the
+  route out of static caching — the adapter must not reintroduce shared
+  caching for session data.
 
 ## Differences from upstream that must be designed for
 
-| Area              | Upstream                       | Ours                                                                            | Consequence                                                                                                                                                                                                                                                                                                       |
-| ----------------- | ------------------------------ | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rotation          | Simple: old refresh → new pair | Session family + replay revocation                                              | A mishandled refresh race looks like **token reuse** and kills the family. The boundary refresh must dedupe/serialize concurrent refreshes for the same cookie pair (request-scoped memoization + short-lived idempotent window), and the client must treat a lost race as "re-read cookies," not "session dead." |
-| Action surface    | `signIn`/`signOut`             | + 2FA challenge, passkey ceremonies, verification-code sign-in, account linking | Proxy allowlist is a designed surface, not a constant. Each entry needs a test that its session lands in cookies.                                                                                                                                                                                                 |
-| Session model     | JWT-primary                    | DB-primary (`authSessions`), JWT is the token field                             | Verified checks must hit the component query — same as upstream — but revocation correctness is _ours_ to keep; the optimistic tier must be documented as revocation-blind within token lifetime.                                                                                                                 |
-| 2FA pending token | N/A                            | Opaque pending token before session mint                                        | Pending tokens must survive the server roundtrip: they're short-lived, they must be proxyable, and they MUST NOT be cookie-persisted (transient state).                                                                                                                                                           |
-| Passkey sign-in   | N/A                            | Ceremony completes client-side, returns a session                               | The ceremony result must POST through the proxy so the session lands in cookies — the client cannot set httpOnly cookies itself.                                                                                                                                                                                  |
+| Area              | Upstream                       | Ours                                                                             | Consequence                                                                                                                                                                                    |
+| ----------------- | ------------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rotation          | Simple: old refresh → new pair | Session family + replay revocation; a **self-race is classified as theft** today | The blocking component work: `rotateSession` needs the bounded-grace/idempotent-converge behavior in §4 before any adapter exists, or the first parallel SSR request pair revokes the session. |
+| Action surface    | `signIn`/`signOut`             | + 2FA challenge, passkey ceremonies, verification-code sign-in, account linking  | Proxy allowlist is a designed surface (§5). Each entry needs a test that its session lands in cookies.                                                                                         |
+| Session model     | JWT-primary                    | DB-primary (`authSessions`), JWT is the token field                              | `verifySession` already does the revocation-aware lookup — reuse it. The optimistic tier stays documented as revocation-blind within token lifetime.                                           |
+| Refresh binding   | Generic                        | `updateSession` resolves through `password`/`native` identity                    | Refresh must be provider-agnostic for SSR — component work, blocking.                                                                                                                          |
+| TTL coupling      | —                              | JWT `exp` couples to `authSessions.expiresAt`; rotation refuses expired sessions | Boundary refresh is proactive-only (§4). Decoupling JWT/session TTL is a separate component decision if refresh-on-expiry is ever in scope.                                                    |
+| 2FA pending token | N/A                            | Opaque pending token; already a cookie on the Convex origin                      | App-origin pending cookie (§1); proxy substitutes it server-side; single-use + challenge TTL enforced by the component.                                                                        |
+| Passkey sign-in   | N/A                            | Ceremony completes client-side, `usePasskeys` writes the session itself          | The mint write path must route through the proxy so the session lands in cookies (§6) — the client cannot set HttpOnly cookies.                                                                |
+| URL ingestion     | N/A                            | Provider reads `?token=&refreshToken=&sessionId=` into state on mount            | Disabled in cookie mode (§6) — OAuth/magic-link redirects place refresh tokens in the query today.                                                                                             |
 
 ## Adapter mapping
 
-| Contract piece            | Next.js adapter                                    | TanStack Start adapter                                                |
-| ------------------------- | -------------------------------------------------- | --------------------------------------------------------------------- |
-| Cookie schema             | `cookies()` API / `NextResponse` cookie writes     | `getRequestHeader`/`setResponseHeader`                                |
-| Optimistic resolution     | `proxy.ts` (renamed middleware)                    | Route `beforeLoad` — UX tier only                                     |
-| Verified resolution       | DAL helper + React `cache()`                       | `createMiddleware` attaching `context.session`                        |
-| Boundary refresh/exchange | `proxy.ts` refresh + code exchange                 | `createServerFn` called in `beforeLoad`, or global request middleware |
-| Proxy endpoint            | Route handler `/api/auth`                          | Server route `/api/auth`                                              |
-| Client provider mode      | `ConvexAuthNextjsServerProvider` → client provider | Provider reading root-route context                                   |
-| Post-auth revalidation    | `router.refresh()` / cache tags                    | `router.invalidate()`                                                 |
-| Cache discipline          | `cookies()` opts out of static caching             | `Cache-Control: private, no-store` headers on session routes          |
+| Contract piece            | Next.js adapter                                   | TanStack Start adapter                                                |
+| ------------------------- | ------------------------------------------------- | --------------------------------------------------------------------- |
+| Cookie schema             | `cookies()` API / `NextResponse` cookie writes    | `getRequestHeader`/`setResponseHeader`                                |
+| Optimistic resolution     | `proxy.ts` (renamed middleware)                   | Route `beforeLoad` — UX tier only                                     |
+| Verified resolution       | DAL helper + React `cache()` over `verifySession` | `createMiddleware` attaching `context.session` via `verifySession`    |
+| Boundary refresh/exchange | `proxy.ts` proactive refresh + code exchange      | `createServerFn` called in `beforeLoad`, or global request middleware |
+| Proxy endpoint            | Route handler `/api/auth`                         | Server route `/api/auth`                                              |
+| Client provider mode      | Server provider → client provider, `storageMode`  | Provider reading root-route context, `storageMode`                    |
+| Transport binding         | `convex/nextjs` fetch\* per request               | `ConvexHttpClient` per request                                        |
+| Post-auth revalidation    | `router.refresh()` / cache tags                   | `router.invalidate()`                                                 |
+| Cache discipline          | `cookies()` opts out of static caching            | `Cache-Control: private, no-store` headers on session routes          |
 
 ## Test plan — before any adapter ships
 
-Component-level (convex-test, no framework):
+Component-level (convex-test, no framework) — **blocking**:
 
+- Concurrent rotation: two `rotateSession`-equivalent calls with the same
+  refresh token → both converge on the family's current pair; the family
+  survives; neither request gets `null`-as-theft.
+- Grace boundary: predecessor token presented inside the window → current
+  pair; presented outside the window → family revocation (existing replay
+  coverage still holds).
+- A token that is not the direct predecessor → family revocation regardless
+  of timing.
+- `verifySession` over HTTP transport: revoked session resolves
+  unauthenticated even when the JWT is structurally valid and unexpired.
+- Provider-agnostic refresh: a session minted via passkey/OAuth (non-password
+  identity) rotates successfully through the refresh path.
 - Session-minting action → token pair round-trips through an HTTP transport
   client, identical to websocket behavior.
-- `rotateSession` called twice concurrently with the same refresh token →
-  exactly one succeeds; the family survives; the loser can recover by
-  re-reading state (define and assert the loser-visible result).
-- Replay: refresh with an already-rotated token → family revoked (existing
-  coverage) **plus** the concurrent-above case is not misclassified as replay.
-- 2FA pending token: mint → proxy-style call → verify → session; pending token
-  is single-use and expires.
-- Revoked session resolves `isSessionActive=false` even when JWT is
-  structurally valid and unexpired.
+- 2FA pending token: mint → proxy-style substitution → verify → session;
+  pending token is single-use and expires.
 
 Adapter-level (upstream's bar is `test-nextjs/e2e-tests` — match it):
 
 - E2E: sign-in → SSR page renders authed on first paint (no flash) → reload →
   still authed → sign-out → SSR renders unauthed.
-- E2E: two parallel SSR requests with an expired token → one refresh, both
-  succeed, family intact.
-- E2E: OAuth code lands on GET navigation → exchange → redirect, code stripped.
-- E2E: passkey sign-in → session cookie set → SSR authed.
+- E2E: two parallel SSR requests with a near-expiry token → one effective
+  rotation, both succeed, family intact.
+- E2E: OAuth code lands on GET navigation → exchange → redirect, param
+  stripped; magic-link `token` does the same on its own route.
+- E2E: passkey sign-in → session cookie set → SSR authed; 2FA challenge
+  survives a reload via the pending cookie.
+- E2E: prefetch flood does not refresh-storm (coalescing assertion).
+
+## Resolved by review
+
+- **Sentinel vs absent refreshToken** — resolved: mode flag, `refreshToken`
+  stays `null` in the browser. A truthy sentinel misfires `if (refreshToken)`
+  sites and the auto-refresh timer.
+- **Dedicated `isSessionActive` query** — resolved: unnecessary; the existing
+  `verifySession` query is the adapter surface.
+- **2FA pending persistence** — resolved: short-lived HttpOnly cookie
+  (reload-safe challenge), not transient JS state.
+- **Org cookie** — resolved: not needed; `activeOrganizationId` is on the user
+  row.
 
 ## Open questions
 
-1. **Refresh-race semantics** — the single highest-risk design point. Options:
-   (a) boundary serializes and the loser re-reads the response cookies,
-   (b) component-level grace window where the immediately-previous refresh
-   token stays valid once (weakens replay detection), (c) advisory lock in the
-   component. Lean: (a) — keeps replay detection strict; needs the adapter to
-   distinguish "rotated" from "stolen" in the component's response.
-2. **Sentinel vs absent refreshToken in cookie mode** — upstream uses
-   `"dummy"`; a structured sentinel is more explicit but changes the client
-   contract.
-3. **Which session-minting actions join the allowlist** — enumerate from
-   `signIn`'s internal dispatch (password/oauth/code/passkey/2FA) rather than
-   letting the proxy grow organically.
-4. **Whether verified resolution needs a dedicated component query** or the
-   existing session lookup suffices — likely a thin `isSessionActive`
-   public query on the component for a stable adapter API.
+1. **Grace-window parameters** — window length, whether it is one-shot or
+   idempotent within the window, configurability. Prototype in the component
+   first; the adapter depends on the result.
+2. **Allowlist enumeration** — the final list of session-minting actions from
+   `signIn`'s internal dispatch + the mint sites in §5.
+3. **Proactive-refresh threshold** — how near expiry triggers a boundary
+   refresh; interacts with Convex prefetch and request fan-out.
+4. **JWT/session TTL decoupling** — only if refresh-on-expiry is ever in
+   scope; out of scope for the first adapters.
 
 ## Sequencing
 
-1. This contract reviewed (Cursor + CodeRabbit) — design-doc PR, no code.
-2. Component-level tests for refresh-race semantics (open question 1) — proves
-   the contract is implementable before any framework exists.
-3. Next.js adapter (#321) — delegated, using upstream's layout as the template
-   and this contract for the deltas.
-4. TanStack Start adapter — built after the Router example (#341) merges and
-   the contract is proven on Next.js.
+1. This contract reviewed (Cursor — done; CodeRabbit on PR #342).
+2. **Blocking component work**: `rotateSession` race semantics (grace /
+   idempotent converge) + provider-agnostic refresh path — with the
+   component-level tests above. No adapter can be built until this lands:
+   under current semantics the first parallel SSR request pair revokes the
+   session.
+3. Next.js adapter (#321) — delegated, using upstream's layout as the
+   template and this contract for the deltas.
+4. TanStack Start adapter — after the Router example (#341) merges and the
+   contract is proven on Next.js.
