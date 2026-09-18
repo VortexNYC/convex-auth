@@ -3,10 +3,33 @@ import { getPage } from "convex-helpers/server/pagination";
 import { getAllRows } from "../pagination.js";
 import { getOneFrom } from "convex-helpers/server/relationships";
 import { mutation, query, type MutationCtx, type QueryCtx } from "../_generated/server.js";
+import { base64urlToBytes } from "../../convex-runtime/native/password.js";
 import schema from "../schema.js";
 import type { Doc, Id } from "../_generated/dataModel.js";
 
 const MAX_SESSIONS_PER_USER = 1000;
+
+// Parallel requests can present the same refresh token (e.g. two SSR handlers
+// holding the same cookie). Within this window a just-rotated token converges
+// on a new sibling pair instead of being treated as replay. Bounded by
+// MAX_GRACE_REDEMPTIONS so a stolen predecessor yields at most a few sessions.
+const ROTATION_GRACE_MS = 15_000;
+const MAX_GRACE_REDEMPTIONS = 8;
+
+function identityIdFromSessionToken(token: string): Id<"auth_identities"> | undefined {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    return undefined;
+  }
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(base64urlToBytes(parts[1]))) as {
+      identityId?: string;
+    };
+    return payload.identityId as Id<"auth_identities"> | undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 async function getSessionsByUser(ctx: { db: QueryCtx["db"] }, userId: string) {
   return await getAllRows(ctx, {
@@ -47,6 +70,7 @@ const userReturnValidator = v.object({
 
 const rotateSessionResultValidator = v.union(
   v.null(),
+  v.literal("converge"),
   v.object({
     user: userReturnValidator,
     identityId: v.id("auth_identities"),
@@ -308,6 +332,14 @@ export const rotateSession = mutation({
       return null;
     }
     if (refresh.revokedAt !== undefined) {
+      // The token was already spent. If it was spent by a rotation inside the
+      // grace window, a parallel request holding the same cookie is presenting
+      // it — converge rather than killing the session family it just minted.
+      if (refresh.rotatedAt !== undefined && now - refresh.rotatedAt <= ROTATION_GRACE_MS) {
+        // Over the redemption cap: fail soft like convergeSession — an over-cap
+        // request is not itself evidence of theft.
+        return (refresh.graceRedemptions ?? 0) < MAX_GRACE_REDEMPTIONS ? "converge" : null;
+      }
       await revokeSessionFamily(ctx, refresh.familyId ?? refresh.sessionId, refresh.userId, now);
       return null;
     }
@@ -328,18 +360,20 @@ export const rotateSession = mutation({
       return null;
     }
 
-    const identity = await getIdentityByUserProviderIssuer(
-      ctx,
-      refresh.userId,
-      args.provider,
-      args.issuer,
-    );
-    if (!identity) {
+    // Resolve the identity the session was minted with: the session JWT
+    // carries it as a claim, so sessions created by any provider (password,
+    // OAuth, passkey) refresh correctly. The provider/issuer args remain as a
+    // fallback for legacy sessions whose tokens predate the claim.
+    const tokenIdentityId = identityIdFromSessionToken(session.token);
+    const identity = tokenIdentityId
+      ? await ctx.db.get("auth_identities", tokenIdentityId)
+      : await getIdentityByUserProviderIssuer(ctx, refresh.userId, args.provider, args.issuer);
+    if (!identity || identity.userId !== refresh.userId) {
       return null;
     }
 
     await Promise.all([
-      ctx.db.patch(refresh._id, { revokedAt: now, updatedAt: now }),
+      ctx.db.patch(refresh._id, { revokedAt: now, rotatedAt: now, updatedAt: now }),
       ctx.db.patch(session._id, { revokedAt: now, updatedAt: now }),
     ]);
 
@@ -371,6 +405,112 @@ export const rotateSession = mutation({
     });
 
     return { user: toUserReturn(user), identityId: identity._id };
+  },
+});
+
+/**
+ * Mints a sibling session + refresh token in the same family when a
+ * just-rotated token is presented within the grace window — the parallel-
+ * request case `rotateSession` reports as "converge". Re-validates the grace
+ * conditions inside the mutation so concurrent presentations stay serialized.
+ */
+export const convergeSession = mutation({
+  args: {
+    predecessorRefreshTokenHash: v.string(),
+    newSessionId: v.string(),
+    newSessionToken: v.string(),
+    newSessionExpiresAt: v.number(),
+    newSessionIpAddress: v.optional(v.string()),
+    newSessionUserAgent: v.optional(v.string()),
+    newRefreshTokenHash: v.string(),
+    newRefreshTokenExpiresAt: v.number(),
+  },
+  returns: v.union(v.null(), v.object({ user: userReturnValidator })),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const refresh = await getOneFrom(
+      ctx.db,
+      "authRefreshTokens",
+      "by_token_hash",
+      args.predecessorRefreshTokenHash,
+      "tokenHash",
+    );
+    if (!refresh || refresh.expiresAt <= now) {
+      return null;
+    }
+    if (
+      refresh.revokedAt === undefined ||
+      refresh.rotatedAt === undefined ||
+      now - refresh.rotatedAt > ROTATION_GRACE_MS
+    ) {
+      // A revoked token that was never rotated, or a rotation older than the
+      // window, is a replay signature — fail closed on the family. A still-
+      // live token presented here is caller error: no revocation, no mint.
+      if (refresh.revokedAt !== undefined) {
+        await revokeSessionFamily(ctx, refresh.familyId ?? refresh.sessionId, refresh.userId, now);
+      }
+      return null;
+    }
+    if ((refresh.graceRedemptions ?? 0) >= MAX_GRACE_REDEMPTIONS) {
+      // Fail soft: the cap bounds how many sessions a stolen predecessor can
+      // yield, but an over-cap request is not itself evidence of theft.
+      return null;
+    }
+
+    const session = await getOneFrom(
+      ctx.db,
+      "authSessions",
+      "by_session_id",
+      refresh.sessionId,
+      "sessionId",
+    );
+    const user = await ctx.db.get("users", refresh.userId);
+    if (!user) {
+      return null;
+    }
+
+    const familyId = refresh.familyId ?? refresh.sessionId;
+
+    await ctx.db.patch(refresh._id, {
+      graceRedemptions: (refresh.graceRedemptions ?? 0) + 1,
+      updatedAt: now,
+    });
+    await ctx.db.insert("authSessions", {
+      sessionId: args.newSessionId,
+      familyId,
+      userId: refresh.userId,
+      token: args.newSessionToken,
+      expiresAt: args.newSessionExpiresAt,
+      ipAddress: args.newSessionIpAddress,
+      userAgent: args.newSessionUserAgent,
+      credentialId: session?.credentialId,
+      revokedAt: undefined,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.insert("authRefreshTokens", {
+      tokenHash: args.newRefreshTokenHash,
+      sessionId: args.newSessionId,
+      familyId,
+      userId: refresh.userId,
+      expiresAt: args.newRefreshTokenExpiresAt,
+      revokedAt: undefined,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("auth_audit_events", {
+      actorUserId: refresh.userId,
+      actorType: "system",
+      eventType: "refresh_token_converged",
+      targetType: "session",
+      targetId: familyId,
+      organizationId: undefined,
+      metadataJson: undefined,
+      createdAt: now,
+    });
+
+    return { user: toUserReturn(user) };
   },
 });
 

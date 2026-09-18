@@ -212,6 +212,8 @@ export type NativeRefreshTokenDoc = {
   userId: string;
   expiresAt: number;
   revokedAt?: number;
+  rotatedAt?: number;
+  graceRedemptions?: number;
   createdAt: number;
   updatedAt: number;
 };
@@ -462,7 +464,23 @@ export type NativeEmailAndPasswordComponentHandle = {
           provider: string;
           issuer: string;
         },
-        { user: NativeUserDoc; identityId: string } | null,
+        { user: NativeUserDoc; identityId: string } | "converge" | null,
+        string
+      >;
+      convergeSession: FunctionReference<
+        "mutation",
+        "public" | "internal",
+        {
+          predecessorRefreshTokenHash: string;
+          newSessionId: string;
+          newSessionToken: string;
+          newSessionExpiresAt: number;
+          newSessionIpAddress?: string;
+          newSessionUserAgent?: string;
+          newRefreshTokenHash: string;
+          newRefreshTokenExpiresAt: number;
+        },
+        { user: NativeUserDoc } | null,
         string
       >;
     };
@@ -504,6 +522,13 @@ export type NativeEmailAndPasswordComponentHandle = {
       >;
     };
     identities: {
+      getIdentityById: FunctionReference<
+        "query",
+        "public" | "internal",
+        { identityId: string },
+        NativeIdentityDoc | null,
+        string
+      >;
       getNativeIdentityByUser: FunctionReference<
         "query",
         "public" | "internal",

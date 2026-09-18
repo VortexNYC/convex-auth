@@ -50,6 +50,8 @@ export const authRefreshTokens = defineTable({
   userId: v.id("users"),
   expiresAt: v.number(),
   revokedAt: v.optional(v.number()),
+  rotatedAt: v.optional(v.number()),
+  graceRedemptions: v.optional(v.number()),
   createdAt: v.number(),
   updatedAt: v.number(),
 })

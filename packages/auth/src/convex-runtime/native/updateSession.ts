@@ -1,11 +1,32 @@
 import type { GenericActionCtx, GenericDataModel } from "convex/server";
+import type { Id } from "../../component/_generated/dataModel.js";
 import { mintToken } from "./jwt.js";
+import { base64urlToBytes } from "./password.js";
 import { generateVerificationToken, hashToken } from "./tokens.js";
 import type { NativeAuthSession, NativeEmailAndPasswordComponentHandle } from "./types.js";
 import { toNativeAuthUser } from "./types.js";
 
 const DEFAULT_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+// The session JWT carries the identity it was minted with as a claim, so any
+// provider's session (password, OAuth, passkey) can resolve it without
+// guessing provider/issuer. Sessions minted before the claim existed fall
+// back to the password/native lookup below.
+function identityIdFromSessionToken(token: string): Id<"auth_identities"> | undefined {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    return undefined;
+  }
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(base64urlToBytes(parts[1]))) as {
+      identityId?: string;
+    };
+    return payload.identityId as Id<"auth_identities"> | undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function handleUpdateSession<DataModel extends GenericDataModel>(
   ctx: GenericActionCtx<DataModel>,
@@ -25,17 +46,25 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
   const session = await ctx.runQuery(component.native.sessions.getSessionBySessionId, {
     sessionId: refresh.sessionId,
   });
-  if (!session || session.revokedAt !== undefined || session.expiresAt <= now) {
+  // A revoked session is not rejected here: a parallel request may have just
+  // rotated this pair, in which case rotateSession reports "converge" and a
+  // sibling session is minted below. Rejection stays inside the mutations.
+  if (!session || session.expiresAt <= now) {
     throw new Error("Invalid refresh token");
   }
 
+  const tokenIdentityId = identityIdFromSessionToken(session.token);
   const [user, identity] = await Promise.all([
     ctx.runQuery(component.native.users.getUserById, { userId: refresh.userId }),
-    ctx.runQuery(component.native.identities.getNativeIdentityByUser, {
-      userId: refresh.userId,
-      provider: "password",
-      issuer: "native",
-    }),
+    tokenIdentityId
+      ? ctx.runQuery(component.native.identities.getIdentityById, {
+          identityId: tokenIdentityId,
+        })
+      : ctx.runQuery(component.native.identities.getNativeIdentityByUser, {
+          userId: refresh.userId,
+          provider: "password",
+          issuer: "native",
+        }),
   ]);
   if (!user) {
     throw new Error("User not found");
@@ -44,26 +73,35 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
     throw new Error("Identity not found");
   }
 
-  const sessionId = crypto.randomUUID();
-  const newRefreshToken = generateVerificationToken();
-  const newRefreshTokenHash = await hashToken(newRefreshToken);
   const sessionTtlMs = DEFAULT_SESSION_TTL_MS;
   const refreshTokenTtlMs = DEFAULT_REFRESH_TOKEN_TTL_MS;
   const expiresAt = now + sessionTtlMs;
 
-  const token = await mintToken(
-    user._id,
-    sessionId,
-    { identityId: identity._id },
-    { expiresInSeconds: Math.floor(sessionTtlMs / 1000) },
-  );
+  const mintSessionPair = async () => {
+    const newSessionId = crypto.randomUUID();
+    const newRefreshToken = generateVerificationToken();
+    const token = await mintToken(
+      user._id,
+      newSessionId,
+      { identityId: identity._id },
+      { expiresInSeconds: Math.floor(sessionTtlMs / 1000) },
+    );
+    return {
+      newSessionId,
+      newRefreshToken,
+      newRefreshTokenHash: await hashToken(newRefreshToken),
+      token,
+    };
+  };
+
+  const pair = await mintSessionPair();
 
   const result = await ctx.runMutation(component.native.sessions.rotateSession, {
     oldRefreshTokenHash,
-    newSessionId: sessionId,
-    newSessionToken: token,
+    newSessionId: pair.newSessionId,
+    newSessionToken: pair.token,
     newSessionExpiresAt: expiresAt,
-    newRefreshTokenHash,
+    newRefreshTokenHash: pair.newRefreshTokenHash,
     newRefreshTokenExpiresAt: now + refreshTokenTtlMs,
     provider: "password",
     issuer: "native",
@@ -73,12 +111,38 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
     throw new Error("Invalid refresh token");
   }
 
+  if (result === "converge") {
+    // A parallel request already rotated this token inside the grace window.
+    // Mint a sibling pair in the same family rather than letting its session
+    // be revoked as replay.
+    const convergePair = await mintSessionPair();
+    const convergeResult = await ctx.runMutation(component.native.sessions.convergeSession, {
+      predecessorRefreshTokenHash: oldRefreshTokenHash,
+      newSessionId: convergePair.newSessionId,
+      newSessionToken: convergePair.token,
+      newSessionExpiresAt: expiresAt,
+      newRefreshTokenHash: convergePair.newRefreshTokenHash,
+      newRefreshTokenExpiresAt: now + refreshTokenTtlMs,
+    });
+    if (!convergeResult) {
+      throw new Error("Invalid refresh token");
+    }
+    return {
+      token: convergePair.token,
+      refreshToken: convergePair.newRefreshToken,
+      user: toNativeAuthUser(convergeResult.user),
+      userId: convergeResult.user._id,
+      identityId: identity._id,
+      sessionId: convergePair.newSessionId,
+    };
+  }
+
   return {
-    token,
-    refreshToken: newRefreshToken,
+    token: pair.token,
+    refreshToken: pair.newRefreshToken,
     user: toNativeAuthUser(result.user),
     userId: result.user._id,
     identityId: result.identityId,
-    sessionId,
+    sessionId: pair.newSessionId,
   };
 }
