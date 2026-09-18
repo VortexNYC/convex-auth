@@ -17,30 +17,64 @@ session state — no token ever touches browser JavaScript.
 
 ## Setup
 
+Two backend options — a throwaway local deployment (no cloud project needed)
+or your own cloud dev deployment.
+
+### Option A — local anonymous backend
+
 ```bash
-# 1. Start the Convex backend (creates a dev deployment, writes .env.local)
 cd examples/nextjs
-pnpm dlx convex dev
+pnpm dlx convex dev --dev-deployment local
 ```
 
-`convex dev` pushes `convex/` and prompts for `JWT_PRIVATE_KEY`/`JWKS`
-generation. Set the app origin so OAuth/magic-link redirects land back on
-Next:
+This starts a local Convex backend on `127.0.0.1:3210` and writes
+`.env.local` with `CONVEX_DEPLOYMENT=anonymous:<name>` and
+`NEXT_PUBLIC_CONVEX_URL`. The first push will fail demanding
+`JWT_PRIVATE_KEY` and `JWKS` — generate an RS256 pair and set them:
 
 ```bash
+# run from repo root — packages/auth has jose installed
+cd ../../packages/auth
+node -e '
+  const jose = require("jose");
+  jose.generateKeyPair("RS256", { extractable: true }).then(async ({ privateKey, publicKey }) => {
+    const priv = await jose.exportJWK(privateKey);
+    const pub = await jose.exportJWK(publicKey);
+    pub.kid = priv.kid;
+    console.log("JWT_PRIVATE_KEY=" + JSON.stringify(priv));
+    console.log("JWKS=" + JSON.stringify({ keys: [pub] }));
+  });
+'
+```
+
+Paste each printed value into `convex env set` (run from `examples/nextjs`):
+
+```bash
+cd ../../examples/nextjs
+pnpm dlx convex env set JWT_PRIVATE_KEY '<private-jwk-json>'
+pnpm dlx convex env set JWKS '{"keys":[<public-jwk-json>]}'
 pnpm dlx convex env set SITE_URL http://localhost:3000
-# optional: return email tokens in responses for local testing
 pnpm dlx convex env set ALLOW_EMAIL_TOKEN_FALLBACK true
+pnpm dlx convex dev --dev-deployment local   # leave running — pushes convex/
 ```
+
+### Option B — cloud dev deployment
 
 ```bash
-# 2. Run Next.js
-pnpm dev
+pnpm dlx convex dev   # creates/links a cloud project, writes .env.local
 ```
 
-Open http://localhost:3000 — signed-out home renders on the server, sign in,
-`/dashboard` verifies server-side and shows the same session client-side via
-`useSession()`.
+Then set the same env vars on the deployment (`JWT_PRIVATE_KEY`, `JWKS`,
+`SITE_URL`, optionally `ALLOW_EMAIL_TOKEN_FALLBACK`).
+
+### Run the app
+
+```bash
+pnpm dev   # http://localhost:3000
+```
+
+Signed-out home renders on the server, sign in, `/dashboard` verifies
+server-side and shows the same session client-side via `useSession()`.
 
 ## Cookie model
 

@@ -61,8 +61,9 @@ export const auth = convexAuth({
     },
   },
   passkey: {
-    rpID: "localhost",
-    origin: "http://localhost:3000",
+    // rpID must be the bare hostname (no scheme/port) of `origin`.
+    rpID: new URL(siteUrl).hostname,
+    origin: siteUrl,
     rpName: "Convex Auth Next.js Demo",
   },
   anonymous: {
