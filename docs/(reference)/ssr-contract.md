@@ -186,13 +186,25 @@ synchronize two independent requests.
 
 **The fix belongs in `rotateSession`**: a bounded grace on the
 immediately-preceding family token. When a presented refresh token was rotated
-within a short window (target: seconds, covering a request burst) and is the
-family's direct predecessor, the component returns the family's **current live
-pair** instead of revoking — idempotent convergence, not a second rotation.
-Tokens older than the window, or not the direct predecessor, still revoke the
-family. Tradeoff to document plainly: a stolen token replayed inside the grace
-window receives the live pair rather than triggering revocation — the same
-leeway Auth0-style rotation accepts; the window stays narrow and configurable.
+within a short window and is the family's direct predecessor, the component
+mints a **sibling pair** in the same family instead of revoking — bounded
+convergence, not a second rotation of the same row. Tokens older than the
+window, or not rotated through, still revoke the family.
+
+**As built (PR #343):** `rotateSession` marks `rotatedAt` on rotation and
+returns `"converge"` for a just-rotated predecessor inside a **15s** window;
+`convergeSession` re-validates inside the mutation and mints the sibling.
+Bounds, in force: `graceRedemptions` ≤ **8** per predecessor row, live family
+sessions ≤ **10** (a `by_family` scan bounded at 2,000 rows), and convergence
+requires **at least one live family member** — sign-out, password reset, or
+reuse revocation during the window kills the grace with the family, so a
+stolen predecessor cannot resurrect it. Refusals are fail-soft (`null`, no
+revocation) for over-cap and live-cap, fail-closed (family revoke) for
+out-of-window and never-rotated replays; refused redemptions write
+`refresh_token_grace_exhausted` audit events. Tradeoff, stated plainly: a
+stolen token replayed inside the window mints a bounded number of sessions
+rather than triggering revocation — the same leeway Auth0-style rotation
+accepts, capped and audited.
 
 ### 5. Auth-action proxy
 
@@ -303,20 +315,21 @@ How the adapter authenticates Convex calls on each side:
 
 ## Test plan — before any adapter ships
 
-Component-level (convex-test, no framework) — **blocking**:
+Component-level (convex-test, no framework) — **blocking**; the rotation
+items landed in PR #343:
 
-- Concurrent rotation: two `rotateSession`-equivalent calls with the same
-  refresh token → both converge on the family's current pair; the family
-  survives; neither request gets `null`-as-theft.
-- Grace boundary: predecessor token presented inside the window → current
-  pair; presented outside the window → family revocation (existing replay
-  coverage still holds).
-- A token that is not the direct predecessor → family revocation regardless
-  of timing.
+- ~~Concurrent rotation: two `rotateSession`-equivalent calls with the same
+  refresh token → the loser converges; the family survives; neither request
+  gets `null`-as-theft.~~ ✅
+- ~~Grace boundary: predecessor inside the window → converge; outside →
+  family revocation.~~ ✅
+- ~~Dead-family convergence refused (logout/reset during the window)~~ ✅ and
+  ~~live-session cap refusal~~ ✅, both with `grace_exhausted` audit coverage.
 - `verifySession` over HTTP transport: revoked session resolves
   unauthenticated even when the JWT is structurally valid and unexpired.
-- Provider-agnostic refresh: a session minted via passkey/OAuth (non-password
-  identity) rotates successfully through the refresh path.
+- ~~Provider-agnostic refresh: a session minted via a non-password identity
+  (OAuth/passkey) rotates successfully through the refresh path~~ ✅ — the
+  session JWT carries the identity doc id; `getIdentityById` resolves it.
 - Session-minting action → token pair round-trips through an HTTP transport
   client, identical to websocket behavior.
 - 2FA pending token: mint → proxy-style substitution → verify → session;
@@ -348,9 +361,11 @@ Adapter-level (upstream's bar is `test-nextjs/e2e-tests` — match it):
 
 ## Open questions
 
-1. **Grace-window parameters** — window length, whether it is one-shot or
-   idempotent within the window, configurability. Prototype in the component
-   first; the adapter depends on the result.
+1. ~~**Grace-window parameters**~~ — resolved in PR #343: 15s window,
+   idempotent within the window, 8 redemptions per predecessor, 10 live
+   sessions per family, family-liveness required. Constants in
+   `component/native/sessions.ts`; configurability deferred until a real
+   consumer needs it.
 2. **Allowlist enumeration** — the final list of session-minting actions from
    `signIn`'s internal dispatch + the mint sites in §5.
 3. **Proactive-refresh threshold** — how near expiry triggers a boundary
@@ -361,11 +376,11 @@ Adapter-level (upstream's bar is `test-nextjs/e2e-tests` — match it):
 ## Sequencing
 
 1. This contract reviewed (Cursor — done; CodeRabbit on PR #342).
-2. **Blocking component work**: `rotateSession` race semantics (grace /
-   idempotent converge) + provider-agnostic refresh path — with the
-   component-level tests above. No adapter can be built until this lands:
-   under current semantics the first parallel SSR request pair revokes the
-   session.
+2. ~~**Blocking component work**~~ — landed in PR #343: `rotateSession`
+   convergence + `convergeSession` + provider-agnostic refresh via the
+   session-JWT identity claim, with the component-level tests above.
+   Remaining before adapters: the HTTP-transport round-trip and 2FA
+   pending-token items in the test plan.
 3. Next.js adapter (#321) — delegated, using upstream's layout as the
    template and this contract for the deltas.
 4. TanStack Start adapter — after the Router example (#341) merges and the
