@@ -288,4 +288,70 @@ describe("native verification codes", () => {
     expect(expired).toBeNull();
     expect(consumed).toBeNull();
   });
+
+  it("two_factor_pending: carries the identity through lookup, is single-use, and expires", async () => {
+    const t = convexTest(schema, modules);
+
+    const userId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "shlomo@example.com",
+        name: "Shlomo",
+        emailVerified: false,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    // The pending token is minted alongside the identity the challenge was
+    // issued for — the verify path (and any cookie/proxy substitution of the
+    // token) needs it to mint the post-2FA session for the right identity.
+    const expiresAt = Date.now() + 300_000;
+    await t.mutation(api.native.codes.createVerificationCode, {
+      userId,
+      type: "two_factor_pending",
+      tokenHash: "pending-hash",
+      identityId: "identity_1",
+      rememberMe: true,
+      expiresAt,
+    });
+
+    const pending = await t.query(api.native.codes.getVerificationCodeByTokenHash, {
+      tokenHash: "pending-hash",
+      type: "two_factor_pending",
+    });
+    expect(pending).toMatchObject({
+      userId,
+      identityId: "identity_1",
+      rememberMe: true,
+      expiresAt,
+    });
+
+    // Single-use: the first consume wins, the second gets nothing — a
+    // replayed pending token cannot mint a second session.
+    const first = await t.mutation(api.native.codes.consumeVerificationCode, {
+      tokenHash: "pending-hash",
+      type: "two_factor_pending",
+    });
+    expect(first?.identityId).toBe("identity_1");
+    const second = await t.mutation(api.native.codes.consumeVerificationCode, {
+      tokenHash: "pending-hash",
+      type: "two_factor_pending",
+    });
+    expect(second).toBeNull();
+
+    // Expired pending tokens refuse at consume time.
+    await t.mutation(api.native.codes.createVerificationCode, {
+      userId,
+      type: "two_factor_pending",
+      tokenHash: "expired-pending",
+      identityId: "identity_1",
+      expiresAt: 1,
+    });
+    const expiredConsume = await t.mutation(api.native.codes.consumeVerificationCode, {
+      tokenHash: "expired-pending",
+      type: "two_factor_pending",
+    });
+    expect(expiredConsume).toBeNull();
+  });
 });

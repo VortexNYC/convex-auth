@@ -325,18 +325,28 @@ items landed in PR #343:
   family revocation.~~ ✅
 - ~~Dead-family convergence refused (logout/reset during the window)~~ ✅ and
   ~~live-session cap refusal~~ ✅, both with `grace_exhausted` audit coverage.
-- `verifySession` over HTTP transport: revoked session resolves
-  unauthenticated even when the JWT is structurally valid and unexpired.
+- ~~`verifySession` over HTTP transport: revoked session resolves
+  unauthenticated even when the JWT is structurally valid and unexpired~~ ✅ —
+  `convex-runtime/native/http.test.ts` drives the real route handlers with
+  real `Request` objects: `/api/auth/convex/token` and `/api/auth/session`
+  reject/null a revoked session with a valid JWT, and round-trip a live
+  session into a freshly verified Convex token.
 - ~~Provider-agnostic refresh: a session minted via a non-password identity
   (OAuth/passkey) rotates successfully through the refresh path~~ ✅ —
   `authSessions` stores `identityId` at every mint site and rotates it
   forward; pre-column rows resolve via the session-JWT claim as a
   transitional path; `getIdentityById` resolves the doc; sessions with
   neither source fail closed — no provider/issuer guessing.
-- Session-minting action → token pair round-trips through an HTTP transport
-  client, identical to websocket behavior.
-- 2FA pending token: mint → proxy-style substitution → verify → session;
-  pending token is single-use and expires.
+- ~~Session-minting action → token pair round-trips through an HTTP transport
+  client, identical to websocket behavior~~ ✅ — `http.test.ts` asserts
+  `/api/auth/sign-in` writes access + refresh cookies and a verifiable token
+  body from a real request.
+- ~~2FA pending token: mint → proxy-style substitution → verify → session;
+  pending token is single-use and expires~~ ✅ — `native-codes.test.ts`
+  proves the `two_factor_pending` lifecycle (identity carried through
+  lookup, single-use consume, expiry refusal); `http.test.ts` proves the
+  pending token lands on the `convex-auth-two-factor` cookie the proxy
+  substitutes server-side.
 
 Adapter-level (upstream's bar is `test-nextjs/e2e-tests` — match it):
 
@@ -388,9 +398,11 @@ Adapter-level (upstream's bar is `test-nextjs/e2e-tests` — match it):
 2. ~~**Blocking component work**~~ — landed in PR #343: `rotateSession`
    convergence + `convergeSession` + provider-agnostic refresh via the
    `authSessions.identityId` column (JWT claim is the transitional path for
-   pre-column rows), with the component-level tests above.
-   Remaining before adapters: the HTTP-transport round-trip and 2FA
-   pending-token items in the test plan.
+   pre-column rows), with the component-level tests above. All
+   component-level contract items are now covered; the adapter-level E2E
+   items remain — including the two-parallel-SSR-requests race proof, which
+   is where true OCC contention gets exercised (convex-test serializes
+   mutations, so the race is only provable against a real deployment).
 3. Next.js adapter (#321) — delegated, using upstream's layout as the
    template and this contract for the deltas.
 4. TanStack Start adapter — after the Router example (#341) merges and the
