@@ -106,7 +106,7 @@ export default defineConfig({
           groups: [
             // A chunk carries exactly one directive — "use server" modules
             // must never share a chunk with "use client" modules.
-            { name: "server-actions", test: /server[\/\\]invalidateCache/ },
+            { name: "server-actions", test: /server[/\\]invalidateCache/ },
           ],
         },
         banner: (chunk) => {

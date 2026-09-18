@@ -6,6 +6,7 @@ import {
   ConvexAuthNextjsClientProvider,
   type ConvexAuthServerState,
 } from "./client.js";
+import type { SerializedAuthActions } from "./serialization.js";
 
 /**
  * Client-side auth provider for cookie-mode sessions. Most apps should use
@@ -16,11 +17,11 @@ import {
  */
 export function ConvexAuthNextjsProvider(props: {
   serverState: ConvexAuthServerState;
-  actions: NativeAuthActions;
+  actions: NativeAuthActions | SerializedAuthActions;
   apiRoute?: string;
   children: ReactNode;
 }) {
   return <ConvexAuthNextjsClientProvider {...props} />;
 }
 
-export type { ConvexAuthServerState };
+export type { ConvexAuthServerState, SerializedAuthActions };

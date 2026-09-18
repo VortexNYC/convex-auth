@@ -13,6 +13,7 @@ import {
 import { ReactNode } from "react";
 import type { NativeAuthActions } from "../../react/ConvexAuthProvider.js";
 import { ConvexAuthNextjsClientProvider } from "../client.js";
+import { serializeAuthActions } from "../serialization.js";
 import { getRequestCookies, getRequestCookiesInMiddleware } from "./cookies.js";
 import { proxyAuthActionToConvex, shouldProxyAuthAction } from "./proxy.js";
 import { handleAuthenticationInRequest } from "./request.js";
@@ -69,7 +70,10 @@ export async function ConvexAuthNextjsServerProvider(props: {
     <ConvexAuthNextjsClientProvider
       serverState={serverState}
       apiRoute={apiRoute}
-      actions={actions}
+      // api.auth is a Proxy of Symbol-keyed FunctionReferences — it would
+      // serialize to `{}` across the RSC boundary, so send name strings and
+      // let the client rebuild the references.
+      actions={serializeAuthActions(actions)}
     >
       {children}
     </ConvexAuthNextjsClientProvider>
