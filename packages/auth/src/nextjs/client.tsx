@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import {
   ConvexAuthProvider,
   type NativeAuthActions,
@@ -18,10 +18,17 @@ const functionNameSymbol = Symbol.for("functionName");
 export function normalizeAuthActions(
   actions: SerializedAuthActions | NativeAuthActions,
 ): NativeAuthActions {
-  if (typeof (actions as SerializedAuthActions).signUp !== "string") {
+  // Manifests hold only string values; live action objects hold only
+  // FunctionReferences. Any string value means we received a manifest —
+  // including partial ones, which must still be rebuilt rather than passed
+  // through as "live" (a pass-through would leave string values where the
+  // provider expects refs and crash downstream).
+  if (!Object.values(actions).some((v) => typeof v === "string")) {
     return actions as NativeAuthActions;
   }
-  const live: Record<string, { [key: symbol]: string }> = {};
+  // Null-prototype so a `__proto__`/`constructor` key in a hand-built manifest
+  // lands as data, not as a prototype write.
+  const live: Record<string, { [key: symbol]: string }> = Object.create(null);
   for (const [key, name] of Object.entries(actions)) {
     if (typeof name === "string") {
       live[key] = { [functionNameSymbol]: name };
@@ -61,7 +68,12 @@ export function ConvexAuthNextjsClientProvider(props: {
   children: ReactNode;
 }) {
   const { serverState, apiRoute, children } = props;
-  const actions = normalizeAuthActions(props.actions);
+  // Memoized — a fresh refs object every render would bust ConvexAuthProvider's
+  // own memoization on `actions`.
+  const actions = useMemo(
+    () => normalizeAuthActions(props.actions),
+    [props.actions],
+  );
   return (
     <ConvexAuthProvider
       actions={actions}

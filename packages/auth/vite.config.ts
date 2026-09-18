@@ -23,6 +23,18 @@ for (const file of fsSync.readdirSync("src", {
   }
 }
 
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// Every module carrying a "use server" prologue — drives the chunk pin below
+// so new server-action files are captured automatically.
+const serverActionIds = [...moduleDirectives]
+  .filter(([, directive]) => directive === "use server")
+  .map(([id]) => id);
+// `/$^/` never matches — an empty id list must pin nothing, not everything.
+const serverActionPattern =
+  serverActionIds.length > 0
+    ? new RegExp(serverActionIds.map(escapeRe).join("|"))
+    : /$^/;
+
 export default defineConfig({
   test: {
     server: {
@@ -104,19 +116,32 @@ export default defineConfig({
       outputOptions: {
         advancedChunks: {
           groups: [
-            // A chunk carries exactly one directive — "use server" modules
-            // must never share a chunk with "use client" modules.
-            { name: "server-actions", test: /server[/\\]invalidateCache/ },
+            // A chunk carries exactly one directive — pin every "use server"
+            // module into the action chunk so it can never be bundled into a
+            // "use client" chunk (where Next would reject or mis-scope it).
+            // Co-chunking action modules is fine: all exports of a
+            // "use server" module are actions by definition.
+            {
+              name: "server-actions",
+              test: serverActionPattern,
+            },
           ],
         },
         banner: (chunk) => {
+          const directives = new Set<string>();
           for (const id of chunk.moduleIds) {
             const directive = moduleDirectives.get(id.split("?")[0]);
             if (directive !== undefined) {
-              return `"${directive}";`;
+              directives.add(directive);
             }
           }
-          return "";
+          if (directives.size > 1) {
+            throw new Error(
+              `Chunk mixes module directives: ${[...chunk.moduleIds].join(", ")}`,
+            );
+          }
+          const [directive] = directives;
+          return directive === undefined ? "" : `"${directive}";`;
         },
       },
       deps: {

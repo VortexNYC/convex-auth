@@ -25,6 +25,7 @@ export default convexAuthNextjsMiddleware(
 );
 
 export const config = {
-  // Skip static assets and the auth proxy route itself.
+  // Only skip static assets — /api/auth must reach the middleware, which is
+  // where the auth proxy intercepts it.
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

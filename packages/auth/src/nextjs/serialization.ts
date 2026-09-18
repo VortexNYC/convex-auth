@@ -55,6 +55,15 @@ const AUTH_ACTION_KEYS = [
   "renamePasskey",
 ] as const satisfies readonly (keyof NativeAuthActions)[];
 
+// Adding a key to NativeAuthActions without listing it above fails typecheck —
+// a silently-missing key would serialize away and arrive `undefined` client-side.
+type UnlistedKey = Exclude<
+  keyof NativeAuthActions,
+  (typeof AUTH_ACTION_KEYS)[number]
+>;
+const _assertAllActionsListed: [UnlistedKey] extends [never] ? true : never =
+  true;
+
 const functionNameSymbol = Symbol.for("functionName");
 
 function referenceName(ref: unknown): string | undefined {

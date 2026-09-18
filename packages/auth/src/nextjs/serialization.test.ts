@@ -111,4 +111,35 @@ describe("normalizeAuthActions", () => {
       (actions as Record<string, unknown>).updateSession,
     ).toBeUndefined();
   });
+
+  it("rebuilds a partial manifest missing signUp", () => {
+    // A manifest that lacks the required key must still be deserialized —
+    // passing it through as "live" would leave string values where the
+    // provider expects refs.
+    const manifest = { updateSession: "auth:updateSession" };
+    const actions = normalizeAuthActions(
+      manifest as unknown as SerializedAuthActions,
+    );
+    expect(getFunctionName(actions.updateSession)).toBe("auth:updateSession");
+    expect(actions.signUp).toBeUndefined();
+  });
+
+  it("does not write to __proto__ on a hostile manifest key", () => {
+    // JSON.parse yields __proto__ as an own enumerable property with a string
+    // value — exactly the shape that would write the prototype on a plain
+    // object literal.
+    const manifest = JSON.parse(
+      '{"signUp":"auth:signUp","__proto__":"auth:evil"}',
+    ) as SerializedAuthActions;
+    const actions = normalizeAuthActions(manifest);
+    // The rebuilt map is null-prototype, so __proto__ lands as data and the
+    // global object prototype is untouched.
+    expect(Object.getPrototypeOf(actions)).toBeNull();
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(
+      getFunctionName(
+        (actions as Record<string, FunctionReference>).__proto__,
+      ),
+    ).toBe("auth:evil");
+  });
 });
