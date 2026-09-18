@@ -1,6 +1,11 @@
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
+  test: {
+    // Delegate to each package's own config — packages/auth carries the wasm
+    // plugin + inline-deps setup that argon2id-wasm requires under vitest.
+    projects: ["packages/auth"],
+  },
   fmt: {
     ignorePatterns: [
       "**/dist/**",
