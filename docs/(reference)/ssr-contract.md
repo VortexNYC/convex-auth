@@ -328,8 +328,9 @@ items landed in PR #343:
 - `verifySession` over HTTP transport: revoked session resolves
   unauthenticated even when the JWT is structurally valid and unexpired.
 - ~~Provider-agnostic refresh: a session minted via a non-password identity
-  (OAuth/passkey) rotates successfully through the refresh path~~ ✅ — the
-  session JWT carries the identity doc id; `getIdentityById` resolves it.
+  (OAuth/passkey) rotates successfully through the refresh path~~ ✅ —
+  `authSessions` stores `identityId` at mint; pre-column rows resolve via the
+  session-JWT claim; `getIdentityById` resolves the doc.
 - Session-minting action → token pair round-trips through an HTTP transport
   client, identical to websocket behavior.
 - 2FA pending token: mint → proxy-style substitution → verify → session;
