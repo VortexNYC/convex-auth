@@ -1,5 +1,27 @@
 import fs from "node:fs/promises";
+import fsSync from "node:fs";
+import path from "node:path";
 import { defineConfig } from "vite-plus";
+
+// "use client" / "use server" are module-level directives in source, but
+// bundling drops them once a directive module lands in a shared chunk —
+// Next.js then treats client components (or server actions) as plain server
+// modules and the build fails. Scan the source tree once so each emitted
+// chunk can re-declare the directive its modules carry.
+const moduleDirectives = new Map<string, string>();
+for (const file of fsSync.readdirSync("src", {
+  recursive: true,
+  encoding: "utf8",
+})) {
+  if (!/\.(ts|tsx)$/.test(file)) continue;
+  const head = fsSync
+    .readFileSync(path.join("src", file), "utf8")
+    .slice(0, 128);
+  const match = head.match(/^"(use client|use server)"/);
+  if (match) {
+    moduleDirectives.set(path.resolve("src", file), match[1]);
+  }
+}
 
 export default defineConfig({
   test: {
@@ -79,6 +101,24 @@ export default defineConfig({
       fixedExtension: false,
       hash: true,
       outDir: "dist",
+      outputOptions: {
+        advancedChunks: {
+          groups: [
+            // A chunk carries exactly one directive — "use server" modules
+            // must never share a chunk with "use client" modules.
+            { name: "server-actions", test: /server[\/\\]invalidateCache/ },
+          ],
+        },
+        banner: (chunk) => {
+          for (const id of chunk.moduleIds) {
+            const directive = moduleDirectives.get(id.split("?")[0]);
+            if (directive !== undefined) {
+              return `"${directive}";`;
+            }
+          }
+          return "";
+        },
+      },
       deps: {
         alwaysBundle: [/^convex-auth-(core|react|react-native|ui)$/],
         neverBundle: [
