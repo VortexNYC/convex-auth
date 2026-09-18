@@ -866,15 +866,16 @@ export const listMembershipsByUser = query({
   },
   returns: v.array(memberDocValidator),
   handler: async (ctx, { userId, status, limit }) => {
+    const startIndexKey = status === undefined ? [userId] : [userId, status];
     const { page: rows } = await getPage(ctx, {
       table: "organization_members",
-      index: "by_user",
-      startIndexKey: [userId],
-      endIndexKey: [userId],
+      index: status === undefined ? "by_user" : "by_user_status",
+      startIndexKey,
+      endIndexKey: startIndexKey,
       absoluteMaxRows: resolveListLimit(limit),
       schema,
     });
-    return status === undefined ? rows : rows.filter((m) => m.status === status);
+    return rows;
   },
 });
 

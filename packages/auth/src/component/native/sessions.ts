@@ -1,5 +1,6 @@
 import { v, type Infer } from "convex/values";
 import { getPage } from "convex-helpers/server/pagination";
+import { getAllRows } from "../pagination.js";
 import { getOneFrom } from "convex-helpers/server/relationships";
 import { mutation, query, type MutationCtx, type QueryCtx } from "../_generated/server.js";
 import schema from "../schema.js";
@@ -8,15 +9,13 @@ import type { Doc, Id } from "../_generated/dataModel.js";
 const MAX_SESSIONS_PER_USER = 1000;
 
 async function getSessionsByUser(ctx: { db: QueryCtx["db"] }, userId: string) {
-  const { page } = await getPage(ctx, {
+  return await getAllRows(ctx, {
     table: "authSessions",
     index: "by_user",
     startIndexKey: [userId],
     endIndexKey: [userId],
     absoluteMaxRows: MAX_SESSIONS_PER_USER,
-    schema,
   });
-  return page;
 }
 
 async function getIdentityByUserProviderIssuer(
@@ -195,39 +194,33 @@ export const revokeSessionsForUser = mutation({
 const MAX_FAMILY_MEMBERS = 1000;
 
 async function getRefreshTokensBySession(ctx: { db: QueryCtx["db"] }, sessionId: string) {
-  const { page } = await getPage(ctx, {
+  return await getAllRows(ctx, {
     table: "authRefreshTokens",
     index: "by_session",
     startIndexKey: [sessionId],
     endIndexKey: [sessionId],
     absoluteMaxRows: MAX_FAMILY_MEMBERS,
-    schema,
   });
-  return page;
 }
 
 async function getRefreshTokensByFamily(ctx: { db: QueryCtx["db"] }, familyId: string) {
-  const { page } = await getPage(ctx, {
+  return await getAllRows(ctx, {
     table: "authRefreshTokens",
     index: "by_family",
     startIndexKey: [familyId],
     endIndexKey: [familyId],
     absoluteMaxRows: MAX_FAMILY_MEMBERS,
-    schema,
   });
-  return page;
 }
 
 async function getSessionsByFamily(ctx: { db: QueryCtx["db"] }, familyId: string) {
-  const { page } = await getPage(ctx, {
+  return await getAllRows(ctx, {
     table: "authSessions",
     index: "by_family",
     startIndexKey: [familyId],
     endIndexKey: [familyId],
     absoluteMaxRows: MAX_FAMILY_MEMBERS,
-    schema,
   });
-  return page;
 }
 
 // Presentation of an already-rotated refresh token means the token was

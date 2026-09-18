@@ -1,34 +1,28 @@
 import { v } from "convex/values";
-import { getPage } from "convex-helpers/server/pagination";
 import { getOneFrom } from "convex-helpers/server/relationships";
 import { mutation, query, type QueryCtx } from "../_generated/server.js";
-import schema from "../schema.js";
+import { getAllRows } from "../pagination.js";
 
-const MAX_REFRESH_TOKENS_PER_SESSION = 10;
-const MAX_REFRESH_TOKENS_PER_USER = 1000;
+const REFRESH_TOKEN_PAGE_SIZE = 1000;
 
 async function getRefreshTokensBySession(ctx: { db: QueryCtx["db"] }, sessionId: string) {
-  const { page } = await getPage(ctx, {
+  return await getAllRows(ctx, {
     table: "authRefreshTokens",
     index: "by_session",
     startIndexKey: [sessionId],
     endIndexKey: [sessionId],
-    absoluteMaxRows: MAX_REFRESH_TOKENS_PER_SESSION,
-    schema,
+    absoluteMaxRows: REFRESH_TOKEN_PAGE_SIZE,
   });
-  return page;
 }
 
 async function getRefreshTokensByUser(ctx: { db: QueryCtx["db"] }, userId: string) {
-  const { page } = await getPage(ctx, {
+  return await getAllRows(ctx, {
     table: "authRefreshTokens",
     index: "by_user",
     startIndexKey: [userId],
     endIndexKey: [userId],
-    absoluteMaxRows: MAX_REFRESH_TOKENS_PER_USER,
-    schema,
+    absoluteMaxRows: REFRESH_TOKEN_PAGE_SIZE,
   });
-  return page;
 }
 
 export const createRefreshToken = mutation({
