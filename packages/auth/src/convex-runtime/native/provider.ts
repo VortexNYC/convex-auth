@@ -279,6 +279,7 @@ export function nativeEmailAndPassword(
     await ctx.runMutation(component.native.sessions.createSessionAndRefreshToken, {
       sessionId,
       userId: args.userId,
+      identityId: args.identityId,
       token,
       credentialId: args.credentialId,
       sessionExpiresAt: expiresAt,

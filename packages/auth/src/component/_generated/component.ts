@@ -2105,6 +2105,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           {
             expiresAt: number;
             familyId?: string;
+            identityId?: string;
             sessionId: string;
             token: string;
             userId: string;
@@ -2117,6 +2118,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "internal",
           {
             familyId?: string;
+            identityId?: string;
             refreshTokenExpiresAt: number;
             refreshTokenHash: string;
             sessionExpiresAt: number;

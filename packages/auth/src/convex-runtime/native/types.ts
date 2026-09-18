@@ -195,6 +195,7 @@ export type NativeSessionDoc = {
   _creationTime?: number;
   sessionId: string;
   userId: string;
+  identityId?: string;
   token: string;
   expiresAt: number;
   ipAddress?: string;
@@ -391,7 +392,9 @@ export type NativeEmailAndPasswordComponentHandle = {
         "public" | "internal",
         {
           sessionId: string;
+          familyId?: string;
           userId: string;
+          identityId?: string;
           token: string;
           expiresAt: number;
         },
@@ -405,6 +408,7 @@ export type NativeEmailAndPasswordComponentHandle = {
           sessionId: string;
           familyId?: string;
           userId: string;
+          identityId?: string;
           token: string;
           credentialId?: string;
           sessionExpiresAt: number;

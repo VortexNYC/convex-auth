@@ -53,23 +53,21 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
     throw new Error("Invalid refresh token");
   }
 
-  const tokenIdentityId = identityIdFromSessionToken(session.token);
-  // A malformed id claim makes the query's id validator throw — treat it like
-  // a missing identity rather than a 500.
-  const identityPromise = tokenIdentityId
-    ? ctx
-        .runQuery(component.native.identities.getIdentityById, {
-          identityId: tokenIdentityId,
-        })
-        .catch(() => null)
-    : ctx.runQuery(component.native.identities.getNativeIdentityByUser, {
-        userId: refresh.userId,
-        provider: "password",
-        issuer: "native",
-      });
+  // The session row carries its identity; sessions minted before the column
+  // existed carry it as a JWT claim instead. A session with neither cannot
+  // name its identity — guessing a provider would bind the wrong one, so fail
+  // closed. A malformed id claim makes the query's id validator throw — treat
+  // it like a missing identity rather than a 500.
+  const sessionIdentityId = session.identityId ?? identityIdFromSessionToken(session.token);
   const [user, identity] = await Promise.all([
     ctx.runQuery(component.native.users.getUserById, { userId: refresh.userId }),
-    identityPromise,
+    sessionIdentityId
+      ? ctx
+          .runQuery(component.native.identities.getIdentityById, {
+            identityId: sessionIdentityId,
+          })
+          .catch(() => null)
+      : Promise.resolve(null),
   ]);
   if (!user) {
     throw new Error("User not found");

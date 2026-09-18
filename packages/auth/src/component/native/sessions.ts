@@ -1,10 +1,8 @@
 import { v, type Infer } from "convex/values";
-import { getPage } from "convex-helpers/server/pagination";
 import { getAllRows } from "../pagination.js";
 import { getOneFrom } from "convex-helpers/server/relationships";
 import { mutation, query, type MutationCtx, type QueryCtx } from "../_generated/server.js";
 import { base64urlToBytes } from "../../convex-runtime/native/password.js";
-import schema from "../schema.js";
 import type { Doc, Id } from "../_generated/dataModel.js";
 
 const MAX_SESSIONS_PER_USER = 1000;
@@ -46,23 +44,6 @@ async function getSessionsByUser(ctx: { db: QueryCtx["db"] }, userId: string) {
   });
 }
 
-async function getIdentityByUserProviderIssuer(
-  ctx: { db: QueryCtx["db"] },
-  userId: string,
-  provider: string,
-  issuer: string,
-) {
-  const { page } = await getPage(ctx, {
-    table: "auth_identities",
-    index: "by_user_provider_issuer",
-    startIndexKey: [userId, provider, issuer],
-    endIndexKey: [userId, provider, issuer],
-    absoluteMaxRows: 1,
-    schema,
-  });
-  return page[0] ?? null;
-}
-
 const userReturnValidator = v.object({
   _id: v.id("users"),
   email: v.optional(v.string()),
@@ -99,6 +80,7 @@ export const createSession = mutation({
     sessionId: v.string(),
     familyId: v.optional(v.string()),
     userId: v.id("users"),
+    identityId: v.optional(v.id("auth_identities")),
     token: v.string(),
     expiresAt: v.number(),
   },
@@ -121,6 +103,7 @@ export const createSessionAndRefreshToken = mutation({
     sessionId: v.string(),
     familyId: v.optional(v.string()),
     userId: v.id("users"),
+    identityId: v.optional(v.id("auth_identities")),
     token: v.string(),
     credentialId: v.optional(v.string()),
     sessionExpiresAt: v.number(),
@@ -145,6 +128,7 @@ export const createSessionAndRefreshToken = mutation({
       sessionId: args.sessionId,
       familyId,
       userId: args.userId,
+      identityId: args.identityId,
       token: args.token,
       credentialId: args.credentialId,
       expiresAt: args.sessionExpiresAt,
@@ -378,27 +362,19 @@ export const rotateSession = mutation({
       return null;
     }
 
-    // Resolve the identity the session was minted with: the session JWT
-    // carries it as a claim, so sessions created by any provider (password,
-    // OAuth, passkey) refresh correctly. The provider/issuer args remain as a
-    // fallback for legacy sessions whose tokens predate the claim.
-    const tokenIdentityId = identityIdFromSessionToken(session.token);
-    // A malformed id claim would make ctx.db.get throw — treat it like a
-    // missing identity rather than crashing the rotation.
+    // Resolve the identity the session was minted with: the session row
+    // carries it, and sessions minted before the column existed carry it as a
+    // JWT claim instead. Any provider's session (password, OAuth, passkey)
+    // refreshes correctly. A session with neither cannot name its identity —
+    // guessing a provider would bind the wrong one, so fail closed.
+    const sessionIdentityId = session.identityId ?? identityIdFromSessionToken(session.token);
     let identity: Doc<"auth_identities"> | null = null;
-    if (tokenIdentityId) {
+    if (sessionIdentityId) {
       try {
-        identity = await ctx.db.get("auth_identities", tokenIdentityId);
+        identity = await ctx.db.get("auth_identities", sessionIdentityId);
       } catch {
         identity = null;
       }
-    } else {
-      identity = await getIdentityByUserProviderIssuer(
-        ctx,
-        refresh.userId,
-        args.provider,
-        args.issuer,
-      );
     }
     if (!identity || identity.userId !== refresh.userId) {
       return null;
@@ -415,6 +391,7 @@ export const rotateSession = mutation({
       sessionId: args.newSessionId,
       familyId,
       userId: refresh.userId,
+      identityId: identity._id,
       token: args.newSessionToken,
       expiresAt: args.newSessionExpiresAt,
       ipAddress: args.newSessionIpAddress,
@@ -553,6 +530,8 @@ export const convergeSession = mutation({
       sessionId: args.newSessionId,
       familyId,
       userId: refresh.userId,
+      identityId:
+        session?.identityId ?? (session ? identityIdFromSessionToken(session.token) : undefined),
       token: args.newSessionToken,
       expiresAt: args.newSessionExpiresAt,
       ipAddress: args.newSessionIpAddress,

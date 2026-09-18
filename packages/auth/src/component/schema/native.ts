@@ -26,6 +26,7 @@ export const authSessions = defineTable({
   sessionId: v.string(),
   familyId: v.optional(v.string()),
   userId: v.id("users"),
+  identityId: v.optional(v.id("auth_identities")),
   token: v.string(),
   expiresAt: v.number(),
   ipAddress: v.optional(v.string()),

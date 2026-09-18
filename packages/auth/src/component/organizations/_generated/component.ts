@@ -590,6 +590,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "internal",
           {
             expiresAt: number;
+            identityId?: string;
             sessionId: string;
             token: string;
             userId: string;
@@ -601,6 +602,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "mutation",
           "internal",
           {
+            identityId?: string;
             refreshTokenExpiresAt: number;
             refreshTokenHash: string;
             sessionExpiresAt: number;

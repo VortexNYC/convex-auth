@@ -125,6 +125,7 @@ function createMockComponent(): MockedComponent {
         revokeRefreshTokensForUser: vi.fn(),
       },
       identities: {
+        getIdentityById: vi.fn(),
         getNativeIdentityByUser: vi.fn(),
         markEmailVerified: vi.fn(),
       },
@@ -1213,13 +1214,14 @@ describe("nativeEmailAndPassword", () => {
         _creationTime: 0,
         sessionId: "session_1",
         userId: "user_1",
+        identityId: identity._id,
         token: "old-token",
         expiresAt: Date.now() + 60_000,
         createdAt: 0,
         updatedAt: 0,
       });
       component.native.users.getUserById.mockResolvedValue(user);
-      component.native.identities.getNativeIdentityByUser.mockResolvedValue(identity);
+      component.native.identities.getIdentityById.mockResolvedValue(identity);
       component.native.sessions.rotateSession.mockResolvedValue({
         user,
         identityId: "identity_1",

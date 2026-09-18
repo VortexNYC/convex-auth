@@ -342,6 +342,7 @@ export async function handleCallback<DataModel extends GenericDataModel>(
   await ctx.runMutation(component.native.sessions.createSessionAndRefreshToken, {
     sessionId,
     userId: identityResult.userId,
+    identityId: identityResult.identityId,
     token,
     sessionExpiresAt,
     refreshTokenHash,
