@@ -12,9 +12,14 @@ const MAX_SESSIONS_PER_USER = 1000;
 // Parallel requests can present the same refresh token (e.g. two SSR handlers
 // holding the same cookie). Within this window a just-rotated token converges
 // on a new sibling pair instead of being treated as replay. Bounded by
-// MAX_GRACE_REDEMPTIONS so a stolen predecessor yields at most a few sessions.
+// MAX_GRACE_REDEMPTIONS per predecessor and MAX_FAMILY_LIVE_SESSIONS so a
+// stolen predecessor can only ever yield a small number of live sessions.
 const ROTATION_GRACE_MS = 15_000;
 const MAX_GRACE_REDEMPTIONS = 8;
+const MAX_FAMILY_LIVE_SESSIONS = 10;
+// Families can accumulate far more than one page of rotated-out rows, so the
+// liveness scan is bounded well above the 1,000-row page size.
+const MAX_FAMILY_SCAN_ROWS = 2000;
 
 function identityIdFromSessionToken(token: string): Id<"auth_identities"> | undefined {
   const parts = token.split(".");
@@ -336,9 +341,22 @@ export const rotateSession = mutation({
       // grace window, a parallel request holding the same cookie is presenting
       // it — converge rather than killing the session family it just minted.
       if (refresh.rotatedAt !== undefined && now - refresh.rotatedAt <= ROTATION_GRACE_MS) {
-        // Over the redemption cap: fail soft like convergeSession — an over-cap
-        // request is not itself evidence of theft.
-        return (refresh.graceRedemptions ?? 0) < MAX_GRACE_REDEMPTIONS ? "converge" : null;
+        // Over the redemption cap: fail soft — an over-cap request is not
+        // itself evidence of theft, but it is worth an audit trail.
+        if ((refresh.graceRedemptions ?? 0) >= MAX_GRACE_REDEMPTIONS) {
+          await ctx.db.insert("auth_audit_events", {
+            actorUserId: refresh.userId,
+            actorType: "system",
+            eventType: "refresh_token_grace_exhausted",
+            targetType: "session",
+            targetId: refresh.familyId ?? refresh.sessionId,
+            organizationId: undefined,
+            metadataJson: undefined,
+            createdAt: now,
+          });
+          return null;
+        }
+        return "converge";
       }
       await revokeSessionFamily(ctx, refresh.familyId ?? refresh.sessionId, refresh.userId, now);
       return null;
@@ -365,9 +383,23 @@ export const rotateSession = mutation({
     // OAuth, passkey) refresh correctly. The provider/issuer args remain as a
     // fallback for legacy sessions whose tokens predate the claim.
     const tokenIdentityId = identityIdFromSessionToken(session.token);
-    const identity = tokenIdentityId
-      ? await ctx.db.get("auth_identities", tokenIdentityId)
-      : await getIdentityByUserProviderIssuer(ctx, refresh.userId, args.provider, args.issuer);
+    // A malformed id claim would make ctx.db.get throw — treat it like a
+    // missing identity rather than crashing the rotation.
+    let identity: Doc<"auth_identities"> | null = null;
+    if (tokenIdentityId) {
+      try {
+        identity = await ctx.db.get("auth_identities", tokenIdentityId);
+      } catch {
+        identity = null;
+      }
+    } else {
+      identity = await getIdentityByUserProviderIssuer(
+        ctx,
+        refresh.userId,
+        args.provider,
+        args.issuer,
+      );
+    }
     if (!identity || identity.userId !== refresh.userId) {
       return null;
     }
@@ -451,9 +483,53 @@ export const convergeSession = mutation({
       }
       return null;
     }
+    const familyId = refresh.familyId ?? refresh.sessionId;
     if ((refresh.graceRedemptions ?? 0) >= MAX_GRACE_REDEMPTIONS) {
       // Fail soft: the cap bounds how many sessions a stolen predecessor can
       // yield, but an over-cap request is not itself evidence of theft.
+      await ctx.db.insert("auth_audit_events", {
+        actorUserId: refresh.userId,
+        actorType: "system",
+        eventType: "refresh_token_grace_exhausted",
+        targetType: "session",
+        targetId: familyId,
+        organizationId: undefined,
+        metadataJson: undefined,
+        createdAt: now,
+      });
+      return null;
+    }
+
+    // Grace must die with the family: sign-out, password reset, or reuse
+    // detection during the window leaves the predecessor's rotatedAt fresh
+    // while every family member is dead. Require at least one live session —
+    // the pair the winning rotation minted — before minting a sibling, and
+    // bound live family membership so bursts cannot compound generation over
+    // generation.
+    const familySessions = await getAllRows(ctx, {
+      table: "authSessions",
+      index: "by_family",
+      startIndexKey: [familyId],
+      endIndexKey: [familyId],
+      absoluteMaxRows: MAX_FAMILY_SCAN_ROWS,
+    });
+    const liveCount = familySessions.filter(
+      (s) => s.revokedAt === undefined && s.expiresAt > now,
+    ).length;
+    if (liveCount === 0) {
+      return null;
+    }
+    if (liveCount >= MAX_FAMILY_LIVE_SESSIONS) {
+      await ctx.db.insert("auth_audit_events", {
+        actorUserId: refresh.userId,
+        actorType: "system",
+        eventType: "refresh_token_grace_exhausted",
+        targetType: "session",
+        targetId: familyId,
+        organizationId: undefined,
+        metadataJson: undefined,
+        createdAt: now,
+      });
       return null;
     }
 
@@ -468,8 +544,6 @@ export const convergeSession = mutation({
     if (!user) {
       return null;
     }
-
-    const familyId = refresh.familyId ?? refresh.sessionId;
 
     await ctx.db.patch(refresh._id, {
       graceRedemptions: (refresh.graceRedemptions ?? 0) + 1,

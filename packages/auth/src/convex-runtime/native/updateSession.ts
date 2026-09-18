@@ -54,22 +54,29 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
   }
 
   const tokenIdentityId = identityIdFromSessionToken(session.token);
-  const [user, identity] = await Promise.all([
-    ctx.runQuery(component.native.users.getUserById, { userId: refresh.userId }),
-    tokenIdentityId
-      ? ctx.runQuery(component.native.identities.getIdentityById, {
+  // A malformed id claim makes the query's id validator throw — treat it like
+  // a missing identity rather than a 500.
+  const identityPromise = tokenIdentityId
+    ? ctx
+        .runQuery(component.native.identities.getIdentityById, {
           identityId: tokenIdentityId,
         })
-      : ctx.runQuery(component.native.identities.getNativeIdentityByUser, {
-          userId: refresh.userId,
-          provider: "password",
-          issuer: "native",
-        }),
+        .catch(() => null)
+    : ctx.runQuery(component.native.identities.getNativeIdentityByUser, {
+        userId: refresh.userId,
+        provider: "password",
+        issuer: "native",
+      });
+  const [user, identity] = await Promise.all([
+    ctx.runQuery(component.native.users.getUserById, { userId: refresh.userId }),
+    identityPromise,
   ]);
   if (!user) {
     throw new Error("User not found");
   }
-  if (!identity) {
+  // The identity claim must belong to the refresh token's user — the
+  // converge path never re-checks this inside the component.
+  if (!identity || identity.userId !== refresh.userId) {
     throw new Error("Identity not found");
   }
 
