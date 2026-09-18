@@ -30,6 +30,7 @@ import type * as native_sessions from "../native/sessions.js";
 import type * as native_users from "../native/users.js";
 import type * as native_verifiers from "../native/verifiers.js";
 import type * as organizations from "../organizations.js";
+import type * as pagination from "../pagination.js";
 import type * as passkeys from "../passkeys.js";
 import type * as schema_admin from "../schema/admin.js";
 import type * as schema_agents from "../schema/agents.js";
@@ -78,6 +79,7 @@ const fullApi: ApiFromModules<{
   "native/users": typeof native_users;
   "native/verifiers": typeof native_verifiers;
   organizations: typeof organizations;
+  pagination: typeof pagination;
   passkeys: typeof passkeys;
   "schema/admin": typeof schema_admin;
   "schema/agents": typeof schema_agents;

@@ -1175,4 +1175,35 @@ describe("native sessions", () => {
     // convergable for the legitimate parallel request.
     expect(predecessor?.graceRedemptions ?? 0).toBe(0);
   });
+
+  it("returns rotated refresh token rows through the public query", async () => {
+    // Rows carrying familyId/rotatedAt/graceRedemptions must survive the
+    // query's returns validator — a real deployment enforces it even though
+    // action-level mocks dispatch to the raw handler.
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-rotated",
+        sessionId: "session-1",
+        userId,
+        familyId: "session-1",
+        expiresAt: now + 1_000_000,
+        revokedAt: now,
+        rotatedAt: now,
+        graceRedemptions: 3,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const row = await t.query(api.native.refreshTokens.getRefreshTokenByTokenHash, {
+      tokenHash: "hash-rotated",
+    });
+    expect(row?.familyId).toBe("session-1");
+    expect(row?.rotatedAt).toBe(now);
+    expect(row?.graceRedemptions).toBe(3);
+  });
 });
