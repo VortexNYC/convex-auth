@@ -1176,6 +1176,71 @@ describe("native sessions", () => {
     expect(predecessor?.graceRedemptions ?? 0).toBe(0);
   });
 
+  it("refuses convergence when the family exceeds the scan budget", async () => {
+    // A truncated family scan cannot prove liveness or the live-session cap
+    // exactly — the converge must refuse rather than mint on an undercount.
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    const identityDocId = await insertIdentity(t, userId);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authSessions", {
+        sessionId: "session-1",
+        familyId: "session-1",
+        userId,
+        identityId: identityDocId,
+        token: "token-1",
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+      // One live member keeps the family alive; the remaining rows push the
+      // family past the scan budget so the count cannot be proven exact.
+      for (let i = 0; i < 2000; i++) {
+        await ctx.db.insert("authSessions", {
+          sessionId: `dead-${i}`,
+          familyId: "session-1",
+          userId,
+          token: `token-dead-${i}`,
+          expiresAt: now + 1_000_000,
+          revokedAt: now - 60_000,
+          createdAt: now - 60_000,
+          updatedAt: now - 60_000,
+        });
+      }
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-1",
+        sessionId: "session-1",
+        userId,
+        familyId: "session-1",
+        expiresAt: now + 1_000_000,
+        revokedAt: now,
+        rotatedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const result = await t.mutation(api.native.sessions.convergeSession, {
+      predecessorRefreshTokenHash: "hash-1",
+      newSessionId: "session-2",
+      newSessionToken: "token-2",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-2",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+    });
+    expect(result).toBeNull();
+
+    const sibling = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-2"))
+        .unique(),
+    );
+    expect(sibling).toBeNull();
+  });
+
   it("returns rotated refresh token rows through the public query", async () => {
     // Rows carrying familyId/rotatedAt/graceRedemptions must survive the
     // query's returns validator — a real deployment enforces it even though

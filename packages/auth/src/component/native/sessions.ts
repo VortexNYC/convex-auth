@@ -484,14 +484,27 @@ export const convergeSession = mutation({
     // while every family member is dead. Require at least one live session —
     // the pair the winning rotation minted — before minting a sibling, and
     // bound live family membership so bursts cannot compound generation over
-    // generation.
-    const familySessions = await getAllRows(ctx, {
-      table: "authSessions",
-      index: "by_family",
-      startIndexKey: [familyId],
-      endIndexKey: [familyId],
-      absoluteMaxRows: MAX_FAMILY_SCAN_ROWS,
-    });
+    // generation. The liveness and cap checks need an exact count, so the
+    // scan is hard-bounded: one row past the budget proves the family is
+    // larger than the scan window, in which case the count is unverifiable
+    // and the converge is refused rather than minted on an undercount.
+    const familySessions = await ctx.db
+      .query("authSessions")
+      .withIndex("by_family", (q) => q.eq("familyId", familyId))
+      .take(MAX_FAMILY_SCAN_ROWS + 1);
+    if (familySessions.length > MAX_FAMILY_SCAN_ROWS) {
+      await ctx.db.insert("auth_audit_events", {
+        actorUserId: refresh.userId,
+        actorType: "system",
+        eventType: "refresh_token_grace_exhausted",
+        targetType: "session",
+        targetId: familyId,
+        organizationId: undefined,
+        metadataJson: undefined,
+        createdAt: now,
+      });
+      return null;
+    }
     const liveCount = familySessions.filter(
       (s) => s.revokedAt === undefined && s.expiresAt > now,
     ).length;
