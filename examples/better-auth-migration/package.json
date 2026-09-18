@@ -12,7 +12,7 @@
   "dependencies": {
     "@vortex-api/convex-auth": "workspace:*",
     "better-auth": "^1.7.1",
-    "convex": "^1.45.0",
+    "convex": "^1.46.0",
     "convex-better-auth-adapter": "^0.13.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

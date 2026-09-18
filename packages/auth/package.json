@@ -238,7 +238,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitest/coverage-v8": "4.1.10",
-    "convex": "^1.45.0",
+    "convex": "^1.46.0",
     "convex-test": "0.0.58",
     "happy-dom": "^20.14.3",
     "react-native-passkeys": "0.4.2",

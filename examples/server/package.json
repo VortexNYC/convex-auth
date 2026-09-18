@@ -12,7 +12,7 @@
   "dependencies": {
     "@hono/node-server": "^1.13.0",
     "@vortex-api/convex-auth": "workspace:*",
-    "convex": "^1.45.0",
+    "convex": "^1.46.0",
     "dotenv": "^16.4.0",
     "hono": "^4.6.0"
   },
