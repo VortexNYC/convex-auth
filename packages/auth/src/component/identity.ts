@@ -5,6 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel.js";
 import type { MutationCtx, QueryCtx } from "./_generated/server.js";
 import { getPage, paginator } from "convex-helpers/server/pagination";
 import { getOneFrom } from "convex-helpers/server/relationships";
+import { getAllRows } from "./pagination.js";
 import { mutation, query } from "./_generated/server.js";
 import { mintToken } from "../convex-runtime/native/jwt.js";
 import schema, {
@@ -289,16 +290,17 @@ export const provisionFromIdentity = mutation({
     }
 
     if (args.verificationCode) {
-      const { page: existingCodes } = await getPage(ctx, {
+      const existingCodes = await getAllRows(ctx, {
         table: "authVerificationCodes",
         index: "by_user_type",
         startIndexKey: [userId, "email_verification"],
         endIndexKey: [userId, "email_verification"],
         absoluteMaxRows: MAX_EMAIL_VERIFICATION_CODE_REVOKE_BATCH,
-        schema,
       });
       await Promise.all(
-        existingCodes.map((code) => ctx.db.patch(code._id, { consumedAt: now, updatedAt: now })),
+        existingCodes
+          .filter((code) => code.consumedAt === undefined)
+          .map((code) => ctx.db.patch(code._id, { consumedAt: now, updatedAt: now })),
       );
       await ctx.db.insert("authVerificationCodes", {
         userId,
@@ -446,13 +448,12 @@ export const resetPassword = mutation({
     ];
 
     if (args.revokeSessions) {
-      const { page: sessions } = await getPage(ctx, {
+      const sessions = await getAllRows(ctx, {
         table: "authSessions",
         index: "by_user",
         startIndexKey: [code.userId],
         endIndexKey: [code.userId],
         absoluteMaxRows: MAX_PASSWORD_RESET_SESSION_REVOKE_BATCH,
-        schema,
       });
 
       for (const session of sessions) {

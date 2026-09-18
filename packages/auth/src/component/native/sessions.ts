@@ -194,39 +194,33 @@ export const revokeSessionsForUser = mutation({
 const MAX_FAMILY_MEMBERS = 1000;
 
 async function getRefreshTokensBySession(ctx: { db: QueryCtx["db"] }, sessionId: string) {
-  const { page } = await getPage(ctx, {
+  return await getAllRows(ctx, {
     table: "authRefreshTokens",
     index: "by_session",
     startIndexKey: [sessionId],
     endIndexKey: [sessionId],
     absoluteMaxRows: MAX_FAMILY_MEMBERS,
-    schema,
   });
-  return page;
 }
 
 async function getRefreshTokensByFamily(ctx: { db: QueryCtx["db"] }, familyId: string) {
-  const { page } = await getPage(ctx, {
+  return await getAllRows(ctx, {
     table: "authRefreshTokens",
     index: "by_family",
     startIndexKey: [familyId],
     endIndexKey: [familyId],
     absoluteMaxRows: MAX_FAMILY_MEMBERS,
-    schema,
   });
-  return page;
 }
 
 async function getSessionsByFamily(ctx: { db: QueryCtx["db"] }, familyId: string) {
-  const { page } = await getPage(ctx, {
+  return await getAllRows(ctx, {
     table: "authSessions",
     index: "by_family",
     startIndexKey: [familyId],
     endIndexKey: [familyId],
     absoluteMaxRows: MAX_FAMILY_MEMBERS,
-    schema,
   });
-  return page;
 }
 
 // Presentation of an already-rotated refresh token means the token was

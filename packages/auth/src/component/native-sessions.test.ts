@@ -387,6 +387,76 @@ describe("native sessions", () => {
     });
   });
 
+  it("family replay revocation reaches live rows beyond a 1000-row page", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    await insertIdentity(t, userId);
+    const now = Date.now();
+
+    // Oldest rows first: a family that has rotated past one page leaves the
+    // live session and refresh token beyond the first 1,000 index rows.
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 1100; i++) {
+        await ctx.db.insert("authRefreshTokens", {
+          tokenHash: `spent-${i}`,
+          sessionId: `spent-session-${i}`,
+          userId,
+          familyId: "fam-1",
+          expiresAt: now + 1_000_000,
+          revokedAt: now - 1,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+      await ctx.db.insert("authSessions", {
+        sessionId: "session-live",
+        userId,
+        token: "token-live",
+        familyId: "fam-1",
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-live",
+        sessionId: "session-live",
+        userId,
+        familyId: "fam-1",
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const replay = await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "spent-0",
+      newSessionId: "session-attacker",
+      newSessionToken: "token-attacker",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-attacker",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+    expect(replay).toBeNull();
+
+    const [liveSession, liveRefresh] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-live"))
+          .unique(),
+        ctx.db
+          .query("authRefreshTokens")
+          .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-live"))
+          .unique(),
+      ]),
+    );
+
+    expect(liveSession?.revokedAt).toBeDefined();
+    expect(liveRefresh?.revokedAt).toBeDefined();
+  });
+
   it("replaying a rotated-out token does not touch other sessions for the user", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);

@@ -52,7 +52,11 @@ export const createVerificationCode = mutation({
 
     const existing = await getVerificationCodesByUserType(ctx, args.userId, args.type);
 
-    await Promise.all(existing.map((code) => ctx.db.patch(code._id, { consumedAt: now })));
+    await Promise.all(
+      existing
+        .filter((code) => code.consumedAt === undefined)
+        .map((code) => ctx.db.patch(code._id, { consumedAt: now })),
+    );
 
     return await ctx.db.insert("authVerificationCodes", {
       ...args,
