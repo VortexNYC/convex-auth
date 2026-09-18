@@ -9,6 +9,7 @@ export default defineMeta({
     "server-api",
     "ui-components",
     "architecture",
+    "ssr-contract",
     "feature-gated-components",
     "consumer-contract",
     "examples",
