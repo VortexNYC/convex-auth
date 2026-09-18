@@ -60,13 +60,16 @@ export async function ConvexAuthNextjsServerProvider(props: {
   children: ReactNode;
 }) {
   const { apiRoute, actions, convexUrl, verbose, children } = props;
-  const serverState = await convexAuthNextjsServerState({ actions, convexUrl });
+  const serverState = await convexAuthNextjsServerState({
+    actions,
+    convexUrl,
+    verbose,
+  });
   return (
     <ConvexAuthNextjsClientProvider
       serverState={serverState}
       apiRoute={apiRoute}
       actions={actions}
-      verbose={verbose}
     >
       {children}
     </ConvexAuthNextjsClientProvider>
@@ -139,38 +142,45 @@ export async function convexAuthNextjsSession(options: {
   return fetchSessionCached(token, functionName, options.convexUrl);
 }
 
-const fetchSessionCached = cache(
-  async (
-    token: string,
-    functionName: string,
-    convexUrl: string | undefined,
-  ): Promise<{
-    user: import("../../react/ConvexAuthProvider.js").NativeAuthUser;
-    sessionId: string | null;
-  } | null> => {
-    try {
-      const result = (await fetchQuery(
-        functionName as unknown as ConvexAuthNextjsActions["verifySession"],
-        { token },
-        getConvexNextjsOptions({ convexUrl }),
-      )) as {
-        user?: import("../../react/ConvexAuthProvider.js").NativeAuthUser;
-        sessionId?: string;
-      };
-      if (result.user == null) {
-        return null;
-      }
-      return { user: result.user, sessionId: result.sessionId ?? null };
-    } catch {
+type VerifiedSession = {
+  user: import("../../react/ConvexAuthProvider.js").NativeAuthUser;
+  sessionId: string | null;
+} | null;
+
+async function fetchSession(
+  token: string,
+  functionName: string,
+  convexUrl: string | undefined,
+): Promise<VerifiedSession> {
+  try {
+    const result = (await fetchQuery(
+      functionName as unknown as ConvexAuthNextjsActions["verifySession"],
+      { token },
+      getConvexNextjsOptions({ convexUrl }),
+    )) as {
+      user?: import("../../react/ConvexAuthProvider.js").NativeAuthUser;
+      sessionId?: string;
+    };
+    if (result.user == null) {
       return null;
     }
-  },
-);
+    return { user: result.user, sessionId: result.sessionId ?? null };
+  } catch {
+    return null;
+  }
+}
+
+// RSC-only memoization: React `cache()` dedupes per render pass. Middleware
+// is not a React render context, so it must not share this — it memoizes on a
+// per-request closure instead.
+const fetchSessionCached = cache(fetchSession);
 
 /**
  * Whether the client is authenticated — verified against the component's
  * `verifySession` query (revocation-aware), not just the JWT. Safe to call in
- * Server Actions, Route Handlers and Middleware.
+ * Server Actions and Route Handlers. In middleware use the ctx's
+ * `convexAuth.isAuthenticated()` — this function's `cache()` memoization is
+ * only valid inside a React render pass.
  *
  * Avoid the pitfall of checking authentication state in layouts, since they
  * won't stop nested pages from rendering.
@@ -316,6 +326,9 @@ export function convexAuthNextjsMiddleware(
       logVerbose(`Forwarding cookies to request`, verbose);
       await setAuthCookiesInMiddleware(request, authResult.refreshTokens);
     }
+    // Memoized per request — repeat `isAuthenticated()` calls in one handler
+    // pay one query; a later request always re-verifies (never RSC `cache()`).
+    let sessionPromise: Promise<VerifiedSession> | undefined;
     if (handler === undefined) {
       logVerbose(`No custom handler`, verbose);
       response = NextResponse.next({
@@ -338,13 +351,12 @@ export function convexAuthNextjsMiddleware(
               if (cookies.token === null) {
                 return false;
               }
-              return (
-                (await fetchSessionCached(
-                  cookies.token,
-                  getFunctionName(options.actions.verifySession),
-                  options.convexUrl,
-                )) !== null
+              sessionPromise ??= fetchSession(
+                cookies.token,
+                getFunctionName(options.actions.verifySession),
+                options.convexUrl,
               );
+              return (await sessionPromise) !== null;
             },
             cookieState: () => convexAuthNextjsCookieState(request),
           },
@@ -426,8 +438,11 @@ type ServerState = {
 async function convexAuthNextjsServerState(options: {
   actions: ConvexAuthNextjsActions;
   convexUrl?: string;
+  verbose?: boolean;
 }): Promise<ServerState> {
+  const verbose = options.verbose ?? false;
   const { token } = await getRequestCookies();
+  logVerbose(`Server state: token cookie ${token === null ? "absent" : "present"}`, verbose);
   if (token === null) {
     return {
       token: null,
@@ -437,19 +452,36 @@ async function convexAuthNextjsServerState(options: {
       _timeFetched: Date.now(),
     };
   }
-  // Resolve the user now so the client provider's first paint is already
+  // Resolve the session now so the client provider's first paint is already
   // authenticated. `verifySession` is revocation-aware — a revoked session
-  // resolves unauthenticated even while its JWT is still structurally valid.
+  // resolves null even while its JWT is still structurally valid, and we must
+  // not seed that dead JWT into the client: default Convex auth verifies
+  // signature+exp only, so a seeded-but-revoked token would stay "live" on the
+  // websocket for its remaining lifetime. Fail closed — an unreachable
+  // backend renders signed-out rather than resurrecting a dead session.
   const session = await fetchSessionCached(
     token,
     getFunctionName(options.actions.verifySession),
     options.convexUrl,
   );
+  logVerbose(
+    `Server state: session ${session === null ? "rejected" : "verified"}`,
+    verbose,
+  );
+  if (session === null) {
+    return {
+      token: null,
+      refreshToken: null,
+      user: null,
+      sessionId: null,
+      _timeFetched: Date.now(),
+    };
+  }
   return {
     token,
     refreshToken: null,
-    user: session?.user ?? null,
-    sessionId: session?.sessionId ?? null,
+    user: session.user,
+    sessionId: session.sessionId,
     _timeFetched: Date.now(),
   };
 }

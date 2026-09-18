@@ -207,9 +207,14 @@ function cookiesFromResult(result: unknown): AuthCookieValues | null | undefined
         : {}),
     };
   }
-  // A 2FA challenge instead of a session: stash the pending token.
+  // A 2FA challenge instead of a session: stash the pending token AND clear
+  // any existing session pair — a new sign-in supersedes the old session, and
+  // leaving it would let the next server render resurrect it while the client
+  // shows the challenge form.
   if (typeof r.twoFactorChallengeToken === "string") {
     return {
+      token: null,
+      refreshToken: null,
       twoFactorPending: r.twoFactorChallengeToken,
       twoFactorPendingMaxAgeMs: r.twoFactorCookieMaxAgeMs,
     };

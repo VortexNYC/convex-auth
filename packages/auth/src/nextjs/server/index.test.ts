@@ -38,6 +38,7 @@ vi.mock("convex/nextjs", () => ({
 
 import { fetchAction, fetchQuery } from "convex/nextjs";
 import {
+  ConvexAuthNextjsServerProvider,
   convexAuthNextjsCookieState,
   convexAuthNextjsMiddleware,
   createRouteMatcher,
@@ -244,6 +245,25 @@ describe("convexAuthNextjsMiddleware", () => {
     expect(request.cookies.get("__Host-__convexAuthToken")).toBeUndefined();
   });
 
+  it("memoizes isAuthenticated per request and re-verifies on the next", async () => {
+    fetchQueryMock.mockResolvedValue({ user: { id: "u1" }, sessionId: "s1" });
+    const middleware = convexAuthNextjsMiddleware(async (request, ctx) => {
+      expect(await ctx.convexAuth.isAuthenticated()).toBe(true);
+      expect(await ctx.convexAuth.isAuthenticated()).toBe(true);
+      return NextResponse.next();
+    }, options);
+    const request = getRequest("/dashboard", {
+      cookie: "__Host-__convexAuthToken=live-tok",
+    });
+    await middleware(request, event);
+    // Two calls, one query — memoized on the request closure.
+    expect(fetchQueryMock).toHaveBeenCalledTimes(1);
+
+    await middleware(request, event);
+    // A new request re-verifies — no RSC cache is shared into middleware.
+    expect(fetchQueryMock).toHaveBeenCalledTimes(2);
+  });
+
   it("preserves a custom handler's NextResponse body while porting refresh cookies", async () => {
     const soon = Math.floor(Date.now() / 1000) + 30;
     fetchActionMock.mockResolvedValue({
@@ -268,6 +288,48 @@ describe("convexAuthNextjsMiddleware", () => {
         .getSetCookie()
         .find((h) => h.startsWith("__Host-__convexAuthToken=rotated")),
     ).toBeDefined();
+  });
+});
+
+describe("ConvexAuthNextjsServerProvider server state", () => {
+  async function serverState() {
+    const element = await ConvexAuthNextjsServerProvider({
+      actions: options.actions,
+      children: null,
+    });
+    return (
+      element.props as {
+        serverState: {
+          token: string | null;
+          user: unknown;
+          sessionId: string | null;
+        };
+      }
+    ).serverState;
+  }
+
+  it("seeds the token when verifySession resolves a session", async () => {
+    fetchQueryMock.mockResolvedValue({ user: { id: "u1" }, sessionId: "s1" });
+    mocks.jar = mocks.makeJar({ "__Host-__convexAuthToken": "jwt" });
+    const state = await serverState();
+    expect(state.token).toBe("jwt");
+    expect(state.sessionId).toBe("s1");
+  });
+
+  it("never seeds a revoked session's JWT — fail closed", async () => {
+    fetchQueryMock.mockResolvedValue({ user: null, sessionId: null });
+    mocks.jar = mocks.makeJar({ "__Host-__convexAuthToken": "dead-jwt" });
+    const state = await serverState();
+    expect(state.token).toBeNull();
+    expect(state.user).toBeNull();
+    expect(state.sessionId).toBeNull();
+  });
+
+  it("fails closed when verifySession throws (backend unreachable)", async () => {
+    fetchQueryMock.mockRejectedValue(new Error("connection refused"));
+    mocks.jar = mocks.makeJar({ "__Host-__convexAuthToken": "jwt" });
+    const state = await serverState();
+    expect(state.token).toBeNull();
   });
 });
 

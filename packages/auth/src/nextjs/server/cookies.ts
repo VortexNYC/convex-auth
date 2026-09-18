@@ -6,9 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
  * (https://nextjs.org/blog/next-15#async-request-apis-breaking-change) many
  * APIs were sync. Keep both call shapes working.
  */
-type RememberNext14<F extends (...args: any[]) => any> = F extends (
-  ...args: infer Args
-) => infer Return
+type RememberNext14<F> = F extends (...args: infer Args) => infer Return
   ? (...args: Args) => Return | Awaited<Return>
   : never;
 

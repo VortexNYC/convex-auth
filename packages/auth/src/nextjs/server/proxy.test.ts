@@ -98,6 +98,15 @@ describe("request validation", () => {
     expect(response.status).toBe(403);
   });
 
+  it("rejects a malformed Origin instead of throwing", async () => {
+    const request = postRequest(
+      { intent: "signIn", args: {} },
+      { origin: "not a url" },
+    );
+    const response = await proxyAuthActionToConvex(request, options);
+    expect(response.status).toBe(403);
+  });
+
   it("rejects credentialed requests without a valid Origin (CSRF)", async () => {
     const request = postRequest(
       { intent: "signIn", args: {} },
@@ -206,12 +215,17 @@ describe("session-minting actions", () => {
       .find((h) => h.startsWith("__Host-__convexAuthTwoFactorPending="));
     expect(pending).toContain("challenge-tok");
     expect(pending).toContain("Max-Age=300");
-    // No session cookies written
-    expect(
-      response.headers
-        .getSetCookie()
-        .find((h) => h.startsWith("__Host-__convexAuthToken=")),
-    ).toBeUndefined();
+    // A pending challenge supersedes any existing session: the pair is
+    // cleared so a stale session can't resurrect on the next server render
+    // while the client shows the challenge form.
+    const tokenCookie = response.headers
+      .getSetCookie()
+      .find((h) => h.startsWith("__Host-__convexAuthToken="));
+    expect(tokenCookie).toMatch(/Expires=Thu, 01 Jan 1970/);
+    const refreshCookie = response.headers
+      .getSetCookie()
+      .find((h) => h.startsWith("__Host-__convexAuthRefreshToken="));
+    expect(refreshCookie).toMatch(/Expires=Thu, 01 Jan 1970/);
   });
 
   it("writes a trusted-device cookie when the session asks to trust", async () => {
@@ -266,6 +280,54 @@ describe("server-side substitutions", () => {
     );
     expect(response.status).toBe(401);
     expect(fetchActionMock).not.toHaveBeenCalled();
+  });
+
+  it("overwrites a body-supplied refreshToken with the cookie value", async () => {
+    fetchActionMock.mockResolvedValue({
+      token: "rotated",
+      refreshToken: "rotated-refresh",
+      sessionId: "s",
+    });
+    mocks.jar = mocks.makeJar({
+      "__Host-__convexAuthRefreshToken": "cookie-refresh",
+    });
+    const request = postRequest(
+      {
+        intent: "updateSession",
+        args: { refreshToken: "attacker-supplied" },
+      },
+      { cookie: "__Host-__convexAuthRefreshToken=cookie-refresh" },
+    );
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.updateSession,
+      { refreshToken: "cookie-refresh" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("overwrites a body-supplied 2FA token with the pending cookie", async () => {
+    fetchActionMock.mockResolvedValue({
+      token: "t",
+      refreshToken: "r",
+      sessionId: "s",
+    });
+    mocks.jar = mocks.makeJar({
+      "__Host-__convexAuthTwoFactorPending": "pending-tok",
+    });
+    const request = postRequest(
+      {
+        intent: "twoFactorVerifyTOTP",
+        args: { code: "123456", token: "attacker-supplied" },
+      },
+      { cookie: "__Host-__convexAuthTwoFactorPending=pending-tok" },
+    );
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.twoFactorVerifyTOTP,
+      { code: "123456", token: "pending-tok" },
+      expect.objectContaining({}),
+    );
   });
 
   it("passes the access token as fetch auth for authenticated intents", async () => {

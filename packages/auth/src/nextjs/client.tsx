@@ -30,7 +30,6 @@ export function ConvexAuthNextjsClientProvider(props: {
   serverState: ConvexAuthServerState;
   actions: NativeAuthActions;
   apiRoute?: string;
-  verbose?: boolean;
   children: ReactNode;
 }) {
   const { serverState, actions, apiRoute, children } = props;
@@ -39,9 +38,7 @@ export function ConvexAuthNextjsClientProvider(props: {
       actions={actions}
       storageMode="cookies"
       apiRoute={apiRoute}
-      initialToken={serverState.token}
-      initialSessionId={serverState.sessionId}
-      initialUser={serverState.user}
+      serverState={serverState}
       onAuthChange={invalidateAuthRouterCache}
     >
       {children}

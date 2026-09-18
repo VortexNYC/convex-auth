@@ -31,6 +31,7 @@ vi.stubGlobal("fetch", fetchMock);
 import {
   ConvexAuthProvider,
   useAuthActions,
+  useSession,
   type ConvexAuthProviderProps,
   type NativeAuthActions,
 } from "./ConvexAuthProvider.js";
@@ -222,6 +223,125 @@ describe("ConvexAuthProvider cookie mode", () => {
     );
     await waitFor(() => expect(onAuthChange).toHaveBeenCalledWith(true));
     expect(onAuthChange).toHaveBeenCalledTimes(1);
+  });
+
+  // `lastAppliedServerStateFetch` is module-scoped — the tests below use
+  // strictly increasing fixed timestamps so the watermark ordering is
+  // deterministic regardless of wall-clock timing.
+  it("re-seeds from a newer serverState after a server-side rotation", async () => {
+    const base = 1_700_000_000_000;
+    const { rerender } = renderProvider({
+      storageMode: "cookies",
+      serverState: {
+        token: "token-v1",
+        sessionId: "s1",
+        user: { id: "u1" } as never,
+        _timeFetched: base,
+      },
+    });
+    await waitFor(() => expect(latestActions?.token).toBe("token-v1"));
+
+    // Middleware rotated the pair; the next RSC payload carries the new token.
+    rerender(
+      React.createElement(
+        ConvexAuthProvider,
+        {
+          actions: baseActions,
+          storageMode: "cookies" as const,
+          serverState: {
+            token: "token-v2",
+            sessionId: "s2",
+            user: { id: "u1" } as never,
+            _timeFetched: base + 1000,
+          },
+        },
+        React.createElement(Probe),
+      ),
+    );
+    await waitFor(() => expect(latestActions?.token).toBe("token-v2"));
+    expect(latestActions?.sessionId).toBe("s2");
+
+    // A stale payload (older watermark — e.g. cached router entry) is ignored.
+    rerender(
+      React.createElement(
+        ConvexAuthProvider,
+        {
+          actions: baseActions,
+          storageMode: "cookies" as const,
+          serverState: {
+            token: "token-v1",
+            sessionId: "s1",
+            user: { id: "u1" } as never,
+            _timeFetched: base,
+          },
+        },
+        React.createElement(Probe),
+      ),
+    );
+    await act(async () => {});
+    expect(latestActions?.token).toBe("token-v2");
+    expect(latestActions?.sessionId).toBe("s2");
+  });
+
+  it("useSession is authenticated on first paint with a server-seeded session", async () => {
+    let session: ReturnType<typeof useSession> | null = null;
+    function SessionProbe() {
+      session = useSession();
+      return null;
+    }
+    render(
+      React.createElement(
+        ConvexAuthProvider,
+        {
+          actions: baseActions,
+          storageMode: "cookies" as const,
+          serverState: {
+            token: "verified-token",
+            sessionId: "s1",
+            user: { id: "u1" } as never,
+            _timeFetched: 1_700_000_001_000,
+          },
+        },
+        React.createElement(SessionProbe),
+      ),
+    );
+    // First paint: no waiting — the server-verified session is already
+    // authenticated even before the live query and setAuth handshake resolve.
+    expect(session?.isAuthenticated).toBe(true);
+    expect(session?.user?.id).toBe("u1");
+  });
+
+  it("signs the client out when a newer serverState carries no token (revoked)", async () => {
+    const base = 1_700_000_002_000;
+    const { rerender } = renderProvider({
+      storageMode: "cookies",
+      serverState: {
+        token: "token-v1",
+        sessionId: "s1",
+        user: { id: "u1" } as never,
+        _timeFetched: base,
+      },
+    });
+    await waitFor(() => expect(latestActions?.isAuthenticated).toBe(true));
+
+    rerender(
+      React.createElement(
+        ConvexAuthProvider,
+        {
+          actions: baseActions,
+          storageMode: "cookies" as const,
+          serverState: {
+            token: null,
+            sessionId: null,
+            user: null,
+            _timeFetched: base + 1000,
+          },
+        },
+        React.createElement(Probe),
+      ),
+    );
+    await waitFor(() => expect(latestActions?.token).toBeNull());
+    expect(latestActions?.isAuthenticated).toBe(false);
   });
 });
 

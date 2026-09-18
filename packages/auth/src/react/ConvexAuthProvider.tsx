@@ -471,6 +471,19 @@ export type ConvexAuthProviderProps = {
   initialRefreshToken?: string | null;
   initialSessionId?: string | null;
   /**
+   * Fresh server-resolved state, re-delivered by the SSR adapter on each
+   * server render. In cookie mode the provider re-seeds token/sessionId when
+   * `_timeFetched` advances, so a middleware-rotated session reaches the
+   * mounted client; a stale payload (framework cache) is ignored via the
+   * watermark. Only meaningful with `storageMode: "cookies"`.
+   */
+  serverState?: {
+    token: string | null;
+    user: NativeAuthUser | null;
+    sessionId: string | null;
+    _timeFetched: number;
+  };
+  /**
    * Called when the session transitions between authenticated and
    * unauthenticated (not on mount). SSR adapters use it to invalidate
    * framework caches — e.g. Next.js's Router Cache — after sign-in/sign-out.
@@ -478,22 +491,55 @@ export type ConvexAuthProviderProps = {
   onAuthChange?: (authenticated: boolean) => unknown;
 };
 
+/**
+ * Cookie mode has no web storage to act as the freshness oracle upstream uses
+ * for `serverState`. The only stale-payload hazard is a framework cache serving
+ * an older server render during a soft navigation — scoped to this tab and
+ * this module instance — so a module-level watermark is the equivalent guard.
+ */
+let lastAppliedServerStateFetch = 0;
+
 export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
   const client = useConvex();
   const updateSessionAction = useAction(props.actions.updateSession);
   const cookieMode = props.storageMode === "cookies";
-  const [token, setToken] = useState<string | null>(props.initialToken ?? null);
+  const seedToken = props.serverState?.token ?? props.initialToken ?? null;
+  const [token, setToken] = useState<string | null>(seedToken);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(props.initialSessionId ?? null);
+  const [sessionId, setSessionId] = useState<string | null>(
+    props.serverState?.sessionId ?? props.initialSessionId ?? null,
+  );
   const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState<string | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
+  // A server-seeded token was verified during this render — the client is
+  // already authenticated; `setAuth`'s async handshake only confirms it.
+  const [isAuthReady, setIsAuthReady] = useState(cookieMode && seedToken !== null);
   const [storage, setStorage] = useState<TokenStorage | null>(null);
   const isHydrating = useRef(true);
+
+  // The user attached to the most recently accepted server state — the
+  // no-flash paint fallback while the live `verifySession` query is loading.
+  // State, not a ref: a newer payload may carry a fresh user over an
+  // unchanged token, and the context memo must see that change.
+  const [serverUser, setServerUser] = useState<NativeAuthUser | null>(
+    props.serverState?.user ?? props.initialUser ?? null,
+  );
 
   useEffect(() => {
     if (cookieMode) {
       // Cookie mode: the server middleware owns refresh and the token lives
       // in memory only. No storage, no URL ingestion, no mount-time refresh.
+      // What does run: re-seeding from a newer serverState — middleware may
+      // have rotated the session since this client mounted.
+      const serverState = props.serverState;
+      if (
+        serverState !== undefined &&
+        serverState._timeFetched > lastAppliedServerStateFetch
+      ) {
+        lastAppliedServerStateFetch = serverState._timeFetched;
+        setServerUser(serverState.user);
+        setToken(serverState.token);
+        setSessionId(serverState.sessionId);
+      }
       isHydrating.current = false;
       return;
     }
@@ -561,6 +607,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
     props.initialToken,
     props.initialRefreshToken,
     props.initialSessionId,
+    props.serverState,
     updateSessionAction,
   ]);
 
@@ -656,7 +703,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
       isAuthReady,
       storageMode: cookieMode ? ("cookies" as const) : undefined,
       apiRoute: props.apiRoute,
-      initialUser: props.initialUser,
+      initialUser: serverUser,
     };
     return new Proxy(props.actions, {
       get(target, prop, receiver) {
@@ -669,13 +716,13 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
   }, [
     props.actions,
     props.apiRoute,
-    props.initialUser,
     cookieMode,
     token,
     refreshToken,
     sessionId,
     twoFactorChallengeToken,
     isAuthReady,
+    serverUser,
   ]);
   return <ConvexAuthContext.Provider value={value}>{props.children}</ConvexAuthContext.Provider>;
 }
@@ -1278,6 +1325,7 @@ export function useAuthActions() {
     setSessionId: ctx.setSessionId,
     isLoading: isLoading || isSessionLoading,
     isAuthenticated: user !== null,
+    storageMode: ctx.storageMode,
   };
 }
 

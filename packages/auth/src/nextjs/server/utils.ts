@@ -77,12 +77,19 @@ export async function setAuthCookiesInMiddleware(
 
 export function isCorsRequest(request: NextRequest) {
   const origin = request.headers.get("Origin");
-  const originURL = origin ? new URL(origin) : null;
-  return (
-    originURL !== null &&
-    (originURL.host !== request.headers.get("Host") ||
-      originURL.protocol !== new URL(request.url).protocol)
-  );
+  if (origin === null) {
+    return false;
+  }
+  // A malformed Origin cannot be proven same-origin — treat as cross-origin.
+  try {
+    const originURL = new URL(origin);
+    return (
+      originURL.host !== request.headers.get("Host") ||
+      originURL.protocol !== new URL(request.url).protocol
+    );
+  } catch {
+    return true;
+  }
 }
 
 export function logVerbose(message: string, verbose: boolean) {
@@ -91,18 +98,6 @@ export function logVerbose(message: string, verbose: boolean) {
       `[verbose] ${new Date().toISOString()} [ConvexAuthNextjs] ${message}`,
     );
   }
-}
-
-export function getRedactedMessage(value: string) {
-  const length = 5;
-  if (value.length < length * 2) {
-    return "<redacted>";
-  }
-  return (
-    value.substring(0, length) +
-    "<redacted>" +
-    value.substring(value.length - length)
-  );
 }
 
 /**

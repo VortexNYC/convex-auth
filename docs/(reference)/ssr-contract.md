@@ -5,9 +5,11 @@ Start, and any future framework adapter). This document is the spec an adapter
 must satisfy — it is framework-neutral on purpose, so each adapter stays a thin
 shell over shared semantics.
 
-Status: draft, revised after read-only review against the actual provider and
-component code (`ConvexAuthProvider.tsx`, `provider.ts`, `http.ts`,
-`native/sessions.ts`). No adapter code has been written from this contract yet.
+Status: implemented. The Next.js adapter
+(`packages/auth/src/nextjs/`, exported as `@vortex-api/convex-auth/nextjs`
+and `@vortex-api/convex-auth/nextjs/server`) satisfies this contract.
+Divergences from this draft are called out inline where the shipped design
+differs.
 
 ## What the three references establish
 
@@ -101,15 +103,23 @@ Our HTTP auth layer already sets cookies — `convex-auth-token`,
 **separate, app-origin set** the adapter owns. Naming should stay parallel so
 the two origins are unambiguous:
 
-| Cookie                              | Contents                                                                   | Lifetime                     |
-| ----------------------------------- | -------------------------------------------------------------------------- | ---------------------------- |
-| `__Host-convex-auth-token`          | Session JWT (access token)                                                 | JWT lifetime                 |
-| `__Host-convex-auth-refresh`        | Opaque refresh token                                                       | Refresh TTL                  |
-| `__Host-convex-auth-2fa-pending`    | Opaque 2FA pending token, only mid-challenge                               | Challenge TTL (minutes)      |
-| `__Host-convex-auth-trusted-device` | Trusted-device token after 2FA                                             | Trusted-device TTL           |
-| `__Host-convex-auth-oauth`          | Short-lived OAuth attempt state (state/PKCE binding), only during the flow | Minutes, deleted on exchange |
+Shipped names (`server/cookies.ts`):
 
-All `HttpOnly; Secure; SameSite=Lax; Path=/`; `__Host-` prefix in production.
+| Cookie                                        | Contents                                             | Lifetime                 |
+| --------------------------------------------- | ---------------------------------------------------- | ------------------------ |
+| `__Host-__convexAuthToken`                    | Session JWT (access token)                           | JWT lifetime             |
+| `__Host-__convexAuthRefreshToken`             | Opaque refresh token                                 | Refresh TTL              |
+| `__Host-__convexAuthTwoFactorPending`         | Opaque 2FA pending token, only mid-challenge         | Challenge TTL (minutes)  |
+| `__Host-__convexAuthTrustedDevice`            | Trusted-device token after 2FA                       | Trusted-device TTL       |
+
+All `HttpOnly; Secure; SameSite=Lax; Path=/`. The `__Host-` prefix applies
+off localhost only — on `localhost`, loopback IPs, and `*.localhost` the
+unprefixed names are used because `Secure` cookies cannot be set over local
+HTTP.
+
+No OAuth-attempt cookie exists: our OAuth state/PKCE verification happens
+entirely on the Convex origin's HTTP routes; the app only ever receives the
+finished session triple (§4).
 
 Two corrections from the first draft, both verified against the code:
 
@@ -127,10 +137,13 @@ Two corrections from the first draft, both verified against the code:
 ### 2. Optimistic session resolution
 
 A request-boundary helper that reads the token cookie and returns a cheap
-verdict: `{ hasSessionCookie: boolean, tokenExpired: boolean }` — JWT `exp`
-decode only, **no Convex call**. Feeds redirect pre-filtering (Next `proxy.ts`,
-Start `beforeLoad`). Must document that this verdict is not authorization —
-revocation-blind within token lifetime.
+verdict — JWT `exp` decode only, **no Convex call**. Feeds redirect
+pre-filtering (Next `proxy.ts`, Start `beforeLoad`). Must document that this
+verdict is not authorization — revocation-blind within token lifetime.
+
+Shipped: `convexAuthNextjsCookieState(request)` → `{ hasSessionCookie,
+tokenExpired }` (`server/index.tsx`). Middleware runs CORS stripping, the
+session-triple intercept, and proactive refresh before the verdict is read.
 
 ### 3. Verified session resolution
 
@@ -145,6 +158,15 @@ surface.
 - Adapter memoizes per request (React `cache()` on Next; request-scoped
   middleware context on Start).
 
+Shipped: `convexAuthNextjsSession()` is the `cache()`-memoized verified
+lookup for RSC render passes; `isAuthenticatedNextjs()` derives from it.
+The middleware ctx's `isAuthenticated()` does NOT use `cache()` — React's
+render cache is invalid outside render context — it memoizes on a
+per-request promise instead, so repeat calls in one handler pay one query
+while the next request re-verifies. `cookieState()` remains the cheap
+pre-filter. `convexAuthNextjsToken()` returns the raw JWT for
+`fetchQuery`/`fetchAction` auth (§7).
+
 ### 4. Boundary refresh + code exchange
 
 At the request boundary (before rendering):
@@ -157,17 +179,18 @@ At the request boundary (before rendering):
      row's `expiresAt` — a "refresh after expiry" path mostly cannot succeed.
      If SSR refresh-on-expiry is ever required, the component must decouple
      JWT TTL from session TTL first.
-   - **Current blocker:** `updateSession` (`provider.ts:581`) resolves the
-     caller through `provider: "password", issuer: "native"` identity. The
-     refresh path the adapter calls must be provider-agnostic — this is
-     component work, part of the blocking pre-adapter item below.
-2. Code exchange runs as **two distinct exchangers**, not one:
-   - **OAuth**: `code` param on a GET navigation → exchange with the attempt
-     cookie (our verifier is embedded in the OAuth state token) → set cookies
-     → redirect, param stripped.
-   - **Magic link**: `token` param arriving at the app's verify route →
-     exchange → set cookies → redirect. Different param, different endpoint
-     shape — do not conflate with the OAuth path.
+   - **Resolved:** `updateSession` (`provider.ts`) takes only
+     `{ refreshToken }` and resolves the caller through the token itself —
+     provider-agnostic, no `ctx.auth` dependency. No component change needed.
+2. **Session-triple landing replaces both exchangers** (divergence from the
+   draft): upstream exchanges a `code`/`token` param at the app boundary
+   because its OAuth callback lands there unfinished. Our Convex-origin HTTP
+   routes complete OAuth and magic-link verification server-side and redirect
+   to the app carrying `?token=&refreshToken=&sessionId=` — an already-minted
+   session. The adapter's request handler intercepts that triple on GET HTML
+   navigations, writes the HttpOnly cookies, and 302-redirects with the
+   params stripped (`server/request.ts`). The `refreshToken` param's presence
+   discriminates a session triple from a lone password-reset `?token=`.
 
 #### Refresh races — the design load-bearing decision
 
@@ -225,25 +248,30 @@ An endpoint the client POSTs to for session-mutating actions. On the server it:
   HttpOnly cookies.
 
 Upstream allowlists `signIn`/`signOut`. Ours is a designed surface because our
-mint sites are wider:
+mint sites are wider — shipped intents (`server/proxy.ts`):
 
-| Action                                                      | Why it must proxy                                           |
-| ----------------------------------------------------------- | ----------------------------------------------------------- |
-| `signIn` / `signUp`                                         | Mints a session — or returns a 2FA pending challenge        |
-| `verifyTwoFactor*` (TOTP, backup)                           | Mints a session from a pending token                        |
-| `verifyPasskeyAuthentication`                               | Mints a session; ceremony options fetch stays client-direct |
-| Email/phone OTP verify, magic-link verify, OAuth `callback` | Mint sessions                                               |
-| `linkAnonymousAccount`                                      | Replaces the session                                        |
-| `updateSession`-equivalent refresh                          | Server substitutes the real refresh token                   |
-| `signOut`                                                   | Clears cookies + revokes                                    |
+| Intent                                                                  | Why it must proxy                                               |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `signIn` / `signUp`                                                     | Mints a session — or returns a 2FA pending challenge            |
+| `twoFactorVerifyTOTP` / `twoFactorVerifyBackupCode`                     | Mints a session; pending token substituted from its cookie      |
+| `verifyPasskeyAuthentication`                                           | Mints a session; ceremony options fetch stays client-direct     |
+| `verifyEmailOtp`, OAuth `callback`                                      | Mint sessions                                                   |
+| `signInAnonymous` / `linkAnonymousAccount`                              | Mint / replace the session                                      |
+| `updateSession`                                                         | Refresh token substituted from its cookie                       |
+| `signOut`                                                               | Clears cookies + revokes; succeeds silently with no token cookie |
+
+Every entry maps to a configured action reference (`options.actions`), so the
+consumer's file layout — not hardcoded `"auth:signIn"` strings — names the
+targets. Confidential result fields (`refreshToken`, 2FA pending, trusted
+device) are stripped from the JSON body; they only ever travel as Set-Cookie.
 
 Session-read and non-minting mutations (profile, org, api-key operations) stay
 client-direct with the in-memory access token.
 
 ### 6. Cookie-mode client provider
 
-`ConvexAuthProvider` gains a **mode flag** (working name:
-`storageMode: "cookies"`) — NOT a sentinel refresh token. A truthy sentinel
+`ConvexAuthProvider` gains a **mode flag** — shipped as
+`storageMode: "cookies"` — NOT a sentinel refresh token. A truthy sentinel
 (`"dummy"`, `"cookie-managed"`) is a landmine: the auto-refresh timer and
 `if (refreshToken)` sites would treat it as a real token and sign the user out
 when it fails.
@@ -290,10 +318,10 @@ How the adapter authenticates Convex calls on each side:
 
 | Area              | Upstream                       | Ours                                                                             | Consequence                                                                                                                                                                                    |
 | ----------------- | ------------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rotation          | Simple: old refresh → new pair | Session family + replay revocation; a **self-race is classified as theft** today | The blocking component work: `rotateSession` needs the bounded-grace/idempotent-converge behavior in §4 before any adapter exists, or the first parallel SSR request pair revokes the session. |
+| Rotation          | Simple: old refresh → new pair | Session family + replay revocation | **Resolved:** bounded-grace converge landed (§4 "As built") — parallel boundary refreshes mint siblings instead of revoking. Proven against real OCC contention on a live deployment.                             |
 | Action surface    | `signIn`/`signOut`             | + 2FA challenge, passkey ceremonies, verification-code sign-in, account linking  | Proxy allowlist is a designed surface (§5). Each entry needs a test that its session lands in cookies.                                                                                         |
 | Session model     | JWT-primary                    | DB-primary (`authSessions`), JWT is the token field                              | `verifySession` already does the revocation-aware lookup — reuse it. The optimistic tier stays documented as revocation-blind within token lifetime.                                           |
-| Refresh binding   | Generic                        | `updateSession` resolves through `password`/`native` identity                    | Refresh must be provider-agnostic for SSR — component work, blocking.                                                                                                                          |
+| Refresh binding   | Generic                        | `updateSession` takes `{ refreshToken }` only                    | **Resolved:** refresh resolves the caller through the token — provider-agnostic as shipped.                                                                                                                          |
 | TTL coupling      | —                              | JWT `exp` couples to `authSessions.expiresAt`; rotation refuses expired sessions | Boundary refresh is proactive-only (§4). Decoupling JWT/session TTL is a separate component decision if refresh-on-expiry is ever in scope.                                                    |
 | 2FA pending token | N/A                            | Opaque pending token; already a cookie on the Convex origin                      | App-origin pending cookie (§1); proxy substitutes it server-side; single-use + challenge TTL enforced by the component.                                                                        |
 | Passkey sign-in   | N/A                            | Ceremony completes client-side, `usePasskeys` writes the session itself          | The mint write path must route through the proxy so the session lands in cookies (§6) — the client cannot set HttpOnly cookies.                                                                |
