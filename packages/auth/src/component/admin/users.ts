@@ -610,11 +610,11 @@ export const setUserPassword = mutation({
     const now = Date.now();
     const accounts = await ctx.db
       .query("authAccounts")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .take(100);
-    const existing = accounts.find(
-      (account) => account.provider === "password" && account.issuer === "native",
-    );
+      .withIndex("by_user_provider_issuer", (q) =>
+        q.eq("userId", args.userId).eq("provider", "password").eq("issuer", "native"),
+      )
+      .take(1);
+    const existing = accounts[0];
 
     if (existing === undefined) {
       const subject = crypto.randomUUID();
@@ -643,11 +643,11 @@ export const setUserPassword = mutation({
     } else {
       const identityRecords = await ctx.db
         .query("auth_identities")
-        .withIndex("by_user", (q) => q.eq("userId", args.userId))
-        .take(100);
-      const identityRecord = identityRecords.find(
-        (record) => record.provider === "password" && record.issuer === "native",
-      );
+        .withIndex("by_user_provider_issuer", (q) =>
+          q.eq("userId", args.userId).eq("provider", "password").eq("issuer", "native"),
+        )
+        .take(1);
+      const identityRecord = identityRecords[0];
       if (identityRecord !== undefined) {
         await ctx.db.patch(identityRecord._id, { updatedAt: now });
       }

@@ -128,6 +128,41 @@ describe("native verification codes", () => {
     expect(second?.consumedAt).toBeGreaterThan(0);
   });
 
+  it("revokes unconsumed codes beyond a single 1000-row page", async () => {
+    const t = convexTest(schema, modules);
+
+    const userId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "shlomo@example.com",
+        name: "Shlomo",
+        emailVerified: false,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    const now = Date.now();
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 1100; i++) {
+        await ctx.db.insert("authVerificationCodes", {
+          userId,
+          type: "two_factor_pending",
+          tokenHash: `hash-${i}`,
+          expiresAt: now + 1_000_000,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    });
+
+    const revoked = await t.mutation(api.native.codes.revokeVerificationCodesForUser, {
+      userId,
+      type: "two_factor_pending",
+    });
+    expect(revoked).toBe(1100);
+  });
+
   it("creating a new code of the same type revokes prior codes", async () => {
     const t = convexTest(schema, modules);
 

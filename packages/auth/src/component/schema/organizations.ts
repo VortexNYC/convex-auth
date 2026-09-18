@@ -48,6 +48,7 @@ export const organization_members = defineTable({
   updatedAt: v.number(),
 })
   .index("by_user", ["userId"])
+  .index("by_user_status", ["userId", "status"])
   .index("by_organization", ["organizationId"])
   .index("by_user_organization", ["userId", "organizationId"])
   .index("by_role", ["roleId"])

@@ -115,6 +115,28 @@ describe("native sessions", () => {
     expect(bySessionId["session-3"].revokedAt).toBeUndefined();
   });
 
+  it("revokes sessions beyond a single 1000-row page", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 1100; i++) {
+        await ctx.db.insert("authSessions", {
+          sessionId: `session-${i}`,
+          userId,
+          token: `token-${i}`,
+          expiresAt: now + 1_000_000,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    });
+
+    const revoked = await t.mutation(api.native.sessions.revokeSessionsForUser, { userId });
+    expect(revoked).toBe(1100);
+  });
+
   it("does not revoke expired sessions", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);

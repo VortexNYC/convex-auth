@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { getPage } from "convex-helpers/server/pagination";
+import { getAllRows } from "../pagination.js";
 import { mutation, query, type QueryCtx } from "../_generated/server.js";
 import schema, { verificationCodeTypeValidator } from "../schema.js";
 
@@ -27,15 +28,13 @@ async function getVerificationCodesByUserType(
   type: string | undefined,
 ) {
   const startIndexKey = type ? [userId, type] : [userId];
-  const { page } = await getPage(ctx, {
+  return await getAllRows(ctx, {
     table: "authVerificationCodes",
     index: "by_user_type",
     startIndexKey,
     endIndexKey: startIndexKey,
     absoluteMaxRows: MAX_VERIFICATION_CODES_PER_USER,
-    schema,
   });
-  return page;
 }
 
 export const createVerificationCode = mutation({

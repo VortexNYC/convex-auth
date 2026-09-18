@@ -1,7 +1,7 @@
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server.js";
-import type { DataModel, Doc, Id } from "./_generated/dataModel.js";
+import type { Doc, Id } from "./_generated/dataModel.js";
 import { v } from "convex/values";
-import { getPage, type PageRequest } from "convex-helpers/server/pagination";
+import { getAllRows } from "./pagination.js";
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
@@ -12,7 +12,6 @@ import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simp
 import { bytesToBase64url, base64urlToBytes } from "../convex-runtime/native/password.js";
 import { mintToken } from "../convex-runtime/native/jwt.js";
 import { generateVerificationToken, hashToken } from "../convex-runtime/native/tokens.js";
-import schema from "./schema.js";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const MAX_PASSKEYS_PER_USER = 10;
@@ -26,29 +25,6 @@ async function deleteExpiredChallenges(ctx: { db: MutationCtx["db"] }, now: numb
     .withIndex("by_expiresAt", (q) => q.lt("expiresAt", now))
     .take(EXPIRED_CHALLENGE_BATCH);
   await Promise.all(expired.map((row) => ctx.db.delete(row._id)));
-}
-
-async function getAllRows<
-  T extends "authSessions" | "authRefreshTokens" | "auth_passkeys" | "authVerificationCodes",
->(
-  ctx: { db: QueryCtx["db"] },
-  request: Omit<PageRequest<DataModel, T>, "schema" | "index"> & { index: string },
-): Promise<Doc<T>[]> {
-  const rows: Doc<T>[] = [];
-  let startIndexKey = request.startIndexKey;
-  for (;;) {
-    const { page, hasMore, indexKeys } = await getPage(ctx, {
-      ...request,
-      startIndexKey,
-      schema,
-    } as PageRequest<DataModel, T>);
-    rows.push(...page);
-    const lastKey = indexKeys[indexKeys.length - 1];
-    if (!hasMore || lastKey === undefined) {
-      return rows;
-    }
-    startIndexKey = lastKey;
-  }
 }
 
 async function getUserPasskeys(ctx: { db: QueryCtx["db"] }, userId: string) {

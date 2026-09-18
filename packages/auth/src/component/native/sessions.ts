@@ -1,5 +1,6 @@
 import { v, type Infer } from "convex/values";
 import { getPage } from "convex-helpers/server/pagination";
+import { getAllRows } from "../pagination.js";
 import { getOneFrom } from "convex-helpers/server/relationships";
 import { mutation, query, type MutationCtx, type QueryCtx } from "../_generated/server.js";
 import schema from "../schema.js";
@@ -8,15 +9,13 @@ import type { Doc, Id } from "../_generated/dataModel.js";
 const MAX_SESSIONS_PER_USER = 1000;
 
 async function getSessionsByUser(ctx: { db: QueryCtx["db"] }, userId: string) {
-  const { page } = await getPage(ctx, {
+  return await getAllRows(ctx, {
     table: "authSessions",
     index: "by_user",
     startIndexKey: [userId],
     endIndexKey: [userId],
     absoluteMaxRows: MAX_SESSIONS_PER_USER,
-    schema,
   });
-  return page;
 }
 
 async function getIdentityByUserProviderIssuer(

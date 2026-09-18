@@ -19,6 +19,7 @@ export const authAccounts = defineTable({
   updatedAt: v.number(),
 })
   .index("by_user", ["userId"])
+  .index("by_user_provider_issuer", ["userId", "provider", "issuer"])
   .index("by_provider_issuer_subject", ["provider", "issuer", "subject"]);
 
 export const authSessions = defineTable({
