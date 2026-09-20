@@ -70,13 +70,13 @@ function normalizeCapabilityGrants(
       expiresAt: grant.expiresAt,
     });
   }
-  return [...byCapability.values()].toSorted((left, right) =>
+  return [...byCapability.values()].sort((left, right) =>
     left.capability.localeCompare(right.capability),
   );
 }
 
 function normalizeStringSet(values: readonly string[]): string[] {
-  return [...new Set(values.map((value) => requireIdentifier(value, "permission")))].toSorted();
+  return [...new Set(values.map((value) => requireIdentifier(value, "permission")))].sort();
 }
 
 function requireIdentifier(value: string, field: string): string {
