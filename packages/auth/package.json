@@ -41,8 +41,8 @@
       "default": "./dist/index.js"
     },
     "./convex": {
-      "convex": "./src/convex-runtime/native/index.ts",
-      "types": "./src/convex-runtime/native/index.ts",
+      "convex": "./src/convex-runtime/index.ts",
+      "types": "./src/convex-runtime/index.ts",
       "import": "./dist/convex.js",
       "default": "./dist/convex.js"
     },
