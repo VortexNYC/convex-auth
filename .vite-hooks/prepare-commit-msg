@@ -1,0 +1,6 @@
+#!/bin/sh
+# Delegates to the Entire CLI hook kept in .git/hooks (core.hooksPath is
+# owned by the Vite+ dispatcher, so git never calls .git/hooks directly).
+ENTIRE_HOOK="$(git rev-parse --git-dir)/hooks/prepare-commit-msg"
+[ -x "$ENTIRE_HOOK" ] && exec "$ENTIRE_HOOK" "$@"
+exit 0

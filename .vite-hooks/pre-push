@@ -1,0 +1,7 @@
+#!/bin/sh
+vp check
+vp run test
+# Entire CLI pre-push (session logs ride the push).
+ENTIRE_HOOK="$(git rev-parse --git-dir)/hooks/pre-push"
+[ -x "$ENTIRE_HOOK" ] && "$ENTIRE_HOOK" "$@"
+exit 0
