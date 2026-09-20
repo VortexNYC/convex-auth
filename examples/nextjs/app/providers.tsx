@@ -9,8 +9,6 @@ import { ReactNode, useState } from "react";
  * so the Convex client context must wrap it.
  */
 export function ConvexClientProvider(props: { children: ReactNode }) {
-  const [client] = useState(
-    () => new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!),
-  );
+  const [client] = useState(() => new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!));
   return <ConvexProvider client={client}>{props.children}</ConvexProvider>;
 }

@@ -2,11 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  useConvexAuthClient,
-  usePasskeys,
-  useSession,
-} from "@vortex-api/convex-auth/react";
+import { useConvexAuthClient, usePasskeys, useSession } from "@vortex-api/convex-auth/react";
 
 type Mode = "signIn" | "signUp" | "twoFactor";
 
@@ -139,8 +135,7 @@ export default function SignInPage() {
         <div className="card">
           <h2>Two-factor verification</h2>
           <p className="muted">
-            The pending challenge lives in an HttpOnly cookie — this form
-            never sees a token.
+            The pending challenge lives in an HttpOnly cookie — this form never sees a token.
           </p>
           <form onSubmit={onTwoFactorSubmit} className="stack">
             <div>
@@ -169,13 +164,7 @@ export default function SignInPage() {
             )}
             <div>
               <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-              />
+              <input id="email" name="email" type="email" autoComplete="email" required />
             </div>
             <div>
               <label htmlFor="password">Password</label>
@@ -183,9 +172,7 @@ export default function SignInPage() {
                 id="password"
                 name="password"
                 type="password"
-                autoComplete={
-                  mode === "signUp" ? "new-password" : "current-password"
-                }
+                autoComplete={mode === "signUp" ? "new-password" : "current-password"}
                 required
               />
             </div>
@@ -197,14 +184,26 @@ export default function SignInPage() {
             {mode === "signUp" ? (
               <>
                 Have an account?{" "}
-                <a href="#" onClick={(e) => { e.preventDefault(); setMode("signIn"); }}>
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMode("signIn");
+                  }}
+                >
                   Sign in
                 </a>
               </>
             ) : (
               <>
                 No account?{" "}
-                <a href="#" onClick={(e) => { e.preventDefault(); setMode("signUp"); }}>
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMode("signUp");
+                  }}
+                >
                   Create one
                 </a>
               </>
@@ -219,11 +218,7 @@ export default function SignInPage() {
             <h2>OAuth</h2>
             <div className="stack">
               {providers.map((p) => (
-                <button
-                  key={p.id}
-                  className="secondary"
-                  onClick={() => void startOAuth(p.id)}
-                >
+                <button key={p.id} className="secondary" onClick={() => void startOAuth(p.id)}>
                   Continue with {p.label}
                 </button>
               ))}
@@ -233,17 +228,10 @@ export default function SignInPage() {
           <div className="card">
             <h2>Other</h2>
             <div className="stack">
-              <button
-                className="secondary"
-                onClick={() => void signInGuest()}
-                disabled={pending}
-              >
+              <button className="secondary" onClick={() => void signInGuest()} disabled={pending}>
                 Continue as guest
               </button>
-              <PasskeyButton
-                onTwoFactor={() => setMode("twoFactor")}
-                onDone={finish}
-              />
+              <PasskeyButton onTwoFactor={() => setMode("twoFactor")} onDone={finish} />
             </div>
           </div>
         </>

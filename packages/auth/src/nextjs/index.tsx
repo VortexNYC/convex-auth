@@ -2,10 +2,7 @@
 
 import { ReactNode } from "react";
 import type { NativeAuthActions } from "../react/ConvexAuthProvider.js";
-import {
-  ConvexAuthNextjsClientProvider,
-  type ConvexAuthServerState,
-} from "./client.js";
+import { ConvexAuthNextjsClientProvider, type ConvexAuthServerState } from "./client.js";
 import type { SerializedAuthActions } from "./serialization.js";
 
 /**

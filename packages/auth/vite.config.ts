@@ -14,9 +14,7 @@ for (const file of fsSync.readdirSync("src", {
   encoding: "utf8",
 })) {
   if (!/\.(ts|tsx)$/.test(file)) continue;
-  const head = fsSync
-    .readFileSync(path.join("src", file), "utf8")
-    .slice(0, 128);
+  const head = fsSync.readFileSync(path.join("src", file), "utf8").slice(0, 128);
   const match = head.match(/^"(use client|use server)"/);
   if (match) {
     moduleDirectives.set(path.resolve("src", file), match[1]);
@@ -31,9 +29,7 @@ const serverActionIds = [...moduleDirectives]
   .map(([id]) => id);
 // `/$^/` never matches — an empty id list must pin nothing, not everything.
 const serverActionPattern =
-  serverActionIds.length > 0
-    ? new RegExp(serverActionIds.map(escapeRe).join("|"))
-    : /$^/;
+  serverActionIds.length > 0 ? new RegExp(serverActionIds.map(escapeRe).join("|")) : /$^/;
 
 export default defineConfig({
   test: {
@@ -136,9 +132,7 @@ export default defineConfig({
             }
           }
           if (directives.size > 1) {
-            throw new Error(
-              `Chunk mixes module directives: ${[...chunk.moduleIds].join(", ")}`,
-            );
+            throw new Error(`Chunk mixes module directives: ${[...chunk.moduleIds].join(", ")}`);
           }
           const [directive] = directives;
           return directive === undefined ? "" : `"${directive}";`;

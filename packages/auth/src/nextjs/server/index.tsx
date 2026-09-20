@@ -4,12 +4,7 @@ import { fetchQuery } from "convex/nextjs";
 import { getFunctionName } from "convex/server";
 import { cache } from "react";
 import type { NextMiddlewareResult } from "next/dist/server/web/types";
-import {
-  NextFetchEvent,
-  NextMiddleware,
-  NextRequest,
-  NextResponse,
-} from "next/server";
+import { NextFetchEvent, NextMiddleware, NextRequest, NextResponse } from "next/server";
 import { ReactNode } from "react";
 import type { NativeAuthActions } from "../../react/ConvexAuthProvider.js";
 import { ConvexAuthNextjsClientProvider } from "../client.js";
@@ -103,8 +98,7 @@ export function convexAuthNextjsCookieState(request: NextRequest): {
   // `nextUrl.hostname` keeps IPv6 brackets (`[::1]`).
   const hostname = request.nextUrl.hostname.replace(/^\[|\]$/g, "");
   const isLocalhost =
-    ["localhost", "127.0.0.1", "::1"].includes(hostname) ||
-    hostname.endsWith(".localhost");
+    ["localhost", "127.0.0.1", "::1"].includes(hostname) || hostname.endsWith(".localhost");
   const name = `${isLocalhost ? "" : "__Host-"}__convexAuthToken`;
   const token = request.cookies.get(name)?.value ?? null;
   if (token === null) {
@@ -276,13 +270,10 @@ export function convexAuthNextjsMiddleware(
   options: ConvexAuthNextjsMiddlewareOptions,
 ): NextMiddleware;
 export function convexAuthNextjsMiddleware(
-  handlerOrOptions:
-    | ConvexAuthNextjsMiddlewareHandler
-    | ConvexAuthNextjsMiddlewareOptions,
+  handlerOrOptions: ConvexAuthNextjsMiddlewareHandler | ConvexAuthNextjsMiddlewareOptions,
   maybeOptions?: ConvexAuthNextjsMiddlewareOptions,
 ): NextMiddleware {
-  const handler =
-    typeof handlerOrOptions === "function" ? handlerOrOptions : undefined;
+  const handler = typeof handlerOrOptions === "function" ? handlerOrOptions : undefined;
   const options = (
     typeof handlerOrOptions === "function" ? maybeOptions : handlerOrOptions
   ) as ConvexAuthNextjsMiddlewareOptions;
@@ -290,9 +281,7 @@ export function convexAuthNextjsMiddleware(
     const verbose = options.verbose ?? false;
     const cookieConfig = options.cookieConfig ?? { maxAge: null };
     if (cookieConfig.maxAge !== null && cookieConfig.maxAge <= 0) {
-      throw new Error(
-        "cookieConfig.maxAge must be null or a positive number of seconds",
-      );
+      throw new Error("cookieConfig.maxAge must be null or a positive number of seconds");
     }
     logVerbose(`Begin middleware for request with URL ${request.url}`, verbose);
     const requestUrl = new URL(request.url);
@@ -314,19 +303,13 @@ export function convexAuthNextjsMiddleware(
 
     // If redirecting, proceed — the middleware will run again on next request
     if (authResult.kind === "redirect") {
-      logVerbose(
-        `Redirecting to ${authResult.response.headers.get("Location")}`,
-        verbose,
-      );
+      logVerbose(`Redirecting to ${authResult.response.headers.get("Location")}`, verbose);
       return authResult.response;
     }
 
     let response: Response | null = null;
     // Forward cookies to request for custom handler
-    if (
-      authResult.kind === "refreshTokens" &&
-      authResult.refreshTokens !== undefined
-    ) {
+    if (authResult.kind === "refreshTokens" && authResult.refreshTokens !== undefined) {
       logVerbose(`Forwarding cookies to request`, verbose);
       await setAuthCookiesInMiddleware(request, authResult.refreshTokens);
     }
@@ -375,10 +358,7 @@ export function convexAuthNextjsMiddleware(
     // Port the cookies from the auth middleware to the response. Mutating a
     // NextResponse directly preserves its body; `NextResponse.next(response)`
     // only forwards headers/status.
-    if (
-      authResult.kind === "refreshTokens" &&
-      authResult.refreshTokens !== undefined
-    ) {
+    if (authResult.kind === "refreshTokens" && authResult.refreshTokens !== undefined) {
       if (response instanceof NextResponse) {
         await setAuthCookies(response, authResult.refreshTokens, cookieConfig);
         return response;
@@ -468,10 +448,7 @@ async function convexAuthNextjsServerState(options: {
     getFunctionName(options.actions.verifySession),
     options.convexUrl,
   );
-  logVerbose(
-    `Server state: session ${session === null ? "rejected" : "verified"}`,
-    verbose,
-  );
+  logVerbose(`Server state: session ${session === null ? "rejected" : "verified"}`, verbose);
   if (session === null) {
     return {
       token: null,

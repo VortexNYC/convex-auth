@@ -27,9 +27,7 @@ import type Link from "next/link";
 import type { NextRequest } from "next/server";
 
 type WithPathPatternWildcard<T> = `${T & string}(.*)`;
-type NextTypedRoute<T = Parameters<typeof Link>["0"]["href"]> = T extends string
-  ? T
-  : never;
+type NextTypedRoute<T = Parameters<typeof Link>["0"]["href"]> = T extends string ? T : never;
 
 type Autocomplete<U extends T, T = string> = U | (T & Record<never, never>);
 
@@ -62,8 +60,7 @@ export const createRouteMatcher = (routes: RouteMatcherParam) => {
 
   const routePatterns = [routes || ""].flat().filter(Boolean);
   const matchers = precomputePathRegex(routePatterns);
-  return (req: NextRequest) =>
-    matchers.some((matcher) => matcher.test(req.nextUrl.pathname));
+  return (req: NextRequest) => matchers.some((matcher) => matcher.test(req.nextUrl.pathname));
 };
 
 const precomputePathRegex = (patterns: Array<string | RegExp>) => {

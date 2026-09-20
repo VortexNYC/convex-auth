@@ -14,8 +14,8 @@ export default async function Home() {
     <main>
       <h1>convex-auth × Next.js</h1>
       <p className="muted">
-        Sessions live in HttpOnly cookies. This page was rendered on the
-        server with a revocation-aware session check — no client flash.
+        Sessions live in HttpOnly cookies. This page was rendered on the server with a
+        revocation-aware session check — no client flash.
       </p>
 
       <div className="card">
@@ -23,12 +23,10 @@ export default async function Home() {
         {session ? (
           <div className="stack">
             <div>
-              <strong>User:</strong>{" "}
-              {session.user.name ?? session.user.email ?? session.user.id}
+              <strong>User:</strong> {session.user.name ?? session.user.email ?? session.user.id}
             </div>
             <div>
-              <strong>Session ID:</strong>{" "}
-              <span className="mono">{session.sessionId}</span>
+              <strong>Session ID:</strong> <span className="mono">{session.sessionId}</span>
             </div>
             <div className="row">
               <Link className="button" href="/dashboard">
@@ -53,7 +51,9 @@ export default async function Home() {
         <ul>
           <li>Middleware lands OAuth session triples into HttpOnly cookies</li>
           <li>Middleware refreshes near-expiry tokens at the boundary</li>
-          <li>Sign-in/up/out POST through the adapter proxy (<code>/api/auth</code>)</li>
+          <li>
+            Sign-in/up/out POST through the adapter proxy (<code>/api/auth</code>)
+          </li>
           <li>2FA pending challenge stays HttpOnly (never touches JS)</li>
           <li>Server components verify sessions revocation-aware</li>
           <li>Client re-seeds from rotated sessions via serverState</li>

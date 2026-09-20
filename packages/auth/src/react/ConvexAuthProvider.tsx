@@ -531,10 +531,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
       // What does run: re-seeding from a newer serverState — middleware may
       // have rotated the session since this client mounted.
       const serverState = props.serverState;
-      if (
-        serverState !== undefined &&
-        serverState._timeFetched > lastAppliedServerStateFetch
-      ) {
+      if (serverState !== undefined && serverState._timeFetched > lastAppliedServerStateFetch) {
         lastAppliedServerStateFetch = serverState._timeFetched;
         setServerUser(serverState.user);
         setToken(serverState.token);
@@ -809,7 +806,7 @@ export function useAuthActions() {
   const cookieMode = ctx.storageMode === "cookies";
   const apiRoute = ctx.apiRoute ?? "/api/auth";
   const callProxy = useCallback(
-    <T = SessionLike>(intent: string, args: Record<string, unknown>) =>
+    <T = SessionLike,>(intent: string, args: Record<string, unknown>) =>
       callAuthProxy(apiRoute, intent, args) as Promise<T>,
     [apiRoute],
   );

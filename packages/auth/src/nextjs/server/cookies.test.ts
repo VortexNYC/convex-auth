@@ -29,11 +29,7 @@ vi.mock("next/headers", () => ({
   cookies: async () => mocks.jar,
 }));
 
-import {
-  getRequestCookies,
-  getRequestCookiesInMiddleware,
-  getResponseCookies,
-} from "./cookies.js";
+import { getRequestCookies, getRequestCookiesInMiddleware, getResponseCookies } from "./cookies.js";
 
 beforeEach(() => {
   mocks.host = "app.example.com";
@@ -106,9 +102,7 @@ describe("getResponseCookies", () => {
     cookies.refreshToken = "ref";
     const headers = setCookieHeaders(response);
     const tokenHeader = headers.find((h) => h.startsWith("__Host-__convexAuthToken="));
-    const refreshHeader = headers.find((h) =>
-      h.startsWith("__Host-__convexAuthRefreshToken="),
-    );
+    const refreshHeader = headers.find((h) => h.startsWith("__Host-__convexAuthRefreshToken="));
     expect(tokenHeader).toContain("__Host-__convexAuthToken=tok");
     expect(refreshHeader).toContain("__Host-__convexAuthRefreshToken=ref");
     for (const header of [tokenHeader, refreshHeader]) {
@@ -124,9 +118,7 @@ describe("getResponseCookies", () => {
     const response = new NextResponse(null);
     const cookies = await getResponseCookies(response, { maxAge: null });
     cookies.token = "tok";
-    const header = setCookieHeaders(response).find((h) =>
-      h.startsWith("__convexAuthToken="),
-    );
+    const header = setCookieHeaders(response).find((h) => h.startsWith("__convexAuthToken="));
     expect(header).toBeDefined();
     expect(header).not.toContain("__Host-");
     expect(header).toContain("HttpOnly");
@@ -149,12 +141,12 @@ describe("getResponseCookies", () => {
     cookies.setTwoFactorPending("challenge", 600_000);
     cookies.setTrustedDevice("trusted", 86_400_000);
     const headers = setCookieHeaders(response);
-    expect(
-      headers.find((h) => h.startsWith("__Host-__convexAuthTwoFactorPending=")),
-    ).toContain("Max-Age=600");
-    expect(
-      headers.find((h) => h.startsWith("__Host-__convexAuthTrustedDevice=")),
-    ).toContain("Max-Age=86400");
+    expect(headers.find((h) => h.startsWith("__Host-__convexAuthTwoFactorPending="))).toContain(
+      "Max-Age=600",
+    );
+    expect(headers.find((h) => h.startsWith("__Host-__convexAuthTrustedDevice="))).toContain(
+      "Max-Age=86400",
+    );
   });
 
   it("clears cookies with an expired Set-Cookie", async () => {
@@ -164,9 +156,7 @@ describe("getResponseCookies", () => {
     cookies.setTwoFactorPending(null);
     const headers = setCookieHeaders(response);
     const tokenHeader = headers.find((h) => h.startsWith("__Host-__convexAuthToken="));
-    const pendingHeader = headers.find((h) =>
-      h.startsWith("__Host-__convexAuthTwoFactorPending="),
-    );
+    const pendingHeader = headers.find((h) => h.startsWith("__Host-__convexAuthTwoFactorPending="));
     expect(tokenHeader).toContain("__Host-__convexAuthToken=;");
     expect(tokenHeader).toMatch(/Expires=Thu, 01 Jan 1970/);
     expect(pendingHeader).toMatch(/Expires=Thu, 01 Jan 1970/);

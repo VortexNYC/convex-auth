@@ -57,25 +57,17 @@ const AUTH_ACTION_KEYS = [
 
 // Adding a key to NativeAuthActions without listing it above fails typecheck —
 // a silently-missing key would serialize away and arrive `undefined` client-side.
-type UnlistedKey = Exclude<
-  keyof NativeAuthActions,
-  (typeof AUTH_ACTION_KEYS)[number]
->;
-const _assertAllActionsListed: [UnlistedKey] extends [never] ? true : never =
-  true;
+type UnlistedKey = Exclude<keyof NativeAuthActions, (typeof AUTH_ACTION_KEYS)[number]>;
+const _assertAllActionsListed: [UnlistedKey] extends [never] ? true : never = true;
 
 const functionNameSymbol = Symbol.for("functionName");
 
 function referenceName(ref: unknown): string | undefined {
-  const name = (ref as { [key: symbol]: unknown } | null)?.[
-    functionNameSymbol
-  ];
+  const name = (ref as { [key: symbol]: unknown } | null)?.[functionNameSymbol];
   return typeof name === "string" ? name : undefined;
 }
 
-export function serializeAuthActions(
-  actions: NativeAuthActions,
-): SerializedAuthActions {
+export function serializeAuthActions(actions: NativeAuthActions): SerializedAuthActions {
   const serialized: SerializedAuthActions = {};
   for (const key of AUTH_ACTION_KEYS) {
     const name = referenceName(actions[key]);

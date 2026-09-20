@@ -54,10 +54,7 @@ export async function handleAuthenticationInRequest(
       { token: paramToken, refreshToken: paramRefreshToken, twoFactorPending: null },
       cookieConfig,
     );
-    logVerbose(
-      `Wrote auth cookies, redirecting to ${redirectUrl.toString()}`,
-      verbose,
-    );
+    logVerbose(`Wrote auth cookies, redirecting to ${redirectUrl.toString()}`, verbose);
     return { kind: "redirect", response };
   }
 
@@ -124,10 +121,7 @@ async function getRefreshedTokens(options: ConvexAuthNextjsMiddlewareOptions) {
     if (result.token === undefined) {
       throw new Error("Invalid `updateSession` action result for token refresh");
     }
-    logVerbose(
-      `Successfully refreshed tokens: is null? ${result.token === null}`,
-      verbose,
-    );
+    logVerbose(`Successfully refreshed tokens: is null? ${result.token === null}`, verbose);
     if (result.token === null || typeof result.refreshToken !== "string") {
       return null;
     }

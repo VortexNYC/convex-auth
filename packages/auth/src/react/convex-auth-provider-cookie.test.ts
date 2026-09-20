@@ -141,9 +141,7 @@ describe("ConvexAuthProvider cookie mode", () => {
     renderProvider({ storageMode: "cookies" });
     await waitFor(() => expect(latestActions).not.toBeNull());
 
-    await act(() =>
-      latestActions!.signIn({ email: "a@b.c", password: "pw" } as never),
-    );
+    await act(() => latestActions!.signIn({ email: "a@b.c", password: "pw" } as never));
 
     const [call] = proxyCalls();
     expect(call.url).toBe("/api/auth");
@@ -218,9 +216,7 @@ describe("ConvexAuthProvider cookie mode", () => {
     await waitFor(() => expect(latestActions).not.toBeNull());
     expect(onAuthChange).not.toHaveBeenCalled();
 
-    await act(() =>
-      latestActions!.signIn({ email: "a@b.c", password: "pw" } as never),
-    );
+    await act(() => latestActions!.signIn({ email: "a@b.c", password: "pw" } as never));
     await waitFor(() => expect(onAuthChange).toHaveBeenCalledWith(true));
     expect(onAuthChange).toHaveBeenCalledTimes(1);
   });
@@ -355,9 +351,7 @@ describe("ConvexAuthProvider localStorage mode (regression)", () => {
     renderProvider();
     await waitFor(() => expect(latestActions).not.toBeNull());
 
-    await act(() =>
-      latestActions!.signIn({ email: "a@b.c", password: "pw" } as never),
-    );
+    await act(() => latestActions!.signIn({ email: "a@b.c", password: "pw" } as never));
 
     expect(signInMock).toHaveBeenCalledWith({
       email: "a@b.c",
@@ -366,12 +360,8 @@ describe("ConvexAuthProvider localStorage mode (regression)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(latestActions?.token).toBe("minted-token");
     expect(latestActions?.refreshToken).toBe("client-refresh");
-    expect(window.localStorage.getItem("convex-auth-token")).toBe(
-      "minted-token",
-    );
-    expect(window.localStorage.getItem("convex-auth-refresh-token")).toBe(
-      "client-refresh",
-    );
+    expect(window.localStorage.getItem("convex-auth-token")).toBe("minted-token");
+    expect(window.localStorage.getItem("convex-auth-refresh-token")).toBe("client-refresh");
   });
 
   it("still ingests tokens from the URL", async () => {

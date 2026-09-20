@@ -40,8 +40,7 @@ import { proxyAuthActionToConvex, shouldProxyAuthAction } from "./proxy.js";
 
 const fetchActionMock = vi.mocked(fetchAction);
 
-const actionRef = (name: string) =>
-  name as unknown as FunctionReference<"action">;
+const actionRef = (name: string) => name as unknown as FunctionReference<"action">;
 
 const actions = {
   signUp: actionRef("auth:signUp"),
@@ -99,10 +98,7 @@ describe("request validation", () => {
   });
 
   it("rejects a malformed Origin instead of throwing", async () => {
-    const request = postRequest(
-      { intent: "signIn", args: {} },
-      { origin: "not a url" },
-    );
+    const request = postRequest({ intent: "signIn", args: {} }, { origin: "not a url" });
     const response = await proxyAuthActionToConvex(request, options);
     expect(response.status).toBe(403);
   });
@@ -175,9 +171,7 @@ describe("session-minting actions", () => {
       setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=new-token")),
     ).toBeDefined();
     expect(
-      setCookies.find((h) =>
-        h.startsWith("__Host-__convexAuthRefreshToken=new-refresh"),
-      ),
+      setCookies.find((h) => h.startsWith("__Host-__convexAuthRefreshToken=new-refresh")),
     ).toBeDefined();
   });
 
@@ -444,9 +438,7 @@ describe("signOut", () => {
     const response = await proxyAuthActionToConvex(request, options);
     expect(response.status).toBe(400);
     expect(
-      response.headers
-        .getSetCookie()
-        .find((h) => h.startsWith("__Host-__convexAuthToken=")),
+      response.headers.getSetCookie().find((h) => h.startsWith("__Host-__convexAuthToken=")),
     ).toMatch(/Expires=Thu, 01 Jan 1970/);
   });
 });
@@ -475,9 +467,7 @@ describe("failure paths", () => {
     const response = await proxyAuthActionToConvex(request, options);
     expect(response.status).toBe(400);
     expect(
-      response.headers
-        .getSetCookie()
-        .find((h) => h.startsWith("__Host-__convexAuthToken=")),
+      response.headers.getSetCookie().find((h) => h.startsWith("__Host-__convexAuthToken=")),
     ).toMatch(/Expires=Thu, 01 Jan 1970/);
   });
 
@@ -492,16 +482,13 @@ describe("failure paths", () => {
     );
     const response = await proxyAuthActionToConvex(request, options);
     expect(
-      response.headers
-        .getSetCookie()
-        .find((h) => h.startsWith("__Host-__convexAuthRefreshToken=")),
+      response.headers.getSetCookie().find((h) => h.startsWith("__Host-__convexAuthRefreshToken=")),
     ).toMatch(/Expires=Thu, 01 Jan 1970/);
   });
 });
 
 describe("shouldProxyAuthAction", () => {
-  const at = (path: string) =>
-    new NextRequest(`https://app.example.com${path}`);
+  const at = (path: string) => new NextRequest(`https://app.example.com${path}`);
 
   it("matches the api route with and without trailing slash", () => {
     expect(shouldProxyAuthAction(at("/api/auth"), "/api/auth")).toBe(true);
@@ -510,12 +497,8 @@ describe("shouldProxyAuthAction", () => {
   });
 
   it("does not match other routes or subpaths", () => {
-    expect(shouldProxyAuthAction(at("/api/auth/callback"), "/api/auth")).toBe(
-      false,
-    );
+    expect(shouldProxyAuthAction(at("/api/auth/callback"), "/api/auth")).toBe(false);
     expect(shouldProxyAuthAction(at("/api/other"), "/api/auth")).toBe(false);
-    expect(shouldProxyAuthAction(at("/api/authenticate"), "/api/auth")).toBe(
-      false,
-    );
+    expect(shouldProxyAuthAction(at("/api/authenticate"), "/api/auth")).toBe(false);
   });
 });

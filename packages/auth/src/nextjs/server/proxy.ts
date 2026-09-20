@@ -37,13 +37,7 @@ const SESSION_INTENTS = [
 
 export type AuthProxyIntent = (typeof SESSION_INTENTS)[number];
 
-type ProxyActions = Pick<
-  NativeAuthActions,
-  | "signUp"
-  | "signIn"
-  | "signOut"
-  | "updateSession"
-> &
+type ProxyActions = Pick<NativeAuthActions, "signUp" | "signIn" | "signOut" | "updateSession"> &
   Partial<
     Pick<
       NativeAuthActions,
@@ -93,9 +87,7 @@ export async function proxyAuthActionToConvex(
     logVerbose(`Invalid intent ${String(intent)}, returning 400`, verbose);
     return new Response("Invalid intent", { status: 400 });
   }
-  const action = options.actions[intent] as
-    | FunctionReference<"action">
-    | undefined;
+  const action = options.actions[intent] as FunctionReference<"action"> | undefined;
   if (!action) {
     logVerbose(`Intent ${intent} is not configured, returning 400`, verbose);
     return new Response("Action not configured", { status: 400 });
@@ -136,10 +128,7 @@ export async function proxyAuthActionToConvex(
     args.trustedDeviceToken = requestCookies.trustedDevice;
   }
 
-  logVerbose(
-    `Fetching action for intent ${intent}`,
-    verbose,
-  );
+  logVerbose(`Fetching action for intent ${intent}`, verbose);
 
   try {
     const result = await fetchAction(action, args as never, {
@@ -249,12 +238,7 @@ export function shouldProxyAuthAction(request: NextRequest, apiRoute: string) {
   // either way (https://nextjs.org/docs/app/api-reference/next-config-js/trailingSlash).
   const requestUrl = new URL(request.url);
   if (apiRoute.endsWith("/")) {
-    return (
-      requestUrl.pathname === apiRoute ||
-      requestUrl.pathname === apiRoute.slice(0, -1)
-    );
+    return requestUrl.pathname === apiRoute || requestUrl.pathname === apiRoute.slice(0, -1);
   }
-  return (
-    requestUrl.pathname === apiRoute || requestUrl.pathname === apiRoute + "/"
-  );
+  return requestUrl.pathname === apiRoute || requestUrl.pathname === apiRoute + "/";
 }

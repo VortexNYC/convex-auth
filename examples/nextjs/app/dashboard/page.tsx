@@ -25,30 +25,24 @@ export default async function DashboardPage() {
     <main>
       <h1>Dashboard</h1>
       <p className="muted">
-        Server-verified render — a revoked session redirects even with a
-        live JWT.
+        Server-verified render — a revoked session redirects even with a live JWT.
       </p>
 
       <div className="card">
         <h2>Server side</h2>
         <div className="stack">
           <div>
-            <strong>User:</strong>{" "}
-            {session.user.name ?? session.user.email ?? session.user.id}
+            <strong>User:</strong> {session.user.name ?? session.user.email ?? session.user.id}
           </div>
           <div>
-            <strong>Email verified:</strong>{" "}
-            {session.user.emailVerified ? "yes" : "no"}
+            <strong>Email verified:</strong> {session.user.emailVerified ? "yes" : "no"}
           </div>
           <div>
-            <strong>Session ID:</strong>{" "}
-            <span className="mono">{session.sessionId}</span>
+            <strong>Session ID:</strong> <span className="mono">{session.sessionId}</span>
           </div>
           <div>
             <strong>Access token:</strong>{" "}
-            <span className="mono">
-              {token ? `${token.slice(0, 24)}…` : "none"}
-            </span>
+            <span className="mono">{token ? `${token.slice(0, 24)}…` : "none"}</span>
           </div>
         </div>
       </div>

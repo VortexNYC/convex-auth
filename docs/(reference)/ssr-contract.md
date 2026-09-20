@@ -105,12 +105,12 @@ the two origins are unambiguous:
 
 Shipped names (`server/cookies.ts`):
 
-| Cookie                                        | Contents                                             | Lifetime                 |
-| --------------------------------------------- | ---------------------------------------------------- | ------------------------ |
-| `__Host-__convexAuthToken`                    | Session JWT (access token)                           | JWT lifetime             |
-| `__Host-__convexAuthRefreshToken`             | Opaque refresh token                                 | Refresh TTL              |
-| `__Host-__convexAuthTwoFactorPending`         | Opaque 2FA pending token, only mid-challenge         | Challenge TTL (minutes)  |
-| `__Host-__convexAuthTrustedDevice`            | Trusted-device token after 2FA                       | Trusted-device TTL       |
+| Cookie                                | Contents                                     | Lifetime                |
+| ------------------------------------- | -------------------------------------------- | ----------------------- |
+| `__Host-__convexAuthToken`            | Session JWT (access token)                   | JWT lifetime            |
+| `__Host-__convexAuthRefreshToken`     | Opaque refresh token                         | Refresh TTL             |
+| `__Host-__convexAuthTwoFactorPending` | Opaque 2FA pending token, only mid-challenge | Challenge TTL (minutes) |
+| `__Host-__convexAuthTrustedDevice`    | Trusted-device token after 2FA               | Trusted-device TTL      |
 
 All `HttpOnly; Secure; SameSite=Lax; Path=/`. The `__Host-` prefix applies
 off localhost only — on `localhost`, loopback IPs, and `*.localhost` the
@@ -250,15 +250,15 @@ An endpoint the client POSTs to for session-mutating actions. On the server it:
 Upstream allowlists `signIn`/`signOut`. Ours is a designed surface because our
 mint sites are wider — shipped intents (`server/proxy.ts`):
 
-| Intent                                                                  | Why it must proxy                                               |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `signIn` / `signUp`                                                     | Mints a session — or returns a 2FA pending challenge            |
-| `twoFactorVerifyTOTP` / `twoFactorVerifyBackupCode`                     | Mints a session; pending token substituted from its cookie      |
-| `verifyPasskeyAuthentication`                                           | Mints a session; ceremony options fetch stays client-direct     |
-| `verifyEmailOtp`, OAuth `callback`                                      | Mint sessions                                                   |
-| `signInAnonymous` / `linkAnonymousAccount`                              | Mint / replace the session                                      |
-| `updateSession`                                                         | Refresh token substituted from its cookie                       |
-| `signOut`                                                               | Clears cookies + revokes; succeeds silently with no token cookie |
+| Intent                                              | Why it must proxy                                                |
+| --------------------------------------------------- | ---------------------------------------------------------------- |
+| `signIn` / `signUp`                                 | Mints a session — or returns a 2FA pending challenge             |
+| `twoFactorVerifyTOTP` / `twoFactorVerifyBackupCode` | Mints a session; pending token substituted from its cookie       |
+| `verifyPasskeyAuthentication`                       | Mints a session; ceremony options fetch stays client-direct      |
+| `verifyEmailOtp`, OAuth `callback`                  | Mint sessions                                                    |
+| `signInAnonymous` / `linkAnonymousAccount`          | Mint / replace the session                                       |
+| `updateSession`                                     | Refresh token substituted from its cookie                        |
+| `signOut`                                           | Clears cookies + revokes; succeeds silently with no token cookie |
 
 Every entry maps to a configured action reference (`options.actions`), so the
 consumer's file layout — not hardcoded `"auth:signIn"` strings — names the
@@ -316,16 +316,16 @@ How the adapter authenticates Convex calls on each side:
 
 ## Differences from upstream that must be designed for
 
-| Area              | Upstream                       | Ours                                                                             | Consequence                                                                                                                                                                                    |
-| ----------------- | ------------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Rotation          | Simple: old refresh → new pair | Session family + replay revocation | **Resolved:** bounded-grace converge landed (§4 "As built") — parallel boundary refreshes mint siblings instead of revoking. Proven against real OCC contention on a live deployment.                             |
-| Action surface    | `signIn`/`signOut`             | + 2FA challenge, passkey ceremonies, verification-code sign-in, account linking  | Proxy allowlist is a designed surface (§5). Each entry needs a test that its session lands in cookies.                                                                                         |
-| Session model     | JWT-primary                    | DB-primary (`authSessions`), JWT is the token field                              | `verifySession` already does the revocation-aware lookup — reuse it. The optimistic tier stays documented as revocation-blind within token lifetime.                                           |
-| Refresh binding   | Generic                        | `updateSession` takes `{ refreshToken }` only                    | **Resolved:** refresh resolves the caller through the token — provider-agnostic as shipped.                                                                                                                          |
-| TTL coupling      | —                              | JWT `exp` couples to `authSessions.expiresAt`; rotation refuses expired sessions | Boundary refresh is proactive-only (§4). Decoupling JWT/session TTL is a separate component decision if refresh-on-expiry is ever in scope.                                                    |
-| 2FA pending token | N/A                            | Opaque pending token; already a cookie on the Convex origin                      | App-origin pending cookie (§1); proxy substitutes it server-side; single-use + challenge TTL enforced by the component.                                                                        |
-| Passkey sign-in   | N/A                            | Ceremony completes client-side, `usePasskeys` writes the session itself          | The mint write path must route through the proxy so the session lands in cookies (§6) — the client cannot set HttpOnly cookies.                                                                |
-| URL ingestion     | N/A                            | Provider reads `?token=&refreshToken=&sessionId=` into state on mount            | Disabled in cookie mode (§6) — OAuth/magic-link redirects place refresh tokens in the query today.                                                                                             |
+| Area              | Upstream                       | Ours                                                                             | Consequence                                                                                                                                                                           |
+| ----------------- | ------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rotation          | Simple: old refresh → new pair | Session family + replay revocation                                               | **Resolved:** bounded-grace converge landed (§4 "As built") — parallel boundary refreshes mint siblings instead of revoking. Proven against real OCC contention on a live deployment. |
+| Action surface    | `signIn`/`signOut`             | + 2FA challenge, passkey ceremonies, verification-code sign-in, account linking  | Proxy allowlist is a designed surface (§5). Each entry needs a test that its session lands in cookies.                                                                                |
+| Session model     | JWT-primary                    | DB-primary (`authSessions`), JWT is the token field                              | `verifySession` already does the revocation-aware lookup — reuse it. The optimistic tier stays documented as revocation-blind within token lifetime.                                  |
+| Refresh binding   | Generic                        | `updateSession` takes `{ refreshToken }` only                                    | **Resolved:** refresh resolves the caller through the token — provider-agnostic as shipped.                                                                                           |
+| TTL coupling      | —                              | JWT `exp` couples to `authSessions.expiresAt`; rotation refuses expired sessions | Boundary refresh is proactive-only (§4). Decoupling JWT/session TTL is a separate component decision if refresh-on-expiry is ever in scope.                                           |
+| 2FA pending token | N/A                            | Opaque pending token; already a cookie on the Convex origin                      | App-origin pending cookie (§1); proxy substitutes it server-side; single-use + challenge TTL enforced by the component.                                                               |
+| Passkey sign-in   | N/A                            | Ceremony completes client-side, `usePasskeys` writes the session itself          | The mint write path must route through the proxy so the session lands in cookies (§6) — the client cannot set HttpOnly cookies.                                                       |
+| URL ingestion     | N/A                            | Provider reads `?token=&refreshToken=&sessionId=` into state on mount            | Disabled in cookie mode (§6) — OAuth/magic-link redirects place refresh tokens in the query today.                                                                                    |
 
 ## Adapter mapping
 

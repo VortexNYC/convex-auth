@@ -21,8 +21,7 @@ export function ClientSessionPanel() {
             <strong>User:</strong> {user.name ?? user.email ?? user.id}
           </div>
           <div>
-            <strong>Session ID:</strong>{" "}
-            <span className="mono">{sessionId}</span>
+            <strong>Session ID:</strong> <span className="mono">{sessionId}</span>
           </div>
           <div>
             <strong>2FA:</strong> {user.twoFactorEnabled ? "enabled" : "off"}

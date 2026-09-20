@@ -6,14 +6,14 @@ session state — no token ever touches browser JavaScript.
 
 ## What runs where
 
-| Piece | File | Role |
-| --- | --- | --- |
-| Middleware | `middleware.ts` | CORS strip, session-triple landing, proactive refresh, `/api/auth` proxy, route protection for `/dashboard` |
-| Server provider | `app/layout.tsx` | `ConvexAuthNextjsServerProvider` verifies the session per RSC render and seeds the client |
-| Server check | `app/page.tsx`, `app/dashboard/page.tsx` | `convexAuthNextjsSession()` — revocation-aware, `cache()`-memoized per render pass |
-| Client session | `app/dashboard/client-panel.tsx` | `useSession()` first-paints authenticated from server state |
-| Sign-in | `app/sign-in/page.tsx` | email+password, OAuth, guest, passkey, 2FA — all mint through the proxy |
-| Sign-out | `app/dashboard/sign-out-button.tsx` | POSTs through the proxy so HttpOnly cookies clear server-side |
+| Piece           | File                                     | Role                                                                                                        |
+| --------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Middleware      | `middleware.ts`                          | CORS strip, session-triple landing, proactive refresh, `/api/auth` proxy, route protection for `/dashboard` |
+| Server provider | `app/layout.tsx`                         | `ConvexAuthNextjsServerProvider` verifies the session per RSC render and seeds the client                   |
+| Server check    | `app/page.tsx`, `app/dashboard/page.tsx` | `convexAuthNextjsSession()` — revocation-aware, `cache()`-memoized per render pass                          |
+| Client session  | `app/dashboard/client-panel.tsx`         | `useSession()` first-paints authenticated from server state                                                 |
+| Sign-in         | `app/sign-in/page.tsx`                   | email+password, OAuth, guest, passkey, 2FA — all mint through the proxy                                     |
+| Sign-out        | `app/dashboard/sign-out-button.tsx`      | POSTs through the proxy so HttpOnly cookies clear server-side                                               |
 
 ## Setup
 

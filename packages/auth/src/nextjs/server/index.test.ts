@@ -60,15 +60,11 @@ const options = { actions } as never;
 const event = {} as NextFetchEvent;
 
 function makeJwt(claims: { exp?: number; iat?: number }): string {
-  const b64 = (value: unknown) =>
-    Buffer.from(JSON.stringify(value)).toString("base64url");
+  const b64 = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
   return `${b64({ alg: "none" })}.${b64(claims)}.sig`;
 }
 
-function getRequest(
-  path: string,
-  headers: Record<string, string> = {},
-): NextRequest {
+function getRequest(path: string, headers: Record<string, string> = {}): NextRequest {
   return new NextRequest(`https://app.example.com${path}`, {
     headers: { host: "app.example.com", ...headers },
   });
@@ -118,10 +114,7 @@ describe("convexAuthNextjsMiddleware", () => {
     const response = await middleware(request, event);
     expect(response?.status).toBe(405);
     // A non-matching path passes through untouched
-    const other = await middleware(
-      getRequest("/api/auth", { accept: "text/html" }),
-      event,
-    );
+    const other = await middleware(getRequest("/api/auth", { accept: "text/html" }), event);
     expect(other?.headers.get("x-middleware-next")).toBe("1");
   });
 
@@ -132,13 +125,9 @@ describe("convexAuthNextjsMiddleware", () => {
     });
     const response = await middleware(request, event);
     expect(response?.status).toBe(307);
-    expect(response?.headers.get("Location")).toBe(
-      "https://app.example.com/app",
-    );
+    expect(response?.headers.get("Location")).toBe("https://app.example.com/app");
     expect(
-      response?.headers
-        .getSetCookie()
-        .find((h) => h.startsWith("__Host-__convexAuthToken=T")),
+      response?.headers.getSetCookie().find((h) => h.startsWith("__Host-__convexAuthToken=T")),
     ).toBeDefined();
   });
 
@@ -154,9 +143,7 @@ describe("convexAuthNextjsMiddleware", () => {
       ...options,
       cookieConfig: { maxAge: 0 },
     } as never);
-    await expect(middleware(getRequest("/"), event)).rejects.toThrow(
-      "cookieConfig.maxAge",
-    );
+    await expect(middleware(getRequest("/"), event)).rejects.toThrow("cookieConfig.maxAge");
   });
 
   it("exposes token and verified auth to a custom handler", async () => {
@@ -185,9 +172,7 @@ describe("convexAuthNextjsMiddleware", () => {
     });
     const response = await middleware(request, event);
     expect(response?.status).toBe(307);
-    expect(response?.headers.get("Location")).toBe(
-      "https://app.example.com/login",
-    );
+    expect(response?.headers.get("Location")).toBe("https://app.example.com/login");
   });
 
   it("writes refreshed cookies onto the response and the forwarded request", async () => {
@@ -208,21 +193,13 @@ describe("convexAuthNextjsMiddleware", () => {
     });
     const response = await middleware(request, event);
     const setCookies = response?.headers.getSetCookie() ?? [];
+    expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=rotated"))).toBeDefined();
     expect(
-      setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=rotated")),
-    ).toBeDefined();
-    expect(
-      setCookies.find((h) =>
-        h.startsWith("__Host-__convexAuthRefreshToken=rotated-refresh"),
-      ),
+      setCookies.find((h) => h.startsWith("__Host-__convexAuthRefreshToken=rotated-refresh")),
     ).toBeDefined();
     // And the downstream handler sees the rotated pair
-    expect(request.cookies.get("__Host-__convexAuthToken")?.value).toBe(
-      "rotated",
-    );
-    expect(request.cookies.get("__Host-__convexAuthRefreshToken")?.value).toBe(
-      "rotated-refresh",
-    );
+    expect(request.cookies.get("__Host-__convexAuthToken")?.value).toBe("rotated");
+    expect(request.cookies.get("__Host-__convexAuthRefreshToken")?.value).toBe("rotated-refresh");
   });
 
   it("clears cookies downstream when the refresh fails", async () => {
@@ -238,9 +215,7 @@ describe("convexAuthNextjsMiddleware", () => {
     });
     const response = await middleware(request, event);
     expect(
-      response?.headers
-        .getSetCookie()
-        .find((h) => h.startsWith("__Host-__convexAuthToken=")),
+      response?.headers.getSetCookie().find((h) => h.startsWith("__Host-__convexAuthToken=")),
     ).toMatch(/Expires=Thu, 01 Jan 1970/);
     expect(request.cookies.get("__Host-__convexAuthToken")).toBeUndefined();
   });
@@ -419,9 +394,7 @@ describe("createRouteMatcher", () => {
   });
 
   it("matches function routes", () => {
-    const isProtected = createRouteMatcher(
-      (req) => req.nextUrl.pathname.startsWith("/app"),
-    );
+    const isProtected = createRouteMatcher((req) => req.nextUrl.pathname.startsWith("/app"));
     expect(isProtected(at("/app/x"))).toBe(true);
     expect(isProtected(at("/other"))).toBe(false);
   });

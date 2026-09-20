@@ -51,15 +51,11 @@ const options = {
 } as never;
 
 function makeJwt(claims: { exp?: number; iat?: number }): string {
-  const b64 = (value: unknown) =>
-    Buffer.from(JSON.stringify(value)).toString("base64url");
+  const b64 = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
   return `${b64({ alg: "none" })}.${b64(claims)}.sig`;
 }
 
-function getRequest(
-  path: string,
-  headers: Record<string, string> = {},
-): NextRequest {
+function getRequest(path: string, headers: Record<string, string> = {}): NextRequest {
   return new NextRequest(`https://app.example.com${path}`, {
     headers: { host: "app.example.com", ...headers },
   });
@@ -90,13 +86,9 @@ describe("session-triple landing", () => {
     // Unrelated params survive the strip
     expect(location.searchParams.get("other")).toBe("1");
     const setCookies = result.response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=TOK"))).toBeDefined();
     expect(
-      setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=TOK")),
-    ).toBeDefined();
-    expect(
-      setCookies.find((h) =>
-        h.startsWith("__Host-__convexAuthRefreshToken=REF"),
-      ),
+      setCookies.find((h) => h.startsWith("__Host-__convexAuthRefreshToken=REF")),
     ).toBeDefined();
   });
 
@@ -116,10 +108,9 @@ describe("session-triple landing", () => {
   });
 
   it("does not intercept the triple on non-HTML requests", async () => {
-    const request = getRequest(
-      "/d?token=T&refreshToken=R&sessionId=S",
-      { accept: "application/json" },
-    );
+    const request = getRequest("/d?token=T&refreshToken=R&sessionId=S", {
+      accept: "application/json",
+    });
     const result = await handleAuthenticationInRequest(request, options);
     expect(result.kind).toBe("refreshTokens");
   });
@@ -215,8 +206,7 @@ describe("CORS", () => {
   it("strips auth cookies from cross-origin requests", async () => {
     const request = getRequest("/dashboard", {
       origin: "https://evil.example.com",
-      cookie:
-        "__Host-__convexAuthToken=tok; __Host-__convexAuthRefreshToken=ref",
+      cookie: "__Host-__convexAuthToken=tok; __Host-__convexAuthRefreshToken=ref",
     });
     await handleAuthenticationInRequest(request, options);
     expect(request.cookies.get("__Host-__convexAuthToken")).toBeUndefined();
@@ -226,8 +216,7 @@ describe("CORS", () => {
   it("leaves cookies alone for same-origin requests", async () => {
     const request = getRequest("/dashboard", {
       origin: "https://app.example.com",
-      cookie:
-        "__Host-__convexAuthToken=tok; __Host-__convexAuthRefreshToken=ref",
+      cookie: "__Host-__convexAuthToken=tok; __Host-__convexAuthRefreshToken=ref",
     });
     await handleAuthenticationInRequest(request, options);
     expect(request.cookies.get("__Host-__convexAuthToken")?.value).toBe("tok");

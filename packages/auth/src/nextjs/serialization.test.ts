@@ -1,15 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  getFunctionName,
-  makeFunctionReference,
-  type FunctionReference,
-} from "convex/server";
+import { getFunctionName, makeFunctionReference, type FunctionReference } from "convex/server";
 import type { NativeAuthActions } from "../react/ConvexAuthProvider.js";
 import { normalizeAuthActions } from "./client.js";
-import {
-  serializeAuthActions,
-  type SerializedAuthActions,
-} from "./serialization.js";
+import { serializeAuthActions, type SerializedAuthActions } from "./serialization.js";
 
 /**
  * Mirrors the lazy `api.auth` Proxy: any property access fabricates a
@@ -21,9 +14,7 @@ function fakeApiAuth(): NativeAuthActions {
     {},
     {
       get: (_target, key) =>
-        typeof key === "string"
-          ? makeFunctionReference(`auth:${key}`)
-          : undefined,
+        typeof key === "string" ? makeFunctionReference(`auth:${key}`) : undefined,
       ownKeys: () => [],
     },
   ) as NativeAuthActions;
@@ -81,9 +72,7 @@ describe("normalizeAuthActions", () => {
   });
 
   it("rebuilt refs satisfy convex's own FunctionReference check", () => {
-    const actions = normalizeAuthActions(
-      acrossRscBoundary(serializeAuthActions(fakeApiAuth())),
-    );
+    const actions = normalizeAuthActions(acrossRscBoundary(serializeAuthActions(fakeApiAuth())));
     // `useAction`/`fetchAction` resolve names via the same global symbol.
     const ref = actions.verifySession as unknown as Record<symbol, string>;
     expect(ref[Symbol.for("functionName")]).toBe("auth:verifySession");
@@ -104,12 +93,8 @@ describe("normalizeAuthActions", () => {
     } as unknown as SerializedAuthActions;
     const actions = normalizeAuthActions(manifest);
     expect(getFunctionName(actions.signUp)).toBe("auth:signUp");
-    expect(
-      (actions as Record<string, unknown>).signIn,
-    ).toBeUndefined();
-    expect(
-      (actions as Record<string, unknown>).updateSession,
-    ).toBeUndefined();
+    expect((actions as Record<string, unknown>).signIn).toBeUndefined();
+    expect((actions as Record<string, unknown>).updateSession).toBeUndefined();
   });
 
   it("rebuilds a partial manifest missing signUp", () => {
@@ -117,9 +102,7 @@ describe("normalizeAuthActions", () => {
     // passing it through as "live" would leave string values where the
     // provider expects refs.
     const manifest = { updateSession: "auth:updateSession" };
-    const actions = normalizeAuthActions(
-      manifest as unknown as SerializedAuthActions,
-    );
+    const actions = normalizeAuthActions(manifest as unknown as SerializedAuthActions);
     expect(getFunctionName(actions.updateSession)).toBe("auth:updateSession");
     expect(actions.signUp).toBeUndefined();
   });
@@ -136,10 +119,8 @@ describe("normalizeAuthActions", () => {
     // global object prototype is untouched.
     expect(Object.getPrototypeOf(actions)).toBeNull();
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
-    expect(
-      getFunctionName(
-        (actions as Record<string, FunctionReference>).__proto__,
-      ),
-    ).toBe("auth:evil");
+    expect(getFunctionName((actions as Record<string, FunctionReference>).__proto__)).toBe(
+      "auth:evil",
+    );
   });
 });

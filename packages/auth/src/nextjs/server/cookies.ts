@@ -114,10 +114,7 @@ function getCookieStore(
   };
 }
 
-function getCookieOptions(
-  isLocalhost: boolean,
-  cookieConfig: { maxAge: number | null },
-) {
+function getCookieOptions(isLocalhost: boolean, cookieConfig: { maxAge: number | null }) {
   // Safari does not send cookies with `secure: true` on http:// domains
   // including localhost, so set `secure: false` there.
   return {

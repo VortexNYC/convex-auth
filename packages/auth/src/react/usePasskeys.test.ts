@@ -189,10 +189,10 @@ describe("web usePasskeys", () => {
 
   it("routes verification through the auth proxy in cookie mode", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({ token: "tok", sessionId: "sess" }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+      new Response(JSON.stringify({ token: "tok", sessionId: "sess" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
     );
     vi.stubGlobal("fetch", fetchMock);
     const ceremonyResponse = { id: "cred_1", rawId: "cred_1", response: {} };

@@ -70,10 +70,7 @@ export function ConvexAuthNextjsClientProvider(props: {
   const { serverState, apiRoute, children } = props;
   // Memoized — a fresh refs object every render would bust ConvexAuthProvider's
   // own memoization on `actions`.
-  const actions = useMemo(
-    () => normalizeAuthActions(props.actions),
-    [props.actions],
-  );
+  const actions = useMemo(() => normalizeAuthActions(props.actions), [props.actions]);
   return (
     <ConvexAuthProvider
       actions={actions}

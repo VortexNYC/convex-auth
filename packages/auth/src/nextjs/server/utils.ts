@@ -94,9 +94,7 @@ export function isCorsRequest(request: NextRequest) {
 
 export function logVerbose(message: string, verbose: boolean) {
   if (verbose) {
-    console.debug(
-      `[verbose] ${new Date().toISOString()} [ConvexAuthNextjs] ${message}`,
-    );
+    console.debug(`[verbose] ${new Date().toISOString()} [ConvexAuthNextjs] ${message}`);
   }
 }
 
@@ -104,9 +102,7 @@ export function logVerbose(message: string, verbose: boolean) {
  * @param options - a subset of ConvexAuthNextjsMiddlewareOptions
  * @returns NextjsOptions
  */
-export function getConvexNextjsOptions(options: {
-  convexUrl?: string;
-}): NextjsOptions {
+export function getConvexNextjsOptions(options: { convexUrl?: string }): NextjsOptions {
   // If `convexUrl` is provided (even if it's undefined), pass it as the `url`
   // option. `convex/nextjs` falls back to `process.env.NEXT_PUBLIC_CONVEX_URL`.
   if (Object.hasOwn(options, "convexUrl")) {
@@ -117,9 +113,7 @@ export function getConvexNextjsOptions(options: {
   return {};
 }
 
-export function decodeTokenClaims(
-  token: string,
-): { exp?: number; iat?: number } | null {
+export function decodeTokenClaims(token: string): { exp?: number; iat?: number } | null {
   const parts = token.split(".");
   if (parts.length !== 3 || !parts[1]) {
     return null;
