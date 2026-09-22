@@ -224,6 +224,40 @@ describe("CORS strip", () => {
     expect(session).toBeNull();
     expect(convexAuthCookieState(request).hasSessionCookie).toBe(false);
   });
+
+  it("physically strips auth cookies from the request header when mutable", async () => {
+    const request = new Request("https://app.example.com/dash", {
+      headers: {
+        host: "app.example.com",
+        accept: "text/html",
+        origin: "https://evil.example.com",
+        cookie: "__Host-__convexAuthToken=abc; other-cookie=keep",
+      },
+    });
+    await handleConvexAuthRequest(request, nextDownstream, options);
+    // Undici Request headers are mutable — the strip applied, keeping
+    // non-auth cookies. Where a runtime makes them immutable the WeakSet
+    // marker (asserted above) still guards session helpers.
+    expect(request.headers.get("cookie")).toBe("other-cookie=keep");
+  });
+});
+
+describe("options validation", () => {
+  it("rejects a non-positive cookieConfig.maxAge", async () => {
+    const request = new Request("https://app.example.com/");
+    await expect(
+      handleConvexAuthRequest(request, nextDownstream, {
+        ...options,
+        cookieConfig: { maxAge: 0 },
+      }),
+    ).rejects.toThrow("maxAge");
+    await expect(
+      handleConvexAuthRequest(request, nextDownstream, {
+        ...options,
+        cookieConfig: { maxAge: -5 },
+      }),
+    ).rejects.toThrow("maxAge");
+  });
 });
 
 describe("getAuthServerState", () => {

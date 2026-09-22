@@ -127,8 +127,14 @@ export async function proxyAuthActionToConvex(
     }
     args.token = pending;
   }
-  if (intent === "signIn" && requestCookies.trustedDevice !== null) {
-    args.trustedDeviceToken = requestCookies.trustedDevice;
+  if (intent === "signIn") {
+    if (requestCookies.trustedDevice !== null) {
+      args.trustedDeviceToken = requestCookies.trustedDevice;
+    } else {
+      // In cookie mode the client cannot legitimately hold this secret —
+      // never trust a body-supplied value.
+      delete args.trustedDeviceToken;
+    }
   }
 
   logVerbose(`Fetching action for intent ${intent}`, verbose);

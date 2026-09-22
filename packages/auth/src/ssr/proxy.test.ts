@@ -284,6 +284,57 @@ describe("cookie substitutions", () => {
     );
   });
 
+  it("signIn drops a body-supplied trustedDeviceToken when no cookie is present", async () => {
+    actionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    await proxyAuthActionToConvex(
+      postRequest({
+        intent: "signIn",
+        args: { email: "a@b.c", trustedDeviceToken: "attacker-supplied" },
+      }),
+      options,
+    );
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.signIn,
+      { email: "a@b.c" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("signIn's trusted-device cookie overwrites a body-supplied value", async () => {
+    actionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    await proxyAuthActionToConvex(
+      postRequest(
+        {
+          intent: "signIn",
+          args: { email: "a@b.c", trustedDeviceToken: "attacker-supplied" },
+        },
+        { cookie: "__Host-__convexAuthTrustedDevice=real-device" },
+      ),
+      options,
+    );
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.signIn,
+      { email: "a@b.c", trustedDeviceToken: "real-device" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("updateSession's refresh cookie overwrites a body-supplied refreshToken", async () => {
+    actionMock.mockResolvedValue({ token: "t2", refreshToken: "r2" });
+    await proxyAuthActionToConvex(
+      postRequest(
+        { intent: "updateSession", args: { refreshToken: "attacker-supplied" } },
+        { cookie: "__Host-__convexAuthRefreshToken=real-refresh" },
+      ),
+      options,
+    );
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.updateSession,
+      { refreshToken: "real-refresh" },
+      expect.objectContaining({}),
+    );
+  });
+
   it("passes the session token as the caller's auth on action calls", async () => {
     actionMock.mockResolvedValue({ success: true });
     await proxyAuthActionToConvex(

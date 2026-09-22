@@ -66,6 +66,9 @@ export async function handleConvexAuthRequest<TNextResult extends { response: Re
   const transport = options.transport ?? convexHttpTransport(options.convexUrl);
   const apiRoute = options.apiRoute ?? "/api/auth";
   const cookieConfig = options.cookieConfig ?? { maxAge: null };
+  if (cookieConfig.maxAge !== null && cookieConfig.maxAge <= 0) {
+    throw new Error("cookieConfig.maxAge must be a positive number of seconds, or null");
+  }
   const verbose = options.verbose ?? false;
 
   // Session-minting/ending actions proxy to the component.
@@ -100,6 +103,20 @@ export async function handleConvexAuthRequest<TNextResult extends { response: Re
   }
   if (result.strippedCookieHeader !== undefined) {
     recordCorsStrip(request);
+    // Best-effort physical strip so even a raw `request.headers.get('cookie')`
+    // downstream reads clean — and the protection survives if a future
+    // TanStack version wraps/clones the request (breaking WeakMap identity).
+    // Received Request headers are immutable on some runtimes; when `set`
+    // throws, the WeakSet marker above still guards every session helper.
+    try {
+      if (result.strippedCookieHeader === null) {
+        request.headers.delete("cookie");
+      } else {
+        request.headers.set("cookie", result.strippedCookieHeader);
+      }
+    } catch {
+      // Immutable headers — recordCorsStrip still enforces.
+    }
   }
 
   const res = await next();
