@@ -29,8 +29,12 @@ export const revoke = mutation({
       throw new Error("Forbidden");
     }
 
-    return await ctx.runMutation(components.convexAuth.native.sessions.revokeSession, {
-      sessionId: args.sessionId,
-    });
+    return await ctx.runMutation(
+      components.convexAuth.native.sessions.revokeSessionFamilyBySession,
+      {
+        sessionId: args.sessionId,
+        auditEventType: "session.revoke",
+      },
+    );
   },
 });
