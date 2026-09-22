@@ -60,10 +60,10 @@
     "@types/node": "^26.4.0",
     "knip": "^6.35.1",
     "secretlint": "^13.0.5",
-    "vite-plus": "0.3.3"
+    "vite-plus": "0.2.4"
   },
   "engines": {
-    "node": ">=22.18.0"
+    "node": ">=20.12.0"
   },
   "packageManager": "pnpm@10.25.0"
 }
