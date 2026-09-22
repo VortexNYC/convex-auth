@@ -9,6 +9,13 @@ import { ReactNode, useState } from "react";
  * so the Convex client context must wrap it.
  */
 export function ConvexClientProvider(props: { children: ReactNode }) {
-  const [client] = useState(() => new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!));
+  const [client] = useState(
+    () =>
+      // Placeholder keeps `next build` prerender working without env; the
+      // client never connects during static export since no queries mount.
+      new ConvexReactClient(
+        process.env.NEXT_PUBLIC_CONVEX_URL ?? "https://placeholder.convex.cloud",
+      ),
+  );
   return <ConvexProvider client={client}>{props.children}</ConvexProvider>;
 }
