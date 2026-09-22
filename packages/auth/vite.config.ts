@@ -110,7 +110,7 @@ export default defineConfig({
       hash: true,
       outDir: "dist",
       outputOptions: {
-        advancedChunks: {
+        codeSplitting: {
           groups: [
             // A chunk carries exactly one directive — pin every "use server"
             // module into the action chunk so it can never be bundled into a

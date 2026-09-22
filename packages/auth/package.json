@@ -249,7 +249,7 @@
     "@testing-library/react": "^16.2.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@vitest/coverage-v8": "4.1.10",
+    "@vitest/coverage-v8": "4.1.11",
     "convex": "^1.46.0",
     "convex-test": "0.0.58",
     "happy-dom": "^20.14.3",
@@ -258,7 +258,7 @@
     "react-dom": "19.2.8",
     "react-native-passkeys": "0.4.2",
     "typescript": "^5.7.0",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.3.2",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.3.3",
     "vitest": "^5.0.0"
   },
   "peerDependencies": {
