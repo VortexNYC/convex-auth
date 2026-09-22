@@ -1,12 +1,22 @@
 /// <reference types="vite/client" />
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeAll } from "vitest";
+import { generateKeyPair, exportJWK } from "jose";
 import { convexTest } from "convex-test";
 import { api } from "./_generated/api.js";
 import schema from "./schema.js";
 import { hashToken } from "../convex-runtime/native/tokens.js";
 
 const modules = import.meta.glob("./**/*.*s");
+
+beforeAll(async () => {
+  process.env.CONVEX_SITE_URL = "https://test.convex.site";
+  const pair = await generateKeyPair("RS256", { extractable: true });
+  const privateJwk = await exportJWK(pair.privateKey);
+  const publicJwk = await exportJWK(pair.publicKey);
+  process.env.JWT_PRIVATE_KEY = JSON.stringify(privateJwk);
+  process.env.JWKS = JSON.stringify({ keys: [{ use: "sig", ...publicJwk }] });
+});
 
 describe("identity verification and password reset", () => {
   it("verifyEmail consumes the code and marks email verified", async () => {
@@ -210,5 +220,43 @@ describe("identity verification and password reset", () => {
 
     expect(result.status).toBe(false);
     expect(result.reason).toBe("invalid");
+  });
+});
+
+describe("provisionFromIdentity", () => {
+  it("stores the identity doc id on the initial session row", async () => {
+    const t = convexTest(schema, modules);
+    const now = Date.now();
+
+    const result = await t.mutation(api.identity.provisionFromIdentity, {
+      identity: {
+        identityId: "subject_signup",
+        provider: "password",
+        issuer: "native",
+        subject: "subject_signup",
+        tokenIdentifier: "subject_signup",
+        email: "shlomo@example.com",
+        emailVerified: false,
+      },
+      user: { email: "shlomo@example.com", name: "Shlomo", emailVerified: false },
+      account: { credentialHash: "hash" },
+      initialSession: {
+        sessionId: "session-signup",
+        sessionExpiresAt: now + 1_000_000,
+        refreshTokenHash: "rt-hash",
+        refreshTokenExpiresAt: now + 1_000_000,
+      },
+    });
+    expect(result.identityId).toBeDefined();
+
+    // The sign-up/first-sign-in mint carries the column — this is the
+    // highest-volume session path, so it must not rely on the claim fallback.
+    const session = await t.run((ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-signup"))
+        .unique(),
+    );
+    expect(session?.identityId).toBe(result.identityId);
   });
 });

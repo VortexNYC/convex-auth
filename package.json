@@ -50,7 +50,8 @@
     "entire:dispatch": "entire dispatch",
     "entire:recap": "entire recap",
     "entire:session:tokens": "entire session tokens",
-    "entire:import:claude-code": "entire import claude-code"
+    "entire:import:claude-code": "entire import claude-code",
+    "prepare": "vp config --no-agent"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.1",
@@ -59,11 +60,7 @@
     "@types/node": "^26.4.0",
     "knip": "^6.35.1",
     "secretlint": "^13.0.5",
-    "simple-git-hooks": "^2.14.0",
     "vite-plus": "0.2.4"
-  },
-  "simple-git-hooks": {
-    "pre-commit": "pnpm run scan:secrets"
   },
   "engines": {
     "node": ">=20.12.0"

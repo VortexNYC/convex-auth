@@ -186,4 +186,36 @@ describe("web usePasskeys", () => {
     ).toHaveBeenCalledWith("pending-token");
     expect((ctx as { setToken: ReturnType<typeof vi.fn> }).setToken).not.toHaveBeenCalled();
   });
+
+  it("routes verification through the auth proxy in cookie mode", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ token: "tok", sessionId: "sess" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const ceremonyResponse = { id: "cred_1", rawId: "cred_1", response: {} };
+    startAuthenticationMock.mockResolvedValue(ceremonyResponse);
+    const ctx = makeCtx({ storageMode: "cookies", apiRoute: "/api/auth" });
+    const { result } = renderHook(() => usePasskeys(args), { wrapper: wrapper(ctx) });
+    await waitFor(() => expect(result.current.supported).toBe(true));
+
+    await act(() => result.current.signIn());
+
+    // The mint goes through the proxy, not the direct action — the proxy
+    // writes the HttpOnly cookies the browser can't set itself.
+    expect(verifyAuthentication).not.toHaveBeenCalled();
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/auth");
+    expect(JSON.parse(init.body as string)).toEqual({
+      intent: "verifyPasskeyAuthentication",
+      args: { challenge: "auth-challenge", response: ceremonyResponse },
+    });
+    expect((ctx as { setToken: ReturnType<typeof vi.fn> }).setToken).toHaveBeenCalledWith("tok");
+    expect(
+      (ctx as { setRefreshToken: ReturnType<typeof vi.fn> }).setRefreshToken,
+    ).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
 });

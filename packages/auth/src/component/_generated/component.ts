@@ -1879,7 +1879,10 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "mutation",
           "internal",
           {
+            credentialId?: string;
             expiresAt: number;
+            identityId?: string;
+            rememberMe?: boolean;
             tokenHash: string;
             type:
               | "email_verification"
@@ -1938,6 +1941,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             userId: string;
           },
           string,
+          Name
+        >;
+        getIdentityById: FunctionReference<
+          "query",
+          "internal",
+          { identityId: string },
+          any,
           Name
         >;
         getNativeIdentityByUser: FunctionReference<
@@ -2005,7 +2015,10 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             _id: string;
             createdAt: number;
             expiresAt: number;
+            familyId?: string;
+            graceRedemptions?: number;
             revokedAt?: number;
+            rotatedAt?: number;
             sessionId: string;
             tokenHash: string;
             updatedAt: number;
@@ -2035,7 +2048,10 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             _id: string;
             createdAt: number;
             expiresAt: number;
+            familyId?: string;
+            graceRedemptions?: number;
             revokedAt?: number;
+            rotatedAt?: number;
             sessionId: string;
             tokenHash: string;
             updatedAt: number;
@@ -2066,12 +2082,39 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           number,
           Name
         >;
+        convergeSession: FunctionReference<
+          "mutation",
+          "internal",
+          {
+            newRefreshTokenExpiresAt: number;
+            newRefreshTokenHash: string;
+            newSessionExpiresAt: number;
+            newSessionId: string;
+            newSessionIpAddress?: string;
+            newSessionToken: string;
+            newSessionUserAgent?: string;
+            predecessorRefreshTokenHash: string;
+          },
+          null | {
+            user: {
+              _id: string;
+              createdAt: number;
+              email?: string;
+              emailVerified: boolean;
+              image?: string;
+              name?: string;
+              updatedAt: number;
+            };
+          },
+          Name
+        >;
         createSession: FunctionReference<
           "mutation",
           "internal",
           {
             expiresAt: number;
             familyId?: string;
+            identityId?: string;
             sessionId: string;
             token: string;
             userId: string;
@@ -2083,7 +2126,9 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "mutation",
           "internal",
           {
+            credentialId?: string;
             familyId?: string;
+            identityId: string;
             refreshTokenExpiresAt: number;
             refreshTokenHash: string;
             sessionExpiresAt: number;
@@ -2122,6 +2167,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           any,
           Name
         >;
+        revokeSessionFamilyBySession: FunctionReference<
+          "mutation",
+          "internal",
+          { sessionId: string },
+          any,
+          Name
+        >;
         revokeSessionsForUser: FunctionReference<
           "mutation",
           "internal",
@@ -2144,18 +2196,20 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             oldRefreshTokenHash: string;
             provider: string;
           },
-          null | {
-            identityId: string;
-            user: {
-              _id: string;
-              createdAt: number;
-              email?: string;
-              emailVerified: boolean;
-              image?: string;
-              name?: string;
-              updatedAt: number;
-            };
-          },
+          | null
+          | "converge"
+          | {
+              identityId: string;
+              user: {
+                _id: string;
+                createdAt: number;
+                email?: string;
+                emailVerified: boolean;
+                image?: string;
+                name?: string;
+                updatedAt: number;
+              };
+            },
           Name
         >;
       };
@@ -2971,6 +3025,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         {
           credentialId?: string;
           enumerateCredentials?: boolean;
+          origin?: string | Array<string>;
           rpID: string;
           userId?: string;
           userVerification?: "required" | "preferred" | "discouraged";
@@ -2987,6 +3042,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           displayName?: string;
           identifier: string;
           maxPasskeys?: number;
+          origin?: string | Array<string>;
           residentKey?: "required" | "preferred" | "discouraged";
           rpID: string;
           rpName: string;
@@ -3019,7 +3075,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
       revokePasskey: FunctionReference<
         "mutation",
         "internal",
-        { credentialId: string; userId?: string },
+        { credentialId: string; userId: string },
         boolean,
         Name
       >;
@@ -3029,6 +3085,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         {
           challenge: string;
           origin: string | Array<string>;
+          refreshTokenTtlMs?: number;
           requireUserVerification?: boolean;
           response: {
             authenticatorAttachment?: string;
@@ -3044,13 +3101,18 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             type?: string;
           };
           rpID: string;
+          sessionTtlMs?: number;
         },
         {
-          expiresAt: number;
+          expiresAt?: number;
           identityId?: string;
-          refreshToken: string;
-          sessionId: string;
-          token: string;
+          refreshToken?: string;
+          sessionId?: string;
+          token?: string;
+          twoFactorChallengeToken?: string;
+          twoFactorCookieMaxAgeMs?: number;
+          twoFactorMethods?: Array<string>;
+          twoFactorRedirect?: boolean;
           userId: string;
         },
         Name
@@ -3060,7 +3122,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         "internal",
         {
           challenge: string;
-          identifier: string;
+          identifier?: string;
           maxPasskeys?: number;
           name?: string;
           origin: string | Array<string>;

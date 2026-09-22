@@ -741,6 +741,7 @@ export const verifyPasskeyAuthentication = mutation({
     await ctx.db.insert("authSessions", {
       sessionId,
       userId: user._id,
+      identityId: passkey.identityId,
       token,
       familyId: sessionId,
       expiresAt: sessionExpiresAt,

@@ -10,6 +10,7 @@ import {
 } from "../../convex-runtime/admin/admin.js";
 import { mintToken } from "../../convex-runtime/native/jwt.js";
 import { generateVerificationToken, hashToken } from "../../convex-runtime/native/tokens.js";
+import { revokeSessionFamily } from "../native/sessions.js";
 import schema from "../schema.js";
 
 const MAX_PAGE_LIMIT = 100;
@@ -264,7 +265,9 @@ export const impersonateUser = mutation({
 
     await ctx.db.insert("authSessions", {
       sessionId,
+      familyId: sessionId,
       userId: args.userId,
+      identityId: identityRecord._id,
       token,
       expiresAt,
       impersonatedBy: admin._id,
@@ -275,6 +278,7 @@ export const impersonateUser = mutation({
     await ctx.db.insert("authRefreshTokens", {
       tokenHash: refreshTokenHash,
       sessionId,
+      familyId: sessionId,
       userId: args.userId,
       expiresAt,
       createdAt: now,
@@ -345,12 +349,15 @@ export const stopImpersonation = mutation({
       throw new Error("Impersonation session not found");
     }
     const now = Date.now();
-    await ctx.db.patch(session._id, { revokedAt: now, updatedAt: now });
-    for await (const token of ctx.db
-      .query("authRefreshTokens")
-      .withIndex("by_session", (q) => q.eq("sessionId", session.sessionId))) {
-      await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
-    }
+    // Revoke the whole lineage, not just the presented session — converged
+    // siblings and their refresh tokens would otherwise keep minting sessions.
+    await revokeSessionFamily(
+      ctx,
+      session.familyId ?? session.sessionId,
+      String(session.userId),
+      now,
+      null,
+    );
     await createAdminAudit(ctx, {
       adminId: String(session.impersonatedBy),
       action: "stopImpersonation",

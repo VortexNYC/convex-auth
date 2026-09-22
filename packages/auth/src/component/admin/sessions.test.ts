@@ -41,7 +41,7 @@ async function insertSession(
   t: ReturnType<typeof convexTest>,
   userId: Id<"users">,
   sessionId: string,
-  overrides: { revokedAt?: number } = {},
+  overrides: { revokedAt?: number; familyId?: string; impersonatedBy?: Id<"users"> } = {},
 ): Promise<Id<"authSessions">> {
   return (await t.run((ctx) =>
     ctx.db.insert("authSessions", {
@@ -52,6 +52,8 @@ async function insertSession(
       ipAddress: "127.0.0.1",
       userAgent: "test",
       revokedAt: overrides.revokedAt,
+      familyId: overrides.familyId,
+      impersonatedBy: overrides.impersonatedBy,
       createdAt: 0,
       updatedAt: 0,
     }),
@@ -62,12 +64,14 @@ async function insertRefreshToken(
   t: ReturnType<typeof convexTest>,
   userId: Id<"users">,
   sessionId: string,
+  familyId?: string,
 ): Promise<Id<"authRefreshTokens">> {
   return (await t.run((ctx) =>
     ctx.db.insert("authRefreshTokens", {
       tokenHash: `hash-${sessionId}`,
       sessionId,
       userId,
+      familyId,
       expiresAt: Date.now() + 3600_000,
       revokedAt: undefined,
       createdAt: 0,
@@ -216,7 +220,7 @@ describe("admin sessions", () => {
     const t = convexTest(schema, modules);
     const adminId = await insertUser(t, "admin@example.com", "Admin", true);
     const userId = await insertUser(t, "user@example.com", "User");
-    await insertNativeIdentity(t, userId);
+    const identityDocId = await insertNativeIdentity(t, userId);
 
     const result = await t
       .withIdentity({ subject: adminId })
@@ -233,6 +237,16 @@ describe("admin sessions", () => {
       });
     expect(session?.impersonatedBy).toBe(String(adminId));
     expect(session?.userId).toBe(String(userId));
+
+    // The impersonated session carries the impersonated user's identity so
+    // the refresh path can resolve it column-first.
+    const sessionRow = await t.run((ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", result.sessionId))
+        .unique(),
+    );
+    expect(sessionRow?.identityId).toBe(identityDocId);
 
     const audits = await t.run((ctx) =>
       ctx.db
@@ -265,5 +279,64 @@ describe("admin sessions", () => {
         .withIdentity({ subject: userId })
         .mutation(makeFunctionReference<"mutation">("admin/sessions:impersonateUser"), { userId }),
     ).rejects.toThrow("Forbidden: super admin required");
+  });
+
+  it("stopImpersonation revokes the whole session family, not just the presented session", async () => {
+    const t = convexTest(schema, modules);
+    const adminId = await insertUser(t, "admin@example.com", "Admin", true);
+    const userId = await insertUser(t, "user@example.com", "User");
+
+    // The impersonated session plus a converged sibling in the same family —
+    // both must die, or the sibling's refresh token keeps minting sessions.
+    await insertSession(t, userId, "imp-1", { familyId: "fam-imp", impersonatedBy: adminId });
+    await insertRefreshToken(t, userId, "imp-1", "fam-imp");
+    await insertSession(t, userId, "imp-2", { familyId: "fam-imp" });
+    await insertRefreshToken(t, userId, "imp-2", "fam-imp");
+    await insertSession(t, userId, "other-device", { familyId: "fam-other" });
+
+    const result = await t
+      .withIdentity({ subject: String(userId) })
+      .mutation(makeFunctionReference<"mutation">("admin/sessions:stopImpersonation"), {
+        sessionId: "imp-1",
+      });
+    expect(result).toEqual({ revoked: true });
+
+    const [imp1, imp2, other, tok1, tok2] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "imp-1"))
+          .unique(),
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "imp-2"))
+          .unique(),
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "other-device"))
+          .unique(),
+        ctx.db
+          .query("authRefreshTokens")
+          .withIndex("by_session", (q) => q.eq("sessionId", "imp-1"))
+          .unique(),
+        ctx.db
+          .query("authRefreshTokens")
+          .withIndex("by_session", (q) => q.eq("sessionId", "imp-2"))
+          .unique(),
+      ]),
+    );
+    expect(imp1?.revokedAt).toBeDefined();
+    expect(imp2?.revokedAt).toBeDefined();
+    expect(tok1?.revokedAt).toBeDefined();
+    expect(tok2?.revokedAt).toBeDefined();
+    expect(other?.revokedAt).toBeUndefined();
+
+    const audits = await t.run((ctx) =>
+      ctx.db
+        .query("auth_admin_audits")
+        .withIndex("by_admin", (q) => q.eq("adminId", String(adminId)))
+        .take(10),
+    );
+    expect(audits[0]?.action).toBe("stopImpersonation");
   });
 });

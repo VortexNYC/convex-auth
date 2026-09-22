@@ -68,6 +68,7 @@ export type NativeAnonymousComponentHandle = {
         {
           sessionId: string;
           userId: string;
+          identityId: string;
           token: string;
           sessionExpiresAt: number;
           refreshTokenHash: string;
@@ -180,6 +181,7 @@ export function nativeAnonymous(
     await ctx.runMutation(component.native.sessions.createSessionAndRefreshToken, {
       sessionId,
       userId,
+      identityId,
       token,
       sessionExpiresAt: expiresAt,
       refreshTokenHash,

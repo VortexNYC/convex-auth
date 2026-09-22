@@ -1,10 +1,20 @@
 /// <reference types="vite/client" />
 
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it, beforeAll, beforeEach, vi } from "vitest";
+import { generateKeyPair, exportJWK } from "jose";
 import { convexTest } from "convex-test";
 import { api } from "./_generated/api.js";
 import schema from "./schema.js";
 import { isCounterRegressionError } from "./passkeys.js";
+
+const { mockVerifyAuthenticationResponse } = vi.hoisted(() => ({
+  mockVerifyAuthenticationResponse: vi.fn(),
+}));
+
+vi.mock("@simplewebauthn/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@simplewebauthn/server")>();
+  return { ...actual, verifyAuthenticationResponse: mockVerifyAuthenticationResponse };
+});
 
 const modules = import.meta.glob("./**/*.*s");
 
@@ -12,20 +22,20 @@ const RP_NAME = "Test App";
 const RP_ID = "test.example.com";
 const ORIGIN = "https://test.example.com";
 
-beforeAll(() => {
+beforeAll(async () => {
   process.env.CONVEX_SITE_URL = "https://test.convex.site";
-  process.env.JWT_PRIVATE_KEY = JSON.stringify({
-    kty: "RSA",
-    n: "xGOr-H7rQ1dG3qZ5m8J_h8m7gW_lLpFQx9YlM4Y8J_l0hHn2xP_l7g",
-    e: "AQAB",
-    d: "xGOr-H7rQ1dG3qZ5m8J_h8m7gW_lLpFQx9YlM4Y8J_l0hHn2xP_l7g",
-    p: "xGOr-H7rQ1dG3qZ5m8J_h8m7gW_lLpFQx9YlM4Y8J_l0hHn2xP_l7g",
-    q: "xGOr-H7rQ1dG3qZ5m8J_h8m7gW_lLpFQx9YlM4Y8J_l0hHn2xP_l7g",
-    dp: "xGOr-H7rQ1dG3qZ5m8J_h8m7gW_lLpFQx9YlM4Y8J_l0hHn2xP_l7g",
-    dq: "xGOr-H7rQ1dG3qZ5m8J_h8m7gW_lLpFQx9YlM4Y8J_l0hHn2xP_l7g",
-    qi: "xGOr-H7rQ1dG3qZ5m8J_h8m7gW_lLpFQx9YlM4Y8J_l0hHn2xP_l7g",
-    kid: "test-key",
-  });
+  const pair = await generateKeyPair("RS256", { extractable: true });
+  const privateJwk = await exportJWK(pair.privateKey);
+  const publicJwk = await exportJWK(pair.publicKey);
+  process.env.JWT_PRIVATE_KEY = JSON.stringify(privateJwk);
+  process.env.JWKS = JSON.stringify({ keys: [{ use: "sig", ...publicJwk }] });
+});
+
+beforeEach(() => {
+  // Default: ceremonies fail verification. Tests that exercise the
+  // post-verification mint path override this with mockResolvedValue.
+  mockVerifyAuthenticationResponse.mockReset();
+  mockVerifyAuthenticationResponse.mockResolvedValue({ verified: false });
 });
 
 async function insertUser(t: ReturnType<typeof convexTest>) {
@@ -181,6 +191,82 @@ describe("passkeys", () => {
         origin: ORIGIN,
       }),
     ).rejects.toThrow();
+  });
+
+  it("stores the passkey identity on the session row it mints", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    const identityDocId = await t.run(async (ctx) =>
+      ctx.db.insert("auth_identities", {
+        identityId: "passkey:rp:cred-1",
+        userId,
+        provider: "passkey",
+        issuer: "native",
+        subject: "cred-1",
+        tokenIdentifier: "passkey:rp:cred-1",
+        emailVerified: false,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    );
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_passkeys", {
+        userId,
+        identityId: identityDocId,
+        credentialId: "cred-1",
+        publicKey: "cHVibGljLWtleQ",
+        counter: 0,
+        transports: [],
+        aaguid: "00000000-0000-0000-0000-000000000000",
+        deviceType: "singleDevice",
+        backedUp: false,
+        name: "Test key",
+        createdAt: now,
+        lastUsedAt: now,
+      }),
+    );
+
+    const options = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
+      userId,
+      rpID: RP_ID,
+    })) as { challenge: string };
+
+    mockVerifyAuthenticationResponse.mockResolvedValue({
+      verified: true,
+      authenticationInfo: {
+        newCounter: 1,
+        credentialDeviceType: "singleDevice",
+        credentialBackedUp: false,
+        userVerified: true,
+      },
+    });
+
+    await t.mutation(api.passkeys.verifyPasskeyAuthentication, {
+      challenge: options.challenge,
+      response: {
+        id: "cred-1",
+        rawId: "cred-1",
+        response: {
+          clientDataJSON: "fake",
+          authenticatorData: "fake",
+          signature: "fake",
+        },
+        type: "public-key",
+      },
+      rpID: RP_ID,
+      origin: ORIGIN,
+    });
+
+    const session = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first(),
+    );
+    expect(session?.identityId).toBe(identityDocId);
+    expect(session?.credentialId).toBe("cred-1");
   });
 
   it("returns an empty list when no userId is provided", async () => {
