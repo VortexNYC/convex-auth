@@ -194,7 +194,7 @@ function requireStringArrayClaim(value: unknown, name: string): string[] {
   if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
     throw new TypeError(`Agent credential ${name} claim is invalid`);
   }
-  return [...new Set(value.map((item) => requireClaim(item, name)))].toSorted();
+  return [...new Set(value.map((item) => requireClaim(item, name)))].sort();
 }
 
 function requirePrimitive(value: unknown) {

@@ -15,8 +15,11 @@
   "files": [
     "dist",
     "src/ui/styles.css",
-    "src/convex-runtime/native/index.ts",
-    "src/convex-runtime/native/http.ts",
+    "src/convex-runtime/**/*.ts",
+    "src/convex-runtime/**/*.tsx",
+    "!src/convex-runtime/**/*.test.ts",
+    "!src/convex-runtime/**/*.test.tsx",
+    "!src/convex-runtime/**/*.type-test.ts",
     "src/component/convex.config.ts",
     "src/component/core/convex.config.ts",
     "src/component/organizations/convex.config.ts",
@@ -38,8 +41,8 @@
       "default": "./dist/index.js"
     },
     "./convex": {
-      "convex": "./src/convex-runtime/native/index.ts",
-      "types": "./src/convex-runtime/native/index.ts",
+      "convex": "./src/convex-runtime/index.ts",
+      "types": "./src/convex-runtime/index.ts",
       "import": "./dist/convex.js",
       "default": "./dist/convex.js"
     },
