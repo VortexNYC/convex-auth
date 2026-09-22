@@ -20,6 +20,16 @@ export type AuthTransport = {
 };
 
 /**
+ * Vite-style env object (TanStack Start, Vite SSR). Vite replaces the
+ * `import.meta.env` expression with the full env object at build time, so
+ * dynamic key access works; in non-Vite runtimes it's `undefined`.
+ */
+function bundlerEnv(key: string): string | undefined {
+  const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
+  return env?.[key];
+}
+
+/**
  * Resolve the Convex deployment URL for an adapter. Server-side env vars
  * only — this module is imported from the adapters' server entries.
  * `convexUrl` in options always wins.
@@ -28,7 +38,9 @@ export function resolveConvexUrl(convexUrl?: string): string {
   const url =
     convexUrl ??
     process.env.CONVEX_URL ??
+    bundlerEnv("CONVEX_URL") ??
     process.env.VITE_CONVEX_URL ??
+    bundlerEnv("VITE_CONVEX_URL") ??
     process.env.NEXT_PUBLIC_CONVEX_URL;
   if (url === undefined) {
     throw new Error(

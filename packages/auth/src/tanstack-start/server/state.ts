@@ -136,6 +136,8 @@ export type ConvexAuthServerState = {
   refreshToken: null;
   user: NativeAuthUser | null;
   sessionId: string | null;
+  /** Convenience for route guards — `true` only after `verifySession` passed. */
+  isAuthenticated: boolean;
   _timeFetched: number;
 };
 
@@ -167,6 +169,7 @@ export async function getAuthServerState(
     refreshToken: null,
     user: session.user,
     sessionId: session.sessionId,
+    isAuthenticated: true,
     _timeFetched: Date.now(),
   };
 }
@@ -177,6 +180,7 @@ function anonymousState(): ConvexAuthServerState {
     refreshToken: null,
     user: null,
     sessionId: null,
+    isAuthenticated: false,
     _timeFetched: Date.now(),
   };
 }
