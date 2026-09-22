@@ -1,0 +1,165 @@
+import { createMiddleware } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+import type { NativeAuthActions } from "../../react/ConvexAuthProvider.js";
+import { handleAuthRequestBoundary } from "../../ssr/boundary.js";
+import { appendAuthCookies, isLocalHostRequest } from "../../ssr/cookies.js";
+import { proxyAuthActionToConvex, shouldProxyAuthAction } from "../../ssr/proxy.js";
+import type { AuthTransport } from "../../ssr/transport.js";
+import { convexHttpTransport } from "../../ssr/transport.js";
+import {
+  getConvexAuthSession,
+  recordCorsStrip,
+  recordRotatedSession,
+  type VerifiedSession,
+} from "./state.js";
+
+/**
+ * Actions the adapter calls on the Convex backend. Pass the `auth` export
+ * from your `convex/auth.ts` (e.g. `api.auth`).
+ */
+export type ConvexAuthTanstackStartActions = NativeAuthActions;
+
+export type ConvexAuthTanstackStartOptions = {
+  /**
+   * The `auth` export from your `convex/auth.ts` — `api.auth`.
+   */
+  actions: ConvexAuthTanstackStartActions;
+  /**
+   * The URL of the Convex deployment to use for authentication.
+   * Defaults to `CONVEX_URL`, then `VITE_CONVEX_URL`.
+   */
+  convexUrl?: string;
+  /**
+   * The route path that handles authentication actions via the proxy.
+   * Defaults to `/api/auth`.
+   */
+  apiRoute?: string;
+  /**
+   * `maxAge` for the auth cookies in seconds; `null` = session cookies.
+   */
+  cookieConfig?: { maxAge: number | null };
+  /**
+   * Inject a custom transport (tests); defaults to `ConvexHttpClient`.
+   */
+  transport?: AuthTransport;
+  /**
+   * Turn on debugging logs.
+   */
+  verbose?: boolean;
+};
+
+/**
+ * The request pipeline `convexAuthRequestMiddleware` runs per request,
+ * factored out so it can be driven directly (and unit-tested) without
+ * TanStack's middleware machinery: proxy intercept → boundary pass →
+ * record outcomes → decorate the downstream response.
+ *
+ * `next` resolves to the downstream handler's result — an object carrying
+ * the `Response` being built (mutable headers). The result may arrive
+ * synchronously or as a promise.
+ */
+export async function handleConvexAuthRequest<TNextResult extends { response: Response }>(
+  request: Request,
+  next: () => TNextResult | Promise<TNextResult>,
+  options: ConvexAuthTanstackStartOptions,
+): Promise<Response | TNextResult> {
+  const transport = options.transport ?? convexHttpTransport(options.convexUrl);
+  const apiRoute = options.apiRoute ?? "/api/auth";
+  const cookieConfig = options.cookieConfig ?? { maxAge: null };
+  const verbose = options.verbose ?? false;
+
+  // Session-minting/ending actions proxy to the component.
+  if (shouldProxyAuthAction(request, apiRoute)) {
+    return await proxyAuthActionToConvex(request, {
+      actions: options.actions,
+      transport,
+      cookieConfig,
+      verbose,
+      convexUrl: options.convexUrl,
+    });
+  }
+
+  const result = await handleAuthRequestBoundary(request, {
+    actions: { updateSession: options.actions.updateSession },
+    transport,
+    cookieConfig,
+    verbose,
+  });
+
+  // Session-triple landed — redirect with cookies already on the response.
+  if (result.kind === "redirect") {
+    return result.response;
+  }
+
+  // Record the refresh outcome keyed by this request so downstream session
+  // helpers see the effective session: a rotated pair (the request's
+  // now-revoked cookie would fail verifySession), a dead session, or — for
+  // cross-origin requests — a strip marker.
+  if (result.refreshTokens !== undefined) {
+    recordRotatedSession(request, result.refreshTokens);
+  }
+  if (result.strippedCookieHeader !== undefined) {
+    recordCorsStrip(request);
+  }
+
+  const res = await next();
+
+  // Write the rotation outcome onto the response cookies.
+  if (result.refreshTokens !== undefined) {
+    appendAuthCookies(
+      res.response.headers,
+      result.refreshTokens === null ? null : result.refreshTokens,
+      { isLocalhost: isLocalHostRequest(request), maxAge: cookieConfig.maxAge },
+    );
+  }
+  return res;
+}
+
+/**
+ * Global request middleware — the SSR boundary. Register in `src/start.ts`:
+ *
+ * ```ts
+ * export const startInstance = createStart(() => ({
+ *   requestMiddleware: [convexAuthRequestMiddleware({ actions: api.auth })],
+ * }));
+ * ```
+ */
+export function convexAuthRequestMiddleware(options: ConvexAuthTanstackStartOptions) {
+  return createMiddleware().server(({ request, next }) =>
+    handleConvexAuthRequest(request, next, options),
+  );
+}
+
+/**
+ * Function middleware that attaches the verified session to `context.session`
+ * — the typed guard for protected server functions:
+ *
+ * ```ts
+ * export const authedMiddleware = convexAuthFunctionMiddleware({ actions: api.auth });
+ *
+ * const getSecret = createServerFn()
+ *   .middleware([authedMiddleware])
+ *   .handler(async ({ context }) => {
+ *     // context.session.user is typed and verified
+ *   });
+ * ```
+ */
+export function convexAuthFunctionMiddleware(
+  options: Pick<ConvexAuthTanstackStartOptions, "actions" | "convexUrl" | "transport">,
+) {
+  return createMiddleware({ type: "function" }).server(async ({ next }) => {
+    const session = await getConvexAuthSession(getRequest(), {
+      actions: { verifySession: options.actions.verifySession },
+      transport: options.transport,
+      convexUrl: options.convexUrl,
+    });
+    return next({ context: { session } });
+  });
+}
+
+/**
+ * Standalone verified lookup for server functions/routes that don't use the
+ * middleware — same per-request memoization.
+ */
+export { getConvexAuthSession };
+export type { VerifiedSession };

@@ -78,6 +78,8 @@ export default defineConfig({
         "react-native-passkeys": "src/react-native/usePasskeys.ts",
         nextjs: "src/nextjs/index.tsx",
         "nextjs-server": "src/nextjs/server/index.tsx",
+        "tanstack-start": "src/tanstack-start/index.ts",
+        "tanstack-start-server": "src/tanstack-start/server/index.ts",
         ui: "src/ui.entry.ts",
         mcp: "src/mcp.ts",
         "component/convex.config": "src/component/convex.config.ts",

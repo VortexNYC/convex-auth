@@ -49,7 +49,9 @@ export async function handleAuthRequestBoundary(
   logVerbose(`Begin handleAuthRequestBoundary`, verbose, "ConvexAuthSsr");
   const requestUrl = new URL(request.url);
 
-  // Do not let a cross-origin request read auth cookies.
+  // Do not let a cross-origin request read auth cookies. The strip also
+  // suppresses the refresh pass entirely — a cross-origin caller must not
+  // trigger a rotation or receive Set-Cookie headers.
   const strippedCookieHeader = stripCookiesIfCors(request);
 
   // OAuth and magic-link flows land back on the app carrying a freshly minted
@@ -88,8 +90,12 @@ export async function handleAuthRequestBoundary(
     return { kind: "redirect", response };
   }
 
-  // Refresh the session proactively when the access token is near expiry.
-  const refreshTokens = await getRefreshedTokens(request, options, verbose);
+  // Refresh the session proactively when the access token is near expiry —
+  // skipped on cross-origin requests (see above).
+  const refreshTokens =
+    strippedCookieHeader === undefined
+      ? await getRefreshedTokens(request, options, verbose)
+      : undefined;
   return { kind: "refreshTokens", refreshTokens, strippedCookieHeader };
 }
 

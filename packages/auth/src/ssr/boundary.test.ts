@@ -165,6 +165,19 @@ describe("CORS strip", () => {
     expect(result.strippedCookieHeader).toBeNull();
   });
 
+  it("does not refresh or call actions for cross-origin requests", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const token = jwt(now + 30, now - 3600); // near-expiry — would refresh if allowed
+    const request = pageRequest({
+      origin: "https://evil.example.com",
+      cookie: `__Host-__convexAuthToken=${token}; __Host-__convexAuthRefreshToken=ref`,
+    });
+    const result = await handleAuthRequestBoundary(request, options);
+    if (result.kind !== "refreshTokens") throw new Error("expected refreshTokens");
+    expect(result.refreshTokens).toBeUndefined();
+    expect(actionMock).not.toHaveBeenCalled();
+  });
+
   it("leaves same-origin requests untouched", async () => {
     const request = pageRequest({
       origin: "https://app.example.com",
