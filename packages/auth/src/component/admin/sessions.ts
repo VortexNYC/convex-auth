@@ -142,20 +142,22 @@ export const revokeSession = mutation({
     }
 
     const now = Date.now();
-    await ctx.db.patch(session._id, { revokedAt: now, updatedAt: now });
-
-    for await (const token of ctx.db
-      .query("authRefreshTokens")
-      .withIndex("by_session", (q) => q.eq("sessionId", session.sessionId))) {
-      await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
-    }
+    // A family is one sign-in lineage; if the presented session is suspect its
+    // siblings (same lineage, minted by concurrent refreshes) are too.
+    await revokeSessionFamily(
+      ctx,
+      session.familyId ?? session.sessionId,
+      String(session.userId),
+      now,
+      null,
+    );
 
     await createAdminAudit(ctx, {
       adminId: String(admin._id),
       action: "revokeSession",
       target: { type: "session", id: session.sessionId },
       result: "success",
-      payload: { userId: session.userId },
+      payload: { userId: session.userId, familyId: session.familyId ?? session.sessionId },
       now,
     });
 

@@ -115,6 +115,60 @@ describe("native sessions", () => {
     expect(bySessionId["session-3"].revokedAt).toBeUndefined();
   });
 
+  it("marks refresh tokens of revoked sessions, sparing the excluded session's", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    await t.mutation(api.native.sessions.createSession, {
+      sessionId: "session-1",
+      userId,
+      token: "token-1",
+      expiresAt: Date.now() + 1_000_000,
+    });
+    await t.mutation(api.native.sessions.createSession, {
+      sessionId: "session-2",
+      userId,
+      token: "token-2",
+      expiresAt: Date.now() + 1_000_000,
+    });
+    const now = Date.now();
+    const [deadToken, keptToken] = await t.run(async (ctx) => [
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-1",
+        sessionId: "session-1",
+        userId,
+        familyId: "fam-1",
+        expiresAt: now + 3_600_000,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "hash-2",
+        sessionId: "session-2",
+        userId,
+        familyId: "fam-2",
+        expiresAt: now + 3_600_000,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    ]);
+
+    const revoked = await t.mutation(api.native.sessions.revokeSessionsForUser, {
+      userId,
+      excludeSessionId: "session-2",
+    });
+    expect(revoked).toBe(1);
+
+    const [dead, kept] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db.get("authRefreshTokens", deadToken),
+        ctx.db.get("authRefreshTokens", keptToken),
+      ]),
+    );
+    expect(dead?.revokedAt).toBeDefined();
+    expect(kept?.revokedAt).toBeUndefined();
+  });
+
   it("revokes sessions beyond a single 1000-row page", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);

@@ -1385,8 +1385,11 @@ export function nativeEmailAndPassword(
       if (!session || session.userId !== resolved.userId || session.revokedAt !== undefined) {
         return { success: true };
       }
-      await ctx.runMutation(component.native.sessions.revokeSession, {
+      // Convergence mints sibling rows inside one sign-in family; "revoke this
+      // session" means the whole lineage, so siblings stop minting too.
+      await ctx.runMutation(component.native.sessions.revokeSessionFamilyBySession, {
         sessionId: session.sessionId,
+        auditEventType: "session.revoke",
       });
       return { success: true };
     },

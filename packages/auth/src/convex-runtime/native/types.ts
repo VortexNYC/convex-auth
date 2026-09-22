@@ -431,7 +431,7 @@ export type NativeEmailAndPasswordComponentHandle = {
       revokeSessionFamilyBySession: FunctionReference<
         "mutation",
         "public" | "internal",
-        { sessionId: string },
+        { auditEventType?: string; sessionId: string },
         string | null,
         string
       >;
