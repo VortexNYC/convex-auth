@@ -650,7 +650,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         revokeSessionFamilyBySession: FunctionReference<
           "mutation",
           "internal",
-          { sessionId: string },
+          { auditEventType?: string; sessionId: string },
           any,
           Name
         >;

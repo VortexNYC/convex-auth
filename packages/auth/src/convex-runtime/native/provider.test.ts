@@ -1794,9 +1794,11 @@ describe("nativeEmailAndPassword", () => {
         sessionId: "session_2",
       });
       expect(result).toEqual({ success: true });
-      expect(component.native.sessions.revokeSession).toHaveBeenCalledWith({
+      expect(component.native.sessions.revokeSessionFamilyBySession).toHaveBeenCalledWith({
         sessionId: "session_2",
+        auditEventType: "session.revoke",
       });
+      expect(component.native.sessions.revokeSession).not.toHaveBeenCalled();
     });
 
     it("refuses to revoke a session owned by a different user", async () => {
@@ -1813,7 +1815,7 @@ describe("nativeEmailAndPassword", () => {
         sessionId: "victim_session",
       });
       expect(result).toEqual({ success: true });
-      expect(component.native.sessions.revokeSession).not.toHaveBeenCalled();
+      expect(component.native.sessions.revokeSessionFamilyBySession).not.toHaveBeenCalled();
     });
 
     it("fails when the caller's token does not resolve", async () => {
@@ -1826,7 +1828,7 @@ describe("nativeEmailAndPassword", () => {
         sessionId: "session_2",
       });
       expect(result).toEqual({ success: false });
-      expect(component.native.sessions.revokeSession).not.toHaveBeenCalled();
+      expect(component.native.sessions.revokeSessionFamilyBySession).not.toHaveBeenCalled();
     });
   });
 });

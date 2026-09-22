@@ -202,6 +202,20 @@ export const revokeSessionsForUser = mutation({
       await ctx.db.patch(session._id, { revokedAt: now, updatedAt: now });
       revoked++;
     }
+
+    // Mark the tokens of every revoked session too. They are already dead —
+    // rotateSession refuses tokens whose session row is revoked — but the
+    // marker keeps the token table honest and replay detection accurate.
+    for await (const token of ctx.db
+      .query("authRefreshTokens")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))) {
+      if (
+        token.revokedAt === undefined &&
+        (!args.excludeSessionId || token.sessionId !== args.excludeSessionId)
+      ) {
+        await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
+      }
+    }
     return revoked;
   },
 });
@@ -302,7 +316,7 @@ export async function revokeSessionFamily(
 // converged into siblings share the family, so revoke them all together.
 // Distinct devices live in separate families and are untouched.
 export const revokeSessionFamilyBySession = mutation({
-  args: { sessionId: v.string() },
+  args: { sessionId: v.string(), auditEventType: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const session = await getOneFrom(
       ctx.db,
@@ -319,7 +333,7 @@ export const revokeSessionFamilyBySession = mutation({
       session.familyId ?? args.sessionId,
       String(session.userId),
       Date.now(),
-      "session.sign_out",
+      args.auditEventType ?? "session.sign_out",
     );
     return session._id;
   },

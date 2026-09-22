@@ -198,6 +198,48 @@ describe("admin sessions", () => {
     expect(audits[0]?.action).toBe("revokeSession");
   });
 
+  it("revokes the whole session family, sparing other families", async () => {
+    const t = convexTest(schema, modules);
+    const adminId = await insertUser(t, "admin@example.com", "Admin", true);
+    const userId = await insertUser(t, "user@example.com", "User");
+    const presented = await insertSession(t, userId, "sess-a", { familyId: "fam-1" });
+    const sibling = await insertSession(t, userId, "sess-b", { familyId: "fam-1" });
+    const otherFamily = await insertSession(t, userId, "sess-c", { familyId: "fam-2" });
+    const siblingToken = await insertRefreshToken(t, userId, "sess-b", "fam-1");
+    const otherToken = await insertRefreshToken(t, userId, "sess-c", "fam-2");
+
+    const result = await t
+      .withIdentity({ subject: adminId })
+      .mutation(makeFunctionReference<"mutation">("admin/sessions:revokeSession"), {
+        sessionId: "sess-a",
+      });
+    expect(result.revoked).toBe(true);
+
+    const [a, b, c, tokB, tokC] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db.get("authSessions", presented),
+        ctx.db.get("authSessions", sibling),
+        ctx.db.get("authSessions", otherFamily),
+        ctx.db.get("authRefreshTokens", siblingToken),
+        ctx.db.get("authRefreshTokens", otherToken),
+      ]),
+    );
+    expect(a?.revokedAt).toBeDefined();
+    expect(b?.revokedAt).toBeDefined();
+    expect(tokB?.revokedAt).toBeDefined();
+    expect(c?.revokedAt).toBeUndefined();
+    expect(tokC?.revokedAt).toBeUndefined();
+
+    const audits = await t.run((ctx) =>
+      ctx.db
+        .query("auth_admin_audits")
+        .withIndex("by_admin", (q) => q.eq("adminId", adminId))
+        .take(1),
+    );
+    expect(audits[0]?.action).toBe("revokeSession");
+    expect(JSON.parse(audits[0]?.payloadJson ?? "{}")).toMatchObject({ familyId: "fam-1" });
+  });
+
   it("revokes all active sessions for a user", async () => {
     const t = convexTest(schema, modules);
     const adminId = await insertUser(t, "admin@example.com", "Admin", true);
