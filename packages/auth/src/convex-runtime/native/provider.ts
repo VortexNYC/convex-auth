@@ -565,10 +565,10 @@ export function nativeEmailAndPassword(
       if (typeof sessionId !== "string") {
         throw new Error("Invalid session token");
       }
-      await ctx.runMutation(component.native.sessions.revokeSession, {
-        sessionId,
-      });
-      await ctx.runMutation(component.native.refreshTokens.revokeRefreshTokensForSession, {
+      // Revoke the whole sign-in lineage: concurrent tabs converge into
+      // sibling sessions sharing one family, so a single-session revoke
+      // would leave siblings and their refresh tokens live.
+      await ctx.runMutation(component.native.sessions.revokeSessionFamilyBySession, {
         sessionId,
       });
       return {

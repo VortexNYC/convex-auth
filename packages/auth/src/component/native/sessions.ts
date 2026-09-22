@@ -238,15 +238,16 @@ async function getSessionsByFamily(ctx: { db: QueryCtx["db"] }, familyId: string
   });
 }
 
-// Presentation of an already-rotated refresh token means the token was
-// replayed — either by an attacker holding a stolen token or by a client
-// racing itself. Fail closed: revoke every session and refresh token in the
-// family and record an audit event.
-async function revokeSessionFamily(
+// Revokes every session and refresh token in a family. Callers pass the
+// audit event type describing why (e.g. "refresh_token_reuse" for replay
+// detection, "session.sign_out" for voluntary sign-out), or null when the
+// caller records its own audit trail (e.g. admin stopImpersonation).
+export async function revokeSessionFamily(
   ctx: { db: MutationCtx["db"] },
   familyId: string,
   userId: string,
   now: number,
+  auditEventType: string | null = "refresh_token_reuse",
 ) {
   // Rows created before family tracking carry no familyId; they are reachable
   // through the spent token's own sessionId, which doubles as its familyId.
@@ -283,17 +284,46 @@ async function revokeSessionFamily(
     await ctx.db.patch(legacySession._id, { revokedAt: now, updatedAt: now });
   }
 
-  await ctx.db.insert("auth_audit_events", {
-    actorUserId: userId as Id<"users">,
-    actorType: "system",
-    eventType: "refresh_token_reuse",
-    targetType: "session",
-    targetId: familyId,
-    organizationId: undefined,
-    metadataJson: undefined,
-    createdAt: now,
-  });
+  if (auditEventType !== null) {
+    await ctx.db.insert("auth_audit_events", {
+      actorUserId: userId as Id<"users">,
+      actorType: "system",
+      eventType: auditEventType,
+      targetType: "session",
+      targetId: familyId,
+      organizationId: undefined,
+      metadataJson: undefined,
+      createdAt: now,
+    });
+  }
 }
+
+// Voluntary sign-out ends the whole sign-in lineage: concurrent tabs that
+// converged into siblings share the family, so revoke them all together.
+// Distinct devices live in separate families and are untouched.
+export const revokeSessionFamilyBySession = mutation({
+  args: { sessionId: v.string() },
+  handler: async (ctx, args) => {
+    const session = await getOneFrom(
+      ctx.db,
+      "authSessions",
+      "by_session_id",
+      args.sessionId,
+      "sessionId",
+    );
+    if (!session) {
+      return null;
+    }
+    await revokeSessionFamily(
+      ctx,
+      session.familyId ?? args.sessionId,
+      String(session.userId),
+      Date.now(),
+      "session.sign_out",
+    );
+    return session._id;
+  },
+});
 
 export const rotateSession = mutation({
   args: {

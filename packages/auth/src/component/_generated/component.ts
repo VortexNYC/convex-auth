@@ -2167,6 +2167,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           any,
           Name
         >;
+        revokeSessionFamilyBySession: FunctionReference<
+          "mutation",
+          "internal",
+          { sessionId: string },
+          any,
+          Name
+        >;
         revokeSessionsForUser: FunctionReference<
           "mutation",
           "internal",

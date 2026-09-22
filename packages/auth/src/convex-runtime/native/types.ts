@@ -201,6 +201,8 @@ export type NativeSessionDoc = {
   ipAddress?: string;
   userAgent?: string;
   revokedAt?: number;
+  familyId?: string;
+  impersonatedBy?: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -420,6 +422,13 @@ export type NativeEmailAndPasswordComponentHandle = {
         string
       >;
       revokeSession: FunctionReference<
+        "mutation",
+        "public" | "internal",
+        { sessionId: string },
+        string | null,
+        string
+      >;
+      revokeSessionFamilyBySession: FunctionReference<
         "mutation",
         "public" | "internal",
         { sessionId: string },

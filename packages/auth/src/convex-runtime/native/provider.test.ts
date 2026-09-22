@@ -112,6 +112,7 @@ function createMockComponent(): MockedComponent {
       sessions: {
         createSessionAndRefreshToken: vi.fn(),
         revokeSession: vi.fn(),
+        revokeSessionFamilyBySession: vi.fn(),
         listSessionsByUser: vi.fn(),
         getSessionByToken: vi.fn(),
         getSessionBySessionId: vi.fn(),
@@ -725,7 +726,7 @@ describe("nativeEmailAndPassword", () => {
     });
   });
 
-  it("signOut verifies the token and revokes the session", async () => {
+  it("signOut verifies the token and revokes the session family", async () => {
     const component = createMockComponent();
     const user = makeUser({ emailVerified: true });
     const identity = makeIdentity({ emailVerified: true });
@@ -747,9 +748,11 @@ describe("nativeEmailAndPassword", () => {
     });
     expect(signOutResult).toEqual({ success: true, redirect: false, url: undefined });
 
-    expect(component.native.sessions.revokeSession).toHaveBeenCalledWith({
+    expect(component.native.sessions.revokeSessionFamilyBySession).toHaveBeenCalledWith({
       sessionId: signInResult.sessionId,
     });
+    // The family mutation owns refresh-token revocation — no second call.
+    expect(component.native.refreshTokens.revokeRefreshTokensForSession).not.toHaveBeenCalled();
   });
 
   describe("sendEmailVerification", () => {

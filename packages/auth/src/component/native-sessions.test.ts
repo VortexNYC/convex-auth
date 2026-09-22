@@ -400,6 +400,115 @@ describe("native sessions", () => {
     });
   });
 
+  it("revokeSessionFamilyBySession revokes every family member and spares other families", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    // A root session plus two converged siblings — the shape convergeSession
+    // mints when concurrent tabs race one sign-in lineage.
+    for (const [sessionId, token, hash] of [
+      ["s-1", "t-1", "h-1"],
+      ["s-2", "t-2", "h-2"],
+      ["s-3", "t-3", "h-3"],
+    ] as const) {
+      await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+        sessionId,
+        userId,
+        identityId: identityDocId,
+        token,
+        familyId: "fam-1",
+        sessionExpiresAt: now + 1_000_000,
+        refreshTokenHash: hash,
+        refreshTokenExpiresAt: now + 1_000_000,
+      });
+    }
+    // A separate device signs in independently — its own family survives.
+    await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+      sessionId: "other",
+      userId,
+      identityId: identityDocId,
+      token: "t-other",
+      familyId: "other",
+      sessionExpiresAt: now + 1_000_000,
+      refreshTokenHash: "h-other",
+      refreshTokenExpiresAt: now + 1_000_000,
+    });
+
+    // Signing out via any member kills the whole lineage.
+    const revoked = await t.mutation(api.native.sessions.revokeSessionFamilyBySession, {
+      sessionId: "s-2",
+    });
+    expect(revoked).not.toBeNull();
+
+    const rows = await t.run(async (ctx) => ({
+      sessions: await ctx.db.query("authSessions").take(10),
+      tokens: await ctx.db.query("authRefreshTokens").take(10),
+      audits: await ctx.db.query("auth_audit_events").take(10),
+    }));
+    for (const sessionId of ["s-1", "s-2", "s-3"]) {
+      expect(rows.sessions.find((s) => s.sessionId === sessionId)?.revokedAt).toBeDefined();
+      expect(rows.tokens.find((tk) => tk.sessionId === sessionId)?.revokedAt).toBeDefined();
+    }
+    expect(rows.sessions.find((s) => s.sessionId === "other")?.revokedAt).toBeUndefined();
+    expect(rows.tokens.find((tk) => tk.sessionId === "other")?.revokedAt).toBeUndefined();
+    expect(rows.audits).toHaveLength(1);
+    expect(rows.audits[0]).toMatchObject({
+      actorType: "system",
+      eventType: "session.sign_out",
+      targetType: "session",
+      targetId: "fam-1",
+      actorUserId: userId,
+    });
+  });
+
+  it("revokeSessionFamilyBySession reaches legacy rows that carry no familyId", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    // Pre-family-tracking rows: session has no familyId, its refresh token is
+    // reachable only through by_session.
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authSessions", {
+        sessionId: "legacy-1",
+        userId,
+        token: "t-legacy",
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "h-legacy",
+        sessionId: "legacy-1",
+        userId,
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    await t.mutation(api.native.sessions.revokeSessionFamilyBySession, {
+      sessionId: "legacy-1",
+    });
+
+    const [session, token] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "legacy-1"))
+          .unique(),
+        ctx.db
+          .query("authRefreshTokens")
+          .withIndex("by_token_hash", (q) => q.eq("tokenHash", "h-legacy"))
+          .unique(),
+      ]),
+    );
+    expect(session?.revokedAt).toBeDefined();
+    expect(token?.revokedAt).toBeDefined();
+  });
+
   it("family replay revocation reaches live rows beyond a 1000-row page", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
