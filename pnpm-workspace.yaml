@@ -12,6 +12,15 @@ auditConfig:
     - "1138808" # image-size ICNS parser infinite loop (CVE-2025-71330)
     - "1138809" # image-size JXL/HEIF parser infinite loop (CVE-2025-71329)
 
+# The lockfile is generated on macOS but installed on linux CI — without
+# this, pnpm prunes non-darwin optional deps (native binaries like
+# @rollup/rollup-linux-x64-gnu) out of the lockfile and linux installs
+# break with MODULE_NOT_FOUND.
+supportedArchitectures:
+  os: [darwin, linux, win32]
+  cpu: [arm64, x64]
+  libc: [glibc, musl]
+
 onlyBuiltDependencies:
   - argon2
 
