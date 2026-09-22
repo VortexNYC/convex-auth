@@ -64,6 +64,39 @@ pnpm install
 pnpm run dev
 ```
 
+## TanStack Start (SSR)
+
+`examples/tanstack-start` is a full SSR app using `@tanstack/react-start` and the `@vortex-api/convex-auth/tanstack-start` adapter. Sessions live in app-origin HttpOnly cookies; every request passes through `convexAuthRequestMiddleware`, which also serves the intent-based `/api/auth` proxy.
+
+```ts
+// src/start.ts
+import { createStart } from "@tanstack/react-start";
+import { convexAuthRequestMiddleware } from "@vortex-api/convex-auth/tanstack-start/server";
+import { api } from "../convex/_generated/api";
+
+export const startInstance = createStart(() => ({
+  requestMiddleware: [convexAuthRequestMiddleware({ actions: api.auth })],
+}));
+```
+
+The root route resolves the verified session in `beforeLoad` and seeds `ConvexAuthTanstackStartProvider` (cookie mode). A pathless `_authed` route guards navigation as UX, while protected `createServerFn`s declare `convexAuthFunctionMiddleware`, which attaches the revocation-aware `context.session` — the real security boundary.
+
+```tsx
+const getDashboardData = createServerFn({ method: "GET" })
+  .middleware([convexAuthFunctionMiddleware({ actions: api.auth })])
+  .handler(async ({ context }) => {
+    if (context.session === null) throw new Error("Unauthorized");
+    return { user: context.session.user };
+  });
+```
+
+```bash
+cd examples/tanstack-start
+pnpm install
+pnpm dlx convex dev   # local backend on :3212
+pnpm run dev          # app on :3200
+```
+
 ## Server with Hono
 
 `examples/server` shows email/password sign-in and OAuth redirect from a server using `hono` and `ConvexHttpClient`.

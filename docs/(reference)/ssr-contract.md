@@ -448,7 +448,12 @@ Adapter-level (upstream's bar is `test-nextjs/e2e-tests` — match it):
    window) are now proven on real OCC; the adapter E2E items below remain
    the only open proof tier.
 
-3. Next.js adapter (#321) — delegated, using upstream's layout as the
-   template and this contract for the deltas.
-4. TanStack Start adapter — after the Router example (#341) merges and the
-   contract is proven on Next.js.
+3. Next.js adapter (#321) — landed; live-verified on the `examples/nextjs`
+   demo (proxy intents, rotation, family revocation, CSRF matrix).
+4. TanStack Start adapter (#353) — landed. The shared fetch-shaped core
+   (`src/ssr/`) carries the proxy pipeline, cookie schema, boundary
+   refresh, and CORS strip; the adapter layer is only the middleware/
+   provider binding. Live-verified on `examples/tanstack-start`: sign-in
+   mint, SSR seed via `beforeLoad` + `getAuthServerState`, `context.session`
+   in protected server functions, rotation, sign-out revocation, and the
+   CSRF/CORS/405 rejection matrix.

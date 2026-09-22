@@ -7,14 +7,14 @@ JavaScript.
 
 ## What runs where
 
-| Piece              | File                              | Role                                                                                          |
-| ------------------ | --------------------------------- | --------------------------------------------------------------------------------------------- |
-| Request middleware | `src/start.ts`                    | `convexAuthRequestMiddleware` — CORS strip, session landing, proactive refresh, `/api/auth` proxy |
-| Server session     | `src/lib/auth-server.ts`          | `getAuthServerState` (seeds client) + `getConvexAuthSession` (verified, revocation-aware)       |
-| Root provider      | `src/routes/__root.tsx`           | `beforeLoad` resolves server state → `ConvexAuthTanstackStartProvider` (cookie mode)            |
-| Route guard        | `src/routes/_authed.tsx`          | `beforeLoad` UX guard reading `context.auth` — **not** the security boundary                    |
-| Protected serverFn | `src/routes/_authed/dashboard.tsx` | `convexAuthFunctionMiddleware` attaches `context.session` — the real authorization boundary    |
-| Sign-in            | `src/routes/sign-in.tsx`          | email+password and anonymous — all mint through the proxy                                     |
+| Piece              | File                               | Role                                                                                              |
+| ------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Request middleware | `src/start.ts`                     | `convexAuthRequestMiddleware` — CORS strip, session landing, proactive refresh, `/api/auth` proxy |
+| Server session     | `src/lib/auth-server.ts`           | `getAuthServerState` (seeds client) + `getConvexAuthSession` (verified, revocation-aware)         |
+| Root provider      | `src/routes/__root.tsx`            | `beforeLoad` resolves server state → `ConvexAuthTanstackStartProvider` (cookie mode)              |
+| Route guard        | `src/routes/_authed.tsx`           | `beforeLoad` UX guard reading `context.auth` — **not** the security boundary                      |
+| Protected serverFn | `src/routes/_authed/dashboard.tsx` | `convexAuthFunctionMiddleware` attaches `context.session` — the real authorization boundary       |
+| Sign-in            | `src/routes/sign-in.tsx`           | email+password and anonymous — all mint through the proxy                                         |
 
 ## Setup
 
