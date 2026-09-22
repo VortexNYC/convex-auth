@@ -15,11 +15,21 @@ import { convexAuth } from "@vortex-api/convex-auth/convex";
 
 export const auth = convexAuth({
   component: components.convexAuth,
-  emailAndPassword: {/* ... */},
-  oauth: {/* ... */},
-  magicLink: {/* ... */},
-  emailOtp: {/* ... */},
-  captcha: {/* ... */},
+  emailAndPassword: {
+    /* ... */
+  },
+  oauth: {
+    /* ... */
+  },
+  magicLink: {
+    /* ... */
+  },
+  emailOtp: {
+    /* ... */
+  },
+  captcha: {
+    /* ... */
+  },
 });
 
 export const { signUp, signIn, signOut, addHttpRoutes } = auth;

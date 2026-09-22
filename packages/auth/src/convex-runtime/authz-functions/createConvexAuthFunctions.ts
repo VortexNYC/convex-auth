@@ -125,9 +125,11 @@ function createConvexAuthFunctionGates<
   };
 
   const customCtxGate = (check?: (viewer: V) => void, label?: string) =>
-    customCtx(async (ctx: GlueCtx): Promise<{ viewer: V }> => ({
-      viewer: await guardWith(ctx, check, label),
-    }));
+    customCtx(
+      async (ctx: GlueCtx): Promise<{ viewer: V }> => ({
+        viewer: await guardWith(ctx, check, label),
+      }),
+    );
 
   return {
     inject: customCtxGate(),

@@ -163,7 +163,9 @@ Example deep link parsing for reset and verify:
 import * as Linking from "expo-linking";
 
 export type AuthDeepLink =
-  { screen: "reset"; token: string } | { screen: "verify"; token: string } | null;
+  | { screen: "reset"; token: string }
+  | { screen: "verify"; token: string }
+  | null;
 
 export function parseAuthDeepLink(url: string | null): AuthDeepLink {
   if (typeof url !== "string" || url.length === 0) return null;
