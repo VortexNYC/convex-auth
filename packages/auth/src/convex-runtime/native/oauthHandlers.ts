@@ -65,6 +65,11 @@ export type NativeOAuthSignInArgs = {
   link?: boolean;
   /** Untrusted client data preserved through the OAuth redirect. */
   additionalData?: Record<string, unknown>;
+  /**
+   * Landing verifier from the initiating browser's cookie. Bound into the
+   * signed state so the callback can echo it onto the session landing URL.
+   */
+  landingVerifier?: string;
 };
 
 export type NativeOAuthCallbackArgs = {
@@ -73,6 +78,12 @@ export type NativeOAuthCallbackArgs = {
   state: string;
   /** User to link this OAuth account to when the sign-in state was initiated with `link: true`. */
   linkingUserId?: string;
+  /**
+   * Landing verifier the completing browser presented (injected from its
+   * cookie by the session proxy). When provided, it must equal the verifier
+   * bound at initiation — a mismatch means the flow crossed browsers.
+   */
+  landingVerifier?: string;
 };
 
 export type NativeOAuthCallbackResult = {
@@ -83,6 +94,8 @@ export type NativeOAuthCallbackResult = {
   sessionId: string;
   redirectUrl: string;
   createdUser: boolean;
+  /** Echoed verifier — the site callback appends it to the landing URL. */
+  landingVerifier?: string;
 };
 
 export type NativeOAuthCallbackErrorResult = {
@@ -134,6 +147,7 @@ export async function handleSignIn(
     requestSignUp: args.requestSignUp,
     link: args.link,
     additionalData: args.additionalData,
+    landingVerifier: args.landingVerifier,
   });
   const url = await provider.createAuthorizationURL({
     state,
@@ -161,6 +175,7 @@ export async function handleCallback<DataModel extends GenericDataModel>(
   component: NativeOAuthComponentHandle,
   config: NativeOAuthConfig,
   args: NativeOAuthCallbackArgs,
+  options?: { boundaryEnforcesVerifier?: boolean },
 ): Promise<NativeOAuthCallbackResult | NativeOAuthCallbackErrorResult> {
   let statePayload: OAuthStatePayload;
   try {
@@ -171,6 +186,23 @@ export async function handleCallback<DataModel extends GenericDataModel>(
 
   if (statePayload.provider !== args.provider) {
     return { error: "provider_mismatch", redirectUrl: resolveErrorURL(statePayload) };
+  }
+
+  // Browser binding: the presented verifier must equal the one bound into
+  // the signed state at initiation — a browser that did not start the flow
+  // cannot complete it through the action path. Both-absent stays allowed
+  // for legacy/token-mode callers (RN, old clients) that have no cookie.
+  // The site callback route sets `boundaryEnforcesVerifier` because it
+  // cannot see the app cookie — it echoes the bound verifier onto the
+  // landing URL and the app boundary compares it against the cookie there.
+  if (
+    options?.boundaryEnforcesVerifier !== true &&
+    statePayload.landingVerifier !== args.landingVerifier
+  ) {
+    return {
+      error: "landing_verifier_mismatch",
+      redirectUrl: resolveErrorURL(statePayload),
+    };
   }
 
   const provider = getProvider(config, args.provider);
@@ -359,5 +391,6 @@ export async function handleCallback<DataModel extends GenericDataModel>(
     sessionId,
     redirectUrl,
     createdUser: identityResult.createdUser,
+    landingVerifier: statePayload.landingVerifier,
   };
 }

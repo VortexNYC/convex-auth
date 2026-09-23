@@ -112,6 +112,11 @@ export type NativeAuthSession = {
   twoFactorCookieMaxAgeMs?: number;
   trustDeviceToken?: string;
   trustDeviceMaxAgeMs?: number;
+  /**
+   * The browser-binding nonce echoed back on OAuth/magic-link session
+   * results so the verify/callback route can carry it onto the landing URL.
+   */
+  landingVerifier?: string;
 };
 
 export type NativeVerificationCodeDoc = {

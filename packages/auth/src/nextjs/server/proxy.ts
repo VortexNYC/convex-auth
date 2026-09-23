@@ -133,6 +133,16 @@ export async function proxyAuthActionToConvex(
       delete args.trustedDeviceToken;
     }
   }
+  if (intent === "callback") {
+    // The OAuth callback binds the flow to the initiating browser: the action
+    // compares this arg against the verifier bound into the signed state.
+    // The cookie is the only trusted source — never forward a body value.
+    if (requestCookies.landingVerifier !== null) {
+      args.landingVerifier = requestCookies.landingVerifier;
+    } else {
+      delete args.landingVerifier;
+    }
+  }
 
   logVerbose(`Fetching action for intent ${intent}`, verbose);
 

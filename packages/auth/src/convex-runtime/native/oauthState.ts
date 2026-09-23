@@ -11,6 +11,13 @@ export type OAuthStatePayload = {
   requestSignUp?: boolean;
   link?: boolean;
   additionalData?: Record<string, unknown>;
+  /**
+   * Nonce bound to the initiating browser's landing-verifier cookie.
+   * Round-tripped through state so the callback can echo it onto the
+   * session landing URL and the app boundary can compare it against the
+   * browser's cookie — closing the cross-browser login-CSRF gap.
+   */
+  landingVerifier?: string;
 };
 
 export async function generateCodeVerifier(): Promise<string> {
@@ -57,5 +64,7 @@ export async function verifyOAuthState(token: string): Promise<OAuthStatePayload
       typeof payload.additionalData === "object" && payload.additionalData !== null
         ? (payload.additionalData as Record<string, unknown>)
         : undefined,
+    landingVerifier:
+      typeof payload.landingVerifier === "string" ? payload.landingVerifier : undefined,
   };
 }

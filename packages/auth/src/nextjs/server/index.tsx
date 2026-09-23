@@ -9,7 +9,11 @@ import { ReactNode } from "react";
 import type { NativeAuthActions } from "../../react/ConvexAuthProvider.js";
 import { ConvexAuthNextjsClientProvider } from "../client.js";
 import { serializeAuthActions } from "../serialization.js";
-import { getRequestCookies, getRequestCookiesInMiddleware } from "./cookies.js";
+import {
+  getRequestCookies,
+  getRequestCookiesInMiddleware,
+  setLandingVerifierCookie,
+} from "./cookies.js";
 import { proxyAuthActionToConvex, shouldProxyAuthAction } from "./proxy.js";
 import { handleAuthenticationInRequest } from "./request.js";
 import {
@@ -240,6 +244,15 @@ export type ConvexAuthNextjsMiddlewareOptions = {
    */
   cookieConfig?: { maxAge: number | null };
   /**
+   * Require session-triple landings (`?token=&refreshToken=`) to carry a
+   * `landingVerifier` param matching the landing-verifier cookie minted at
+   * flow initiation — binds OAuth/magic-link landings to the browser that
+   * started the flow. Defaults to `true`; set `false` only for deployments
+   * that predate verifier threading (e.g. magic links opened in a different
+   * browser than the requesting one).
+   */
+  requireLandingVerifier?: boolean;
+  /**
    * Turn on debugging logs.
    */
   verbose?: boolean;
@@ -358,13 +371,19 @@ export function convexAuthNextjsMiddleware(
     // Port the cookies from the auth middleware to the response. Mutating a
     // NextResponse directly preserves its body; `NextResponse.next(response)`
     // only forwards headers/status.
-    if (authResult.kind === "refreshTokens" && authResult.refreshTokens !== undefined) {
-      if (response instanceof NextResponse) {
-        await setAuthCookies(response, authResult.refreshTokens, cookieConfig);
-        return response;
+    const refreshedTokens =
+      authResult.kind === "refreshTokens" ? authResult.refreshTokens : undefined;
+    const mintedLandingVerifier =
+      authResult.kind === "refreshTokens" ? authResult.landingVerifier : undefined;
+    if (refreshedTokens !== undefined || mintedLandingVerifier !== undefined) {
+      const nextResponse =
+        response instanceof NextResponse ? response : NextResponse.next(response);
+      if (refreshedTokens !== undefined) {
+        await setAuthCookies(nextResponse, refreshedTokens, cookieConfig);
       }
-      const nextResponse = NextResponse.next(response);
-      await setAuthCookies(nextResponse, authResult.refreshTokens, cookieConfig);
+      if (mintedLandingVerifier !== undefined) {
+        setLandingVerifierCookie(nextResponse, mintedLandingVerifier, request.headers);
+      }
       return nextResponse;
     }
 

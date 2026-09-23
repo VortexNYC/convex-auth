@@ -224,3 +224,47 @@ describe("HTTP transport: /api/auth/sign-in session mint", () => {
     expect(body.twoFactorChallengeToken).toBe("pending-token-value");
   });
 });
+
+describe("HTTP transport: /api/auth/magic-link/verify", () => {
+  it("echoes the session's landingVerifier onto the landing URL", async () => {
+    const verifyMagicLink = vi.fn(async () => ({
+      token: await sessionJwt(),
+      refreshToken: "refresh-token-value",
+      sessionId: "session_1",
+      userId: "user_1",
+      landingVerifier: "lv-bound",
+    }));
+    const routes = captureRoutes(makeComponent(), { verifyMagicLink });
+    const handler = routes.get("GET /api/auth/magic-link/verify")!;
+
+    const res = await handler(
+      makeCtx({}),
+      new Request(`${SITE}/api/auth/magic-link/verify?token=tok&callbackURL=/dash`),
+    );
+    expect(res.status).toBe(302);
+    const landing = new URL(res.headers.get("Location")!);
+    expect(landing.searchParams.get("landingVerifier")).toBe("lv-bound");
+    expect(landing.searchParams.get("token")).toBeTruthy();
+    // The verify action is called without a verifier — the site route cannot
+    // see the app cookie, so the boundary enforces it downstream.
+    expect(verifyMagicLink.mock.calls[0][1]).not.toHaveProperty("landingVerifier");
+  });
+
+  it("omits landingVerifier from the landing URL when none was bound", async () => {
+    const verifyMagicLink = vi.fn(async () => ({
+      token: await sessionJwt(),
+      refreshToken: "refresh-token-value",
+      sessionId: "session_1",
+      userId: "user_1",
+    }));
+    const routes = captureRoutes(makeComponent(), { verifyMagicLink });
+    const handler = routes.get("GET /api/auth/magic-link/verify")!;
+
+    const res = await handler(
+      makeCtx({}),
+      new Request(`${SITE}/api/auth/magic-link/verify?token=tok&callbackURL=/dash`),
+    );
+    const landing = new URL(res.headers.get("Location")!);
+    expect(landing.searchParams.has("landingVerifier")).toBe(false);
+  });
+});

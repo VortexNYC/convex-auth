@@ -12,6 +12,7 @@ export const TOKEN_COOKIE = "__convexAuthToken";
 export const REFRESH_TOKEN_COOKIE = "__convexAuthRefreshToken";
 export const TWO_FACTOR_PENDING_COOKIE = "__convexAuthTwoFactorPending";
 export const TRUSTED_DEVICE_COOKIE = "__convexAuthTrustedDevice";
+export const LANDING_VERIFIER_COOKIE = "__convexAuthLandingVerifier";
 
 export type AuthCookieValues = {
   token?: string | null;
@@ -60,6 +61,44 @@ export function authCookieNames(isLocalhost: boolean) {
     twoFactorPending: prefix + TWO_FACTOR_PENDING_COOKIE,
     trustedDevice: prefix + TRUSTED_DEVICE_COOKIE,
   };
+}
+
+/**
+ * The landing verifier is deliberately absent from `authCookieNames`: it is
+ * a CSRF binding nonce, not a credential — it must survive the cross-origin
+ * cookie strip, is never cleared on sign-out, and carries no session
+ * authority on its own.
+ */
+export function landingVerifierCookieName(isLocalhost: boolean) {
+  return (isLocalhost ? "" : "__Host-") + LANDING_VERIFIER_COOKIE;
+}
+
+/**
+ * Read the landing verifier off an incoming request's `Cookie` header.
+ */
+export function parseLandingVerifierCookie(request: Request): string | null {
+  const name = landingVerifierCookieName(isLocalHostRequest(request));
+  return parseCookieHeader(request.headers.get("cookie")).get(name) ?? null;
+}
+
+/**
+ * Serialize the landing-verifier write. Non-HttpOnly — the client reads it
+ * to bind flow-initiation calls to this browser — and session-scoped.
+ */
+export function buildLandingVerifierSetCookie(value: string, isLocalhost: boolean): string {
+  const parts = [`${landingVerifierCookieName(isLocalhost)}=${value}`, "Path=/", "SameSite=Lax"];
+  if (!isLocalhost) {
+    parts.push("Secure");
+  }
+  return parts.join("; ");
+}
+
+/**
+ * Mint a fresh landing verifier. UUID — available in every runtime the
+ * adapters run in — gives 122 bits of unguessable entropy.
+ */
+export function generateLandingVerifier(): string {
+  return globalThis.crypto.randomUUID();
 }
 
 /**

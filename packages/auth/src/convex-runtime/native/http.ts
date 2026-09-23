@@ -879,6 +879,9 @@ export function addNativeAuthHttpRoutes(
           if (result.sessionId) {
             redirect.searchParams.set("sessionId", result.sessionId);
           }
+          if (result.landingVerifier) {
+            redirect.searchParams.set("landingVerifier", result.landingVerifier);
+          }
           headers.set("Location", redirect.toString());
           return new Response(null, {
             status: 302,

@@ -120,8 +120,9 @@ describe("convexAuthNextjsMiddleware", () => {
 
   it("lands the session triple into cookies via redirect", async () => {
     const middleware = convexAuthNextjsMiddleware(options);
-    const request = getRequest("/app?token=T&refreshToken=R&sessionId=S", {
+    const request = getRequest("/app?token=T&refreshToken=R&sessionId=S&landingVerifier=lv-1", {
       accept: "text/html",
+      cookie: "__Host-__convexAuthLandingVerifier=lv-1",
     });
     const response = await middleware(request, event);
     expect(response?.status).toBe(307);
@@ -129,6 +130,31 @@ describe("convexAuthNextjsMiddleware", () => {
     expect(
       response?.headers.getSetCookie().find((h) => h.startsWith("__Host-__convexAuthToken=T")),
     ).toBeDefined();
+  });
+
+  it("rejects the session triple when the landing verifier mismatches", async () => {
+    const middleware = convexAuthNextjsMiddleware(options);
+    const request = getRequest("/app?token=T&refreshToken=R&sessionId=S&landingVerifier=lv-x", {
+      accept: "text/html",
+      cookie: "__Host-__convexAuthLandingVerifier=lv-1",
+    });
+    const response = await middleware(request, event);
+    expect(response?.status).toBe(307);
+    expect(response?.headers.get("Location")).toBe("https://app.example.com/app");
+    expect(
+      response?.headers.getSetCookie().find((h) => h.startsWith("__Host-__convexAuthToken=")),
+    ).toBeUndefined();
+  });
+
+  it("mints a landing verifier cookie on same-origin navigations that lack one", async () => {
+    const middleware = convexAuthNextjsMiddleware(options);
+    const response = await middleware(getRequest("/dashboard", { accept: "text/html" }), event);
+    const verifier = response?.headers
+      .getSetCookie()
+      .find((h) => h.startsWith("__Host-__convexAuthLandingVerifier="));
+    expect(verifier).toBeDefined();
+    expect(verifier).toContain("Secure");
+    expect(verifier).not.toContain("HttpOnly");
   });
 
   it("passes through a plain authenticated-free request", async () => {

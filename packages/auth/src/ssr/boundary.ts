@@ -1,7 +1,10 @@
 import {
   appendAuthCookies,
+  buildLandingVerifierSetCookie,
+  generateLandingVerifier,
   isLocalHostRequest,
   parseAuthCookies,
+  parseLandingVerifierCookie,
   stripAuthCookiesFromHeader,
 } from "./cookies.js";
 import type { AuthTransport } from "./transport.js";
@@ -20,12 +23,30 @@ export type AuthBoundaryResult =
        * adapter can rewrite the forwarded request.
        */
       strippedCookieHeader?: string | null;
+      /**
+       * A fresh landing verifier to Set-Cookie on the response, present when
+       * a navigation arrived without one. The adapter must serialize it
+       * non-HttpOnly (`buildLandingVerifierSetCookie` / equivalent) — the
+       * client reads it to bind OAuth/magic-link initiation to this browser.
+       */
+      landingVerifier?: string;
     };
 
 export type AuthBoundaryOptions = {
   actions: { updateSession: FunctionReference<"action", "public"> };
   transport: AuthTransport;
   cookieConfig?: { maxAge: number | null };
+  /**
+   * Require session-triple landings (`?token=&refreshToken=`) to carry a
+   * `landingVerifier` param matching the landing-verifier cookie minted at
+   * flow initiation. This binds OAuth/magic-link landings to the browser
+   * that started the flow, closing the cross-browser login-CSRF gap.
+   *
+   * Defaults to `true`. Set `false` only while a deployment predates
+   * verifier threading, or when magic links must open in a different
+   * browser than the one that requested them.
+   */
+  requireLandingVerifier?: boolean;
   verbose?: boolean;
 };
 
@@ -46,8 +67,12 @@ export async function handleAuthRequestBoundary(
   const verbose = options.verbose ?? false;
   const cookieConfig = options.cookieConfig ?? { maxAge: null };
   const isLocalhost = isLocalHostRequest(request);
+  const requireLandingVerifier = options.requireLandingVerifier !== false;
   logVerbose(`Begin handleAuthRequestBoundary`, verbose, "ConvexAuthSsr");
   const requestUrl = new URL(request.url);
+  const isNavigation =
+    request.method === "GET" && request.headers.get("accept")?.includes("text/html") === true;
+  const cookieVerifier = parseLandingVerifierCookie(request);
 
   // Do not let a cross-origin request read auth cookies. The strip also
   // suppresses the refresh pass entirely — a cross-origin caller must not
@@ -62,21 +87,40 @@ export async function handleAuthRequestBoundary(
   // discriminates the session-triple from it.
   const paramToken = requestUrl.searchParams.get("token");
   const paramRefreshToken = requestUrl.searchParams.get("refreshToken");
-  if (
-    paramToken !== null &&
-    paramRefreshToken !== null &&
-    request.method === "GET" &&
-    request.headers.get("accept")?.includes("text/html")
-  ) {
+  if (paramToken !== null && paramRefreshToken !== null && isNavigation) {
     logVerbose(`Handling session params on navigation`, verbose, "ConvexAuthSsr");
     const redirectUrl = new URL(requestUrl);
     redirectUrl.searchParams.delete("token");
     redirectUrl.searchParams.delete("refreshToken");
     redirectUrl.searchParams.delete("sessionId");
+    redirectUrl.searchParams.delete("landingVerifier");
     const response = new Response(null, {
       status: 302,
       headers: { Location: redirectUrl.toString() },
     });
+    // Any landing redirect is a good moment to establish the verifier cookie
+    // on a browser that lacks one — rejected landings self-heal this way.
+    if (cookieVerifier === null) {
+      response.headers.append(
+        "Set-Cookie",
+        buildLandingVerifierSetCookie(generateLandingVerifier(), isLocalhost),
+      );
+    }
+    const paramVerifier = requestUrl.searchParams.get("landingVerifier");
+    if (
+      requireLandingVerifier &&
+      (paramVerifier === null || cookieVerifier === null || paramVerifier !== cookieVerifier)
+    ) {
+      // The triple did not land in the browser that initiated the flow —
+      // strip the params and let the app render signed-out rather than
+      // write an attacker-controlled session into the victim's cookies.
+      logVerbose(
+        `Rejected session params: landing verifier ${paramVerifier === null ? "absent" : "mismatch"}`,
+        verbose,
+        "ConvexAuthSsr",
+      );
+      return { kind: "redirect", response };
+    }
     appendAuthCookies(
       response.headers,
       { token: paramToken, refreshToken: paramRefreshToken, twoFactorPending: null },
@@ -96,7 +140,15 @@ export async function handleAuthRequestBoundary(
     strippedCookieHeader === undefined
       ? await getRefreshedTokens(request, options, verbose)
       : undefined;
-  return { kind: "refreshTokens", refreshTokens, strippedCookieHeader };
+  // Establish the verifier on same-origin navigations that lack one, so any
+  // browser that renders the app carries it before page JS can run a
+  // session-minting call through the proxy. Mint-if-absent only —
+  // overwriting would break a flow in flight in another tab.
+  const landingVerifier =
+    isNavigation && cookieVerifier === null && strippedCookieHeader === undefined
+      ? generateLandingVerifier()
+      : undefined;
+  return { kind: "refreshTokens", refreshTokens, strippedCookieHeader, landingVerifier };
 }
 
 /**

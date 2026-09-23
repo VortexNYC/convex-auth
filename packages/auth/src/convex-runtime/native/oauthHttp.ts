@@ -66,6 +66,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
       const newUserURL = url.searchParams.get("newUserURL") ?? undefined;
       const requestSignUp = url.searchParams.get("requestSignUp") === "true";
       const link = url.searchParams.get("link") === "true";
+      const landingVerifier = url.searchParams.get("landingVerifier") ?? undefined;
 
       if (callbackURL && !isAllowedRedirectUrl(callbackURL, requestOrigin, trustedOrigins)) {
         return buildErrorRedirect(
@@ -93,6 +94,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
         newUserURL,
         requestSignUp,
         link,
+        landingVerifier,
       });
 
       return new Response(null, {
@@ -114,6 +116,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
         newUserURL?: string;
         requestSignUp?: boolean;
         link?: boolean;
+        landingVerifier?: string;
       };
       try {
         parsed = parse(
@@ -124,6 +127,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
             newUserURL: v.optional(v.string()),
             requestSignUp: v.optional(v.boolean()),
             link: v.optional(v.boolean()),
+            landingVerifier: v.optional(v.string()),
           }),
           body,
         );
@@ -174,6 +178,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
           newUserURL: parsed.newUserURL,
           requestSignUp: parsed.requestSignUp,
           link: parsed.link,
+          landingVerifier: parsed.landingVerifier,
         });
         return new Response(JSON.stringify(result), {
           status: 200,
@@ -252,12 +257,21 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
         }
       }
 
-      const result = await handleCallback(ctx, config.component, config.oauth, {
-        provider,
-        code,
-        state,
-        linkingUserId,
-      });
+      const result = await handleCallback(
+        ctx,
+        config.component,
+        config.oauth,
+        {
+          provider,
+          code,
+          state,
+          linkingUserId,
+        },
+        // The site route cannot see the app's landing-verifier cookie — it
+        // echoes the bound verifier onto the landing URL and the app
+        // boundary enforces the match there.
+        { boundaryEnforcesVerifier: true },
+      );
       if ("error" in result) {
         return buildErrorRedirect(result.redirectUrl, result.error, result.errorDescription);
       }
@@ -275,6 +289,9 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
       redirect.searchParams.set("token", result.token);
       redirect.searchParams.set("refreshToken", result.refreshToken);
       redirect.searchParams.set("sessionId", result.sessionId);
+      if (result.landingVerifier !== undefined) {
+        redirect.searchParams.set("landingVerifier", result.landingVerifier);
+      }
 
       const headers = new Headers();
       headers.set("Location", redirect.toString());

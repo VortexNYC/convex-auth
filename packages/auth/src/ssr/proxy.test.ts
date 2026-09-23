@@ -355,6 +355,57 @@ describe("cookie substitutions", () => {
     );
   });
 
+  it("callback injects the landing-verifier cookie as args.landingVerifier", async () => {
+    actionMock.mockResolvedValue({ token: "t", refreshToken: "r", sessionId: "s" });
+    await proxyAuthActionToConvex(
+      postRequest(
+        { intent: "callback", args: { provider: "github", code: "c", state: "st" } },
+        { cookie: "__Host-__convexAuthLandingVerifier=lv-cookie" },
+      ),
+      options,
+    );
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.callback,
+      { provider: "github", code: "c", state: "st", landingVerifier: "lv-cookie" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("callback drops a body-supplied landingVerifier when no cookie is present", async () => {
+    actionMock.mockResolvedValue({ token: "t", refreshToken: "r", sessionId: "s" });
+    await proxyAuthActionToConvex(
+      postRequest({
+        intent: "callback",
+        args: { provider: "github", code: "c", state: "st", landingVerifier: "lv-forged" },
+      }),
+      options,
+    );
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.callback,
+      { provider: "github", code: "c", state: "st" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("callback's verifier cookie overwrites a body-supplied value", async () => {
+    actionMock.mockResolvedValue({ token: "t", refreshToken: "r", sessionId: "s" });
+    await proxyAuthActionToConvex(
+      postRequest(
+        {
+          intent: "callback",
+          args: { provider: "github", code: "c", state: "st", landingVerifier: "lv-forged" },
+        },
+        { cookie: "__Host-__convexAuthLandingVerifier=lv-cookie" },
+      ),
+      options,
+    );
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.callback,
+      { provider: "github", code: "c", state: "st", landingVerifier: "lv-cookie" },
+      expect.objectContaining({}),
+    );
+  });
+
   it("passes the session token as the caller's auth on action calls", async () => {
     actionMock.mockResolvedValue({ success: true });
     await proxyAuthActionToConvex(

@@ -17,6 +17,7 @@ export const TOKEN_COOKIE = "__convexAuthToken";
 export const REFRESH_TOKEN_COOKIE = "__convexAuthRefreshToken";
 export const TWO_FACTOR_PENDING_COOKIE = "__convexAuthTwoFactorPending";
 export const TRUSTED_DEVICE_COOKIE = "__convexAuthTrustedDevice";
+export const LANDING_VERIFIER_COOKIE = "__convexAuthLandingVerifier";
 
 export async function getRequestCookies() {
   // maxAge doesn't matter for request cookies since they're only relevant for
@@ -44,6 +45,12 @@ export type AuthCookieStore = {
   refreshToken: string | null;
   readonly twoFactorPending: string | null;
   readonly trustedDevice: string | null;
+  /**
+   * The landing verifier — a CSRF binding nonce, not a credential. It is
+   * non-HttpOnly (the client reads it to bind flow initiation) and is never
+   * cleared by `setValue`-based auth-cookie writes.
+   */
+  readonly landingVerifier: string | null;
   setTwoFactorPending(value: string | null, maxAgeMs?: number): void;
   setTrustedDevice(value: string | null, maxAgeMs?: number): void;
 };
@@ -61,6 +68,7 @@ function getCookieStore(
   const refreshTokenName = prefix + REFRESH_TOKEN_COOKIE;
   const twoFactorPendingName = prefix + TWO_FACTOR_PENDING_COOKIE;
   const trustedDeviceName = prefix + TRUSTED_DEVICE_COOKIE;
+  const landingVerifierName = prefix + LANDING_VERIFIER_COOKIE;
   function getValue(name: string) {
     return responseCookies.get(name)?.value ?? null;
   }
@@ -111,7 +119,30 @@ function getCookieStore(
     setTrustedDevice(value, maxAgeMs) {
       setValue(trustedDeviceName, value, maxAgeMs);
     },
+    get landingVerifier() {
+      return getValue(landingVerifierName);
+    },
   };
+}
+
+/**
+ * Write the landing verifier on a response. Non-HttpOnly — the client reads
+ * it to bind OAuth/magic-link initiation to this browser — session-scoped,
+ * and `Secure` everywhere except localhost.
+ */
+export function setLandingVerifierCookie(
+  response: NextResponse,
+  value: string,
+  requestHeaders: Headers,
+) {
+  const isLocalhost = isLocalHost(requestHeaders.get("Host") ?? "");
+  const prefix = isLocalhost ? "" : "__Host-";
+  response.cookies.set(prefix + LANDING_VERIFIER_COOKIE, value, {
+    httpOnly: false,
+    secure: !isLocalhost,
+    sameSite: "lax",
+    path: "/",
+  });
 }
 
 function getCookieOptions(isLocalhost: boolean, cookieConfig: { maxAge: number | null }) {

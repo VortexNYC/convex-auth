@@ -2,6 +2,7 @@ import { useAction, useConvex, useQuery } from "convex/react";
 import type { FunctionReference } from "convex/server";
 import type { NativeAuthUser } from "../convex-runtime/native/types.js";
 import type { ConvexAuthSessionListItem } from "./auth-client-types";
+import { getOrCreateLandingVerifier } from "./landingVerifier.js";
 import {
   createContext,
   useCallback,
@@ -119,6 +120,11 @@ export type NativeAuthSignInMagicLinkArgs = {
   newUserCallbackURL?: string;
   errorCallbackURL?: string;
   metadata?: Record<string, string>;
+  /**
+   * Browser binding nonce — set internally by the provider in cookie mode;
+   * do not pass a client-chosen value.
+   */
+  landingVerifier?: string;
 };
 
 export type NativeAuthSignInWithRedirectArgs = {
@@ -128,6 +134,11 @@ export type NativeAuthSignInWithRedirectArgs = {
   newUserURL?: string;
   requestSignUp?: boolean;
   link?: boolean;
+  /**
+   * Browser binding nonce — set internally by the provider in cookie mode;
+   * do not pass a client-chosen value.
+   */
+  landingVerifier?: string;
 };
 
 export type NativeAuthSignInWithRedirectResult = { url: string };
@@ -559,6 +570,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
           searchParams.delete("token");
           searchParams.delete("refreshToken");
           searchParams.delete("sessionId");
+          searchParams.delete("landingVerifier");
           const cleaned =
             searchParams.toString() === ""
               ? window.location.pathname
@@ -900,12 +912,16 @@ export function useAuthActions() {
       }
       setIsLoading(true);
       try {
-        return await signInMagicLinkAction(args);
+        // Bind the emailed link to this browser — the verify route echoes
+        // the verifier onto the landing URL for the boundary to compare.
+        return await signInMagicLinkAction(
+          cookieMode ? { ...args, landingVerifier: getOrCreateLandingVerifier() } : args,
+        );
       } finally {
         setIsLoading(false);
       }
     },
-    [signInMagicLinkAction],
+    [cookieMode, signInMagicLinkAction],
   );
 
   const signInWithRedirect = useCallback(
@@ -915,12 +931,17 @@ export function useAuthActions() {
       }
       setIsLoading(true);
       try {
-        return await client.action(ctx.signInWithRedirect, args);
+        // Bind the OAuth flow to this browser — the verifier rides the
+        // signed state and returns on the landing URL for the boundary.
+        return await client.action(
+          ctx.signInWithRedirect,
+          cookieMode ? { ...args, landingVerifier: getOrCreateLandingVerifier() } : args,
+        );
       } finally {
         setIsLoading(false);
       }
     },
-    [client, ctx.signInWithRedirect],
+    [client, cookieMode, ctx.signInWithRedirect],
   );
 
   const oauthCallback = useCallback(

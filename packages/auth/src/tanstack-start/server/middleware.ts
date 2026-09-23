@@ -2,7 +2,11 @@ import { createMiddleware } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import type { NativeAuthActions } from "../../react/ConvexAuthProvider.js";
 import { handleAuthRequestBoundary } from "../../ssr/boundary.js";
-import { appendAuthCookies, isLocalHostRequest } from "../../ssr/cookies.js";
+import {
+  appendAuthCookies,
+  buildLandingVerifierSetCookie,
+  isLocalHostRequest,
+} from "../../ssr/cookies.js";
 import { proxyAuthActionToConvex, shouldProxyAuthAction } from "../../ssr/proxy.js";
 import type { AuthTransport } from "../../ssr/transport.js";
 import { convexHttpTransport } from "../../ssr/transport.js";
@@ -38,6 +42,15 @@ export type ConvexAuthTanstackStartOptions = {
    * `maxAge` for the auth cookies in seconds; `null` = session cookies.
    */
   cookieConfig?: { maxAge: number | null };
+  /**
+   * Require session-triple landings (`?token=&refreshToken=`) to carry a
+   * `landingVerifier` param matching the landing-verifier cookie minted at
+   * flow initiation — binds OAuth/magic-link landings to the browser that
+   * started the flow. Defaults to `true`; set `false` only for deployments
+   * that predate verifier threading (e.g. magic links opened in a different
+   * browser than the requesting one).
+   */
+  requireLandingVerifier?: boolean;
   /**
    * Inject a custom transport (tests); defaults to `ConvexHttpClient`.
    */
@@ -86,6 +99,7 @@ export async function handleConvexAuthRequest<TNextResult extends { response: Re
     actions: { updateSession: options.actions.updateSession },
     transport,
     cookieConfig,
+    requireLandingVerifier: options.requireLandingVerifier,
     verbose,
   });
 
@@ -121,17 +135,27 @@ export async function handleConvexAuthRequest<TNextResult extends { response: Re
 
   const res = await next();
 
-  if (result.refreshTokens !== undefined) {
-    const tokens = result.refreshTokens === null ? null : result.refreshTokens;
+  if (result.refreshTokens !== undefined || result.landingVerifier !== undefined) {
     const cookieOpts = { isLocalhost: isLocalHostRequest(request), maxAge: cookieConfig.maxAge };
+    const applyCookies = (headers: Headers) => {
+      if (result.refreshTokens !== undefined) {
+        appendAuthCookies(headers, result.refreshTokens, cookieOpts);
+      }
+      if (result.landingVerifier !== undefined) {
+        headers.append(
+          "Set-Cookie",
+          buildLandingVerifierSetCookie(result.landingVerifier, cookieOpts.isLocalhost),
+        );
+      }
+    };
     try {
-      appendAuthCookies(res.response.headers, tokens, cookieOpts);
+      applyCookies(res.response.headers);
     } catch {
       // Immutable headers (redirects, proxied fetch responses): rebuild so the
       // rotated cookies still reach the browser instead of 500ing and losing
       // the session.
       const rebuilt = new Response(res.response.body, res.response);
-      appendAuthCookies(rebuilt.headers, tokens, cookieOpts);
+      applyCookies(rebuilt.headers);
       return { ...res, response: rebuilt };
     }
   }

@@ -50,6 +50,8 @@ const baseActions = {
   updateSession: ref("updateSession"),
   verifySession: ref("verifySession"),
   twoFactorVerifyTOTP: ref("twoFactorVerifyTOTP"),
+  signInMagicLink: ref("signInMagicLink"),
+  signInWithRedirect: ref("signInWithRedirect"),
 } as NativeAuthActions;
 
 const sessionResult = {
@@ -99,7 +101,9 @@ beforeEach(() => {
   actionMocks.clear();
   fetchMock.mockReset();
   mockClient.setAuth.mockClear();
+  mockClient.action.mockClear();
   window.localStorage.clear();
+  document.cookie = "__convexAuthLandingVerifier=; Max-Age=0; Path=/";
   latestActions = null;
 });
 
@@ -207,6 +211,46 @@ describe("ConvexAuthProvider cookie mode", () => {
     expect(call.body.intent).toBe("signOut");
     await waitFor(() => expect(latestActions?.token).toBeNull());
     expect(latestActions?.isAuthenticated).toBe(false);
+  });
+
+  it("attaches the landing-verifier cookie value to magic-link initiation", async () => {
+    renderProvider({ storageMode: "cookies" });
+    await waitFor(() => expect(latestActions).not.toBeNull());
+
+    await act(() => latestActions!.signInWithMagicLink({ email: "a@b.c" } as never));
+
+    const call = actionMocks.get("signInMagicLink")!.mock.calls[0][0] as Record<string, unknown>;
+    expect(call.email).toBe("a@b.c");
+    const verifier = call.landingVerifier as string;
+    expect(verifier).toBeTruthy();
+    // The verifier it sent is the cookie value the boundary will compare at
+    // landing — happy-dom's hostname is localhost, so no __Host- prefix.
+    expect(document.cookie).toContain(`__convexAuthLandingVerifier=${verifier}`);
+  });
+
+  it("reuses the existing verifier cookie instead of minting a new one", async () => {
+    document.cookie = "__convexAuthLandingVerifier=lv-existing; Path=/; SameSite=Lax";
+    renderProvider({ storageMode: "cookies" });
+    await waitFor(() => expect(latestActions).not.toBeNull());
+
+    mockClient.action.mockResolvedValue({ url: "https://provider.example/authorize" });
+    await act(() => latestActions!.signInWithRedirect({ provider: "github" } as never));
+
+    expect(mockClient.action).toHaveBeenLastCalledWith(
+      "signInWithRedirect",
+      expect.objectContaining({ provider: "github", landingVerifier: "lv-existing" }),
+    );
+  });
+
+  it("omits the verifier in token mode (native/localStorage flows)", async () => {
+    renderProvider({ storageMode: "localStorage" });
+    await waitFor(() => expect(latestActions).not.toBeNull());
+
+    mockClient.action.mockResolvedValue({ url: "https://provider.example/authorize" });
+    await act(() => latestActions!.signInWithRedirect({ provider: "github" } as never));
+
+    const args = mockClient.action.mock.calls.at(-1)![1] as Record<string, unknown>;
+    expect(args).not.toHaveProperty("landingVerifier");
   });
 
   it("fires onAuthChange on transitions, not on mount", async () => {

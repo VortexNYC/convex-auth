@@ -70,10 +70,10 @@ beforeEach(() => {
 });
 
 describe("session-triple landing", () => {
-  it("moves ?token&refreshToken&sessionId into HttpOnly cookies and strips the URL", async () => {
+  it("moves a verifier-bound triple into HttpOnly cookies and strips the URL", async () => {
     const request = getRequest(
-      "/dashboard?token=TOK&refreshToken=REF&sessionId=SESS&other=1",
-      HTML,
+      "/dashboard?token=TOK&refreshToken=REF&sessionId=SESS&landingVerifier=lv-1&other=1",
+      { ...HTML, cookie: "__Host-__convexAuthLandingVerifier=lv-1" },
     );
     const result = await handleAuthenticationInRequest(request, options);
     expect(result.kind).toBe("redirect");
@@ -83,6 +83,7 @@ describe("session-triple landing", () => {
     expect(location.searchParams.get("token")).toBeNull();
     expect(location.searchParams.get("refreshToken")).toBeNull();
     expect(location.searchParams.get("sessionId")).toBeNull();
+    expect(location.searchParams.get("landingVerifier")).toBeNull();
     // Unrelated params survive the strip
     expect(location.searchParams.get("other")).toBe("1");
     const setCookies = result.response.headers.getSetCookie();
@@ -90,6 +91,37 @@ describe("session-triple landing", () => {
     expect(
       setCookies.find((h) => h.startsWith("__Host-__convexAuthRefreshToken=REF")),
     ).toBeDefined();
+  });
+
+  it("rejects a triple whose landingVerifier is absent or mismatched", async () => {
+    for (const [path, cookie] of [
+      ["/dashboard?token=TOK&refreshToken=REF", "__Host-__convexAuthLandingVerifier=lv-1"],
+      [
+        "/dashboard?token=TOK&refreshToken=REF&landingVerifier=lv-attacker",
+        "__Host-__convexAuthLandingVerifier=lv-1",
+      ],
+      ["/dashboard?token=TOK&refreshToken=REF&landingVerifier=lv-attacker", ""],
+    ] as const) {
+      const request = getRequest(path, cookie === "" ? HTML : { ...HTML, cookie });
+      const result = await handleAuthenticationInRequest(request, options);
+      expect(result.kind).toBe("redirect");
+      if (result.kind !== "redirect") throw new Error("unreachable");
+      const setCookies = result.response.headers.getSetCookie();
+      expect(setCookies.find((h) => h.includes("__convexAuthToken="))).toBeUndefined();
+      expect(setCookies.find((h) => h.includes("__convexAuthRefreshToken="))).toBeUndefined();
+    }
+  });
+
+  it("lands a param-free triple when requireLandingVerifier is disabled", async () => {
+    const request = getRequest("/dashboard?token=TOK&refreshToken=REF", HTML);
+    const result = await handleAuthenticationInRequest(request, {
+      ...options,
+      requireLandingVerifier: false,
+    } as typeof options);
+    expect(result.kind).toBe("redirect");
+    if (result.kind !== "redirect") throw new Error("unreachable");
+    const setCookies = result.response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=TOK"))).toBeDefined();
   });
 
   it("ignores a lone ?token (password-reset links carry one)", async () => {
@@ -116,6 +148,40 @@ describe("session-triple landing", () => {
   });
 });
 
+describe("landing verifier", () => {
+  it("mints a verifier on navigations that lack the cookie", async () => {
+    const request = getRequest("/dashboard", HTML);
+    const result = await handleAuthenticationInRequest(request, options);
+    if (result.kind !== "refreshTokens") throw new Error("unreachable");
+    expect(result.landingVerifier).toEqual(expect.any(String));
+  });
+
+  it("does not re-mint when the verifier cookie is present", async () => {
+    const request = getRequest("/dashboard", {
+      ...HTML,
+      cookie: "__Host-__convexAuthLandingVerifier=lv-existing",
+    });
+    const result = await handleAuthenticationInRequest(request, options);
+    if (result.kind !== "refreshTokens") throw new Error("unreachable");
+    expect(result.landingVerifier).toBeUndefined();
+  });
+
+  it("does not mint on non-navigation or cross-origin requests", async () => {
+    const apiRequest = getRequest("/api/data", { accept: "application/json" });
+    const apiResult = await handleAuthenticationInRequest(apiRequest, options);
+    if (apiResult.kind !== "refreshTokens") throw new Error("unreachable");
+    expect(apiResult.landingVerifier).toBeUndefined();
+
+    const corsRequest = getRequest("/dashboard", {
+      ...HTML,
+      origin: "https://evil.example.com",
+    });
+    const corsResult = await handleAuthenticationInRequest(corsRequest, options);
+    if (corsResult.kind !== "refreshTokens") throw new Error("unreachable");
+    expect(corsResult.landingVerifier).toBeUndefined();
+  });
+});
+
 describe("proactive refresh", () => {
   const soon = Math.floor(Date.now() / 1000) + 30; // expires in 30s
   const later = Math.floor(Date.now() / 1000) + 3600;
@@ -123,7 +189,11 @@ describe("proactive refresh", () => {
   it("returns undefined when no cookies exist", async () => {
     const request = getRequest("/dashboard", HTML);
     const result = await handleAuthenticationInRequest(request, options);
-    expect(result).toEqual({ kind: "refreshTokens", refreshTokens: undefined });
+    expect(result).toEqual({
+      kind: "refreshTokens",
+      refreshTokens: undefined,
+      landingVerifier: expect.any(String),
+    });
     expect(fetchActionMock).not.toHaveBeenCalled();
   });
 
@@ -146,6 +216,7 @@ describe("proactive refresh", () => {
     expect(result).toEqual({
       kind: "refreshTokens",
       refreshTokens: { token: "new-token", refreshToken: "new-refresh" },
+      landingVerifier: expect.any(String),
     });
   });
 
@@ -156,7 +227,11 @@ describe("proactive refresh", () => {
     });
     const request = getRequest("/dashboard", HTML);
     const result = await handleAuthenticationInRequest(request, options);
-    expect(result).toEqual({ kind: "refreshTokens", refreshTokens: undefined });
+    expect(result).toEqual({
+      kind: "refreshTokens",
+      refreshTokens: undefined,
+      landingVerifier: expect.any(String),
+    });
     expect(fetchActionMock).not.toHaveBeenCalled();
   });
 
@@ -166,7 +241,11 @@ describe("proactive refresh", () => {
     });
     const request = getRequest("/dashboard", HTML);
     const result = await handleAuthenticationInRequest(request, options);
-    expect(result).toEqual({ kind: "refreshTokens", refreshTokens: null });
+    expect(result).toEqual({
+      kind: "refreshTokens",
+      refreshTokens: null,
+      landingVerifier: expect.any(String),
+    });
   });
 
   it("returns null when the token is undecodable", async () => {
@@ -176,7 +255,11 @@ describe("proactive refresh", () => {
     });
     const request = getRequest("/dashboard", HTML);
     const result = await handleAuthenticationInRequest(request, options);
-    expect(result).toEqual({ kind: "refreshTokens", refreshTokens: null });
+    expect(result).toEqual({
+      kind: "refreshTokens",
+      refreshTokens: null,
+      landingVerifier: expect.any(String),
+    });
   });
 
   it("returns null when the refresh action denies the rotation", async () => {
@@ -187,7 +270,11 @@ describe("proactive refresh", () => {
     fetchActionMock.mockResolvedValue({ token: null });
     const request = getRequest("/dashboard", HTML);
     const result = await handleAuthenticationInRequest(request, options);
-    expect(result).toEqual({ kind: "refreshTokens", refreshTokens: null });
+    expect(result).toEqual({
+      kind: "refreshTokens",
+      refreshTokens: null,
+      landingVerifier: expect.any(String),
+    });
   });
 
   it("returns null when the refresh action throws", async () => {
@@ -198,7 +285,11 @@ describe("proactive refresh", () => {
     fetchActionMock.mockRejectedValue(new Error("family revoked"));
     const request = getRequest("/dashboard", HTML);
     const result = await handleAuthenticationInRequest(request, options);
-    expect(result).toEqual({ kind: "refreshTokens", refreshTokens: null });
+    expect(result).toEqual({
+      kind: "refreshTokens",
+      refreshTokens: null,
+      landingVerifier: expect.any(String),
+    });
   });
 });
 

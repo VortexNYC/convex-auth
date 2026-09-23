@@ -269,6 +269,16 @@ describe("OAuth state and PKCE", () => {
     expect(payload.callbackURL).toBe("https://app.example.com/callback");
   });
 
+  it("round-trips the landing verifier inside the signed state", async () => {
+    const state = await mintOAuthState({
+      provider: "github",
+      codeVerifier: "verifier",
+      landingVerifier: "lv-abc",
+    });
+    const payload = await verifyOAuthState(state);
+    expect(payload.landingVerifier).toBe("lv-abc");
+  });
+
   it("rejects an expired or tampered state token", async () => {
     const state = await mintOAuthState({ provider: "github", codeVerifier: "verifier" });
     await expect(verifyOAuthState(`${state}x`)).rejects.toThrow();
@@ -609,6 +619,71 @@ describe("OAuth handlers", () => {
     );
     expect(result.refreshToken).toBeDefined();
     expect(result.refreshToken).not.toBe(result.token);
+  });
+
+  it("handleCallback binds the flow to the initiating browser via landingVerifier", async () => {
+    const config = createOAuthConfig();
+    const component = createMockComponent();
+    const { fetch, responses } = createMockFetch();
+    config.github.fetchImpl = fetch as unknown as typeof globalThis.fetch;
+    setupGitHubResponses(createGitHubProvider(config.github), responses);
+
+    component.identity.provisionFromIdentity.mockResolvedValue({
+      userId: "user_1",
+      identityId: "identity_1",
+      createdUser: true,
+      linkedExistingIdentity: false,
+    });
+    component.native.accounts.getAccountBySubject.mockResolvedValue(null);
+    component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_doc_1");
+
+    const { url } = await handleSignIn(config, {
+      provider: "github",
+      landingVerifier: "lv-victim",
+    });
+    const state = new URL(url).searchParams.get("state")!;
+    const ctx = createContext() as unknown as GenericActionCtx<DataModel>;
+    const boundComponent = component as unknown as NativeOAuthComponentHandle;
+
+    // A different browser's verifier → rejected before token exchange.
+    const mismatch = await handleCallback(ctx, boundComponent, config, {
+      provider: "github",
+      code: "code-123",
+      state,
+      landingVerifier: "lv-attacker",
+    });
+    expect(mismatch).toMatchObject({ error: "landing_verifier_mismatch" });
+
+    // A bound verifier with none presented → rejected (a browser that did
+    // not initiate the flow cannot complete it through the action path).
+    const absent = await handleCallback(ctx, boundComponent, config, {
+      provider: "github",
+      code: "code-123",
+      state,
+    });
+    expect(absent).toMatchObject({ error: "landing_verifier_mismatch" });
+
+    // Matching verifier → the flow completes and echoes it for the landing.
+    const ok = await handleCallback(ctx, boundComponent, config, {
+      provider: "github",
+      code: "code-123",
+      state,
+      landingVerifier: "lv-victim",
+    });
+    if ("error" in ok) throw new Error(`unexpected error: ${ok.error}`);
+    expect(ok.landingVerifier).toBe("lv-victim");
+
+    // The site callback route delegates enforcement to the app boundary —
+    // it sees no cookie, so the flag skips the check and echoes the verifier.
+    const site = await handleCallback(
+      ctx,
+      boundComponent,
+      config,
+      { provider: "github", code: "code-123", state },
+      { boundaryEnforcesVerifier: true },
+    );
+    if ("error" in site) throw new Error(`unexpected error: ${site.error}`);
+    expect(site.landingVerifier).toBe("lv-victim");
   });
 
   it("handleCallback redirects to newUserURL for new users", async () => {
@@ -1328,6 +1403,60 @@ describe("addNativeOAuthHttpRoutes", () => {
     const setCookie = callbackResponse.headers.get("Set-Cookie");
     expect(setCookie).toMatch(/convex-auth-token=/);
     expect(setCookie).toMatch(/convex-auth-refresh-token=/);
+  });
+
+  it("threads landingVerifier from sign-in through the session landing URL", async () => {
+    const config = createOAuthConfig();
+    const component = createMockComponent();
+    const { fetch, responses } = createMockFetch();
+    config.github.fetchImpl = fetch as unknown as typeof globalThis.fetch;
+    setupGitHubResponses(createGitHubProvider(config.github), responses);
+
+    component.identity.provisionFromIdentity.mockResolvedValue({
+      userId: "user_1",
+      identityId: "identity_1",
+      createdUser: true,
+      linkedExistingIdentity: false,
+    });
+    component.native.accounts.getAccountBySubject.mockResolvedValue(null);
+    component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_doc_1");
+
+    const routes: {
+      path?: string;
+      pathPrefix?: string;
+      method: string;
+      handler: (ctx: unknown, request: Request) => Promise<Response>;
+    }[] = [];
+    const http = {
+      route: (r: {
+        path?: string;
+        pathPrefix?: string;
+        method: string;
+        handler: (ctx: unknown, request: Request) => Promise<Response>;
+      }) => routes.push(r),
+    };
+    addNativeOAuthHttpRoutes(http as unknown as import("convex/server").HttpRouter, {
+      component: component as unknown as NativeOAuthComponentHandle,
+      oauth: config,
+    });
+    const signinRoute = routes.find((r) => r.pathPrefix === "/api/auth/signin/")!;
+    const callbackRoute = routes.find((r) => r.pathPrefix === "/api/auth/callback/")!;
+
+    const signinResponse = (await exec(signinRoute.handler).handler(
+      createContext(),
+      new Request("https://app.example.com/api/auth/signin/github?landingVerifier=lv-42"),
+    )) as Response;
+    const state = new URL(signinResponse.headers.get("Location")!).searchParams.get("state")!;
+    // The verifier is bound into the signed state.
+    expect((await verifyOAuthState(state)).landingVerifier).toBe("lv-42");
+
+    const callbackResponse = (await exec(callbackRoute.handler).handler(
+      createContext() as unknown as GenericActionCtx<DataModel>,
+      new Request(`https://app.example.com/api/auth/callback/github?code=code-123&state=${state}`),
+    )) as Response;
+    const landing = new URL(callbackResponse.headers.get("Location")!);
+    expect(landing.searchParams.get("landingVerifier")).toBe("lv-42");
+    expect(landing.searchParams.get("token")).toBeTruthy();
   });
 
   it("returns invalid_callback_request when the provider is missing", async () => {

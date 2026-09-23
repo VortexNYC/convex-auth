@@ -29,10 +29,10 @@ beforeEach(() => {
 });
 
 describe("session-triple landing", () => {
-  it("lands ?token=&refreshToken=&sessionId= into cookies and redirects stripped", async () => {
+  it("lands a verifier-bound triple into cookies and redirects stripped", async () => {
     const request = pageRequest(
-      {},
-      "https://app.example.com/dash?token=jwt-x&refreshToken=ref-y&sessionId=s1&other=keep",
+      { cookie: "__Host-__convexAuthLandingVerifier=lv-1" },
+      "https://app.example.com/dash?token=jwt-x&refreshToken=ref-y&sessionId=s1&landingVerifier=lv-1&other=keep",
     );
     const result = await handleAuthRequestBoundary(request, options);
     expect(result.kind).toBe("redirect");
@@ -45,6 +45,89 @@ describe("session-triple landing", () => {
     expect(
       setCookies.find((h) => h.startsWith("__Host-__convexAuthRefreshToken=ref-y")),
     ).toBeDefined();
+  });
+
+  it("rejects a triple with no landingVerifier param and writes no auth cookies", async () => {
+    const request = pageRequest(
+      { cookie: "__Host-__convexAuthLandingVerifier=lv-1" },
+      "https://app.example.com/dash?token=jwt-x&refreshToken=ref-y",
+    );
+    const result = await handleAuthRequestBoundary(request, options);
+    expect(result.kind).toBe("redirect");
+    if (result.kind !== "redirect") return;
+    const setCookies = result.response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.includes("__convexAuthToken="))).toBeUndefined();
+    expect(setCookies.find((h) => h.includes("__convexAuthRefreshToken="))).toBeUndefined();
+  });
+
+  it("rejects a triple whose landingVerifier mismatches the cookie", async () => {
+    const request = pageRequest(
+      { cookie: "__Host-__convexAuthLandingVerifier=lv-victim" },
+      "https://app.example.com/dash?token=jwt-x&refreshToken=ref-y&landingVerifier=lv-attacker",
+    );
+    const result = await handleAuthRequestBoundary(request, options);
+    if (result.kind !== "redirect") throw new Error("expected redirect");
+    const setCookies = result.response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.includes("__convexAuthToken="))).toBeUndefined();
+    // The victim's own verifier cookie is left untouched — no rotation.
+    expect(
+      setCookies.find((h) => h.startsWith("__Host-__convexAuthLandingVerifier=")),
+    ).toBeUndefined();
+  });
+
+  it("rejects a verifier-bound triple when the browser has no cookie, and mints one", async () => {
+    const request = pageRequest(
+      {},
+      "https://app.example.com/dash?token=jwt-x&refreshToken=ref-y&landingVerifier=lv-attacker",
+    );
+    const result = await handleAuthRequestBoundary(request, options);
+    if (result.kind !== "redirect") throw new Error("expected redirect");
+    const setCookies = result.response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.includes("__convexAuthToken="))).toBeUndefined();
+    const verifierCookie = setCookies.find((h) =>
+      h.startsWith("__Host-__convexAuthLandingVerifier="),
+    );
+    expect(verifierCookie).toBeDefined();
+    expect(verifierCookie).toContain("Secure");
+    expect(verifierCookie).not.toContain("HttpOnly");
+  });
+
+  it("lands a param-free triple when requireLandingVerifier is disabled", async () => {
+    const request = pageRequest({}, "https://app.example.com/dash?token=jwt-x&refreshToken=ref-y");
+    const result = await handleAuthRequestBoundary(request, {
+      ...options,
+      requireLandingVerifier: false,
+    });
+    if (result.kind !== "redirect") throw new Error("expected redirect");
+    const setCookies = result.response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=jwt-x"))).toBeDefined();
+  });
+
+  it("mints a landing verifier on navigations that lack the cookie", async () => {
+    const result = await handleAuthRequestBoundary(pageRequest(), options);
+    if (result.kind !== "refreshTokens") throw new Error("expected refreshTokens");
+    expect(result.landingVerifier).toBeDefined();
+    expect(typeof result.landingVerifier).toBe("string");
+  });
+
+  it("does not re-mint when the verifier cookie is already present", async () => {
+    const result = await handleAuthRequestBoundary(
+      pageRequest({ cookie: "__Host-__convexAuthLandingVerifier=lv-existing" }),
+      options,
+    );
+    if (result.kind !== "refreshTokens") throw new Error("expected refreshTokens");
+    expect(result.landingVerifier).toBeUndefined();
+  });
+
+  it("does not mint on non-navigation requests", async () => {
+    const result = await handleAuthRequestBoundary(
+      new Request("https://app.example.com/api/data", {
+        headers: { host: "app.example.com", accept: "application/json" },
+      }),
+      options,
+    );
+    if (result.kind !== "refreshTokens") throw new Error("expected refreshTokens");
+    expect(result.landingVerifier).toBeUndefined();
   });
 
   it("ignores a lone ?token= (password-reset link)", async () => {
@@ -175,6 +258,8 @@ describe("CORS strip", () => {
     const result = await handleAuthRequestBoundary(request, options);
     if (result.kind !== "refreshTokens") throw new Error("expected refreshTokens");
     expect(result.refreshTokens).toBeUndefined();
+    // No Set-Cookie of any kind cross-origin — including the verifier.
+    expect(result.landingVerifier).toBeUndefined();
     expect(actionMock).not.toHaveBeenCalled();
   });
 

@@ -201,6 +201,7 @@ export const nativeAuthSessionValidator = v.object({
   twoFactorCookieMaxAgeMs: v.optional(v.number()),
   trustDeviceToken: v.optional(v.string()),
   trustDeviceMaxAgeMs: v.optional(v.number()),
+  landingVerifier: v.optional(v.string()),
 });
 
 function resolveEmailConfig(args: NativeEmailAndPasswordConfig): {

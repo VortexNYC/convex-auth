@@ -53,6 +53,11 @@ type SignInMagicLinkBody = {
   newUserCallbackURL?: string;
   errorCallbackURL?: string;
   metadata?: Record<string, string>;
+  /**
+   * Landing verifier from the requesting browser's cookie. Stored on the
+   * verifier record so the verify route can echo it onto the landing URL.
+   */
+  landingVerifier?: string;
 };
 
 type VerifyMagicLinkBody = {
@@ -60,6 +65,13 @@ type VerifyMagicLinkBody = {
   callbackURL?: string;
   newUserCallbackURL?: string;
   errorCallbackURL?: string;
+  /**
+   * Landing verifier the verifying browser presented. When provided it must
+   * equal the verifier stored at request time — the site route omits it
+   * (the app cookie is invisible on the site domain) and binds via the
+   * landing URL instead.
+   */
+  landingVerifier?: string;
 };
 
 function resolveMagicLinkBaseUrl(config: NativeMagicLinkConfig): string {
@@ -107,6 +119,7 @@ export function nativeMagicLink(
       newUserCallbackURL: v.optional(v.string()),
       errorCallbackURL: v.optional(v.string()),
       metadata: v.optional(v.record(v.string(), v.string())),
+      landingVerifier: v.optional(v.string()),
     },
     returns: v.object({
       status: v.union(v.literal("queued"), v.literal("not_configured"), v.literal("failed")),
@@ -131,6 +144,7 @@ export function nativeMagicLink(
       const metadata = JSON.stringify({
         email: normalizedEmail,
         name: args.name,
+        landingVerifier: args.landingVerifier,
       });
 
       await ctx.runMutation(component.native.verifiers.createVerifier, {
@@ -168,6 +182,7 @@ export function nativeMagicLink(
       callbackURL: v.optional(v.string()),
       newUserCallbackURL: v.optional(v.string()),
       errorCallbackURL: v.optional(v.string()),
+      landingVerifier: v.optional(v.string()),
     },
     returns: nativeAuthSessionValidator,
     handler: async (ctx: GenericActionCtx<DataModel>, args: VerifyMagicLinkBody) => {
@@ -183,10 +198,16 @@ export function nativeMagicLink(
         throw new Error("INVALID_TOKEN");
       }
 
-      let metadata: { email?: string; name?: string };
+      let metadata: { email?: string; name?: string; landingVerifier?: string };
       try {
         metadata = verifier.metadata ? JSON.parse(verifier.metadata) : {};
       } catch {
+        throw new Error("INVALID_TOKEN");
+      }
+
+      // A presented verifier must equal the one bound at request time —
+      // indistinguishable from an invalid token on purpose.
+      if (args.landingVerifier !== undefined && metadata.landingVerifier !== args.landingVerifier) {
         throw new Error("INVALID_TOKEN");
       }
 
@@ -240,6 +261,7 @@ export function nativeMagicLink(
         user: toNativeAuthUser(result.user),
         userId: result.userId,
         identityId: result.identityId,
+        landingVerifier: metadata.landingVerifier,
       };
     },
   });

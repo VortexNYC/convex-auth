@@ -192,6 +192,25 @@ At the request boundary (before rendering):
    params stripped (`server/request.ts`). The `refreshToken` param's presence
    discriminates a session triple from a lone password-reset `?token=`.
 
+   **Browser binding (`landingVerifier`):** an already-minted session in a
+   URL is bearer credentials in the query string — anyone holding the link
+   can land it. To close the cross-browser login-CSRF gap (an attacker
+   completing their own OAuth/magic-link flow and feeding the victim the
+   landing URL), the flow binds the minted session to the browser that
+   started it via a non-HttpOnly cookie —
+   `__convexAuthLandingVerifier` (`__Host-` prefixed off localhost). The
+   boundary mints it on same-origin HTML navigations that lack one; the
+   client reads it and attaches it to OAuth sign-in (where it rides the
+   signed state through the provider redirect) and magic-link requests
+   (where it is stored on the verifier record). The callback/verify routes
+   echo it onto the landing URL as `?landingVerifier=`, and the boundary
+   writes auth cookies only when the param equals the cookie — absent or
+   mismatched verifiers get the params stripped and the app renders
+   signed-out. `requireLandingVerifier: false` (middleware/boundary
+   option) restores the old behavior for deployments that predate verifier
+   threading or rely on cross-browser magic-link opens; token-mode and
+   native clients never bind and are unaffected.
+
 #### Refresh races — the design load-bearing decision
 
 Our component treats a presented-but-rotated refresh token as **replay and

@@ -424,6 +424,37 @@ describe("server-side substitutions", () => {
       expect.objectContaining({}),
     );
   });
+
+  it("injects the landing-verifier cookie into callback args", async () => {
+    fetchActionMock.mockResolvedValue({ token: "t", refreshToken: "r", sessionId: "s" });
+    mocks.jar = mocks.makeJar({
+      "__Host-__convexAuthLandingVerifier": "lv-cookie",
+    });
+    const request = postRequest(
+      { intent: "callback", args: { provider: "github", code: "c", state: "st" } },
+      { cookie: "__Host-__convexAuthLandingVerifier=lv-cookie" },
+    );
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.callback,
+      { provider: "github", code: "c", state: "st", landingVerifier: "lv-cookie" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("deletes a body-supplied landingVerifier when the cookie is absent", async () => {
+    fetchActionMock.mockResolvedValue({ token: "t", refreshToken: "r", sessionId: "s" });
+    const request = postRequest({
+      intent: "callback",
+      args: { provider: "github", code: "c", state: "st", landingVerifier: "lv-forged" },
+    });
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.callback,
+      { provider: "github", code: "c", state: "st" },
+      expect.objectContaining({}),
+    );
+  });
 });
 
 describe("signOut", () => {

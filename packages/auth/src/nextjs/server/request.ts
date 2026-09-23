@@ -1,6 +1,11 @@
 import { fetchAction } from "convex/nextjs";
 import { NextRequest, NextResponse } from "next/server";
-import { getRequestCookies, getRequestCookiesInMiddleware } from "./cookies.js";
+import { generateLandingVerifier } from "../../ssr/cookies.js";
+import {
+  getRequestCookies,
+  getRequestCookiesInMiddleware,
+  setLandingVerifierCookie,
+} from "./cookies.js";
 import {
   decodeTokenClaims,
   getConvexNextjsOptions,
@@ -15,6 +20,12 @@ export type AuthRequestResult =
   | {
       kind: "refreshTokens";
       refreshTokens: { token: string; refreshToken: string } | null | undefined;
+      /**
+       * A fresh landing verifier to Set-Cookie on the response, present when
+       * a navigation arrived without one. Written non-HttpOnly so the client
+       * can read it and bind OAuth/magic-link initiation to this browser.
+       */
+      landingVerifier?: string;
     };
 
 export async function handleAuthenticationInRequest(
@@ -23,8 +34,12 @@ export async function handleAuthenticationInRequest(
 ): Promise<AuthRequestResult> {
   const verbose = options.verbose ?? false;
   const cookieConfig = options.cookieConfig ?? { maxAge: null };
+  const requireLandingVerifier = options.requireLandingVerifier !== false;
   logVerbose(`Begin handleAuthenticationInRequest`, verbose);
   const requestUrl = new URL(request.url);
+  const isNavigation =
+    request.method === "GET" && request.headers.get("accept")?.includes("text/html") === true;
+  const cookieVerifier = (await getRequestCookiesInMiddleware(request)).landingVerifier;
 
   // Do not let a cross-origin request read auth cookies.
   await validateCors(request);
@@ -37,18 +52,33 @@ export async function handleAuthenticationInRequest(
   // discriminates the session-triple from it.
   const paramToken = requestUrl.searchParams.get("token");
   const paramRefreshToken = requestUrl.searchParams.get("refreshToken");
-  if (
-    paramToken !== null &&
-    paramRefreshToken !== null &&
-    request.method === "GET" &&
-    request.headers.get("accept")?.includes("text/html")
-  ) {
+  if (paramToken !== null && paramRefreshToken !== null && isNavigation) {
     logVerbose(`Handling session params on navigation`, verbose);
     const redirectUrl = new URL(requestUrl);
     redirectUrl.searchParams.delete("token");
     redirectUrl.searchParams.delete("refreshToken");
     redirectUrl.searchParams.delete("sessionId");
+    redirectUrl.searchParams.delete("landingVerifier");
     const response = NextResponse.redirect(redirectUrl);
+    // Any landing redirect is a good moment to establish the verifier cookie
+    // on a browser that lacks one — rejected landings self-heal this way.
+    if (cookieVerifier === null) {
+      setLandingVerifierCookie(response, generateLandingVerifier(), request.headers);
+    }
+    const paramVerifier = requestUrl.searchParams.get("landingVerifier");
+    if (
+      requireLandingVerifier &&
+      (paramVerifier === null || cookieVerifier === null || paramVerifier !== cookieVerifier)
+    ) {
+      // The triple did not land in the browser that initiated the flow —
+      // strip the params and let the app render signed-out rather than
+      // write an attacker-controlled session into the victim's cookies.
+      logVerbose(
+        `Rejected session params: landing verifier ${paramVerifier === null ? "absent" : "mismatch"}`,
+        verbose,
+      );
+      return { kind: "redirect", response };
+    }
     await setAuthCookies(
       response,
       { token: paramToken, refreshToken: paramRefreshToken, twoFactorPending: null },
@@ -60,7 +90,15 @@ export async function handleAuthenticationInRequest(
 
   // Refresh the session proactively when the access token is near expiry.
   const refreshTokens = await getRefreshedTokens(options);
-  return { kind: "refreshTokens", refreshTokens };
+  // Establish the verifier on same-origin navigations that lack one, so any
+  // browser that renders the app carries it before page JS can run a
+  // session-minting call through the proxy. Mint-if-absent only —
+  // overwriting would break a flow in flight in another tab.
+  const landingVerifier =
+    isNavigation && cookieVerifier === null && !isCorsRequest(request)
+      ? generateLandingVerifier()
+      : undefined;
+  return { kind: "refreshTokens", refreshTokens, landingVerifier };
 }
 
 async function validateCors(request: NextRequest) {

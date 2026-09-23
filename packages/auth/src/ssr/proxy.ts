@@ -4,6 +4,7 @@ import {
   appendAuthCookies,
   isLocalHostRequest,
   parseAuthCookies,
+  parseLandingVerifierCookie,
   type AuthCookieValues,
 } from "./cookies.js";
 import type { AuthTransport } from "./transport.js";
@@ -137,6 +138,17 @@ export async function proxyAuthActionToConvex(
       // In cookie mode the client cannot legitimately hold this secret —
       // never trust a body-supplied value.
       delete args.trustedDeviceToken;
+    }
+  }
+  if (intent === "callback") {
+    // The OAuth callback binds the flow to the initiating browser: the action
+    // compares this arg against the verifier bound into the signed state.
+    // The cookie is the only trusted source — never forward a body value.
+    const landingVerifier = parseLandingVerifierCookie(request);
+    if (landingVerifier !== null) {
+      args.landingVerifier = landingVerifier;
+    } else {
+      delete args.landingVerifier;
     }
   }
 
