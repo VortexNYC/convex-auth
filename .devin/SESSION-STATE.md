@@ -139,3 +139,22 @@ green (includes site/changelog). CI pending on `8bab3b9`.
   (`boundary.ts` vs `request.ts`) still duplicated — deeper divergence,
   separate extraction.
 - Verify: check/typecheck clean; 1697/1697 tests pass.
+
+## Boundary twin collapse (2026-09-23, 7f706ec)
+
+- `runAuthBoundary` core in `ssr/boundary.ts` — one copy of the
+  landing/CORS/error-param/refresh decision tree; `AuthBoundaryIO` seam:
+  readCookies/readLandingVerifier/stripForwardedAuthCookies/redirect/
+  writeCookies/writeLandingVerifier/callAction/log.
+- `nextjs/server/request.ts` 158→67 lines. Two-jar split preserved:
+  refresh reads `cookies()` store, verifier reads middleware-bound
+  `request.cookies` (they are genuinely different jars in Next — tests
+  encode it).
+- `nextjs/server/utils.ts` + `cookies.ts` deduped onto ssr versions:
+  isCorsRequest, decodeTokenClaims, logVerbose ("ConvexAuthNextjs" tag),
+  AuthCookieValues, five cookie-name constants.
+- Cursor review: no issues — verified decision-tree/effect parity
+  exhaustively (incl. pre-existing 307-vs-302 redirect-code split and
+  conditional strippedCookieHeader). CI + CodeRabbit green.
+- Remaining twin debt: none in SSR surface. `ssr/` is now the single
+  source for proxy + boundary decision logic; future adapters bind io.
