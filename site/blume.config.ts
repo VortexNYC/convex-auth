@@ -27,7 +27,7 @@ export default defineConfig({
     ],
   },
   deployment: {
-    site: "https://your-deployment.convex.site",
+    site: "https://resilient-blackbird-58.convex.site",
   },
   openapi: {
     enabled: true,

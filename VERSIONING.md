@@ -71,7 +71,9 @@ The following **are** breaking:
 ## Releases
 
 - Git tags are `v<major>.<minor>.<patch>`, immutable, and created by the
-  release workflow. Tags are never moved or deleted.
+  release workflow. Tags are never moved or deleted. npm publishes carry
+  [provenance attestations](https://docs.npmjs.com/generating-provenance-statements)
+  (sigstore) so consumers can verify a release maps to this repo's CI run.
 - The GitHub Release body is the changelog text for that version — one story,
   not two. The docs changelog is generated from GitHub Releases.
 - Release notes lead with breaking changes, then added/changed/fixed, then a

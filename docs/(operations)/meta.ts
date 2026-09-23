@@ -5,5 +5,5 @@ export default defineMeta({
   order: 5,
   display: "group",
   icon: "cog",
-  pages: ["security", "production", "testing", "preflight", "troubleshooting"],
+  pages: ["security", "production", "testing", "preflight", "releasing", "troubleshooting"],
 });
