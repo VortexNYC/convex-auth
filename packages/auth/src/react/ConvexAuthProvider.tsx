@@ -148,6 +148,11 @@ export type NativeAuthOAuthCallbackArgs = {
   code: string;
   state: string;
   linkingUserId?: string;
+  /**
+   * Landing verifier bound at sign-in initiation. The provider injects this
+   * from the browser's cookie — callers should not set it directly.
+   */
+  landingVerifier?: string;
 };
 
 export type NativeAuthOAuthCallbackSuccess = {
