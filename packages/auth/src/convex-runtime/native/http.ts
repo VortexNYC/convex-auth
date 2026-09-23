@@ -12,7 +12,7 @@ import {
   type NativeEmailAndPasswordComponentHandle,
   toNativeAuthUser,
 } from "./types.js";
-import { isAllowedRedirectUrl } from "./callback.js";
+import { isAllowedRedirectUrl, redirectBaseOrigin } from "./callback.js";
 import { validateCsrfHeaders } from "./csrf.js";
 import { setCookieHeader, clearCookieHeader, readCookie } from "./cookies.js";
 
@@ -45,7 +45,7 @@ function callAction<TReturn>(ctx: unknown, action: unknown, args: unknown): Prom
  * dev app, and silently masks a missing `SITE_URL` in production.
  */
 function resolveCallbackUrl(callbackURL: string): URL {
-  const base = process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "http://localhost";
+  const base = redirectBaseOrigin();
   try {
     return new URL(callbackURL, base);
   } catch {
@@ -413,7 +413,7 @@ export function addNativeAuthHttpRoutes(
           parsed.callbackURL &&
           !isAllowedRedirectUrl(
             parsed.callbackURL,
-            new URL(request.url).origin,
+            redirectBaseOrigin(new URL(request.url).origin),
             options?.trustedOrigins ?? [],
           )
         ) {
@@ -828,18 +828,32 @@ export function addNativeAuthHttpRoutes(
           // Validate every redirect-bearing param before any of them is
           // used — including the error paths below, which would otherwise
           // 302 to an unvalidated caller-supplied origin.
-          if (!isAllowedRedirectUrl(callbackURL, requestOrigin, options?.trustedOrigins ?? [])) {
+          if (
+            !isAllowedRedirectUrl(
+              callbackURL,
+              redirectBaseOrigin(requestOrigin),
+              options?.trustedOrigins ?? [],
+            )
+          ) {
             return buildErrorResponse(400, "invalid_callback_url");
           }
           if (
             newUserCallbackURL &&
-            !isAllowedRedirectUrl(newUserCallbackURL, requestOrigin, options?.trustedOrigins ?? [])
+            !isAllowedRedirectUrl(
+              newUserCallbackURL,
+              redirectBaseOrigin(requestOrigin),
+              options?.trustedOrigins ?? [],
+            )
           ) {
             return buildErrorResponse(400, "invalid_new_user_callback_url");
           }
           if (
             errorCallbackURL &&
-            !isAllowedRedirectUrl(errorCallbackURL, requestOrigin, options?.trustedOrigins ?? [])
+            !isAllowedRedirectUrl(
+              errorCallbackURL,
+              redirectBaseOrigin(requestOrigin),
+              options?.trustedOrigins ?? [],
+            )
           ) {
             return buildErrorResponse(400, "invalid_error_callback_url");
           }
@@ -931,7 +945,13 @@ export function addNativeAuthHttpRoutes(
       if (!callbackURL) {
         return new Response("Missing callbackURL", { status: 400 });
       }
-      if (!isAllowedRedirectUrl(callbackURL, requestOrigin, options?.trustedOrigins ?? [])) {
+      if (
+        !isAllowedRedirectUrl(
+          callbackURL,
+          redirectBaseOrigin(requestOrigin),
+          options?.trustedOrigins ?? [],
+        )
+      ) {
         return new Response("Invalid callbackURL", { status: 400 });
       }
 
@@ -960,7 +980,11 @@ export function addNativeAuthHttpRoutes(
 
       if (
         callbackURL &&
-        !isAllowedRedirectUrl(callbackURL, requestOrigin, options?.trustedOrigins ?? [])
+        !isAllowedRedirectUrl(
+          callbackURL,
+          redirectBaseOrigin(requestOrigin),
+          options?.trustedOrigins ?? [],
+        )
       ) {
         return buildErrorResponse(400, "invalid_callback_url");
       }

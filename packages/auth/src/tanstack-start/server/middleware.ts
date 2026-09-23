@@ -147,6 +147,7 @@ export async function handleConvexAuthRequest<TNextResult extends { response: Re
           buildLandingVerifierSetCookie(result.landingVerifier, cookieOpts.isLocalhost),
         );
       }
+      headers.set("Cache-Control", "private, no-store");
     };
     try {
       applyCookies(res.response.headers);

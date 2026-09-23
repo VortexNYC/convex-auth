@@ -105,6 +105,18 @@ function matchesSchemePattern(target: URL, patterns: string[]): boolean {
 }
 
 /**
+ * The single base every redirect target resolves against — validation and the
+ * final `Location` header must share it. `SITE_URL` (the app origin) wins so
+ * relative callbacks land on the app; the site origin is the fallback for
+ * deployments that host the app themselves. Splitting the bases lets
+ * scheme-relative smuggles (`https:evil.example.com`) validate as same-origin
+ * under one base and resolve absolute under the other — token exfiltration.
+ */
+export function redirectBaseOrigin(requestOrigin?: string): string {
+  return process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? requestOrigin ?? "http://localhost";
+}
+
+/**
  * Whether `url` may receive a redirect that carries tokens or session state.
  * Resolution against `baseOrigin` happens before the comparison, so
  * protocol-relative (`//evil.com`), backslash, and scheme-smuggled values
@@ -119,15 +131,17 @@ export function isAllowedRedirectUrl(
   trustedOrigins: string[],
 ): boolean {
   let target: URL;
+  let base: string;
   try {
-    target = new URL(url, baseOrigin);
+    base = new URL(baseOrigin).origin;
+    target = new URL(url, base);
   } catch {
     return false;
   }
   if (target.protocol !== "http:" && target.protocol !== "https:") {
     return matchesSchemePattern(target, trustedOrigins);
   }
-  if (target.origin === baseOrigin) {
+  if (target.origin === base) {
     return true;
   }
   const allowed = new Set(normalizeTrustedOrigins(trustedOrigins));

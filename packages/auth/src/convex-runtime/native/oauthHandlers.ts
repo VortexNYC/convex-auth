@@ -20,7 +20,7 @@ import {
 import { mintToken } from "./jwt.js";
 import { generateVerificationToken, hashToken } from "./tokens.js";
 import { encryptOAuthTokens } from "./oauthCrypto.js";
-import { isAllowedRedirectUrl } from "./callback.js";
+import { isAllowedRedirectUrl, redirectBaseOrigin } from "./callback.js";
 import type { NativeOAuthComponentHandle } from "./types.js";
 
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -142,11 +142,7 @@ export async function handleSignIn(
   // exfiltration. The site routes pass their request-scoped allowlist; the
   // action path derives it from `oauth.trustedOrigins` (which `convexAuth`
   // merges with the email/OIDC/deployment origins) plus the env origins.
-  const baseOrigin =
-    options?.baseOrigin ??
-    process.env.CONVEX_SITE_URL ??
-    process.env.SITE_URL ??
-    "http://localhost";
+  const baseOrigin = options?.baseOrigin ?? redirectBaseOrigin();
   const trustedOrigins = options?.trustedOrigins ?? [
     ...(config.trustedOrigins ?? []),
     ...(process.env.SITE_URL ? [process.env.SITE_URL] : []),

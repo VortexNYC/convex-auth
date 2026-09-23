@@ -604,6 +604,40 @@ describe("OAuth handlers", () => {
     expect(new URL(trusted.url).searchParams.get("state")).toBeTruthy();
   });
 
+  it("handleSignIn validates against the same base the landing resolves against", async () => {
+    const config = createOAuthConfig();
+    // The classic split-base dev setup: app on http://localhost, API on the
+    // https site origin. `https:evil.example.com` parses as a *path* under an
+    // https base (validates same-origin) but as an absolute URL under the
+    // http base that `resolveRedirectUrl` uses — the old CONVEX_SITE_URL-first
+    // base let it through and the 302 leaked `?token=` to evil.example.com.
+    const priorSiteUrl = process.env.SITE_URL;
+    process.env.SITE_URL = "http://localhost:3000";
+    process.env.CONVEX_SITE_URL = "https://api.example.com";
+    try {
+      await expect(
+        handleSignIn(config, {
+          provider: "github",
+          callbackURL: "https:evil.example.com",
+        }),
+      ).rejects.toThrow("Untrusted OAuth redirect URL");
+
+      // Same-base relative and trusted absolute inputs still pass.
+      const trusted = await handleSignIn(config, {
+        provider: "github",
+        callbackURL: "http://localhost:3000/cb",
+        errorURL: "/error",
+      });
+      expect(new URL(trusted.url).searchParams.get("state")).toBeTruthy();
+    } finally {
+      if (priorSiteUrl === undefined) {
+        delete process.env.SITE_URL;
+      } else {
+        process.env.SITE_URL = priorSiteUrl;
+      }
+    }
+  });
+
   it("handleSignIn honors a caller-supplied allowlist (site route path)", async () => {
     const config = createOAuthConfig({ trustedOrigins: undefined });
     process.env.CONVEX_SITE_URL = "https://site.example.com";

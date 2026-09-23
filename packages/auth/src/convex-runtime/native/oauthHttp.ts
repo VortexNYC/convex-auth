@@ -3,7 +3,7 @@ import { handleCallback, handleSignIn, type NativeOAuthConfig } from "./oauthHan
 import { verifyOAuthState } from "./oauthState.js";
 import type { NativeOAuthComponentHandle } from "./types.js";
 import { verifyToken } from "./jwt.js";
-import { isAllowedRedirectUrl } from "./callback.js";
+import { isAllowedRedirectUrl, redirectBaseOrigin } from "./callback.js";
 import { setCookieHeader, readCookie } from "./cookies.js";
 import { parse } from "../helpers/index.js";
 import { v } from "convex/values";
@@ -25,7 +25,7 @@ function parseProvider(url: URL, prefix: string): string {
  * app and silently masks a missing `SITE_URL` in production.
  */
 function resolveRedirectUrl(target: string): URL {
-  const base = process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "http://localhost";
+  const base = redirectBaseOrigin();
   try {
     return new URL(target, base);
   } catch {
@@ -84,19 +84,28 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
       // strict landing check downstream.
       const landingVerifier = url.searchParams.get("landingVerifier") || undefined;
 
-      if (callbackURL && !isAllowedRedirectUrl(callbackURL, requestOrigin, trustedOrigins)) {
+      if (
+        callbackURL &&
+        !isAllowedRedirectUrl(callbackURL, redirectBaseOrigin(requestOrigin), trustedOrigins)
+      ) {
         return buildErrorRedirect(
           process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
           "invalid_callback_url",
         );
       }
-      if (errorURL && !isAllowedRedirectUrl(errorURL, requestOrigin, trustedOrigins)) {
+      if (
+        errorURL &&
+        !isAllowedRedirectUrl(errorURL, redirectBaseOrigin(requestOrigin), trustedOrigins)
+      ) {
         return buildErrorRedirect(
           process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
           "invalid_error_url",
         );
       }
-      if (newUserURL && !isAllowedRedirectUrl(newUserURL, requestOrigin, trustedOrigins)) {
+      if (
+        newUserURL &&
+        !isAllowedRedirectUrl(newUserURL, redirectBaseOrigin(requestOrigin), trustedOrigins)
+      ) {
         return buildErrorRedirect(
           process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
           "invalid_new_user_url",
@@ -164,7 +173,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
 
       if (
         parsed.callbackURL &&
-        !isAllowedRedirectUrl(parsed.callbackURL, requestOrigin, trustedOrigins)
+        !isAllowedRedirectUrl(parsed.callbackURL, redirectBaseOrigin(requestOrigin), trustedOrigins)
       ) {
         return new Response(JSON.stringify({ success: false, reason: "invalid_callback_url" }), {
           status: 400,
@@ -173,7 +182,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
       }
       if (
         parsed.errorURL &&
-        !isAllowedRedirectUrl(parsed.errorURL, requestOrigin, trustedOrigins)
+        !isAllowedRedirectUrl(parsed.errorURL, redirectBaseOrigin(requestOrigin), trustedOrigins)
       ) {
         return new Response(JSON.stringify({ success: false, reason: "invalid_error_url" }), {
           status: 400,
@@ -182,7 +191,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
       }
       if (
         parsed.newUserURL &&
-        !isAllowedRedirectUrl(parsed.newUserURL, requestOrigin, trustedOrigins)
+        !isAllowedRedirectUrl(parsed.newUserURL, redirectBaseOrigin(requestOrigin), trustedOrigins)
       ) {
         return new Response(JSON.stringify({ success: false, reason: "invalid_new_user_url" }), {
           status: 400,
