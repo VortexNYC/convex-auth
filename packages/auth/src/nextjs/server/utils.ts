@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { NextjsOptions } from "convex/nextjs";
+import { logVerbose as logVerboseShared } from "../../ssr/utils.js";
+import type { AuthCookieValues } from "../../ssr/cookies.js";
 import {
   getRequestCookiesInMiddleware,
   getResponseCookies,
@@ -16,14 +18,7 @@ export function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-export type AuthCookieValues = {
-  token?: string | null;
-  refreshToken?: string | null;
-  twoFactorPending?: string | null;
-  twoFactorPendingMaxAgeMs?: number;
-  trustedDevice?: string | null;
-  trustedDeviceMaxAgeMs?: number;
-};
+export type { AuthCookieValues } from "../../ssr/cookies.js";
 
 /**
  * Write auth cookies on a response. `null` clears every auth cookie; a partial
@@ -78,26 +73,10 @@ export async function setAuthCookiesInMiddleware(
   }
 }
 
-export function isCorsRequest(request: NextRequest) {
-  const origin = request.headers.get("Origin");
-  if (origin === null) {
-    return false;
-  }
-  try {
-    const originURL = new URL(origin);
-    return (
-      originURL.host !== request.headers.get("Host") ||
-      originURL.protocol !== new URL(request.url).protocol
-    );
-  } catch {
-    return true;
-  }
-}
+export { isCorsRequest } from "../../ssr/utils.js";
 
 export function logVerbose(message: string, verbose: boolean) {
-  if (verbose) {
-    console.debug(`[verbose] ${new Date().toISOString()} [ConvexAuthNextjs] ${message}`);
-  }
+  logVerboseShared(message, verbose, "ConvexAuthNextjs");
 }
 
 /**
@@ -113,19 +92,4 @@ export function getConvexNextjsOptions(options: { convexUrl?: string }): NextjsO
   return {};
 }
 
-export function decodeTokenClaims(token: string): { exp?: number; iat?: number } | null {
-  const parts = token.split(".");
-  if (parts.length !== 3 || !parts[1]) {
-    return null;
-  }
-  const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-  const padding = (4 - (normalized.length % 4)) % 4;
-  try {
-    return JSON.parse(atob(normalized + "=".repeat(padding))) as {
-      exp?: number;
-      iat?: number;
-    };
-  } catch {
-    return null;
-  }
-}
+export { decodeTokenClaims } from "../../ssr/utils.js";

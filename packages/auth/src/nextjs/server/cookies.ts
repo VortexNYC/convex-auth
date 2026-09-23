@@ -1,5 +1,13 @@
 import { cookies as nextCookies, headers as nextHeaders } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  isLocalHost as isLocalHostShared,
+  LANDING_VERIFIER_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  TOKEN_COOKIE,
+  TRUSTED_DEVICE_COOKIE,
+  TWO_FACTOR_PENDING_COOKIE,
+} from "../../ssr/cookies.js";
 
 /**
  * Before Next.js 15 introduced Async Request APIs
@@ -13,11 +21,13 @@ type RememberNext14<F> = F extends (...args: infer Args) => infer Return
 const cookies = nextCookies as RememberNext14<typeof nextCookies>;
 const headers = nextHeaders as RememberNext14<typeof nextHeaders>;
 
-export const TOKEN_COOKIE = "__convexAuthToken";
-export const REFRESH_TOKEN_COOKIE = "__convexAuthRefreshToken";
-export const TWO_FACTOR_PENDING_COOKIE = "__convexAuthTwoFactorPending";
-export const TRUSTED_DEVICE_COOKIE = "__convexAuthTrustedDevice";
-export const LANDING_VERIFIER_COOKIE = "__convexAuthLandingVerifier";
+export {
+  LANDING_VERIFIER_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  TOKEN_COOKIE,
+  TRUSTED_DEVICE_COOKIE,
+  TWO_FACTOR_PENDING_COOKIE,
+} from "../../ssr/cookies.js";
 
 export async function getRequestCookies() {
   return getCookieStore(await headers(), await cookies(), {
@@ -156,14 +166,4 @@ function getCookieOptions(isLocalhost: boolean, cookieConfig: { maxAge: number |
   } as const;
 }
 
-function isLocalHost(host: string) {
-  const hostname = host.startsWith("[")
-    ? host.slice(1, host.indexOf("]"))
-    : (host.split(":")[0] ?? "");
-  return (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "::1" ||
-    hostname.endsWith(".localhost")
-  );
-}
+const isLocalHost = isLocalHostShared;
