@@ -97,7 +97,7 @@ export function parseAuthCookies(request: Request): AuthCookieReadValues {
     refreshToken: jar.get(names.refreshToken) ?? null,
     twoFactorPending: jar.get(names.twoFactorPending) ?? null,
     trustedDevice: jar.get(names.trustedDevice) ?? null,
-    landingVerifier: jar.get(landingVerifierCookieName(isLocalhost)) ?? null,
+    landingVerifier: jar.get(landingVerifierCookieName(isLocalhost)) || null,
   };
 }
 
