@@ -425,6 +425,40 @@ describe("server-side substitutions", () => {
     );
   });
 
+  it("signIn injects the landing-verifier cookie and drops a forged body value", async () => {
+    fetchActionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    mocks.jar = mocks.makeJar({
+      "__Host-__convexAuthLandingVerifier": "lv-cookie",
+    });
+    const request = postRequest(
+      {
+        intent: "signIn",
+        args: { email: "a@b.c", password: "pw", landingVerifier: "lv-forged" },
+      },
+      { cookie: "__Host-__convexAuthLandingVerifier=lv-cookie" },
+    );
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.signIn,
+      { email: "a@b.c", password: "pw", landingVerifier: "lv-cookie" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("signIn deletes a body-supplied landingVerifier when the cookie is absent", async () => {
+    fetchActionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    const request = postRequest({
+      intent: "signIn",
+      args: { email: "a@b.c", password: "pw", landingVerifier: "lv-forged" },
+    });
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.signIn,
+      { email: "a@b.c", password: "pw" },
+      expect.objectContaining({}),
+    );
+  });
+
   it("injects the landing-verifier cookie into callback args", async () => {
     fetchActionMock.mockResolvedValue({ token: "t", refreshToken: "r", sessionId: "s" });
     mocks.jar = mocks.makeJar({

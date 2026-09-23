@@ -132,6 +132,14 @@ export async function proxyAuthActionToConvex(
       // HttpOnly cookie is the only trusted source for it.
       delete args.trustedDeviceToken;
     }
+    // Same posture as `callback`: the landing verifier binds the flow to
+    // this browser's cookie jar, so the cookie — never the body — is the
+    // trusted source.
+    if (requestCookies.landingVerifier !== null) {
+      args.landingVerifier = requestCookies.landingVerifier;
+    } else {
+      delete args.landingVerifier;
+    }
   }
   if (intent === "callback") {
     // The OAuth callback binds the flow to the initiating browser: the action
