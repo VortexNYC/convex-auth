@@ -29,6 +29,19 @@ export default defineConfig({
   deployment: {
     site: "https://your-deployment.convex.site",
   },
+  openapi: {
+    enabled: true,
+    sources: [
+      {
+        spec: "../openapi/auth.yaml",
+        route: "api",
+        label: "HTTP API",
+      },
+    ],
+  },
+  navigation: {
+    tabs: [{ label: "API Reference", path: "/api" }],
+  },
   theme: {
     accent: {
       light: "#000000",

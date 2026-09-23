@@ -125,6 +125,11 @@ export default http;
 | `GET /api/auth/magic-link/verify`     | Validate a magic link and issue a session. |
 | `GET /api/auth/callback/:provider`    | OAuth provider callback.                   |
 
+The full wire contract — every route, request field, response shape, and error
+reason — is maintained as an OpenAPI document and rendered at
+[API Reference](/api). The spec is the source of truth; this table is the
+overview.
+
 ## Calling actions from the client
 
 Once re-exported, the actions are available as `api.auth.*` and can be called with `useAction`:
