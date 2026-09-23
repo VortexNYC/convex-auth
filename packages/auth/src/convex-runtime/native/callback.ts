@@ -16,21 +16,58 @@ function normalizeTrustedOrigins(origins: string[]): string[] {
 }
 
 /**
- * Minimal glob match — `*` matches within a path segment (`[^/]*`), `**`
- * crosses separators (`.*`), `?` matches one non-separator char. Case
- * insensitive because URL schemes/hosts are.
+ * Minimal glob match — `*` matches within a path segment (stops at `/`),
+ * `**` crosses separators, `?` matches one non-separator char. Hand-rolled
+ * (no RegExp construction) so no escaping or ReDoS questions ever apply —
+ * CodeQL-clean by construction. Case insensitive because URL schemes/hosts
+ * are. Classic two-pointer with a backtrack point per star kind.
  */
 function globMatch(value: string, pattern: string): boolean {
-  const rx = pattern
-    .split("**")
-    .map((segment) =>
-      segment
-        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-        .replace(/\*/g, "[^/]*")
-        .replace(/\?/g, "[^/]"),
-    )
-    .join(".*");
-  return new RegExp(`^${rx}$`, "i").test(value);
+  const v0 = value.toLowerCase();
+  const p0 = pattern.toLowerCase();
+  let v = 0;
+  let p = 0;
+  let starP = -1;
+  let starV = -1;
+  let globP = -1;
+  let globV = -1;
+  while (v < v0.length) {
+    if (p0.startsWith("**", p)) {
+      globP = p;
+      globV = v;
+      p += 2;
+      continue;
+    }
+    const pc = p0[p];
+    if (pc === "*") {
+      starP = p;
+      starV = v;
+      p++;
+      continue;
+    }
+    const charMatches = pc === "?" ? v0[v] !== "/" : pc === v0[v];
+    if (p < p0.length && charMatches) {
+      v++;
+      p++;
+      continue;
+    }
+    // Backtrack: `*` can extend within the segment (never past `/`), then
+    // `**` can extend across anything.
+    if (starP !== -1 && v0[starV] !== "/" && starV < v0.length) {
+      v = ++starV;
+      p = starP + 1;
+      continue;
+    }
+    if (globP !== -1) {
+      v = ++globV;
+      p = globP + 2;
+      continue;
+    }
+    return false;
+  }
+  while (p0.startsWith("**", p)) p += 2;
+  while (p0[p] === "*") p++;
+  return p === p0.length;
 }
 
 /**
