@@ -388,7 +388,16 @@ export const rotateSession = mutation({
         }
         return "converge";
       }
-      await revokeSessionFamily(ctx, refresh.familyId ?? refresh.sessionId, refresh.userId, now);
+      // Family revocation is the theft-containment response: a rotated token
+      // replayed after the grace window proves someone kept a spent token
+      // that could have minted a derived chain. A token revoked WITHOUT
+      // rotatedAt was killed administratively (revoke-other-sessions,
+      // sign-out, admin revocation) — presenting it is not theft evidence,
+      // and nuking here would let a revoked sibling DoS the caller's own
+      // session. Reject quietly instead.
+      if (refresh.rotatedAt !== undefined) {
+        await revokeSessionFamily(ctx, refresh.familyId ?? refresh.sessionId, refresh.userId, now);
+      }
       return null;
     }
 
@@ -499,10 +508,12 @@ export const convergeSession = mutation({
       refresh.rotatedAt === undefined ||
       now - refresh.rotatedAt > ROTATION_GRACE_MS
     ) {
-      // A revoked token that was never rotated, or a rotation older than the
-      // window, is a replay signature — fail closed on the family. A still-
-      // live token presented here is caller error: no revocation, no mint.
-      if (refresh.revokedAt !== undefined) {
+      // Only a rotated predecessor replayed after the window is a theft
+      // signal — fail closed on the family. A token revoked administratively
+      // (no rotatedAt) is simply dead; nuking here would let its replay
+      // invalidate unrelated live sessions the user chose to keep. A live
+      // token presented to converge is caller error: no revocation, no mint.
+      if (refresh.rotatedAt !== undefined) {
         await revokeSessionFamily(ctx, refresh.familyId ?? refresh.sessionId, refresh.userId, now);
       }
       return null;

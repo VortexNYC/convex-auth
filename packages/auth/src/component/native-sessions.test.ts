@@ -169,6 +169,69 @@ describe("native sessions", () => {
     expect(kept?.revokedAt).toBeUndefined();
   });
 
+  it("a replayed sibling token revoked by revoke-other-sessions cannot nuke the caller's session", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    // Caller session-A and converged sibling session-B share family "fam-A";
+    // session-C is a second device in its own family.
+    for (const [sessionId, hash, familyId] of [
+      ["session-A", "hash-A", "fam-A"],
+      ["session-B", "hash-B", "fam-A"],
+      ["session-C", "hash-C", "fam-C"],
+    ] as const) {
+      await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+        sessionId,
+        familyId,
+        userId,
+        identityId: identityDocId,
+        token: `token-${sessionId}`,
+        sessionExpiresAt: now + 1_000_000,
+        refreshTokenHash: hash,
+        refreshTokenExpiresAt: now + 1_000_000,
+      });
+    }
+
+    // "Revoke other sessions": kills siblings B and C, spares caller A.
+    await t.mutation(api.native.sessions.revokeSessionsForUser, {
+      userId,
+      excludeSessionId: "session-A",
+    });
+
+    // A stale copy of B's refresh token is later presented. Previously this
+    // triggered family revocation on fam-A and killed the caller's session.
+    const replay = await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-B",
+      newSessionId: "session-evil",
+      newSessionToken: "token-evil",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-evil",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+    expect(replay).toBeNull();
+
+    const [caller, evil, auditEvents] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-A"))
+          .unique(),
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-evil"))
+          .unique(),
+        ctx.db.query("auth_audit_events").take(10),
+      ]),
+    );
+    expect(caller?.revokedAt).toBeUndefined();
+    expect(evil).toBeNull();
+    expect(auditEvents.filter((e) => e.eventType === "refresh_token_reuse")).toHaveLength(0);
+  });
+
   it("revokes sessions beyond a single 1000-row page", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
@@ -571,6 +634,8 @@ describe("native sessions", () => {
 
     // Oldest rows first: a family that has rotated past one page leaves the
     // live session and refresh token beyond the first 1,000 index rows.
+    // Rotated-out predecessors carry rotatedAt — that marker is what makes a
+    // replayed spent token a theft signal that nukes the family.
     await t.run(async (ctx) => {
       for (let i = 0; i < 1100; i++) {
         await ctx.db.insert("authRefreshTokens", {
@@ -579,7 +644,8 @@ describe("native sessions", () => {
           userId,
           familyId: "fam-1",
           expiresAt: now + 1_000_000,
-          revokedAt: now - 1,
+          revokedAt: now - 60_000,
+          rotatedAt: now - 60_000,
           createdAt: now,
           updatedAt: now,
         });
@@ -1047,7 +1113,7 @@ describe("native sessions", () => {
     });
   });
 
-  it("convergeSession revokes the family for a token revoked without rotation", async () => {
+  it("convergeSession rejects a token revoked without rotation without nuking the family", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
     const identityDocId = await insertIdentity(t, userId);
@@ -1062,7 +1128,9 @@ describe("native sessions", () => {
       refreshTokenHash: "hash-1",
       refreshTokenExpiresAt: now + 1_000_000,
     });
-    // Sign-out / manual revocation — never rotated through.
+    // Administrative revocation (revoke-other-sessions, sign-out, admin) —
+    // never rotated through. Replaying it must not nuke live family rows:
+    // the caller's excluded session would otherwise die with it.
     await t.run(async (ctx) => {
       const token = await ctx.db
         .query("authRefreshTokens")
@@ -1081,7 +1149,7 @@ describe("native sessions", () => {
     });
     expect(result).toBeNull();
 
-    const [session, refresh] = await t.run(async (ctx) =>
+    const [session, refresh, minted, auditEvents] = await t.run(async (ctx) =>
       Promise.all([
         ctx.db
           .query("authSessions")
@@ -1091,10 +1159,19 @@ describe("native sessions", () => {
           .query("authRefreshTokens")
           .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
           .unique(),
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-3"))
+          .unique(),
+        ctx.db.query("auth_audit_events").take(10),
       ]),
     );
-    expect(session?.revokedAt).toBeDefined();
+    // The token stays revoked (the test's own revocation), but the live
+    // session row survives — no family nuke, no mint, no reuse audit event.
+    expect(session?.revokedAt).toBeUndefined();
     expect(refresh?.revokedAt).toBeDefined();
+    expect(minted).toBeNull();
+    expect(auditEvents).toHaveLength(0);
   });
 
   it("rotateSession resolves identity from the session JWT for non-password providers", async () => {
