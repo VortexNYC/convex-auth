@@ -22,7 +22,7 @@ overrides:
   uuid: ^14.0.0
   vitest: ^4.1.11
 
-pnpmfileChecksum: sha256-m7aIPRsgXt5XSK820mFzmNEMXg5mHhnRD40FUvGF5eA=
+pnpmfileChecksum: sha256-E93VggVuqXy1xltXL14C2QwQjT0A9r8hsH/1dhpggSE=
 
 patchedDependencies:
   uniwind:
