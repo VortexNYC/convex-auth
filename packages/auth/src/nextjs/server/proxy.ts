@@ -124,8 +124,14 @@ export async function proxyAuthActionToConvex(
     }
     args.token = pending;
   }
-  if (intent === "signIn" && requestCookies.trustedDevice !== null) {
-    args.trustedDeviceToken = requestCookies.trustedDevice;
+  if (intent === "signIn") {
+    if (requestCookies.trustedDevice !== null) {
+      args.trustedDeviceToken = requestCookies.trustedDevice;
+    } else {
+      // Never let a client-supplied trustedDeviceToken reach the action; the
+      // HttpOnly cookie is the only trusted source for it.
+      delete args.trustedDeviceToken;
+    }
   }
 
   logVerbose(`Fetching action for intent ${intent}`, verbose);

@@ -341,6 +341,15 @@ How the adapter authenticates Convex calls on each side:
 | Post-auth revalidation    | `router.refresh()` / cache tags                   | `router.invalidate()`                                                 |
 | Cache discipline          | `cookies()` opts out of static caching            | `Cache-Control: private, no-store` headers on session routes          |
 
+TanStack Start caveat: the rotation-override `WeakMap` and CORS-strip
+`WeakSet` are keyed on the middleware's `Request` object identity — the
+helpers assume `getRequest()` (and anything the session helpers see)
+resolves to the same object for the request's lifetime. If TanStack ever
+clones the request upstream, rotation overrides fail closed (a revoked
+cookie reads as signed-out) and the CORS strip falls back to the
+physical cookie-header rewrite, which the middleware attempts for exactly
+this reason.
+
 ## Test plan — before any adapter ships
 
 Component-level (convex-test, no framework) — **blocking**; the rotation

@@ -64,6 +64,9 @@ export async function proxyAuthActionToConvex(
   options: ConvexAuthProxyOptions,
 ): Promise<Response> {
   const cookieConfig = options?.cookieConfig ?? { maxAge: null };
+  if (cookieConfig.maxAge !== null && cookieConfig.maxAge <= 0) {
+    throw new Error("cookieConfig.maxAge must be a positive number of seconds, or null");
+  }
   const verbose = options?.verbose ?? false;
   const isLocalhost = isLocalHostRequest(request);
   const cookieOpts = { isLocalhost, maxAge: cookieConfig.maxAge };

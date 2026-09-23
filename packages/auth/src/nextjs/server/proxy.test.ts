@@ -389,6 +389,20 @@ describe("server-side substitutions", () => {
       expect.objectContaining({}),
     );
   });
+
+  it("deletes a body-supplied trustedDeviceToken when the cookie is absent", async () => {
+    fetchActionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    const request = postRequest({
+      intent: "signIn",
+      args: { email: "a@b.c", password: "pw", trustedDeviceToken: "forged" },
+    });
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.signIn,
+      { email: "a@b.c", password: "pw" },
+      expect.objectContaining({}),
+    );
+  });
 });
 
 describe("signOut", () => {

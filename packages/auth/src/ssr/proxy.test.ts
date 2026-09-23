@@ -402,6 +402,24 @@ describe("localhost cookie naming", () => {
   });
 });
 
+describe("cookieConfig", () => {
+  it("rejects a non-positive maxAge", async () => {
+    await expect(
+      proxyAuthActionToConvex(postRequest({ intent: "signIn", args: {} }), {
+        ...options,
+        cookieConfig: { maxAge: 0 },
+      }),
+    ).rejects.toThrow("cookieConfig.maxAge");
+    await expect(
+      proxyAuthActionToConvex(postRequest({ intent: "signIn", args: {} }), {
+        ...options,
+        cookieConfig: { maxAge: -60 },
+      }),
+    ).rejects.toThrow("cookieConfig.maxAge");
+    expect(actionMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("shouldProxyAuthAction", () => {
   const req = (path: string) => new Request(`https://app.example.com${path}`);
   it("matches the api route with and without trailing slash", () => {

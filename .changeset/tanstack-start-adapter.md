@@ -23,5 +23,6 @@ intent-based `/api/auth` proxy, and revocation-aware verified sessions.
 
 Shared internals were extracted into a framework-neutral `src/ssr/` core
 (fetch-shaped `Request`→`Response` pipeline, cookie schema, boundary
-refresh) that the Next.js adapter also builds on. Includes a runnable
+refresh) that future adapters build on; the Next.js adapter keeps its own
+pipeline for now and is migrated separately. Includes a runnable
 `examples/tanstack-start` demo.
