@@ -1,0 +1,43 @@
+name: changeset-gate
+# No `paths:` filter: gate is a REQUIRED status check, and a path-filtered required
+# check never reports on PRs outside the filter — which blocks their merge forever.
+# The job itself no-ops (passes) when no packages/** files changed.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: changeset-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+# A PR that changes any package must carry a changeset so every merge
+# contributes release notes — the GitHub Releases feed doubles as the docs
+# changelog — OR the 'no-release' label.
+jobs:
+  gate:
+    # Only the no-release label changes this gate's decision.
+    if: ${{ (github.event.action != 'labeled' && github.event.action != 'unlabeled') || github.event.label.name == 'no-release' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Detect package changes
+        id: pkg
+        run: |
+          git fetch origin "$BASE_REF" --depth=1
+          if git diff --name-only "origin/$BASE_REF"...HEAD | grep -q "^packages/"; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          BASE_REF: ${{ github.base_ref }}
+      - name: Require a changeset (or no-release label)
+        if: ${{ steps.pkg.outputs.changed == 'true' && !contains(github.event.pull_request.labels.*.name, 'no-release') }}
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: scripts/changeset-gate.sh

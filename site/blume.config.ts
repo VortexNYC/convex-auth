@@ -16,7 +16,15 @@ export default defineConfig({
   description: "Vortex-native, full-stack authentication for Convex.",
   logo: "/logo.svg",
   content: {
-    root: "../docs",
+    sources: [
+      { type: "filesystem", root: "../docs" },
+      {
+        type: "github-releases",
+        prefix: "changelog",
+        owner: "VortexNYC",
+        repo: "convex-auth",
+      },
+    ],
   },
   deployment: {
     site: "https://your-deployment.convex.site",
