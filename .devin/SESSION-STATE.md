@@ -33,7 +33,7 @@ branch `feat/tanstack-start-adapter`, head `796e3e4`, all pushed.
     and `nextjs/server/proxy.ts`; token-mode `oauthCallback` attaches
     the cookie.
   - F12 session-bearing responses emit `Cache-Control: private,
-    no-store` (proxy JSON + landing redirects).
+no-store` (proxy JSON + landing redirects).
 - **CodeQL**: 16 `incomplete-hostname-regexp` alerts → `globMatch` is now
   a hand-rolled two-pointer matcher (`796e3e4`) — no RegExp construction,
   no escaping surface. Alerts should clear on re-analysis.
