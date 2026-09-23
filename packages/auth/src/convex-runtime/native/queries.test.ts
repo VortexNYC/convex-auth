@@ -618,4 +618,63 @@ describe("addNativeAuthHttpRoutes", () => {
     );
     expect(response.status).toBe(403);
   });
+
+  it("blocks cross-site POSTs to update-session (session fixation)", async () => {
+    const component = createMockComponent();
+    const routes: {
+      path?: string;
+      pathPrefix?: string;
+      method: string;
+      handler: (ctx: unknown, request: Request) => Promise<Response>;
+    }[] = [];
+    const http: HttpRouter = {
+      route: (r) => {
+        routes.push(r as any);
+        return http;
+      },
+    } as unknown as HttpRouter;
+
+    addNativeAuthHttpRoutes(
+      http,
+      component,
+      {
+        updateSession: vi.fn(() => ({
+          token: "token",
+          refreshToken: "rotated",
+        })),
+      } as unknown as NativeEmailAndPasswordFunctionReferences,
+      { trustedOrigins: ["https://app.example.com"] },
+    );
+    const updateSessionRoute = routes.find(
+      (r) => r.path === "/api/auth/update-session" && r.method === "POST",
+    );
+    expect(updateSessionRoute).toBeDefined();
+
+    // update-session authenticates on a body-supplied refreshToken and writes
+    // session cookies — without CSRF validation a cross-site POST could fixate
+    // the victim's session cookies (login CSRF).
+    const hostile = await exec(updateSessionRoute!.handler).handler(
+      createContext(),
+      new Request("https://api.example.com/api/auth/update-session", {
+        method: "POST",
+        headers: {
+          "sec-fetch-site": "cross-site",
+          origin: "https://evil.example.com",
+        },
+        body: JSON.stringify({ refreshToken: "attacker-refresh" }),
+      }),
+    );
+    expect(hostile.status).toBe(403);
+
+    // Non-browser / same-origin clients (no fetch metadata, no cookies) still
+    // reach auth — token-mode refreshes and SSR proxy calls depend on it.
+    const allowed = await exec(updateSessionRoute!.handler).handler(
+      createContext(),
+      new Request("https://api.example.com/api/auth/update-session", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken: "attacker-refresh" }),
+      }),
+    );
+    expect(allowed.status).not.toBe(403);
+  });
 });

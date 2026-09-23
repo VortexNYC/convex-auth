@@ -1003,6 +1003,13 @@ export function addNativeAuthHttpRoutes(
     path: "/api/auth/update-session",
     method: "POST",
     handler: httpActionGeneric(async (ctx, request) => {
+      // Writes session cookies — the CSRF check blocks cross-site posts that
+      // would otherwise let an attacker fixate a victim's browser session.
+      const csrf = checkCsrf(request, options);
+      if (csrf) {
+        return csrf;
+      }
+
       const body = await request.json().catch(() => undefined);
 
       let parsed: { refreshToken: string };

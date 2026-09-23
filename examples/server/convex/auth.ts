@@ -24,6 +24,15 @@ export const auth = convexAuth({
   emailAndPassword: {
     enabled: true,
     checkBreach: true,
+    // This server forwards caller-supplied `callbackURL`s into the OAuth
+    // action — the redirect allowlist must cover the dev origins a demo
+    // client may land on.
+    trustedOrigins: [
+      siteUrl,
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://localhost:5174",
+    ],
     email: {
       from: process.env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
       appOrigin: siteUrl,
