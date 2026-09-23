@@ -1,7 +1,7 @@
 # Session state — 2026-09-23 (ruthless SSR/auth hardening sweep, PR #354)
 
 Repo: `~/Projects/convex-auth` · remote `github.com/VortexNYC/convex-auth` ·
-branch `feat/tanstack-start-adapter`, head `796e3e4`, all pushed.
+branch `feat/tanstack-start-adapter`, head `3600b5c`, all pushed.
 
 ## Where things stand
 
@@ -36,7 +36,10 @@ branch `feat/tanstack-start-adapter`, head `796e3e4`, all pushed.
 no-store` (proxy JSON + landing redirects).
 - **CodeQL**: 16 `incomplete-hostname-regexp` alerts → `globMatch` is now
   a hand-rolled two-pointer matcher (`796e3e4`) — no RegExp construction,
-  no escaping surface. Alerts should clear on re-analysis.
+  no escaping surface. **Cleared**: CodeQL passes on `3600b5c`.
+- **CI typecheck catch**: `landingVerifier` missing from React-side
+  `NativeAuthOAuthCallbackArgs` (the token-mode `oauthCallback` attach
+  was added after the last local typecheck) → fixed in `3600b5c`.
 - **Docs**: oauth.md, magic-links.mdx, ssr-contract.md, server-api.mdx
   all corrected to match implementation (no more `updateSession({token})`,
   verifier + trustedOrigins + cache contract documented).
@@ -53,11 +56,13 @@ no-store` (proxy JSON + landing redirects).
 ## Verification
 
 1,694 tests · `pnpm run check` clean · typecheck clean (10 workspaces) ·
-`pnpm run build` green. CI on `796e3e4` running.
+`pnpm run build` green. **CI fully green on `3600b5c`** — checks 20.x +
+22.x, CodeQL, SAST, leaks, secretlint, prc, deps-and-secrets all pass.
 
 ## Open gates / next
 
-1. CodeRabbit incremental + CI green on `796e3e4`.
-2. PR #354 merge decision once both gates pass.
+1. CodeRabbit incremental review on `3600b5c` — still queued/in progress
+   behind the org rate limit (~1h). All prior findings resolved.
+2. PR #354 merge decision once CodeRabbit completes.
 3. Deferred feature issues unchanged (#254/#216/#214/#213/#206/#204/#203,
    docs #218). Next.js remains last per the layering plan.
