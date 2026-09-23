@@ -36,8 +36,6 @@ export type AuthCookieReadValues = {
  * cookies over `http://` — matching the Next.js adapter's behavior.
  */
 export function isLocalHost(host: string) {
-  // IPv6 hosts arrive bracketed (`[::1]:3000`); strip brackets before the
-  // port split so the hostname survives.
   const hostname = host.startsWith("[")
     ? host.slice(1, host.indexOf("]"))
     : (host.split(":")[0] ?? "");
@@ -63,30 +61,15 @@ export function authCookieNames(isLocalhost: boolean) {
   };
 }
 
-/**
- * The landing verifier is deliberately absent from `authCookieNames`: it is
- * a CSRF binding nonce, not a credential — it must survive the cross-origin
- * cookie strip, is never cleared on sign-out, and carries no session
- * authority on its own.
- */
 export function landingVerifierCookieName(isLocalhost: boolean) {
   return (isLocalhost ? "" : "__Host-") + LANDING_VERIFIER_COOKIE;
 }
 
-/**
- * Read the landing verifier off an incoming request's `Cookie` header.
- */
 export function parseLandingVerifierCookie(request: Request): string | null {
   const name = landingVerifierCookieName(isLocalHostRequest(request));
-  // Empty reads as absent — an empty cookie must never satisfy the strict
-  // landing check against an empty `landingVerifier` param.
   return parseCookieHeader(request.headers.get("cookie")).get(name) || null;
 }
 
-/**
- * Serialize the landing-verifier write. Non-HttpOnly — the client reads it
- * to bind flow-initiation calls to this browser — and session-scoped.
- */
 export function buildLandingVerifierSetCookie(value: string, isLocalhost: boolean): string {
   const parts = [`${landingVerifierCookieName(isLocalhost)}=${value}`, "Path=/", "SameSite=Lax"];
   if (!isLocalhost) {
@@ -95,10 +78,6 @@ export function buildLandingVerifierSetCookie(value: string, isLocalhost: boolea
   return parts.join("; ");
 }
 
-/**
- * Mint a fresh landing verifier. UUID — available in every runtime the
- * adapters run in — gives 122 bits of unguessable entropy.
- */
 export function generateLandingVerifier(): string {
   return globalThis.crypto.randomUUID();
 }

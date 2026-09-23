@@ -287,7 +287,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -322,7 +322,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -356,7 +356,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -389,7 +389,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -425,7 +425,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -465,7 +465,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -509,7 +509,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -528,11 +528,6 @@ describe("addNativeAuthHttpRoutes", () => {
     const signInRoute = routes.find((r) => r.path === "/api/auth/sign-in" && r.method === "POST");
     expect(signInRoute).toBeDefined();
 
-    // A same-site sibling (subdomain) is still cross-origin to us — our
-    // SameSite=Lax cookies flow on the request, so the Origin must validate
-    // exactly like a cross-site POST. `same-site` was previously trusted
-    // unconditionally, letting any sibling mint sessions into the victim's
-    // cookies (login CSRF).
     const hostile = await exec(signInRoute!.handler).handler(
       createContext(),
       new Request("https://api.example.com/api/auth/sign-in", {
@@ -547,7 +542,6 @@ describe("addNativeAuthHttpRoutes", () => {
     );
     expect(hostile.status).toBe(403);
 
-    // Trusted sibling origins still pass.
     const trusted = await exec(signInRoute!.handler).handler(
       createContext(),
       new Request("https://api.example.com/api/auth/sign-in", {
@@ -561,8 +555,6 @@ describe("addNativeAuthHttpRoutes", () => {
     );
     expect(trusted.status).toBe(200);
 
-    // Browsers always send Origin on cross-origin POSTs — a same-site POST
-    // with no origin signal at all is a forged-metadata client, not a page.
     const noOrigin = await exec(signInRoute!.handler).handler(
       createContext(),
       new Request("https://api.example.com/api/auth/sign-in", {
@@ -584,7 +576,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -602,9 +594,6 @@ describe("addNativeAuthHttpRoutes", () => {
     );
     const signInRoute = routes.find((r) => r.path === "/api/auth/sign-in" && r.method === "POST");
 
-    // No browser can produce `same-origin` + a foreign Origin — a client
-    // sending contradictory headers fails closed rather than trusting the
-    // weaker signal.
     const response = await exec(signInRoute!.handler).handler(
       createContext(),
       new Request("https://api.example.com/api/auth/sign-in", {
@@ -629,7 +618,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -650,9 +639,6 @@ describe("addNativeAuthHttpRoutes", () => {
     );
     expect(updateSessionRoute).toBeDefined();
 
-    // update-session authenticates on a body-supplied refreshToken and writes
-    // session cookies — without CSRF validation a cross-site POST could fixate
-    // the victim's session cookies (login CSRF).
     const hostile = await exec(updateSessionRoute!.handler).handler(
       createContext(),
       new Request("https://api.example.com/api/auth/update-session", {
@@ -666,8 +652,6 @@ describe("addNativeAuthHttpRoutes", () => {
     );
     expect(hostile.status).toBe(403);
 
-    // Non-browser / same-origin clients (no fetch metadata, no cookies) still
-    // reach auth — token-mode refreshes and SSR proxy calls depend on it.
     const allowed = await exec(updateSessionRoute!.handler).handler(
       createContext(),
       new Request("https://api.example.com/api/auth/update-session", {

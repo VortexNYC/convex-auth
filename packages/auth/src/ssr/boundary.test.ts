@@ -58,6 +58,7 @@ describe("session-triple landing", () => {
     const setCookies = result.response.headers.getSetCookie();
     expect(setCookies.find((h) => h.includes("__convexAuthToken="))).toBeUndefined();
     expect(setCookies.find((h) => h.includes("__convexAuthRefreshToken="))).toBeUndefined();
+    expect(result.response.headers.get("Location")).toContain("error=landing_verifier_mismatch");
   });
 
   it("rejects a triple whose landingVerifier mismatches the cookie", async () => {
@@ -67,9 +68,9 @@ describe("session-triple landing", () => {
     );
     const result = await handleAuthRequestBoundary(request, options);
     if (result.kind !== "redirect") throw new Error("expected redirect");
+    expect(result.response.headers.get("Location")).toContain("error=landing_verifier_mismatch");
     const setCookies = result.response.headers.getSetCookie();
     expect(setCookies.find((h) => h.includes("__convexAuthToken="))).toBeUndefined();
-    // The victim's own verifier cookie is left untouched — no rotation.
     expect(
       setCookies.find((h) => h.startsWith("__Host-__convexAuthLandingVerifier=")),
     ).toBeUndefined();
@@ -82,6 +83,7 @@ describe("session-triple landing", () => {
     );
     const result = await handleAuthRequestBoundary(request, options);
     if (result.kind !== "redirect") throw new Error("expected redirect");
+    expect(result.response.headers.get("Location")).toContain("error=landing_verifier_mismatch");
     const setCookies = result.response.headers.getSetCookie();
     expect(setCookies.find((h) => h.includes("__convexAuthToken="))).toBeUndefined();
     const verifierCookie = setCookies.find((h) =>
@@ -93,14 +95,13 @@ describe("session-triple landing", () => {
   });
 
   it("rejects an empty landingVerifier param even against an empty cookie value", async () => {
-    // `?landingVerifier=` parses to "" and an empty-valued cookie reads "" —
-    // both normalize to absent so empty==empty can never satisfy the check.
     const request = pageRequest(
       { cookie: "__Host-__convexAuthLandingVerifier=" },
       "https://app.example.com/dash?token=jwt-x&refreshToken=ref-y&landingVerifier=",
     );
     const result = await handleAuthRequestBoundary(request, options);
     if (result.kind !== "redirect") throw new Error("expected redirect");
+    expect(result.response.headers.get("Location")).toContain("error=landing_verifier_mismatch");
     const setCookies = result.response.headers.getSetCookie();
     expect(setCookies.find((h) => h.includes("__convexAuthToken="))).toBeUndefined();
   });
@@ -117,10 +118,6 @@ describe("session-triple landing", () => {
   });
 
   it("never lands a triple on a cross-origin request, even in compat mode", async () => {
-    // A credentialed cross-origin fetch can carry `accept: text/html` and the
-    // session triple — CORS-failed responses still reach the browser's cookie
-    // store, so writing auth cookies here is a login-CSRF write. Compat mode
-    // relaxes the verifier check, never the same-origin requirement.
     const request = pageRequest(
       { origin: "https://evil.example.com" },
       "https://app.example.com/dash?token=jwt-x&refreshToken=ref-y&landingVerifier=lv-1",
@@ -132,11 +129,10 @@ describe("session-triple landing", () => {
     if (result.kind !== "redirect") throw new Error("expected redirect");
     const location = result.response.headers.get("Location") ?? "";
     expect(location).not.toContain("token=");
+    expect(location).toContain("error=cross_origin");
     const setCookies = result.response.headers.getSetCookie();
     expect(setCookies.find((h) => h.includes("__convexAuthToken="))).toBeUndefined();
     expect(setCookies.find((h) => h.includes("__convexAuthRefreshToken="))).toBeUndefined();
-    // No verifier mint on a cross-origin response either — Set-Cookie is
-    // reserved for same-origin traffic.
     expect(setCookies.find((h) => h.includes("__convexAuthLandingVerifier="))).toBeUndefined();
   });
 
@@ -287,7 +283,7 @@ describe("CORS strip", () => {
 
   it("does not refresh or call actions for cross-origin requests", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const token = jwt(now + 30, now - 3600); // near-expiry — would refresh if allowed
+    const token = jwt(now + 30, now - 3600);
     const request = pageRequest({
       origin: "https://evil.example.com",
       cookie: `__Host-__convexAuthToken=${token}; __Host-__convexAuthRefreshToken=ref`,
@@ -295,7 +291,6 @@ describe("CORS strip", () => {
     const result = await handleAuthRequestBoundary(request, options);
     if (result.kind !== "refreshTokens") throw new Error("expected refreshTokens");
     expect(result.refreshTokens).toBeUndefined();
-    // No Set-Cookie of any kind cross-origin — including the verifier.
     expect(result.landingVerifier).toBeUndefined();
     expect(actionMock).not.toHaveBeenCalled();
   });

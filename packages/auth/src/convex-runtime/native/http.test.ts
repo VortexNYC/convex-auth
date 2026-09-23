@@ -19,8 +19,6 @@ beforeAll(async () => {
 
 type RouteHandler = (ctx: unknown, request: Request) => Promise<Response>;
 
-// Captures every registered route so handlers can be invoked with a real
-// Request — the same code path the HTTP transport exercises, minus TCP.
 function captureRoutes(
   component: Record<string, unknown>,
   actions?: Record<string, unknown>,
@@ -95,8 +93,6 @@ describe("HTTP transport: /api/auth/convex/token", () => {
 
   it("rejects a revoked session even when the JWT is valid and unexpired", async () => {
     const token = await sessionJwt();
-    // Structurally valid, unexpired JWT — but the session row is revoked.
-    // The HTTP surface must stay revocation-aware, not just JWT-aware.
     const ctx = makeCtx({
       [SESSION_REF]: liveSession(token, { revokedAt: Date.now() }),
       [USER_REF]: user,
@@ -128,7 +124,6 @@ describe("HTTP transport: /api/auth/convex/token", () => {
     const payload = await verifyToken(body.token);
     expect(payload.sub).toBe("user_1");
     expect(payload.sessionId).toBe("session_1");
-    // The minted token carries the session's identity through the transport.
     expect(payload.identityId).toBe("identity_1");
   });
 });
@@ -192,8 +187,6 @@ describe("HTTP transport: /api/auth/sign-in session mint", () => {
   });
 
   it("writes the 2FA pending token to its cookie when sign-in returns a challenge", async () => {
-    // The pending token must survive as a cookie — this is the transport the
-    // SSR proxy relies on to substitute the challenge server-side.
     const session = {
       token: null,
       refreshToken: null,
@@ -245,8 +238,6 @@ describe("HTTP transport: /api/auth/magic-link/verify", () => {
     const landing = new URL(res.headers.get("Location")!);
     expect(landing.searchParams.get("landingVerifier")).toBe("lv-bound");
     expect(landing.searchParams.get("token")).toBeTruthy();
-    // The verify action is called without a verifier — the site route cannot
-    // see the app cookie, so the boundary enforces it downstream.
     expect(verifyMagicLink.mock.calls[0][1]).not.toHaveProperty("landingVerifier");
   });
 
@@ -278,8 +269,6 @@ describe("HTTP transport: /api/auth/magic-link/verify", () => {
     const routes = captureRoutes(makeComponent(), { verifyMagicLink });
     const handler = routes.get("GET /api/auth/magic-link/verify")!;
 
-    // An error-path redirect target is attacker-controllable too — it must
-    // pass the same allowlist as the success target.
     const badError = await handler(
       makeCtx({}),
       new Request(
@@ -305,8 +294,6 @@ describe("HTTP transport: /api/auth/magic-link/verify", () => {
     const routes = captureRoutes(makeComponent(), { verifyMagicLink });
     const handler = routes.get("GET /api/auth/magic-link/verify")!;
 
-    // `//evil.example.com` is not `startsWith("http")` yet resolves to an
-    // attacker origin — the allowlist must compare resolved origins.
     const res = await handler(
       makeCtx({}),
       new Request(

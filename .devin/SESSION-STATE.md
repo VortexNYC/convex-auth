@@ -89,3 +89,26 @@ green (includes site/changelog). CI pending on `8bab3b9`.
 4. Optional: schedule the vendored `blume-update-docs` audit (Devin
    scheduled session) for recurring docs freshness.
 5. PR #354 merge decision once reviews settle.
+
+## Review-sweep pass (2026-09-23, post-012e872)
+
+- `.coderabbit.yaml` path rule sweep: removed ~500 standalone `//`
+  comments and trailing comments from branch-touched `packages/**` files
+  ("No comments unless asked"); restored doc-example lines and the
+  Next.js #56632 workaround reference eaten by the sweep.
+- `as any` → typed access in `magicLink.test.ts` (Mockify handle) and
+  `queries.test.ts` (`r as (typeof routes)[number]`).
+- Rejected landings are no longer silent: boundary, Next.js request
+  handler, and token-mode provider write `?error=landing_verifier_mismatch`
+  (or `?error=cross_origin`) onto the stripped redirect/cleanup URL.
+  Documented in `ssr-contract.md`; tests assert the param.
+- #356 closed: `revokeSessionsForUser` gains `excludeFamilyId`
+  (`familyId ?? sessionId` semantics); `revokeOtherSessions` passes the
+  caller's family. Regression test added; generated `component.ts`
+  surfaces updated.
+- #333: upstream filed at get-convex/convex-backend#567
+  (`stringifyValueForError` crashes on function-valued args).
+- #337: stays until ~2026-10-18 (30d post-2.4.1 refresh TTL).
+- #334: staged for v3 major with migration-note plan.
+- TanStack findings confirmed already-fixed (immutable-header rebuild,
+  typed-guard null throw).

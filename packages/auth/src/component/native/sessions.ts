@@ -7,16 +7,9 @@ import type { Doc, Id } from "../_generated/dataModel.js";
 
 const MAX_SESSIONS_PER_USER = 1000;
 
-// Parallel requests can present the same refresh token (e.g. two SSR handlers
-// holding the same cookie). Within this window a just-rotated token converges
-// on a new sibling pair instead of being treated as replay. Bounded by
-// MAX_GRACE_REDEMPTIONS per predecessor and MAX_FAMILY_LIVE_SESSIONS so a
-// stolen predecessor can only ever yield a small number of live sessions.
 const ROTATION_GRACE_MS = 15_000;
 const MAX_GRACE_REDEMPTIONS = 8;
 const MAX_FAMILY_LIVE_SESSIONS = 10;
-// Families can accumulate far more than one page of rotated-out rows, so the
-// liveness scan is bounded well above the 1,000-row page size.
 const MAX_FAMILY_SCAN_ROWS = 2000;
 
 function identityIdFromSessionToken(token: string): Id<"auth_identities"> | undefined {
@@ -185,10 +178,15 @@ export const revokeSessionsForUser = mutation({
   args: {
     userId: v.id("users"),
     excludeSessionId: v.optional(v.string()),
+    excludeFamilyId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
     const sessions = await getSessionsByUser(ctx, args.userId);
+
+    const isExcluded = (sessionId: string, familyId?: string) =>
+      sessionId === args.excludeSessionId ||
+      (args.excludeFamilyId !== undefined && (familyId ?? sessionId) === args.excludeFamilyId);
 
     const active = sessions.filter(
       (session) => session.revokedAt === undefined && session.expiresAt > now,
@@ -196,23 +194,17 @@ export const revokeSessionsForUser = mutation({
 
     let revoked = 0;
     for (const session of active) {
-      if (args.excludeSessionId && session.sessionId === args.excludeSessionId) {
+      if (isExcluded(session.sessionId, session.familyId)) {
         continue;
       }
       await ctx.db.patch(session._id, { revokedAt: now, updatedAt: now });
       revoked++;
     }
 
-    // Mark the tokens of every revoked session too. They are already dead —
-    // rotateSession refuses tokens whose session row is revoked — but the
-    // marker keeps the token table honest and replay detection accurate.
     for await (const token of ctx.db
       .query("authRefreshTokens")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))) {
-      if (
-        token.revokedAt === undefined &&
-        (!args.excludeSessionId || token.sessionId !== args.excludeSessionId)
-      ) {
+      if (token.revokedAt === undefined && !isExcluded(token.sessionId, token.familyId)) {
         await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
       }
     }
@@ -252,10 +244,6 @@ async function getSessionsByFamily(ctx: { db: QueryCtx["db"] }, familyId: string
   });
 }
 
-// Revokes every session and refresh token in a family. Callers pass the
-// audit event type describing why (e.g. "refresh_token_reuse" for replay
-// detection, "session.sign_out" for voluntary sign-out), or null when the
-// caller records its own audit trail (e.g. admin stopImpersonation).
 export async function revokeSessionFamily(
   ctx: { db: MutationCtx["db"] },
   familyId: string,
@@ -263,8 +251,6 @@ export async function revokeSessionFamily(
   now: number,
   auditEventType: string | null = "refresh_token_reuse",
 ) {
-  // Rows created before family tracking carry no familyId; they are reachable
-  // through the spent token's own sessionId, which doubles as its familyId.
   const [familyTokens, sessionTokens, familySessions] = await Promise.all([
     getRefreshTokensByFamily(ctx, familyId),
     getRefreshTokensBySession(ctx, familyId),
@@ -312,9 +298,6 @@ export async function revokeSessionFamily(
   }
 }
 
-// Voluntary sign-out ends the whole sign-in lineage: concurrent tabs that
-// converged into siblings share the family, so revoke them all together.
-// Distinct devices live in separate families and are untouched.
 export const revokeSessionFamilyBySession = mutation({
   args: { sessionId: v.string(), auditEventType: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -367,12 +350,7 @@ export const rotateSession = mutation({
       return null;
     }
     if (refresh.revokedAt !== undefined) {
-      // The token was already spent. If it was spent by a rotation inside the
-      // grace window, a parallel request holding the same cookie is presenting
-      // it — converge rather than killing the session family it just minted.
       if (refresh.rotatedAt !== undefined && now - refresh.rotatedAt <= ROTATION_GRACE_MS) {
-        // Over the redemption cap: fail soft — an over-cap request is not
-        // itself evidence of theft, but it is worth an audit trail.
         if ((refresh.graceRedemptions ?? 0) >= MAX_GRACE_REDEMPTIONS) {
           await ctx.db.insert("auth_audit_events", {
             actorUserId: refresh.userId,
@@ -388,13 +366,6 @@ export const rotateSession = mutation({
         }
         return "converge";
       }
-      // Family revocation is the theft-containment response: a rotated token
-      // replayed after the grace window proves someone kept a spent token
-      // that could have minted a derived chain. A token revoked WITHOUT
-      // rotatedAt was killed administratively (revoke-other-sessions,
-      // sign-out, admin revocation) — presenting it is not theft evidence,
-      // and nuking here would let a revoked sibling DoS the caller's own
-      // session. Reject quietly instead.
       if (refresh.rotatedAt !== undefined) {
         await revokeSessionFamily(ctx, refresh.familyId ?? refresh.sessionId, refresh.userId, now);
       }
@@ -417,11 +388,6 @@ export const rotateSession = mutation({
       return null;
     }
 
-    // Resolve the identity the session was minted with: the session row
-    // carries it, and sessions minted before the column existed carry it as a
-    // JWT claim instead. Any provider's session (password, OAuth, passkey)
-    // refreshes correctly. A session with neither cannot name its identity —
-    // guessing a provider would bind the wrong one, so fail closed.
     const sessionIdentityId = session.identityId ?? identityIdFromSessionToken(session.token);
     let identity: Doc<"auth_identities"> | null = null;
     if (sessionIdentityId) {
@@ -508,11 +474,6 @@ export const convergeSession = mutation({
       refresh.rotatedAt === undefined ||
       now - refresh.rotatedAt > ROTATION_GRACE_MS
     ) {
-      // Only a rotated predecessor replayed after the window is a theft
-      // signal — fail closed on the family. A token revoked administratively
-      // (no rotatedAt) is simply dead; nuking here would let its replay
-      // invalidate unrelated live sessions the user chose to keep. A live
-      // token presented to converge is caller error: no revocation, no mint.
       if (refresh.rotatedAt !== undefined) {
         await revokeSessionFamily(ctx, refresh.familyId ?? refresh.sessionId, refresh.userId, now);
       }
@@ -520,8 +481,6 @@ export const convergeSession = mutation({
     }
     const familyId = refresh.familyId ?? refresh.sessionId;
     if ((refresh.graceRedemptions ?? 0) >= MAX_GRACE_REDEMPTIONS) {
-      // Fail soft: the cap bounds how many sessions a stolen predecessor can
-      // yield, but an over-cap request is not itself evidence of theft.
       await ctx.db.insert("auth_audit_events", {
         actorUserId: refresh.userId,
         actorType: "system",
@@ -535,15 +494,6 @@ export const convergeSession = mutation({
       return null;
     }
 
-    // Grace must die with the family: sign-out, password reset, or reuse
-    // detection during the window leaves the predecessor's rotatedAt fresh
-    // while every family member is dead. Require at least one live session —
-    // the pair the winning rotation minted — before minting a sibling, and
-    // bound live family membership so bursts cannot compound generation over
-    // generation. The liveness and cap checks need an exact count, so the
-    // scan is hard-bounded: one row past the budget proves the family is
-    // larger than the scan window, in which case the count is unverifiable
-    // and the converge is refused rather than minted on an undercount.
     const familySessions = await ctx.db
       .query("authSessions")
       .withIndex("by_family", (q) => q.eq("familyId", familyId))
@@ -593,11 +543,6 @@ export const convergeSession = mutation({
       return null;
     }
 
-    // Same resolution as rotateSession — the converged row feeds the next
-    // rotation, so an absent or foreign identity here would stick. Resolve
-    // the predecessor's column, then its JWT claim, verify the identity
-    // belongs to this user, and fail closed rather than mint an identity-
-    // less sibling.
     const sessionIdentityId =
       session?.identityId ?? (session ? identityIdFromSessionToken(session.token) : undefined);
     let identity: Doc<"auth_identities"> | null = null;

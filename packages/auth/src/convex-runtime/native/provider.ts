@@ -126,7 +126,6 @@ const DEFAULT_TWO_FACTOR_SECRET_BYTES = 20;
 const DEFAULT_TWO_FACTOR_PENDING_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_TRUST_DEVICE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-// Common RFC-style email validation regex.
 const EMAIL_REGEX =
   /^(?!\.)(?!.*\.\.)([A-Z0-9_+-]\.?)+[A-Z0-9_+-]@([A-Z0-9][A-Z0-9-]*\.)+[A-Z]{2,}$/i;
 
@@ -338,8 +337,6 @@ export function nativeEmailAndPassword(
         }
       }
 
-      // Hash the password before the transaction so both the success and
-      // duplicate paths perform the same slow work, mitigating timing attacks.
       const credentialHash = await hashPassword(args.password);
 
       const subject = crypto.randomUUID();
@@ -567,9 +564,6 @@ export function nativeEmailAndPassword(
       if (typeof sessionId !== "string") {
         throw new Error("Invalid session token");
       }
-      // Revoke the whole sign-in lineage: concurrent tabs converge into
-      // sibling sessions sharing one family, so a single-session revoke
-      // would leave siblings and their refresh tokens live.
       await ctx.runMutation(component.native.sessions.revokeSessionFamilyBySession, {
         sessionId,
       });
@@ -1387,8 +1381,6 @@ export function nativeEmailAndPassword(
       if (!session || session.userId !== resolved.userId || session.revokedAt !== undefined) {
         return { success: true };
       }
-      // Convergence mints sibling rows inside one sign-in family; "revoke this
-      // session" means the whole lineage, so siblings stop minting too.
       await ctx.runMutation(component.native.sessions.revokeSessionFamilyBySession, {
         sessionId: session.sessionId,
         auditEventType: "session.revoke",
@@ -1406,6 +1398,7 @@ export function nativeEmailAndPassword(
       await ctx.runMutation(component.native.sessions.revokeSessionsForUser, {
         userId: resolved.userId,
         excludeSessionId: resolved.session.sessionId,
+        excludeFamilyId: resolved.session.familyId ?? resolved.session.sessionId,
       });
       return { success: true };
     },

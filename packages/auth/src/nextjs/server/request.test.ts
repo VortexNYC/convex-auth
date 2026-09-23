@@ -34,8 +34,6 @@ vi.mock("convex/nextjs", () => ({
   fetchAction: vi.fn(),
   fetchQuery: vi.fn(),
 }));
-// The server barrel imports the client provider chain; keep this test on the
-// request boundary only.
 vi.mock("./index.js", () => ({}));
 
 import { fetchAction } from "convex/nextjs";
@@ -84,7 +82,6 @@ describe("session-triple landing", () => {
     expect(location.searchParams.get("refreshToken")).toBeNull();
     expect(location.searchParams.get("sessionId")).toBeNull();
     expect(location.searchParams.get("landingVerifier")).toBeNull();
-    // Unrelated params survive the strip
     expect(location.searchParams.get("other")).toBe("1");
     const setCookies = result.response.headers.getSetCookie();
     expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=TOK"))).toBeDefined();
@@ -101,8 +98,6 @@ describe("session-triple landing", () => {
         "__Host-__convexAuthLandingVerifier=lv-1",
       ],
       ["/dashboard?token=TOK&refreshToken=REF&landingVerifier=lv-attacker", ""],
-      // Empty param + empty cookie value — "" == "" must not satisfy the
-      // strict check; both normalize to absent.
       [
         "/dashboard?token=TOK&refreshToken=REF&landingVerifier=",
         "__Host-__convexAuthLandingVerifier=",
@@ -131,10 +126,6 @@ describe("session-triple landing", () => {
   });
 
   it("never lands a triple on a cross-origin request, even in compat mode", async () => {
-    // A credentialed cross-origin fetch can carry `accept: text/html` and the
-    // session triple — CORS-failed responses still reach the browser's cookie
-    // store, so writing auth cookies here is a login-CSRF write. Compat mode
-    // relaxes the verifier check, never the same-origin requirement.
     const request = getRequest("/dashboard?token=TOK&refreshToken=REF&landingVerifier=lv-1", {
       ...HTML,
       origin: "https://evil.example.com",
@@ -150,7 +141,6 @@ describe("session-triple landing", () => {
     const setCookies = result.response.headers.getSetCookie();
     expect(setCookies.find((h) => h.includes("__convexAuthToken="))).toBeUndefined();
     expect(setCookies.find((h) => h.includes("__convexAuthRefreshToken="))).toBeUndefined();
-    // No verifier mint on a cross-origin response either.
     expect(setCookies.find((h) => h.includes("__convexAuthLandingVerifier="))).toBeUndefined();
   });
 
@@ -213,7 +203,7 @@ describe("landing verifier", () => {
 });
 
 describe("proactive refresh", () => {
-  const soon = Math.floor(Date.now() / 1000) + 30; // expires in 30s
+  const soon = Math.floor(Date.now() / 1000) + 30;
   const later = Math.floor(Date.now() / 1000) + 3600;
 
   it("returns undefined when no cookies exist", async () => {

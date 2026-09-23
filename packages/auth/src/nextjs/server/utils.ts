@@ -10,9 +10,6 @@ export function jsonResponse(body: unknown, status = 200) {
   return new NextResponse(JSON.stringify(body), {
     headers: {
       "Content-Type": "application/json",
-      // Proxy responses carry session state (tokens, Set-Cookie) — they must
-      // never be shared-cached. POSTs aren't cacheable by default, but an
-      // explicit no-store is the documented contract.
       "Cache-Control": "private, no-store",
     },
     status,
@@ -86,7 +83,6 @@ export function isCorsRequest(request: NextRequest) {
   if (origin === null) {
     return false;
   }
-  // A malformed Origin cannot be proven same-origin — treat as cross-origin.
   try {
     const originURL = new URL(origin);
     return (
@@ -109,8 +105,6 @@ export function logVerbose(message: string, verbose: boolean) {
  * @returns NextjsOptions
  */
 export function getConvexNextjsOptions(options: { convexUrl?: string }): NextjsOptions {
-  // If `convexUrl` is provided (even if it's undefined), pass it as the `url`
-  // option. `convex/nextjs` falls back to `process.env.NEXT_PUBLIC_CONVEX_URL`.
   if (Object.hasOwn(options, "convexUrl")) {
     return {
       url: options.convexUrl,

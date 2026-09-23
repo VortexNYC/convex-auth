@@ -80,8 +80,6 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
       const newUserURL = url.searchParams.get("newUserURL") ?? undefined;
       const requestSignUp = url.searchParams.get("requestSignUp") === "true";
       const link = url.searchParams.get("link") === "true";
-      // "" reads as absent — an empty verifier must never satisfy the
-      // strict landing check downstream.
       const landingVerifier = url.searchParams.get("landingVerifier") || undefined;
 
       if (
@@ -285,9 +283,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
           ) {
             linkingUserId = payload.sub;
           }
-        } catch {
-          // Invalid access token; treat as unauthenticated.
-        }
+        } catch {}
       }
 
       const result = await handleCallback(
@@ -300,9 +296,6 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
           state,
           linkingUserId,
         },
-        // The site route cannot see the app's landing-verifier cookie — it
-        // echoes the bound verifier onto the landing URL and the app
-        // boundary enforces the match there.
         { boundaryEnforcesVerifier: true },
       );
       if ("error" in result) {

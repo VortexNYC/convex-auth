@@ -469,7 +469,7 @@ export type NativeEmailAndPasswordComponentHandle = {
       revokeSessionsForUser: FunctionReference<
         "mutation",
         "public" | "internal",
-        { userId: string; excludeSessionId?: string },
+        { userId: string; excludeSessionId?: string; excludeFamilyId?: string },
         number,
         string
       >;

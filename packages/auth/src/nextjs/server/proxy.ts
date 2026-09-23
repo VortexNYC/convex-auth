@@ -70,8 +70,6 @@ export async function proxyAuthActionToConvex(
   if (isCorsRequest(request)) {
     return new Response("Invalid origin", { status: 403 });
   }
-  // Defense in depth under the CORS check: credentialed requests without a
-  // matching Origin/Referer are rejected even when no Origin header is set.
   const csrf = validateCsrfHeaders(request, []);
   if (!csrf.allowed) {
     return new Response(csrf.reason, { status: csrf.status });
@@ -96,17 +94,12 @@ export async function proxyAuthActionToConvex(
   const requestCookies = await getRequestCookies();
   const token = requestCookies.token ?? undefined;
 
-  // Sign-out without a session cookie still clears any stale cookies and
-  // succeeds — the action's `token` arg is a required string and would fail
-  // validation on undefined.
   if (intent === "signOut" && token === undefined) {
     const response = jsonResponse({ success: true });
     await setAuthCookies(response, null, cookieConfig);
     return response;
   }
 
-  // Server-side substitution: the browser sends placeholders for values that
-  // live only in HttpOnly cookies.
   if (intent === "updateSession") {
     const refreshToken = requestCookies.refreshToken;
     if (refreshToken === null) {
@@ -128,23 +121,10 @@ export async function proxyAuthActionToConvex(
     if (requestCookies.trustedDevice !== null) {
       args.trustedDeviceToken = requestCookies.trustedDevice;
     } else {
-      // Never let a client-supplied trustedDeviceToken reach the action; the
-      // HttpOnly cookie is the only trusted source for it.
       delete args.trustedDeviceToken;
     }
-    // Same posture as `callback`: the landing verifier binds the flow to
-    // this browser's cookie jar, so the cookie — never the body — is the
-    // trusted source.
-    if (requestCookies.landingVerifier !== null) {
-      args.landingVerifier = requestCookies.landingVerifier;
-    } else {
-      delete args.landingVerifier;
-    }
   }
-  if (intent === "callback") {
-    // The OAuth callback binds the flow to the initiating browser: the action
-    // compares this arg against the verifier bound into the signed state.
-    // The cookie is the only trusted source — never forward a body value.
+  if (intent === "signIn" || intent === "callback") {
     if (requestCookies.landingVerifier !== null) {
       args.landingVerifier = requestCookies.landingVerifier;
     } else {
@@ -164,7 +144,6 @@ export async function proxyAuthActionToConvex(
     const clientResult = stripConfidentialFields(result);
     const response = jsonResponse(clientResult);
     if (intent === "signOut") {
-      // Sign-out always clears the auth cookies, whatever the action returned.
       await setAuthCookies(response, null, cookieConfig);
     } else if (cookiesToWrite !== undefined) {
       await setAuthCookies(response, cookiesToWrite, cookieConfig);
@@ -177,8 +156,6 @@ export async function proxyAuthActionToConvex(
       { error: error instanceof Error ? error.message : "Unknown error" },
       400,
     );
-    // On mint failure the safest state is cleared cookies — a stale token
-    // cookie would otherwise leave the client half-authenticated.
     if (intent === "updateSession" || intent === "signOut") {
       await setAuthCookies(response, null, cookieConfig);
     }
@@ -206,7 +183,6 @@ function cookiesFromResult(result: unknown): AuthCookieValues | null | undefined
     return undefined;
   }
   const r = result as SessionResult;
-  // A minted session: write both tokens and clear any pending challenge.
   if (typeof r.token === "string" && typeof r.refreshToken === "string") {
     return {
       token: r.token,
@@ -220,10 +196,6 @@ function cookiesFromResult(result: unknown): AuthCookieValues | null | undefined
         : {}),
     };
   }
-  // A 2FA challenge instead of a session: stash the pending token AND clear
-  // any existing session pair — a new sign-in supersedes the old session, and
-  // leaving it would let the next server render resurrect it while the client
-  // shows the challenge form.
   if (typeof r.twoFactorChallengeToken === "string") {
     return {
       token: null,
@@ -232,8 +204,6 @@ function cookiesFromResult(result: unknown): AuthCookieValues | null | undefined
       twoFactorPendingMaxAgeMs: r.twoFactorCookieMaxAgeMs,
     };
   }
-  // A session result with a null token means "signed out" from the action's
-  // perspective (e.g. updateSession failing soft).
   if (r.token === null) {
     return null;
   }
@@ -258,8 +228,6 @@ function stripConfidentialFields(result: unknown): unknown {
 }
 
 export function shouldProxyAuthAction(request: NextRequest, apiRoute: string) {
-  // Handle both with and without trailing slash since this could be configured
-  // either way (https://nextjs.org/docs/app/api-reference/next-config-js/trailingSlash).
   const requestUrl = new URL(request.url);
   if (apiRoute.endsWith("/")) {
     return requestUrl.pathname === apiRoute || requestUrl.pathname === apiRoute.slice(0, -1);

@@ -56,7 +56,6 @@ const actions = {
 };
 
 const options = { actions } as never;
-// NextFetchEvent has no public constructor; the middleware only forwards it.
 const event = {} as NextFetchEvent;
 
 function makeJwt(claims: { exp?: number; iat?: number }): string {
@@ -84,7 +83,7 @@ describe("convexAuthNextjsMiddleware", () => {
       headers: { host: "app.example.com" },
     });
     const response = await middleware(request, event);
-    expect(response?.status).toBe(405); // GET hits the proxy → method rejected
+    expect(response?.status).toBe(405);
   });
 
   it("proxies the api route on POST", async () => {
@@ -113,7 +112,6 @@ describe("convexAuthNextjsMiddleware", () => {
     });
     const response = await middleware(request, event);
     expect(response?.status).toBe(405);
-    // A non-matching path passes through untouched
     const other = await middleware(getRequest("/api/auth", { accept: "text/html" }), event);
     expect(other?.headers.get("x-middleware-next")).toBe("1");
   });
@@ -140,7 +138,9 @@ describe("convexAuthNextjsMiddleware", () => {
     });
     const response = await middleware(request, event);
     expect(response?.status).toBe(307);
-    expect(response?.headers.get("Location")).toBe("https://app.example.com/app");
+    expect(response?.headers.get("Location")).toBe(
+      "https://app.example.com/app?error=landing_verifier_mismatch",
+    );
     expect(
       response?.headers.getSetCookie().find((h) => h.startsWith("__Host-__convexAuthToken=")),
     ).toBeUndefined();
@@ -211,8 +211,6 @@ describe("convexAuthNextjsMiddleware", () => {
     const request = getRequest("/dashboard", {
       cookie: `__Host-__convexAuthToken=${makeJwt({ iat: soon - 600, exp: soon })}; __Host-__convexAuthRefreshToken=old-refresh`,
     });
-    // getRefreshedTokens reads the next/headers jar — keep it in sync with
-    // the request cookie header.
     mocks.jar = mocks.makeJar({
       "__Host-__convexAuthToken": makeJwt({ iat: soon - 600, exp: soon }),
       "__Host-__convexAuthRefreshToken": "old-refresh",
@@ -223,7 +221,6 @@ describe("convexAuthNextjsMiddleware", () => {
     expect(
       setCookies.find((h) => h.startsWith("__Host-__convexAuthRefreshToken=rotated-refresh")),
     ).toBeDefined();
-    // And the downstream handler sees the rotated pair
     expect(request.cookies.get("__Host-__convexAuthToken")?.value).toBe("rotated");
     expect(request.cookies.get("__Host-__convexAuthRefreshToken")?.value).toBe("rotated-refresh");
   });
@@ -257,11 +254,9 @@ describe("convexAuthNextjsMiddleware", () => {
       cookie: "__Host-__convexAuthToken=live-tok",
     });
     await middleware(request, event);
-    // Two calls, one query — memoized on the request closure.
     expect(fetchQueryMock).toHaveBeenCalledTimes(1);
 
     await middleware(request, event);
-    // A new request re-verifies — no RSC cache is shared into middleware.
     expect(fetchQueryMock).toHaveBeenCalledTimes(2);
   });
 
@@ -298,9 +293,6 @@ describe("convexAuthNextjsMiddleware", () => {
       refreshToken: "rotated-refresh",
     });
     const middleware = convexAuthNextjsMiddleware(async () => {
-      // A plain Response — not a NextResponse. `NextResponse.next(response)`
-      // would discard this body (continuations carry none); the middleware
-      // must rebuild instead.
       return new Response("plain-body", {
         status: 202,
         headers: { "x-custom": "kept" },
@@ -417,7 +409,6 @@ describe("nextjsMiddlewareRedirect", () => {
     expect(location.origin).toBe("https://app.example.com");
     expect(location.pathname).toBe("/login");
     expect(location.searchParams.get("next")).toBe("/dashboard");
-    // The original query is replaced, not merged
     expect(location.searchParams.get("x")).toBeNull();
   });
 });

@@ -84,7 +84,6 @@ export async function handleConvexAuthRequest<TNextResult extends { response: Re
   }
   const verbose = options.verbose ?? false;
 
-  // Session-minting/ending actions proxy to the component.
   if (shouldProxyAuthAction(request, apiRoute)) {
     return await proxyAuthActionToConvex(request, {
       actions: options.actions,
@@ -103,34 +102,22 @@ export async function handleConvexAuthRequest<TNextResult extends { response: Re
     verbose,
   });
 
-  // Session-triple landed — redirect with cookies already on the response.
   if (result.kind === "redirect") {
     return result.response;
   }
 
-  // Record the refresh outcome keyed by this request so downstream session
-  // helpers see the effective session: a rotated pair (the request's
-  // now-revoked cookie would fail verifySession), a dead session, or — for
-  // cross-origin requests — a strip marker.
   if (result.refreshTokens !== undefined) {
     recordRotatedSession(request, result.refreshTokens);
   }
   if (result.strippedCookieHeader !== undefined) {
     recordCorsStrip(request);
-    // Best-effort physical strip so even a raw `request.headers.get('cookie')`
-    // downstream reads clean — and the protection survives if a future
-    // TanStack version wraps/clones the request (breaking WeakMap identity).
-    // Received Request headers are immutable on some runtimes; when `set`
-    // throws, the WeakSet marker above still guards every session helper.
     try {
       if (result.strippedCookieHeader === null) {
         request.headers.delete("cookie");
       } else {
         request.headers.set("cookie", result.strippedCookieHeader);
       }
-    } catch {
-      // Immutable headers — recordCorsStrip still enforces.
-    }
+    } catch {}
   }
 
   const res = await next();
@@ -152,9 +139,6 @@ export async function handleConvexAuthRequest<TNextResult extends { response: Re
     try {
       applyCookies(res.response.headers);
     } catch {
-      // Immutable headers (redirects, proxied fetch responses): rebuild so the
-      // rotated cookies still reach the browser instead of 500ing and losing
-      // the session.
       const rebuilt = new Response(res.response.body, res.response);
       applyCookies(rebuilt.headers);
       return { ...res, response: rebuilt };

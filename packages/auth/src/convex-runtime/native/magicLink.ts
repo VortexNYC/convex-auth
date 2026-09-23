@@ -7,7 +7,6 @@ import { generateVerificationToken, hashToken } from "./tokens.js";
 import { nativeAuthSessionValidator } from "./provider.js";
 import { toNativeAuthUser, type NativeEmailAndPasswordComponentHandle } from "./types.js";
 
-// Common RFC-style email validation regex.
 const EMAIL_REGEX =
   /^(?!\.)(?!.*\.\.)([A-Z0-9_+-]\.?)+[A-Z0-9_+-]@([A-Z0-9][A-Z0-9-]*\.)+[A-Z]{2,}$/i;
 
@@ -144,8 +143,6 @@ export function nativeMagicLink(
       const metadata = JSON.stringify({
         email: normalizedEmail,
         name: args.name,
-        // "" reads as absent — an empty verifier must never satisfy the
-        // strict landing check downstream.
         landingVerifier: args.landingVerifier || undefined,
       });
 
@@ -207,9 +204,6 @@ export function nativeMagicLink(
         throw new Error("INVALID_TOKEN");
       }
 
-      // A presented verifier must equal the one bound at request time —
-      // indistinguishable from an invalid token on purpose. "" reads as
-      // absent (not presented) so empty values can't alias-match.
       if (args.landingVerifier && metadata.landingVerifier !== args.landingVerifier) {
         throw new Error("INVALID_TOKEN");
       }

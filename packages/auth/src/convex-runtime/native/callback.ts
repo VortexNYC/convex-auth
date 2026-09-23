@@ -1,8 +1,4 @@
 function normalizeTrustedOrigins(origins: string[]): string[] {
-  // Only http(s) origins can be compared by origin equality. Custom-scheme
-  // entries ("myapp://", "exp://**") produce `origin === "null"` — letting
-  // that string into the set would alias EVERY opaque-scheme URL to it, so
-  // they are excluded here and handled by pattern matching instead.
   return origins
     .map((origin) => {
       try {
@@ -51,8 +47,6 @@ function globMatch(value: string, pattern: string): boolean {
       p++;
       continue;
     }
-    // Backtrack: `*` can extend within the segment (never past `/`), then
-    // `**` can extend across anything.
     if (starP !== -1 && v0[starV] !== "/" && starV < v0.length) {
       v = ++starV;
       p = starP + 1;
@@ -97,9 +91,7 @@ function matchesSchemePattern(target: URL, patterns: string[]): boolean {
     }
     try {
       if (new URL(pattern).host === target.host) return true;
-    } catch {
-      // Malformed pattern — not trusted.
-    }
+    } catch {}
   }
   return false;
 }

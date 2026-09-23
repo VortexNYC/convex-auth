@@ -204,9 +204,13 @@ At the request boundary (before rendering):
    signed state through the provider redirect) and magic-link requests
    (where it is stored on the verifier record). The callback/verify routes
    echo it onto the landing URL as `?landingVerifier=`, and the boundary
-   writes auth cookies only when the param equals the cookie — absent or
-   mismatched verifiers get the params stripped and the app renders
-   signed-out. `requireLandingVerifier: false` (middleware/boundary
+   writes auth cookies only when the param equals the cookie. Rejected
+   landings are stripped and surfaced, not silent: the redirect carries
+   `?error=landing_verifier_mismatch` (verifier absent/mismatched) or
+   `?error=cross_origin` (credentialed cross-origin request) so the app
+   can render a real error instead of appearing signed-out — and on
+   same-origin rejections a fresh verifier cookie is minted so the next
+   attempt self-heals. `requireLandingVerifier: false` (middleware/boundary
    option) restores the old behavior for deployments that predate verifier
    threading or rely on cross-browser magic-link opens.
 

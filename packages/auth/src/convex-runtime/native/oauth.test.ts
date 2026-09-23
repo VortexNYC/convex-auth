@@ -192,8 +192,6 @@ function createOAuthConfig(overrides: Partial<NativeOAuthConfig> = {}): NativeOA
     google: createGoogleConfig(),
     redirectURI: "https://app.example.com/api/auth/callback/github",
     sessionTtlMs: 60_000,
-    // Tests pass `https://app.example.com` redirect URLs — they must be
-    // explicitly trusted now that `handleSignIn` enforces the allowlist.
     trustedOrigins: ["https://app.example.com"],
     ...overrides,
   };
@@ -567,9 +565,6 @@ describe("OAuth handlers", () => {
     const config = createOAuthConfig();
     process.env.CONVEX_SITE_URL = "https://app.example.com";
 
-    // The action path must enforce the same allowlist the HTTP routes do —
-    // a completed flow lands the session triple on this URL, so an
-    // unvalidated absolute URL exfiltrates `?token=&refreshToken=`.
     await expect(
       handleSignIn(config, {
         provider: "github",
@@ -588,13 +583,10 @@ describe("OAuth handlers", () => {
         newUserURL: "https://evil.example.com/welcome",
       }),
     ).rejects.toThrow("Untrusted OAuth redirect URL");
-    // Protocol-relative slips past `startsWith("http")` but resolves
-    // cross-origin.
     await expect(
       handleSignIn(config, { provider: "github", callbackURL: "//evil.example.com/x" }),
     ).rejects.toThrow("Untrusted OAuth redirect URL");
 
-    // Trusted and relative values still mint a URL.
     const trusted = await handleSignIn(config, {
       provider: "github",
       callbackURL: "https://app.example.com/home",
@@ -606,11 +598,6 @@ describe("OAuth handlers", () => {
 
   it("handleSignIn validates against the same base the landing resolves against", async () => {
     const config = createOAuthConfig();
-    // The classic split-base dev setup: app on http://localhost, API on the
-    // https site origin. `https:evil.example.com` parses as a *path* under an
-    // https base (validates same-origin) but as an absolute URL under the
-    // http base that `resolveRedirectUrl` uses — the old CONVEX_SITE_URL-first
-    // base let it through and the 302 leaked `?token=` to evil.example.com.
     const priorSiteUrl = process.env.SITE_URL;
     process.env.SITE_URL = "http://localhost:3000";
     process.env.CONVEX_SITE_URL = "https://api.example.com";
@@ -622,7 +609,6 @@ describe("OAuth handlers", () => {
         }),
       ).rejects.toThrow("Untrusted OAuth redirect URL");
 
-      // Same-base relative and trusted absolute inputs still pass.
       const trusted = await handleSignIn(config, {
         provider: "github",
         callbackURL: "http://localhost:3000/cb",
@@ -642,8 +628,6 @@ describe("OAuth handlers", () => {
     const config = createOAuthConfig({ trustedOrigins: undefined });
     process.env.CONVEX_SITE_URL = "https://site.example.com";
 
-    // The site routes pass their request-scoped list — a redirect onto the
-    // request origin validates even though `oauth.trustedOrigins` is empty.
     const { url } = await handleSignIn(
       config,
       { provider: "github", callbackURL: "https://app.example.com/home" },
@@ -740,7 +724,6 @@ describe("OAuth handlers", () => {
     const ctx = createContext() as unknown as GenericActionCtx<DataModel>;
     const boundComponent = component as unknown as NativeOAuthComponentHandle;
 
-    // A different browser's verifier → rejected before token exchange.
     const mismatch = await handleCallback(ctx, boundComponent, config, {
       provider: "github",
       code: "code-123",
@@ -749,8 +732,6 @@ describe("OAuth handlers", () => {
     });
     expect(mismatch).toMatchObject({ error: "landing_verifier_mismatch" });
 
-    // A bound verifier with none presented → rejected (a browser that did
-    // not initiate the flow cannot complete it through the action path).
     const absent = await handleCallback(ctx, boundComponent, config, {
       provider: "github",
       code: "code-123",
@@ -758,7 +739,6 @@ describe("OAuth handlers", () => {
     });
     expect(absent).toMatchObject({ error: "landing_verifier_mismatch" });
 
-    // Matching verifier → the flow completes and echoes it for the landing.
     const ok = await handleCallback(ctx, boundComponent, config, {
       provider: "github",
       code: "code-123",
@@ -768,8 +748,6 @@ describe("OAuth handlers", () => {
     if ("error" in ok) throw new Error(`unexpected error: ${ok.error}`);
     expect(ok.landingVerifier).toBe("lv-victim");
 
-    // The site callback route delegates enforcement to the app boundary —
-    // it sees no cookie, so the flag skips the check and echoes the verifier.
     const site = await handleCallback(
       ctx,
       boundComponent,
@@ -1542,7 +1520,6 @@ describe("addNativeOAuthHttpRoutes", () => {
       new Request("https://app.example.com/api/auth/signin/github?landingVerifier=lv-42"),
     )) as Response;
     const state = new URL(signinResponse.headers.get("Location")!).searchParams.get("state")!;
-    // The verifier is bound into the signed state.
     expect((await verifyOAuthState(state)).landingVerifier).toBe("lv-42");
 
     const callbackResponse = (await exec(callbackRoute.handler).handler(

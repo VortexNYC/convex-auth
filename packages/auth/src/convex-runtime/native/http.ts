@@ -146,7 +146,6 @@ function buildTwoFactorVerifyResponse(
 
   const responseBody = { success: true, ...session } as Record<string, unknown>;
   if (responseBody.user && typeof responseBody.user === "object" && responseBody.user !== null) {
-    // user is already a plain object from toNativeAuthUser
   }
   return new Response(JSON.stringify(responseBody), {
     status: 200,
@@ -825,9 +824,6 @@ export function addNativeAuthHttpRoutes(
           const newUserCallbackURL = url.searchParams.get("newUserCallbackURL");
           const errorCallbackURL = url.searchParams.get("errorCallbackURL");
 
-          // Validate every redirect-bearing param before any of them is
-          // used — including the error paths below, which would otherwise
-          // 302 to an unvalidated caller-supplied origin.
           if (
             !isAllowedRedirectUrl(
               callbackURL,
@@ -904,8 +900,6 @@ export function addNativeAuthHttpRoutes(
             );
           }
 
-          // New users land on `newUserCallbackURL` when the caller provided
-          // one — matching the OAuth `newUserURL` convention.
           const successTarget =
             result.createdUser === true && newUserCallbackURL ? newUserCallbackURL : callbackURL;
           const redirect = resolveCallbackUrl(successTarget);
@@ -1027,8 +1021,6 @@ export function addNativeAuthHttpRoutes(
     path: "/api/auth/update-session",
     method: "POST",
     handler: httpActionGeneric(async (ctx, request) => {
-      // Writes session cookies — the CSRF check blocks cross-site posts that
-      // would otherwise let an attacker fixate a victim's browser session.
       const csrf = checkCsrf(request, options);
       if (csrf) {
         return csrf;

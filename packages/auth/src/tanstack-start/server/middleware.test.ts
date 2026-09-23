@@ -207,7 +207,6 @@ describe("handleConvexAuthRequest", () => {
         cookie: `__Host-__convexAuthToken=${oldToken}; __Host-__convexAuthRefreshToken=old`,
       },
     });
-    // Redirect responses carry immutable headers — appending must not throw.
     const downstream = () =>
       Promise.resolve({ response: Response.redirect("https://app.example.com/elsewhere") });
     const res = await handleConvexAuthRequest(request, downstream, options);
@@ -236,8 +235,6 @@ describe("rotation-aware session resolution", () => {
     });
     await handleConvexAuthRequest(request, nextDownstream, options);
 
-    // Downstream helpers resolve the ROTATED token — the request's cookie
-    // still holds the revoked predecessor.
     queryMock.mockResolvedValue({ user: { id: "u1" }, sessionId: "s1" });
     const session = await getConvexAuthSession(request, {
       actions: { verifySession: actions.verifySession },
@@ -319,9 +316,6 @@ describe("CORS strip", () => {
       },
     });
     await handleConvexAuthRequest(request, nextDownstream, options);
-    // Undici Request headers are mutable — the strip applied, keeping
-    // non-auth cookies. Where a runtime makes them immutable the WeakSet
-    // marker (asserted above) still guards session helpers.
     expect(request.headers.get("cookie")).toBe("other-cookie=keep");
   });
 });

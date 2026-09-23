@@ -137,11 +137,6 @@ export async function handleSignIn(
   args: NativeOAuthSignInArgs,
   options?: { baseOrigin?: string; trustedOrigins?: string[] },
 ): Promise<{ url: string }> {
-  // `callbackURL`/`errorURL`/`newUserURL` reach the landing redirect carrying
-  // `?token=&refreshToken=` — an unvalidated absolute URL is session
-  // exfiltration. The site routes pass their request-scoped allowlist; the
-  // action path derives it from `oauth.trustedOrigins` (which `convexAuth`
-  // merges with the email/OIDC/deployment origins) plus the env origins.
   const baseOrigin = options?.baseOrigin ?? redirectBaseOrigin();
   const trustedOrigins = options?.trustedOrigins ?? [
     ...(config.trustedOrigins ?? []),
@@ -167,8 +162,6 @@ export async function handleSignIn(
     requestSignUp: args.requestSignUp,
     link: args.link,
     additionalData: args.additionalData,
-    // "" reads as absent — an empty verifier must never satisfy the strict
-    // landing check downstream.
     landingVerifier: args.landingVerifier || undefined,
   });
   const url = await provider.createAuthorizationURL({
@@ -210,13 +203,6 @@ export async function handleCallback<DataModel extends GenericDataModel>(
     return { error: "provider_mismatch", redirectUrl: resolveErrorURL(statePayload) };
   }
 
-  // Browser binding: the presented verifier must equal the one bound into
-  // the signed state at initiation — a browser that did not start the flow
-  // cannot complete it through the action path. Both-absent stays allowed
-  // for legacy/token-mode callers (RN, old clients) that have no cookie.
-  // The site callback route sets `boundaryEnforcesVerifier` because it
-  // cannot see the app cookie — it echoes the bound verifier onto the
-  // landing URL and the app boundary compares it against the cookie there.
   if (
     options?.boundaryEnforcesVerifier !== true &&
     statePayload.landingVerifier !== (args.landingVerifier || undefined)

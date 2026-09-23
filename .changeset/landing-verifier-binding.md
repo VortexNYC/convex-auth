@@ -20,6 +20,13 @@ the session params instead. The proxies inject the cookie value (never
 the request body) into `callback` action args so a forged body cannot
 substitute it.
 
+Rejected landings are surfaced, not silent: the stripped-URL redirect
+carries `?error=landing_verifier_mismatch` (or `?error=cross_origin`
+when a credentialed cross-origin request carried the triple), so apps
+can render a real error — e.g. a magic link opened in a different
+browser — instead of appearing signed-out. The token-mode provider
+writes the same param on its client-side URL cleanup.
+
 Opt out per-deployment with `requireLandingVerifier: false` on the
 middleware/boundary — for releases that predate verifier threading or
 rely on opening magic links in a different browser. Token-mode web

@@ -142,7 +142,7 @@ describe("nativeMagicLink", () => {
 
     expect(result).toMatchObject({ status: "queued" });
 
-    const createCall = (component as any).native.verifiers.createVerifier.mock.calls[0]?.[0];
+    const createCall = component.native.verifiers.createVerifier.mock.calls[0]?.[0];
     expect(createCall).toMatchObject({
       type: "magic-link",
     });
@@ -282,8 +282,7 @@ describe("nativeMagicLink", () => {
       landingVerifier: "lv-requester",
     });
 
-    // The verifier was persisted on the verifier record metadata.
-    const createCall = (component as any).native.verifiers.createVerifier.mock.calls[0]?.[0];
+    const createCall = component.native.verifiers.createVerifier.mock.calls[0]?.[0];
     expect(JSON.parse(createCall.metadata).landingVerifier).toBe("lv-requester");
 
     const token = sendMagicLink.mock.calls[0][0].token;
@@ -300,13 +299,10 @@ describe("nativeMagicLink", () => {
       updatedAt: Date.now(),
     });
 
-    // A different browser's verifier → rejected like an invalid token.
     await expect(
       exec(verifyMagicLink).handler(ctx, { token, landingVerifier: "lv-attacker" }),
     ).rejects.toThrow("INVALID_TOKEN");
 
-    // Matching verifier → session minted and the verifier echoed for the
-    // landing URL so the SSR boundary can bind it to the cookie.
     component.native.users.getUserByEmail = vi.fn().mockResolvedValue(null);
     component.identity.provisionFromIdentity = vi.fn().mockResolvedValue({
       userId: "user_1",

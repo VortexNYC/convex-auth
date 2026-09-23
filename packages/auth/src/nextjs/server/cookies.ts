@@ -20,8 +20,6 @@ export const TRUSTED_DEVICE_COOKIE = "__convexAuthTrustedDevice";
 export const LANDING_VERIFIER_COOKIE = "__convexAuthLandingVerifier";
 
 export async function getRequestCookies() {
-  // maxAge doesn't matter for request cookies since they're only relevant for
-  // the length of the request
   return getCookieStore(await headers(), await cookies(), {
     maxAge: null,
   });
@@ -75,12 +73,10 @@ function getCookieStore(
   const cookieOptions = getCookieOptions(isLocalhost, cookieConfig);
   function setValue(name: string, value: string | null, maxAgeMs?: number) {
     if (value === null) {
-      // Only request cookies have a `size` property
       if ("size" in responseCookies) {
         responseCookies.delete(name);
       } else {
-        // See https://github.com/vercel/next.js/issues/56632
-        // for why .delete({}) doesn't work:
+        // https://github.com/vercel/next.js/issues/56632
         responseCookies.set(name, "", {
           ...cookieOptions,
           maxAge: undefined,
@@ -120,8 +116,6 @@ function getCookieStore(
       setValue(trustedDeviceName, value, maxAgeMs);
     },
     get landingVerifier() {
-      // Empty reads as absent — an empty cookie must never satisfy the
-      // strict landing check against an empty `landingVerifier` param.
       return getValue(landingVerifierName) || null;
     },
   };
@@ -148,8 +142,6 @@ export function setLandingVerifierCookie(
 }
 
 function getCookieOptions(isLocalhost: boolean, cookieConfig: { maxAge: number | null }) {
-  // Safari does not send cookies with `secure: true` on http:// domains
-  // including localhost, so set `secure: false` there.
   return {
     secure: !isLocalhost,
     httpOnly: true,
@@ -160,8 +152,6 @@ function getCookieOptions(isLocalhost: boolean, cookieConfig: { maxAge: number |
 }
 
 function isLocalHost(host: string) {
-  // IPv6 hosts arrive bracketed (`[::1]:3000`); strip brackets before the
-  // port split so the hostname survives.
   const hostname = host.startsWith("[")
     ? host.slice(1, host.indexOf("]"))
     : (host.split(":")[0] ?? "");

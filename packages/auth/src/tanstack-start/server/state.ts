@@ -76,8 +76,6 @@ export type VerifiedSession = {
   sessionId: string | null;
 } | null;
 
-// One verified lookup per request — repeat calls in the same request share
-// the promise; the next request always re-verifies.
 const sessionPromises = new WeakMap<Request, Promise<VerifiedSession>>();
 
 /**
@@ -125,8 +123,6 @@ async function fetchVerifiedSession(
     }
     return { user: result.user, sessionId: result.sessionId ?? null };
   } catch {
-    // Fail closed — an unreachable backend resolves signed-out rather than
-    // trusting a cookie that might be revoked.
     return null;
   }
 }

@@ -74,17 +74,8 @@ export async function handleAuthRequestBoundary(
     request.method === "GET" && request.headers.get("accept")?.includes("text/html") === true;
   const cookieVerifier = parseLandingVerifierCookie(request);
 
-  // Do not let a cross-origin request read auth cookies. The strip also
-  // suppresses the refresh pass entirely — a cross-origin caller must not
-  // trigger a rotation or receive Set-Cookie headers.
   const strippedCookieHeader = stripCookiesIfCors(request);
 
-  // OAuth and magic-link flows land back on the app carrying a freshly minted
-  // session in the query string (`?token=&refreshToken=&sessionId=`). Move the
-  // pair into HttpOnly cookies and strip the params before the document
-  // renders. This replaces client-side URL ingestion entirely in cookie mode.
-  // Password-reset links also carry a lone `?token=`; the `refreshToken` param
-  // discriminates the session-triple from it.
   const paramToken = requestUrl.searchParams.get("token");
   const paramRefreshToken = requestUrl.searchParams.get("refreshToken");
   if (paramToken !== null && paramRefreshToken !== null && isNavigation) {
@@ -94,48 +85,32 @@ export async function handleAuthRequestBoundary(
     redirectUrl.searchParams.delete("refreshToken");
     redirectUrl.searchParams.delete("sessionId");
     redirectUrl.searchParams.delete("landingVerifier");
+    const paramVerifier = requestUrl.searchParams.get("landingVerifier") || null;
+    const rejectionReason =
+      strippedCookieHeader !== undefined
+        ? "cross_origin"
+        : requireLandingVerifier &&
+            (paramVerifier === null || cookieVerifier === null || paramVerifier !== cookieVerifier)
+          ? "landing_verifier_mismatch"
+          : null;
+    if (rejectionReason !== null) {
+      redirectUrl.searchParams.set("error", rejectionReason);
+    }
     const response = new Response(null, {
       status: 302,
       headers: {
         Location: redirectUrl.toString(),
-        // The landing redirect writes auth cookies — 302s are heuristically
-        // cacheable, so pin them to the browser that earned them.
         "Cache-Control": "private, no-store",
       },
     });
-    // Any landing redirect is a good moment to establish the verifier cookie
-    // on a browser that lacks one — rejected landings self-heal this way.
-    // Cross-origin requests get no Set-Cookie at all (the strip invariant).
     if (cookieVerifier === null && strippedCookieHeader === undefined) {
       response.headers.append(
         "Set-Cookie",
         buildLandingVerifierSetCookie(generateLandingVerifier(), isLocalhost),
       );
     }
-    // `get` returns "" for a bare `?landingVerifier=` — normalize to null
-    // so empty param + empty cookie can never satisfy the strict check.
-    const paramVerifier = requestUrl.searchParams.get("landingVerifier") || null;
-    if (
-      // A cross-origin request never lands a session — CORS-failed
-      // responses still reach the browser's cookie store, so a credentialed
-      // fetch carrying a triple would otherwise write auth cookies even in
-      // verifier-compat mode.
-      strippedCookieHeader !== undefined ||
-      (requireLandingVerifier &&
-        (paramVerifier === null || cookieVerifier === null || paramVerifier !== cookieVerifier))
-    ) {
-      // The triple did not land in the browser that initiated the flow —
-      // strip the params and let the app render signed-out rather than
-      // write an attacker-controlled session into the victim's cookies.
-      logVerbose(
-        `Rejected session params: ${
-          strippedCookieHeader !== undefined
-            ? "cross-origin request"
-            : `landing verifier ${paramVerifier === null ? "absent" : "mismatch"}`
-        }`,
-        verbose,
-        "ConvexAuthSsr",
-      );
+    if (rejectionReason !== null) {
+      logVerbose(`Rejected session params: ${rejectionReason}`, verbose, "ConvexAuthSsr");
       return { kind: "redirect", response };
     }
     appendAuthCookies(
@@ -151,16 +126,10 @@ export async function handleAuthRequestBoundary(
     return { kind: "redirect", response };
   }
 
-  // Refresh the session proactively when the access token is near expiry —
-  // skipped on cross-origin requests (see above).
   const refreshTokens =
     strippedCookieHeader === undefined
       ? await getRefreshedTokens(request, options, verbose)
       : undefined;
-  // Establish the verifier on same-origin navigations that lack one, so any
-  // browser that renders the app carries it before page JS can run a
-  // session-minting call through the proxy. Mint-if-absent only —
-  // overwriting would break a flow in flight in another tab.
   const landingVerifier =
     isNavigation && cookieVerifier === null && strippedCookieHeader === undefined
       ? generateLandingVerifier()
@@ -181,8 +150,8 @@ function stripCookiesIfCors(request: Request): string | null | undefined {
   return stripAuthCookiesFromHeader(request);
 }
 
-const REQUIRED_TOKEN_LIFETIME_MS = 60_000; // 1 minute
-const MINIMUM_REQUIRED_TOKEN_LIFETIME_MS = 10_000; // 10 seconds
+const REQUIRED_TOKEN_LIFETIME_MS = 60_000;
+const MINIMUM_REQUIRED_TOKEN_LIFETIME_MS = 10_000;
 
 async function getRefreshedTokens(
   request: Request,
@@ -209,8 +178,6 @@ async function getRefreshedTokens(
     return null;
   }
   const totalTokenLifetimeMs = claims.exp * 1000 - claims.iat * 1000;
-  // Refresh when the token is valid for less than the next minute, or less
-  // than 10% of its lifetime, whichever is larger — never less than 10s.
   const minimumExpiration =
     Date.now() +
     Math.min(

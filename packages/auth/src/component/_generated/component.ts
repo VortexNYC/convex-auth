@@ -2177,7 +2177,11 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         revokeSessionsForUser: FunctionReference<
           "mutation",
           "internal",
-          { excludeSessionId?: string; userId: string },
+          {
+            excludeFamilyId?: string;
+            excludeSessionId?: string;
+            userId: string;
+          },
           any,
           Name
         >;

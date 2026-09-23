@@ -13,8 +13,6 @@ const mockClient = {
 
 vi.mock("convex/react", () => ({
   useConvex: () => mockClient,
-  // Stable per-ref identity — the real useAction memoizes; a fresh vi.fn()
-  // per render would retrigger the provider's effects forever.
   useAction: (ref: unknown) => {
     const key = ref as string;
     if (!actionMocks.has(key)) {
@@ -120,7 +118,6 @@ describe("ConvexAuthProvider cookie mode", () => {
     await waitFor(() => expect(latestActions?.token).toBe("server-token"));
     expect(latestActions?.sessionId).toBe("server-session");
     expect(latestActions?.isAuthenticated).toBe(true);
-    // No browser persistence in cookie mode
     expect(window.localStorage.length).toBe(0);
     expect(latestActions?.refreshToken).toBeNull();
   });
@@ -134,8 +131,6 @@ describe("ConvexAuthProvider cookie mode", () => {
     renderProvider({ storageMode: "cookies" });
     await waitFor(() => expect(latestActions).not.toBeNull());
     expect(latestActions?.token).toBeNull();
-    // The URL is left for the middleware to strip — the client never
-    // touches it in cookie mode.
     expect(window.location.search).toContain("token=url-token");
     window.history.replaceState(null, "", "/");
   });
@@ -156,10 +151,8 @@ describe("ConvexAuthProvider cookie mode", () => {
     expect(call.credentials).toBe("same-origin");
     expect(latestActions?.token).toBe("minted-token");
     expect(latestActions?.sessionId).toBe("minted-session");
-    // The proxy strips refreshToken from the JSON body; state never holds it.
     expect(latestActions?.refreshToken).toBeNull();
     expect(window.localStorage.length).toBe(0);
-    // The direct action was never invoked
     expect(actionMocks.get("signIn")).not.toHaveBeenCalled();
   });
 
@@ -223,8 +216,6 @@ describe("ConvexAuthProvider cookie mode", () => {
     expect(call.email).toBe("a@b.c");
     const verifier = call.landingVerifier as string;
     expect(verifier).toBeTruthy();
-    // The verifier it sent is the cookie value the boundary will compare at
-    // landing — happy-dom's hostname is localhost, so no __Host- prefix.
     expect(document.cookie).toContain(`__convexAuthLandingVerifier=${verifier}`);
   });
 
@@ -251,10 +242,6 @@ describe("ConvexAuthProvider cookie mode", () => {
 
     const args = mockClient.action.mock.calls.at(-1)![1] as Record<string, unknown>;
     const verifier = args.landingVerifier as string;
-    // Token-mode landings carry the triple in the URL — the same login-CSRF
-    // hole the cookie-mode boundary closes, enforced client-side at ingest.
-    // Only non-DOM runtimes (React Native) get no verifier: the helper
-    // returns undefined there and no cookie exists to compare against.
     expect(verifier).toBeTruthy();
     expect(document.cookie).toContain(`__convexAuthLandingVerifier=${verifier}`);
   });
@@ -271,9 +258,6 @@ describe("ConvexAuthProvider cookie mode", () => {
     expect(onAuthChange).toHaveBeenCalledTimes(1);
   });
 
-  // `lastAppliedServerStateFetch` is module-scoped — the tests below use
-  // strictly increasing fixed timestamps so the watermark ordering is
-  // deterministic regardless of wall-clock timing.
   it("re-seeds from a newer serverState after a server-side rotation", async () => {
     const base = 1_700_000_000_000;
     const { rerender } = renderProvider({
@@ -287,7 +271,6 @@ describe("ConvexAuthProvider cookie mode", () => {
     });
     await waitFor(() => expect(latestActions?.token).toBe("token-v1"));
 
-    // Middleware rotated the pair; the next RSC payload carries the new token.
     rerender(
       React.createElement(
         ConvexAuthProvider,
@@ -307,7 +290,6 @@ describe("ConvexAuthProvider cookie mode", () => {
     await waitFor(() => expect(latestActions?.token).toBe("token-v2"));
     expect(latestActions?.sessionId).toBe("s2");
 
-    // A stale payload (older watermark — e.g. cached router entry) is ignored.
     rerender(
       React.createElement(
         ConvexAuthProvider,
@@ -351,8 +333,6 @@ describe("ConvexAuthProvider cookie mode", () => {
         React.createElement(SessionProbe),
       ),
     );
-    // First paint: no waiting — the server-verified session is already
-    // authenticated even before the live query and setAuth handshake resolve.
     expect(session?.isAuthenticated).toBe(true);
     expect(session?.user?.id).toBe("u1");
   });
@@ -430,10 +410,6 @@ describe("ConvexAuthProvider localStorage mode (regression)", () => {
   });
 
   it("rejects a URL triple without a matching landingVerifier", async () => {
-    // The login-CSRF case: a landing link crafted by a third party carries
-    // either no verifier or one bound to a different browser. Neither may
-    // be ingested — and the credentials are stripped from the URL either
-    // way so they cannot linger in history.
     for (const url of [
       "/?token=url-token&refreshToken=url-refresh&sessionId=url-session",
       "/?token=url-token&refreshToken=url-refresh&sessionId=url-session&landingVerifier=lv-other",

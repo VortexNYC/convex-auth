@@ -34,18 +34,9 @@ export function validateCsrfHeaders(
     }
 
     if (site === "cross-site" || site === "same-site") {
-      // Cross-origin POSTs — including same-site siblings, whose requests
-      // still carry our SameSite=Lax cookies. Browsers always send Origin
-      // on cross-origin POSTs, so require and validate it. Better Auth
-      // treats this identically: fetch-metadata requests validate
-      // origin/referer rather than trusting the site classification.
       return validateOriginOrReferer(request, trustedOrigins, { requireWhenNoCookie: true });
     }
 
-    // same-origin / none: the metadata already asserts the request's own
-    // context, but still validate Origin/Referer when present — a header
-    // set that contradicts the metadata (same-site claim, foreign Origin)
-    // cannot come from a real browser and fails closed.
     return validateOriginOrReferer(request, trustedOrigins, { requireWhenNoCookie: false });
   }
 
@@ -53,8 +44,6 @@ export function validateCsrfHeaders(
     return validateOriginOrReferer(request, trustedOrigins, { requireWhenNoCookie: true });
   }
 
-  // No cookies and no Fetch Metadata headers: treat as a first-login or
-  // non-browser request and allow the action to authenticate.
   return { allowed: true };
 }
 

@@ -178,9 +178,6 @@ describe("session-minting actions", () => {
       .find((h) => h.startsWith("__Host-__convexAuthTwoFactorPending="));
     expect(pending).toContain("challenge-tok");
     expect(pending).toContain("Max-Age=300");
-    // A pending challenge supersedes any existing session: the pair is
-    // cleared so a stale session can't resurrect on the next server render
-    // while the client shows the challenge form.
     const tokenCookie = response.headers
       .getSetCookie()
       .find((h) => h.startsWith("__Host-__convexAuthToken="));
@@ -503,7 +500,6 @@ describe("localhost cookie naming", () => {
     const setCookies = response.headers.getSetCookie();
     expect(setCookies.find((h) => h.startsWith("__convexAuthToken=t"))).toBeDefined();
     expect(setCookies.find((h) => h.startsWith("__Host-"))).toBeUndefined();
-    // No Secure attribute on localhost (Safari refuses Secure over http).
     expect(setCookies.every((h) => !h.includes("Secure"))).toBe(true);
   });
 });

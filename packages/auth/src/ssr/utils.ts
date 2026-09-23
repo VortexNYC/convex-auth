@@ -6,9 +6,6 @@ export function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     headers: {
       "Content-Type": "application/json",
-      // Proxy responses carry session state (tokens, Set-Cookie) — they must
-      // never be shared-cached. POSTs aren't cacheable by default, but an
-      // explicit no-store is the documented contract.
       "Cache-Control": "private, no-store",
     },
     status,
@@ -20,7 +17,6 @@ export function isCorsRequest(request: Request) {
   if (origin === null) {
     return false;
   }
-  // A malformed Origin cannot be proven same-origin — treat as cross-origin.
   try {
     const originURL = new URL(origin);
     return (
