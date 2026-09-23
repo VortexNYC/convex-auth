@@ -1,68 +1,91 @@
-# Session state — 2026-09-23 (ruthless SSR/auth hardening sweep, PR #354)
+# Session state — 2026-09-23 (SSR sweep + demo hardening + release hygiene, PR #354)
 
 Repo: `~/Projects/convex-auth` · remote `github.com/VortexNYC/convex-auth` ·
-branch `feat/tanstack-start-adapter`, head `3600b5c`, all pushed.
+branch `feat/tanstack-start-adapter`, head `8bab3b9`, all pushed.
 
 ## Where things stand
 
 - **PR #354** — TanStack Start SSR adapter + security fixes + the full
-  ruthless sweep (`b62c80f`, `e84308a`, `796e3e4`).
+  ruthless sweep + demo-environment hardening.
 - **Published**: `@vortex-api/convex-auth@2.5.2` is npm `latest`;
   GitHub release `v2.5.2` exists.
-- **#356 fixed** — `2259e02`: family revocation fires only for
-  rotated-token replay (`rotatedAt !== undefined`).
-- **#355 fixed** — `71b6874`: landing-verifier browser binding.
-- **Sweep findings F1-F12** — all fixed, all tested:
-  - F1 OAuth `signIn` action redirect allowlist (was unvalidated —
-    `?token=&refreshToken=` exfiltration to arbitrary origins).
-  - F2 same-origin gate on session-triple landings (compat mode wrote
-    auth cookies on credentialed cross-origin fetches).
-  - F3 `sec-fetch-site: same-site` no longer skips Origin validation
-    (sibling subdomains are cross-origin to the app).
-  - F4 relative redirect URLs resolve against SITE_URL/CONVEX_SITE_URL.
-  - F5 magic-link `errorCallbackURL`/`newUserCallbackURL` validated +
-    `createdUser` honored.
-  - F6 Next.js middleware preserves plain-`Response` bodies.
-  - F7 token-mode URL ingestion strict-by-default.
-  - F8 RN custom-scheme origins (`myapp://`, `exp://**`) — scheme-pattern
-    matching, `origin === "null"` aliasing closed.
-  - F9 empty `landingVerifier` (`?landingVerifier=` + empty cookie)
-    normalized to absent everywhere — `""==""` can't satisfy the check.
-  - F10/F11 proxies substitute the cookie value (never body) for
-    `landingVerifier` on `signIn` AND `callback`, both `ssr/proxy.ts`
-    and `nextjs/server/proxy.ts`; token-mode `oauthCallback` attaches
-    the cookie.
-  - F12 session-bearing responses emit `Cache-Control: private,
-no-store` (proxy JSON + landing redirects).
-- **CodeQL**: 16 `incomplete-hostname-regexp` alerts → `globMatch` is now
-  a hand-rolled two-pointer matcher (`796e3e4`) — no RegExp construction,
-  no escaping surface. **Cleared**: CodeQL passes on `3600b5c`.
-- **CI typecheck catch**: `landingVerifier` missing from React-side
-  `NativeAuthOAuthCallbackArgs` (the token-mode `oauthCallback` attach
-  was added after the last local typecheck) → fixed in `3600b5c`.
-- **Docs**: oauth.md, magic-links.mdx, ssr-contract.md, server-api.mdx
-  all corrected to match implementation (no more `updateSession({token})`,
-  verifier + trustedOrigins + cache contract documented).
+- **Sweep F1–F12 fixed and tested** (see git log `b62c80f`–`3600b5c`).
+
+## Demo environments — deployed and smoke-tested live
+
+Cloud:
+
+- `perfect-dragon-698` — react example SPA + backend (dev).
+- `cheerful-buzzard-770` — oauth example SPA + backend (prod slot; moved
+  off `perfect-dragon-698` — the two were clobbering each other).
+- `stoic-pony-614` — react-native backend (dev).
+- `fast-gopher-450` — server example backend (dev).
+
+Local anonymous backends (unique ports so all coexist):
+
+- nextjs `3210/3211` · tanstack-start `3212/3213` · tanstack-router
+  `3214/3215` · react-native-web `3216/3217` · better-auth-migration
+  `3218/3219`. Ports live in each example's gitignored `.env.local`;
+  `docs/(reference)/examples.md` documents the convention.
+
+Verified live: untrusted `callbackURL` → `invalid_callback_url`; trusted
+origin → signed provider URL; `convex-auth-rn://` + `exp://` accepted on
+the RN deployment and rejected elsewhere; magic-link verify rejects evil
+redirects (400); sign-up → sign-in → refresh rotation roundtrip 200;
+rotated-token replay inside 15s grace converges, after grace →
+`invalid_refresh_token`; `convex logs` clean on all deployments.
+
+## New findings fixed since the sweep
+
+- `11ba8cd` — `/api/auth/update-session` now runs `checkCsrf` (it wrote
+  session cookies from a body-supplied refreshToken with no CSRF check —
+  session-fixation vector). Live-verified 403 on all four cloud
+  deployments + regression test.
+- `2bbae9a` — CodeRabbit incremental Majors, both real:
+  - Split-base open redirect: `isAllowedRedirectUrl` validated against
+    request origin/`CONVEX_SITE_URL` while `resolveRedirectUrl` resolved
+    against `SITE_URL` first — `https:evil.example.com` validated as a
+    same-origin path under https but resolved absolute under http →
+    `?token=` exfiltration. All validators + resolvers now share
+    `redirectBaseOrigin()` (`SITE_URL ?? CONVEX_SITE_URL ?? requestOrigin`).
+  - TanStack middleware appended auth cookies to downstream responses
+    without forcing `Cache-Control` — `applyCookies` now pins
+    `private, no-store`.
+
+## Release/changelog/docs hygiene (new)
+
+- `site/blume.config.ts` — `github-releases` content source wired
+  (`prefix: changelog`, `VortexNYC/convex-auth`): every GitHub release
+  auto-builds a `/changelog` timeline entry + `changelog/rss.xml`.
+  Verified in `pnpm run build` output.
+- `changeset-gate` workflow + `scripts/changeset-gate.sh` (adapted from
+  vortex-core): package source changes require a changeset or the
+  `no-release` label; major bumps require a `Migration note:` line.
+  Label `no-release` created.
+- Release titles normalized to `convex-auth vX.Y.Z` (was mixed:
+  `v2.0.5 — desc`, `convex-auth@1.7.5`, `v0.1.0-alpha.0`).
+- `blume-update-docs` skill vendored to `.devin/skills/` — the docs-drift
+  audit Hayden ships with Blume (audits merged PRs vs docs, fixes stale
+  pages, opens a maintenance PR).
 
 ## Reviews
 
-- **Cursor** (`b62c80f`): no Critical/High/Medium. All bypass attempts
-  failed. One parity note (nextjs proxy signIn) → fixed `e84308a`.
-- **CodeRabbit**: prior findings all resolved (several self-marked
-  "Addressed in 3274975/ad2447d"; CSRF/immutable-headers/typed-guard
-  Majors fixed by this sweep). Incremental on `e84308a`/`796e3e4`
-  in progress via push trigger.
+- Cursor (`b62c80f`): clean. CodeRabbit incremental completed at ~17:36 —
+  both Majors fixed in `2bbae9a`; remaining Minors: test `as any` casts,
+  comment-style nits, silent-rejection UX note on `ConvexAuthProvider`.
 
 ## Verification
 
-1,694 tests · `pnpm run check` clean · typecheck clean (10 workspaces) ·
-`pnpm run build` green. **CI fully green on `3600b5c`** — checks 20.x +
-22.x, CodeQL, SAST, leaks, secretlint, prc, deps-and-secrets all pass.
+223 native tests · `vp check` clean · typecheck clean · `pnpm run build`
+green (includes site/changelog). CI pending on `8bab3b9`.
 
 ## Open gates / next
 
-1. CodeRabbit incremental review on `3600b5c` — still queued/in progress
-   behind the org rate limit (~1h). All prior findings resolved.
-2. PR #354 merge decision once CodeRabbit completes.
-3. Deferred feature issues unchanged (#254/#216/#214/#213/#206/#204/#203,
-   docs #218). Next.js remains last per the layering plan.
+1. CI + CodeRabbit incremental on `2bbae9a`/`8bab3b9`.
+2. CodeRabbit Minors: `as any` in `magicLink.test.ts:286`, comment nits,
+   silent landing-rejection UX in `ConvexAuthProvider.tsx:601`.
+3. `deployment.site` in `site/blume.config.ts` is a placeholder — set the
+   real docs origin so the changelog RSS feed gets absolute URLs.
+4. Optional: schedule the vendored `blume-update-docs` audit (Devin
+   scheduled session) for recurring docs freshness.
+5. PR #354 merge decision once reviews settle.
