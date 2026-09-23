@@ -2,13 +2,24 @@ import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { useConvexAuthClient, useSession } from "@vortex-api/convex-auth/react";
 
+// Keep search params + hash (location.href) but reject open redirects.
+// Prefix checks are insufficient: WHATWG normalizes `/\evil.com` and control
+// characters into cross-origin URLs. Parse against a dummy origin instead.
+function localHref(raw: string, fallback = "/dashboard"): string {
+  try {
+    const origin = "https://local.invalid";
+    const url = new URL(raw, origin);
+    if (url.origin !== origin) return fallback;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return fallback;
+  }
+}
+
 export const Route = createFileRoute("/sign-in")({
   validateSearch: (search: Record<string, unknown>) => {
     const raw = typeof search.redirect === "string" ? search.redirect : "/dashboard";
-    // Keep search params + hash (location.href) but reject open redirects —
-    // only local paths are allowed.
-    const redirect = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
-    return { redirect };
+    return { redirect: localHref(raw) };
   },
   beforeLoad: ({ context, search }) => {
     if (context.auth.isAuthenticated) {
