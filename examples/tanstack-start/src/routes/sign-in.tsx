@@ -3,12 +3,16 @@ import { useState } from "react";
 import { useConvexAuthClient, useSession } from "@vortex-api/convex-auth/react";
 
 export const Route = createFileRoute("/sign-in")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    redirect: typeof search.redirect === "string" ? search.redirect : "/dashboard",
-  }),
+  validateSearch: (search: Record<string, unknown>) => {
+    const raw = typeof search.redirect === "string" ? search.redirect : "/dashboard";
+    // Keep search params + hash (location.href) but reject open redirects —
+    // only local paths are allowed.
+    const redirect = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
+    return { redirect };
+  },
   beforeLoad: ({ context, search }) => {
     if (context.auth.isAuthenticated) {
-      throw redirect({ to: search.redirect ?? "/dashboard" });
+      throw redirect({ href: search.redirect });
     }
   },
   component: SignInPage,
@@ -26,7 +30,7 @@ function SignInPage() {
   const afterAuth = async () => {
     // Re-run beforeLoad/loaders so route context picks up the fresh session.
     await router.invalidate();
-    await router.navigate({ to: redirectTo ?? "/dashboard" });
+    await router.navigate({ href: redirectTo });
   };
 
   const submitEmail = async (e: React.FormEvent<HTMLFormElement>) => {

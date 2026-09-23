@@ -136,6 +136,31 @@ describe("handleConvexAuthRequest", () => {
       ),
     ).toBeDefined();
   });
+
+  it("rebuilds immutable responses so rotated cookies still reach the browser", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const oldToken = jwt(now + 30, now - 3600);
+    actionMock.mockResolvedValue({ token: "t2", refreshToken: "r2" });
+    const request = new Request("https://app.example.com/dash", {
+      headers: {
+        host: "app.example.com",
+        accept: "text/html",
+        cookie: `__Host-__convexAuthToken=${oldToken}; __Host-__convexAuthRefreshToken=old`,
+      },
+    });
+    // Redirect responses carry immutable headers — appending must not throw.
+    const downstream = () =>
+      Promise.resolve({ response: Response.redirect("https://app.example.com/elsewhere") });
+    const res = await handleConvexAuthRequest(request, downstream, options);
+    const response = (res as { response: Response }).response;
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("https://app.example.com/elsewhere");
+    const setCookies = response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=t2"))).toBeDefined();
+    expect(
+      setCookies.find((h) => h.startsWith("__Host-__convexAuthRefreshToken=r2")),
+    ).toBeDefined();
+  });
 });
 
 describe("rotation-aware session resolution", () => {

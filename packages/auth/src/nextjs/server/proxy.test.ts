@@ -267,6 +267,27 @@ describe("server-side substitutions", () => {
     );
   });
 
+  it("omits the access token for updateSession so an expired JWT cannot reject the refresh", async () => {
+    fetchActionMock.mockResolvedValue({ token: "t2", refreshToken: "r2" });
+    mocks.jar = mocks.makeJar({
+      "__Host-__convexAuthToken": "expired-jwt",
+      "__Host-__convexAuthRefreshToken": "cookie-refresh",
+    });
+    const request = postRequest(
+      { intent: "updateSession", args: {} },
+      {
+        cookie:
+          "__Host-__convexAuthToken=expired-jwt; __Host-__convexAuthRefreshToken=cookie-refresh",
+      },
+    );
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.updateSession,
+      { refreshToken: "cookie-refresh" },
+      expect.not.objectContaining({ token: expect.anything() }),
+    );
+  });
+
   it("rejects updateSession when no refresh cookie is present", async () => {
     const response = await proxyAuthActionToConvex(
       postRequest({ intent: "updateSession", args: {} }),

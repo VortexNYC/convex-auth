@@ -139,7 +139,7 @@ export async function proxyAuthActionToConvex(
   try {
     const result = await fetchAction(action, args as never, {
       ...getConvexNextjsOptions(options),
-      ...(token !== undefined ? { token } : {}),
+      ...(token !== undefined && intent !== "updateSession" ? { token } : {}),
     });
 
     const cookiesToWrite = cookiesFromResult(result);

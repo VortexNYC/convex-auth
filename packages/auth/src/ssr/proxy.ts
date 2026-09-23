@@ -146,7 +146,10 @@ export async function proxyAuthActionToConvex(
     const result = await options.transport.action(
       action,
       args,
-      token !== undefined ? { token } : {},
+      // updateSession authenticates on the refresh-token arg alone — sending a
+      // possibly-expired JWT lets Convex reject the request before the refresh
+      // path runs, and the catch branch would clear live cookies.
+      token !== undefined && intent !== "updateSession" ? { token } : {},
     );
 
     const cookiesToWrite = cookiesFromResult(result);

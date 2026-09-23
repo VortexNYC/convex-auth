@@ -121,13 +121,19 @@ export async function handleConvexAuthRequest<TNextResult extends { response: Re
 
   const res = await next();
 
-  // Write the rotation outcome onto the response cookies.
   if (result.refreshTokens !== undefined) {
-    appendAuthCookies(
-      res.response.headers,
-      result.refreshTokens === null ? null : result.refreshTokens,
-      { isLocalhost: isLocalHostRequest(request), maxAge: cookieConfig.maxAge },
-    );
+    const tokens = result.refreshTokens === null ? null : result.refreshTokens;
+    const cookieOpts = { isLocalhost: isLocalHostRequest(request), maxAge: cookieConfig.maxAge };
+    try {
+      appendAuthCookies(res.response.headers, tokens, cookieOpts);
+    } catch {
+      // Immutable headers (redirects, proxied fetch responses): rebuild so the
+      // rotated cookies still reach the browser instead of 500ing and losing
+      // the session.
+      const rebuilt = new Response(res.response.body, res.response);
+      appendAuthCookies(rebuilt.headers, tokens, cookieOpts);
+      return { ...res, response: rebuilt };
+    }
   }
   return res;
 }
@@ -170,6 +176,9 @@ export function convexAuthFunctionMiddleware(
       transport: options.transport,
       convexUrl: options.convexUrl,
     });
+    if (session === null) {
+      throw new Error("Unauthorized");
+    }
     return next({ context: { session } });
   });
 }

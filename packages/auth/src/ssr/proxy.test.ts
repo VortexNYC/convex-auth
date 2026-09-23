@@ -234,6 +234,26 @@ describe("cookie substitutions", () => {
     expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=t2"))).toBeDefined();
   });
 
+  it("updateSession omits the access token so an expired JWT cannot reject the refresh", async () => {
+    actionMock.mockResolvedValue({ token: "t2", refreshToken: "r2" });
+    const response = await proxyAuthActionToConvex(
+      postRequest(
+        { intent: "updateSession", args: {} },
+        {
+          cookie:
+            "__Host-__convexAuthToken=expired-jwt; __Host-__convexAuthRefreshToken=old-refresh",
+        },
+      ),
+      options,
+    );
+    expect(response.status).toBe(200);
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.updateSession,
+      { refreshToken: "old-refresh" },
+      {},
+    );
+  });
+
   it("updateSession without a refresh cookie returns 401", async () => {
     const response = await proxyAuthActionToConvex(
       postRequest({ intent: "updateSession", args: {} }),
