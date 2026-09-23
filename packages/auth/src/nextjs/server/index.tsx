@@ -369,15 +369,22 @@ export function convexAuthNextjsMiddleware(
     }
 
     // Port the cookies from the auth middleware to the response. Mutating a
-    // NextResponse directly preserves its body; `NextResponse.next(response)`
-    // only forwards headers/status.
+    // NextResponse directly preserves its body; a plain `Response` must be
+    // rebuilt — `NextResponse.next()` produces a continuation whose body is
+    // always null, so it would silently discard the handler's body.
     const refreshedTokens =
       authResult.kind === "refreshTokens" ? authResult.refreshTokens : undefined;
     const mintedLandingVerifier =
       authResult.kind === "refreshTokens" ? authResult.landingVerifier : undefined;
     if (refreshedTokens !== undefined || mintedLandingVerifier !== undefined) {
       const nextResponse =
-        response instanceof NextResponse ? response : NextResponse.next(response);
+        response instanceof NextResponse
+          ? response
+          : new NextResponse(response.body, {
+              status: response.status,
+              statusText: response.statusText,
+              headers: new Headers(response.headers),
+            });
       if (refreshedTokens !== undefined) {
         await setAuthCookies(nextResponse, refreshedTokens, cookieConfig);
       }

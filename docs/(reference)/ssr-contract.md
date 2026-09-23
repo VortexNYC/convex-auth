@@ -208,8 +208,23 @@ At the request boundary (before rendering):
    mismatched verifiers get the params stripped and the app renders
    signed-out. `requireLandingVerifier: false` (middleware/boundary
    option) restores the old behavior for deployments that predate verifier
-   threading or rely on cross-browser magic-link opens; token-mode and
-   native clients never bind and are unaffected.
+   threading or rely on cross-browser magic-link opens.
+
+   **Token mode binds too — in browsers.** `ConvexAuthProvider` attaches the
+   verifier to OAuth/magic-link initiation in any DOM environment (not just
+   cookie mode), and its URL-ingestion path applies the same param-vs-cookie
+   check before accepting a session triple — same login-CSRF hole, closed
+   client-side. `requireLandingVerifier={false}` on the provider is the
+   escape hatch (off-browser initiation, cross-device magic links). Native /
+   non-DOM runtimes get no verifier and no check — `document.cookie` does not
+   exist to bind against, and those flows land via deep links, not URL params
+   a web attacker could plant.
+
+   **Cross-origin requests can never land a triple.** Even with
+   `requireLandingVerifier: false`, the boundary only lands a session on a
+   same-origin navigation — a credentialed cross-origin `fetch` carrying the
+   triple gets the params stripped and **no** `Set-Cookie`, since a
+   CORS-failed response still reaches the browser's cookie store.
 
 #### Refresh races — the design load-bearing decision
 
@@ -254,7 +269,13 @@ An endpoint the client POSTs to for session-mutating actions. On the server it:
 
 - Rejects non-POST and applies **`validateCsrfHeaders`**
   (`convex-runtime/native/csrf.ts`) — our existing CSRF primitive, stronger
-  than a bare cross-origin check.
+  than a bare cross-origin check. Fetch Metadata is a gate, not a grant:
+  `cross-site` **and** `same-site` requests must also carry an `Origin` (or
+  `Referer`) matching the request host or a trusted origin — a sibling
+  subdomain is `same-site` to the browser but cross-origin to us, and
+  `SameSite=Lax` cookies flow to it. `same-origin`/`none` requests still get
+  their `Origin` validated when present, so contradictory headers fail
+  closed rather than passing on the metadata's word.
 - Enforces an **action allowlist**.
 - Substitutes server-confidential fields from cookies — `refreshToken`, and
   the 2FA pending token where the action consumes it — the client never sends

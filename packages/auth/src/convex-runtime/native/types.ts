@@ -117,6 +117,11 @@ export type NativeAuthSession = {
    * results so the verify/callback route can carry it onto the landing URL.
    */
   landingVerifier?: string;
+  /**
+   * Set when the sign-in created a brand-new user — lets callback routes
+   * honor `newUserCallbackURL`-style destinations.
+   */
+  createdUser?: boolean;
 };
 
 export type NativeVerificationCodeDoc = {

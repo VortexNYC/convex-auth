@@ -242,7 +242,7 @@ describe("ConvexAuthProvider cookie mode", () => {
     );
   });
 
-  it("omits the verifier in token mode (native/localStorage flows)", async () => {
+  it("attaches the verifier in token mode too — browser landings are bound", async () => {
     renderProvider({ storageMode: "localStorage" });
     await waitFor(() => expect(latestActions).not.toBeNull());
 
@@ -250,7 +250,13 @@ describe("ConvexAuthProvider cookie mode", () => {
     await act(() => latestActions!.signInWithRedirect({ provider: "github" } as never));
 
     const args = mockClient.action.mock.calls.at(-1)![1] as Record<string, unknown>;
-    expect(args).not.toHaveProperty("landingVerifier");
+    const verifier = args.landingVerifier as string;
+    // Token-mode landings carry the triple in the URL — the same login-CSRF
+    // hole the cookie-mode boundary closes, enforced client-side at ingest.
+    // Only non-DOM runtimes (React Native) get no verifier: the helper
+    // returns undefined there and no cookie exists to compare against.
+    expect(verifier).toBeTruthy();
+    expect(document.cookie).toContain(`__convexAuthLandingVerifier=${verifier}`);
   });
 
   it("fires onAuthChange on transitions, not on mount", async () => {
@@ -408,16 +414,51 @@ describe("ConvexAuthProvider localStorage mode (regression)", () => {
     expect(window.localStorage.getItem("convex-auth-refresh-token")).toBe("client-refresh");
   });
 
-  it("still ingests tokens from the URL", async () => {
+  it("ingests a verifier-bound URL triple", async () => {
+    document.cookie = "__convexAuthLandingVerifier=lv-bound; Path=/; SameSite=Lax";
     window.history.replaceState(
       null,
       "",
-      "/?token=url-token&refreshToken=url-refresh&sessionId=url-session",
+      "/?token=url-token&refreshToken=url-refresh&sessionId=url-session&landingVerifier=lv-bound",
     );
     renderProvider();
     await waitFor(() => expect(latestActions?.token).toBe("url-token"));
     expect(latestActions?.refreshToken).toBe("url-refresh");
     expect(window.location.search).not.toContain("token=");
+    expect(window.location.search).not.toContain("landingVerifier=");
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("rejects a URL triple without a matching landingVerifier", async () => {
+    // The login-CSRF case: a landing link crafted by a third party carries
+    // either no verifier or one bound to a different browser. Neither may
+    // be ingested — and the credentials are stripped from the URL either
+    // way so they cannot linger in history.
+    for (const url of [
+      "/?token=url-token&refreshToken=url-refresh&sessionId=url-session",
+      "/?token=url-token&refreshToken=url-refresh&sessionId=url-session&landingVerifier=lv-other",
+    ]) {
+      window.history.replaceState(null, "", url);
+      renderProvider();
+      await waitFor(() => expect(latestActions).not.toBeNull());
+      expect(latestActions?.token ?? null).toBeNull();
+      expect(window.location.search).not.toContain("token=");
+      cleanup();
+      actionMocks.clear();
+      latestActions = null;
+    }
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("ingests an unbound triple when requireLandingVerifier is disabled", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/?token=url-token&refreshToken=url-refresh&sessionId=url-session",
+    );
+    renderProvider({ requireLandingVerifier: false });
+    await waitFor(() => expect(latestActions?.token).toBe("url-token"));
+    expect(latestActions?.refreshToken).toBe("url-refresh");
     window.history.replaceState(null, "", "/");
   });
 });

@@ -95,8 +95,6 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
     : undefined;
   const emailOtpActions = config.emailOtp ? nativeEmailOtp(component, config.emailOtp) : undefined;
 
-  const oauthActions = config.oauth ? nativeOAuth(component, config.oauth) : undefined;
-
   const passkeyActions =
     config.passkey && component.passkeys
       ? nativePasskey(component.passkeys, config.passkey)
@@ -109,6 +107,33 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
       )
     : undefined;
 
+  // One merged redirect allowlist for both the OAuth actions and the OAuth
+  // HTTP routes. Redirect URLs declared under `emailAndPassword.trustedOrigins`
+  // (or the email `appOrigin`, the OIDC login origin, or the deployment envs)
+  // were always honored by the routes — the action path must accept exactly
+  // what the routes accept, no more and no less.
+  const emailConfig = config.emailAndPassword ?? {};
+  const oauthProviderLoginOrigin = (() => {
+    const loginUrl = config.oauthProvider?.loginUrl;
+    if (!loginUrl) return [];
+    try {
+      return [new URL(loginUrl).origin];
+    } catch {
+      return [];
+    }
+  })();
+  const trustedOrigins = [
+    ...(emailConfig.trustedOrigins ?? []),
+    ...(emailConfig.email?.appOrigin ? [emailConfig.email.appOrigin] : []),
+    ...(config.oauth?.trustedOrigins ?? []),
+    ...(process.env.SITE_URL ? [process.env.SITE_URL] : []),
+    ...(process.env.CONVEX_SITE_URL ? [process.env.CONVEX_SITE_URL] : []),
+    ...oauthProviderLoginOrigin,
+  ];
+
+  const oauthConfig = config.oauth ? { ...config.oauth, trustedOrigins } : undefined;
+  const oauthActions = oauthConfig ? nativeOAuth(component, oauthConfig) : undefined;
+
   const auth = {
     ...emailAndPasswordActions,
     ...magicLinkActions,
@@ -120,24 +145,6 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
     ...passkeyActions,
     ...anonymousActions,
     addHttpRoutes(http: HttpRouter) {
-      const emailConfig = config.emailAndPassword ?? {};
-      const oauthProviderLoginOrigin = (() => {
-        const loginUrl = config.oauthProvider?.loginUrl;
-        if (!loginUrl) return [];
-        try {
-          return [new URL(loginUrl).origin];
-        } catch {
-          return [];
-        }
-      })();
-      const trustedOrigins = [
-        ...(emailConfig.trustedOrigins ?? []),
-        ...(emailConfig.email?.appOrigin ? [emailConfig.email.appOrigin] : []),
-        ...(config.oauth?.trustedOrigins ?? []),
-        ...(process.env.SITE_URL ? [process.env.SITE_URL] : []),
-        ...(process.env.CONVEX_SITE_URL ? [process.env.CONVEX_SITE_URL] : []),
-        ...oauthProviderLoginOrigin,
-      ];
       const httpActions = magicLinkActions
         ? ({
             ...emailAndPasswordActions,
@@ -148,10 +155,10 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
             Partial<NativeMagicLinkFunctionReferences>);
 
       addNativeAuthHttpRoutes(http, component, httpActions, { trustedOrigins });
-      if (oauthActions && config.oauth) {
+      if (oauthActions && oauthConfig) {
         addNativeOAuthHttpRoutes(http, {
           component,
-          oauth: config.oauth,
+          oauth: oauthConfig,
           trustedOrigins,
         });
       }

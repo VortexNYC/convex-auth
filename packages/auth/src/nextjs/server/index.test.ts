@@ -290,6 +290,39 @@ describe("convexAuthNextjsMiddleware", () => {
         .find((h) => h.startsWith("__Host-__convexAuthToken=rotated")),
     ).toBeDefined();
   });
+
+  it("preserves a custom handler's plain Response body when porting cookies", async () => {
+    const soon = Math.floor(Date.now() / 1000) + 30;
+    fetchActionMock.mockResolvedValue({
+      token: "rotated",
+      refreshToken: "rotated-refresh",
+    });
+    const middleware = convexAuthNextjsMiddleware(async () => {
+      // A plain Response — not a NextResponse. `NextResponse.next(response)`
+      // would discard this body (continuations carry none); the middleware
+      // must rebuild instead.
+      return new Response("plain-body", {
+        status: 202,
+        headers: { "x-custom": "kept" },
+      });
+    }, options);
+    const request = getRequest("/dashboard", {
+      cookie: `__Host-__convexAuthToken=${makeJwt({ iat: soon - 600, exp: soon })}; __Host-__convexAuthRefreshToken=old`,
+    });
+    mocks.jar = mocks.makeJar({
+      "__Host-__convexAuthToken": makeJwt({ iat: soon - 600, exp: soon }),
+      "__Host-__convexAuthRefreshToken": "old",
+    });
+    const response = await middleware(request, event);
+    expect(response?.status).toBe(202);
+    expect(await response?.text()).toBe("plain-body");
+    expect(response?.headers.get("x-custom")).toBe("kept");
+    expect(
+      response?.headers
+        .getSetCookie()
+        .find((h) => h.startsWith("__Host-__convexAuthToken=rotated")),
+    ).toBeDefined();
+  });
 });
 
 describe("ConvexAuthNextjsServerProvider server state", () => {

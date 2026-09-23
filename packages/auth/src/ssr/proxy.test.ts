@@ -339,6 +339,41 @@ describe("cookie substitutions", () => {
     );
   });
 
+  it("signIn injects the landing-verifier cookie and drops a forged body value", async () => {
+    actionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    await proxyAuthActionToConvex(
+      postRequest(
+        {
+          intent: "signIn",
+          args: { email: "a@b.c", landingVerifier: "lv-forged" },
+        },
+        { cookie: "__Host-__convexAuthLandingVerifier=lv-cookie" },
+      ),
+      options,
+    );
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.signIn,
+      { email: "a@b.c", landingVerifier: "lv-cookie" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("signIn drops a body-supplied landingVerifier when no cookie is present", async () => {
+    actionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    await proxyAuthActionToConvex(
+      postRequest({
+        intent: "signIn",
+        args: { email: "a@b.c", landingVerifier: "lv-forged" },
+      }),
+      options,
+    );
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.signIn,
+      { email: "a@b.c" },
+      expect.objectContaining({}),
+    );
+  });
+
   it("updateSession's refresh cookie overwrites a body-supplied refreshToken", async () => {
     actionMock.mockResolvedValue({ token: "t2", refreshToken: "r2" });
     await proxyAuthActionToConvex(

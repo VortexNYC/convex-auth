@@ -78,7 +78,9 @@ export function landingVerifierCookieName(isLocalhost: boolean) {
  */
 export function parseLandingVerifierCookie(request: Request): string | null {
   const name = landingVerifierCookieName(isLocalHostRequest(request));
-  return parseCookieHeader(request.headers.get("cookie")).get(name) ?? null;
+  // Empty reads as absent — an empty cookie must never satisfy the strict
+  // landing check against an empty `landingVerifier` param.
+  return parseCookieHeader(request.headers.get("cookie")).get(name) || null;
 }
 
 /**

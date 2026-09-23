@@ -23,6 +23,28 @@ function isLocalhostHostname(hostname: string): boolean {
   );
 }
 
+/**
+ * Read the verifier cookie without minting — the compare side of the
+ * browser binding, used when a session triple lands on the URL.
+ */
+export function readLandingVerifier(): string | null {
+  if (typeof document === "undefined" || typeof location === "undefined") {
+    return null;
+  }
+  const isLocalhost = isLocalhostHostname(location.hostname);
+  const name = `${isLocalhost ? "" : "__Host-"}${LANDING_VERIFIER_COOKIE}`;
+  const prefix = `${name}=`;
+  for (const entry of document.cookie.split(";")) {
+    const trimmed = entry.trim();
+    // An empty-valued entry is treated as absent — an empty verifier must
+    // never satisfy the strict landing check against an empty param.
+    if (trimmed.startsWith(prefix) && trimmed.length > prefix.length) {
+      return trimmed.slice(prefix.length);
+    }
+  }
+  return null;
+}
+
 export function getOrCreateLandingVerifier(): string | undefined {
   if (typeof document === "undefined" || typeof location === "undefined") {
     return undefined;
@@ -32,13 +54,17 @@ export function getOrCreateLandingVerifier(): string | undefined {
   const prefix = `${name}=`;
   for (const entry of document.cookie.split(";")) {
     const trimmed = entry.trim();
-    if (trimmed.startsWith(prefix)) {
+    if (trimmed.startsWith(prefix) && trimmed.length > prefix.length) {
       return trimmed.slice(prefix.length);
     }
   }
   // `randomUUID` requires a secure context; `getRandomValues` works on
   // plain-HTTP origins too (where the cookie write below may not stick, but
-  // the verifier still binds this flow consistently).
+  // the verifier still binds this flow consistently). `crypto` itself may be
+  // absent in exotic embedded DOMs — treat that like no DOM at all.
+  if (typeof crypto === "undefined" || typeof crypto.getRandomValues !== "function") {
+    return undefined;
+  }
   const value =
     typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()

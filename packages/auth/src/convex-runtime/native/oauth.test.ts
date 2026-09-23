@@ -192,6 +192,9 @@ function createOAuthConfig(overrides: Partial<NativeOAuthConfig> = {}): NativeOA
     google: createGoogleConfig(),
     redirectURI: "https://app.example.com/api/auth/callback/github",
     sessionTtlMs: 60_000,
+    // Tests pass `https://app.example.com` redirect URLs — they must be
+    // explicitly trusted now that `handleSignIn` enforces the allowlist.
+    trustedOrigins: ["https://app.example.com"],
     ...overrides,
   };
 }
@@ -558,6 +561,64 @@ describe("OAuth handlers", () => {
     expect(parsed.searchParams.get("redirect_uri")).toBe(
       "https://auth.example.com/api/auth/callback/github",
     );
+  });
+
+  it("handleSignIn rejects redirect URLs outside the allowlist", async () => {
+    const config = createOAuthConfig();
+    process.env.CONVEX_SITE_URL = "https://app.example.com";
+
+    // The action path must enforce the same allowlist the HTTP routes do —
+    // a completed flow lands the session triple on this URL, so an
+    // unvalidated absolute URL exfiltrates `?token=&refreshToken=`.
+    await expect(
+      handleSignIn(config, {
+        provider: "github",
+        callbackURL: "https://evil.example.com/steal",
+      }),
+    ).rejects.toThrow("Untrusted OAuth redirect URL");
+    await expect(
+      handleSignIn(config, {
+        provider: "github",
+        errorURL: "https://evil.example.com/error",
+      }),
+    ).rejects.toThrow("Untrusted OAuth redirect URL");
+    await expect(
+      handleSignIn(config, {
+        provider: "github",
+        newUserURL: "https://evil.example.com/welcome",
+      }),
+    ).rejects.toThrow("Untrusted OAuth redirect URL");
+    // Protocol-relative slips past `startsWith("http")` but resolves
+    // cross-origin.
+    await expect(
+      handleSignIn(config, { provider: "github", callbackURL: "//evil.example.com/x" }),
+    ).rejects.toThrow("Untrusted OAuth redirect URL");
+
+    // Trusted and relative values still mint a URL.
+    const trusted = await handleSignIn(config, {
+      provider: "github",
+      callbackURL: "https://app.example.com/home",
+      errorURL: "https://app.example.com/error",
+      newUserURL: "/welcome",
+    });
+    expect(new URL(trusted.url).searchParams.get("state")).toBeTruthy();
+  });
+
+  it("handleSignIn honors a caller-supplied allowlist (site route path)", async () => {
+    const config = createOAuthConfig({ trustedOrigins: undefined });
+    process.env.CONVEX_SITE_URL = "https://site.example.com";
+
+    // The site routes pass their request-scoped list — a redirect onto the
+    // request origin validates even though `oauth.trustedOrigins` is empty.
+    const { url } = await handleSignIn(
+      config,
+      { provider: "github", callbackURL: "https://app.example.com/home" },
+      {
+        baseOrigin: "https://site.example.com",
+        trustedOrigins: ["https://site.example.com", "https://app.example.com"],
+      },
+    );
+    expect(new URL(url).searchParams.get("state")).toBeTruthy();
   });
 
   it("handleCallback provisions a new user and creates a session", async () => {

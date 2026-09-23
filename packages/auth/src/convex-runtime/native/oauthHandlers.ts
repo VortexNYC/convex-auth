@@ -20,6 +20,7 @@ import {
 import { mintToken } from "./jwt.js";
 import { generateVerificationToken, hashToken } from "./tokens.js";
 import { encryptOAuthTokens } from "./oauthCrypto.js";
+import { isAllowedRedirectUrl } from "./callback.js";
 import type { NativeOAuthComponentHandle } from "./types.js";
 
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -134,7 +135,30 @@ function getRedirectURI(config: NativeOAuthConfig, provider: NativeOAuthProvider
 export async function handleSignIn(
   config: NativeOAuthConfig,
   args: NativeOAuthSignInArgs,
+  options?: { baseOrigin?: string; trustedOrigins?: string[] },
 ): Promise<{ url: string }> {
+  // `callbackURL`/`errorURL`/`newUserURL` reach the landing redirect carrying
+  // `?token=&refreshToken=` — an unvalidated absolute URL is session
+  // exfiltration. The site routes pass their request-scoped allowlist; the
+  // action path derives it from `oauth.trustedOrigins` (which `convexAuth`
+  // merges with the email/OIDC/deployment origins) plus the env origins.
+  const baseOrigin =
+    options?.baseOrigin ??
+    process.env.CONVEX_SITE_URL ??
+    process.env.SITE_URL ??
+    "http://localhost";
+  const trustedOrigins = options?.trustedOrigins ?? [
+    ...(config.trustedOrigins ?? []),
+    ...(process.env.SITE_URL ? [process.env.SITE_URL] : []),
+    ...(process.env.CONVEX_SITE_URL ? [process.env.CONVEX_SITE_URL] : []),
+  ];
+  for (const redirectUrl of [args.callbackURL, args.errorURL, args.newUserURL]) {
+    if (redirectUrl && !isAllowedRedirectUrl(redirectUrl, baseOrigin, trustedOrigins)) {
+      throw new Error(
+        `Untrusted OAuth redirect URL: ${redirectUrl}. Add its origin to oauth.trustedOrigins.`,
+      );
+    }
+  }
   const provider = getProvider(config, args.provider);
   const redirectURI = getRedirectURI(config, provider);
   const codeVerifier = await generateCodeVerifier();
@@ -147,7 +171,9 @@ export async function handleSignIn(
     requestSignUp: args.requestSignUp,
     link: args.link,
     additionalData: args.additionalData,
-    landingVerifier: args.landingVerifier,
+    // "" reads as absent — an empty verifier must never satisfy the strict
+    // landing check downstream.
+    landingVerifier: args.landingVerifier || undefined,
   });
   const url = await provider.createAuthorizationURL({
     state,
@@ -197,7 +223,7 @@ export async function handleCallback<DataModel extends GenericDataModel>(
   // landing URL and the app boundary compares it against the cookie there.
   if (
     options?.boundaryEnforcesVerifier !== true &&
-    statePayload.landingVerifier !== args.landingVerifier
+    statePayload.landingVerifier !== (args.landingVerifier || undefined)
   ) {
     return {
       error: "landing_verifier_mismatch",

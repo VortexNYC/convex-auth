@@ -139,6 +139,15 @@ export async function proxyAuthActionToConvex(
       // never trust a body-supplied value.
       delete args.trustedDeviceToken;
     }
+    // Same posture as `callback`: the landing verifier binds the flow to
+    // this browser's cookie jar, so the cookie — never the body — is the
+    // trusted source.
+    const landingVerifier = parseLandingVerifierCookie(request);
+    if (landingVerifier !== null) {
+      args.landingVerifier = landingVerifier;
+    } else {
+      delete args.landingVerifier;
+    }
   }
   if (intent === "callback") {
     // The OAuth callback binds the flow to the initiating browser: the action

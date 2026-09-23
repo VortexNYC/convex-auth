@@ -267,4 +267,77 @@ describe("HTTP transport: /api/auth/magic-link/verify", () => {
     const landing = new URL(res.headers.get("Location")!);
     expect(landing.searchParams.has("landingVerifier")).toBe(false);
   });
+
+  it("rejects unvalidated errorCallbackURL and newUserCallbackURL origins", async () => {
+    const verifyMagicLink = vi.fn(async () => ({
+      token: await sessionJwt(),
+      refreshToken: "refresh-token-value",
+      sessionId: "session_1",
+      userId: "user_1",
+    }));
+    const routes = captureRoutes(makeComponent(), { verifyMagicLink });
+    const handler = routes.get("GET /api/auth/magic-link/verify")!;
+
+    // An error-path redirect target is attacker-controllable too — it must
+    // pass the same allowlist as the success target.
+    const badError = await handler(
+      makeCtx({}),
+      new Request(
+        `${SITE}/api/auth/magic-link/verify?token=tok&callbackURL=/dash&errorCallbackURL=` +
+          encodeURIComponent("https://evil.example.com/fake-error"),
+      ),
+    );
+    expect(badError.status).toBe(400);
+
+    const badNewUser = await handler(
+      makeCtx({}),
+      new Request(
+        `${SITE}/api/auth/magic-link/verify?token=tok&callbackURL=/dash&newUserCallbackURL=` +
+          encodeURIComponent("https://evil.example.com/welcome"),
+      ),
+    );
+    expect(badNewUser.status).toBe(400);
+    expect(verifyMagicLink).not.toHaveBeenCalled();
+  });
+
+  it("rejects a protocol-relative callbackURL — it resolves cross-origin", async () => {
+    const verifyMagicLink = vi.fn();
+    const routes = captureRoutes(makeComponent(), { verifyMagicLink });
+    const handler = routes.get("GET /api/auth/magic-link/verify")!;
+
+    // `//evil.example.com` is not `startsWith("http")` yet resolves to an
+    // attacker origin — the allowlist must compare resolved origins.
+    const res = await handler(
+      makeCtx({}),
+      new Request(
+        `${SITE}/api/auth/magic-link/verify?token=tok&callbackURL=` +
+          encodeURIComponent("//evil.example.com/dash"),
+      ),
+    );
+    expect(res.status).toBe(400);
+    expect(verifyMagicLink).not.toHaveBeenCalled();
+  });
+
+  it("lands new users on newUserCallbackURL when the session was created", async () => {
+    const verifyMagicLink = vi.fn(async () => ({
+      token: await sessionJwt(),
+      refreshToken: "refresh-token-value",
+      sessionId: "session_1",
+      userId: "user_1",
+      createdUser: true,
+    }));
+    const routes = captureRoutes(makeComponent(), { verifyMagicLink });
+    const handler = routes.get("GET /api/auth/magic-link/verify")!;
+
+    const res = await handler(
+      makeCtx({}),
+      new Request(
+        `${SITE}/api/auth/magic-link/verify?token=tok&callbackURL=/dash&newUserCallbackURL=/welcome`,
+      ),
+    );
+    expect(res.status).toBe(302);
+    const landing = new URL(res.headers.get("Location")!);
+    expect(landing.pathname).toBe("/welcome");
+    expect(landing.searchParams.get("token")).toBeTruthy();
+  });
 });

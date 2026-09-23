@@ -39,11 +39,22 @@ function callAction<TReturn>(ctx: unknown, action: unknown, args: unknown): Prom
   return actionFn(ctx, args);
 }
 
+/**
+ * Relative callback URLs resolve against the app origin (`SITE_URL`) —
+ * bare `http://localhost` would produce a port-80 URL that never reaches a
+ * dev app, and silently masks a missing `SITE_URL` in production.
+ */
+function resolveCallbackUrl(callbackURL: string): URL {
+  const base = process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "http://localhost";
+  try {
+    return new URL(callbackURL, base);
+  } catch {
+    return new URL(base);
+  }
+}
+
 function buildErrorRedirect(callbackURL: string, error: string): Response {
-  const redirect = new URL(
-    callbackURL,
-    callbackURL.startsWith("http") ? undefined : "http://localhost",
-  );
+  const redirect = resolveCallbackUrl(callbackURL);
   redirect.searchParams.set("error", error);
   return new Response(null, {
     status: 302,
@@ -52,10 +63,7 @@ function buildErrorRedirect(callbackURL: string, error: string): Response {
 }
 
 function buildTokenRedirect(callbackURL: string, token: string): Response {
-  const redirect = new URL(
-    callbackURL,
-    callbackURL.startsWith("http") ? undefined : "http://localhost",
-  );
+  const redirect = resolveCallbackUrl(callbackURL);
   redirect.searchParams.set("token", token);
   return new Response(null, {
     status: 302,
@@ -817,15 +825,29 @@ export function addNativeAuthHttpRoutes(
           const newUserCallbackURL = url.searchParams.get("newUserCallbackURL");
           const errorCallbackURL = url.searchParams.get("errorCallbackURL");
 
-          if (!token) {
-            return buildErrorRedirect(callbackURL, "INVALID_TOKEN");
-          }
-
+          // Validate every redirect-bearing param before any of them is
+          // used — including the error paths below, which would otherwise
+          // 302 to an unvalidated caller-supplied origin.
           if (!isAllowedRedirectUrl(callbackURL, requestOrigin, options?.trustedOrigins ?? [])) {
             return buildErrorResponse(400, "invalid_callback_url");
           }
+          if (
+            newUserCallbackURL &&
+            !isAllowedRedirectUrl(newUserCallbackURL, requestOrigin, options?.trustedOrigins ?? [])
+          ) {
+            return buildErrorResponse(400, "invalid_new_user_callback_url");
+          }
+          if (
+            errorCallbackURL &&
+            !isAllowedRedirectUrl(errorCallbackURL, requestOrigin, options?.trustedOrigins ?? [])
+          ) {
+            return buildErrorResponse(400, "invalid_error_callback_url");
+          }
 
           const redirectTarget = errorCallbackURL ?? callbackURL;
+          if (!token) {
+            return buildErrorRedirect(redirectTarget, "INVALID_TOKEN");
+          }
 
           let result;
           try {
@@ -868,10 +890,11 @@ export function addNativeAuthHttpRoutes(
             );
           }
 
-          const redirect = new URL(
-            callbackURL,
-            callbackURL.startsWith("http") ? undefined : "http://localhost",
-          );
+          // New users land on `newUserCallbackURL` when the caller provided
+          // one — matching the OAuth `newUserURL` convention.
+          const successTarget =
+            result.createdUser === true && newUserCallbackURL ? newUserCallbackURL : callbackURL;
+          const redirect = resolveCallbackUrl(successTarget);
           redirect.searchParams.set("token", result.token);
           if (result.refreshToken) {
             redirect.searchParams.set("refreshToken", result.refreshToken);

@@ -6,7 +6,7 @@
 2. `convex-auth` returns a provider authorization URL.
 3. The browser redirects to the provider.
 4. The provider redirects to `https://<your-convex-site>/api/auth/callback/<provider>`.
-5. `convex-auth` exchanges the code and redirects the browser to `callbackURL` with `?token=...&sessionId=...`.
+5. `convex-auth` exchanges the code and redirects the browser to `callbackURL` carrying the session — `?token=...&refreshToken=...&sessionId=...` plus a `landingVerifier` binding the landing to the initiating browser.
 
 ## Callback URLs
 
@@ -120,28 +120,34 @@ function OAuthButtons() {
 
 ## Callback handling
 
-Convex already exposes the callback at `/api/auth/callback/:provider` through `auth.addHttpRoutes(http)`. The provider redirects there, the token is issued, and the browser is redirected to `callbackURL` with `?token=...&sessionId=...`.
+Convex already exposes the callback at `/api/auth/callback/:provider` through `auth.addHttpRoutes(http)`. The provider redirects there, the token is issued, and the browser is redirected to `callbackURL` carrying `?token=...&refreshToken=...&sessionId=...&landingVerifier=...`.
 
-Your frontend should read the token from the query string and pass it to the provider:
+**You do not need a callback page.** `ConvexAuthProvider` ingests the session triple from the URL automatically on mount and strips the credentials from the address bar. There is no `updateSession({ token })` step — `updateSession` only takes `{ refreshToken }` for rotation and is called for you.
 
-```tsx
-import { useEffect } from "react";
-import { useAuthActions } from "@vortex-api/convex-auth/react";
+Two details matter:
 
-function OAuthCallback() {
-  const { updateSession } = useAuthActions();
+- **The `landingVerifier` param binds the landing to the browser that started the flow.** The provider compares it against a verifier cookie set at initiation; a landing URL missing it (or carrying one bound to a different browser) is rejected and the credentials are stripped. If you initiate OAuth outside the browser — e.g. a server calling `signInWithRedirect` — pass `requireLandingVerifier={false}` to `ConvexAuthProvider` or the landing will be rejected.
+- **In cookie mode (`storageMode: "cookies"`) the session never reaches the URL's JavaScript at all.** The SSR middleware intercepts the triple, writes HttpOnly cookies, and redirects with the params stripped — see the [SSR contract](<../(reference)/ssr-contract.md>).
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    if (token) {
-      void updateSession({ token });
-    }
-  }, [updateSession]);
+## Redirect allowlist (`trustedOrigins`)
 
-  return <p>Finishing sign-in...</p>;
-}
+`callbackURL`, `errorURL`, and `newUserURL` are validated before the flow starts: each must resolve to the Convex site origin, `SITE_URL`, or an origin in `trustedOrigins`. This is load-bearing — the callback attaches session tokens to that URL, so an unchecked absolute URL would exfiltrate sessions.
+
+Relative URLs like `/dashboard` always work; they resolve against `SITE_URL` (falling back to `CONVEX_SITE_URL`). **Absolute URLs require the origin to be trusted.** If your app lives on its own origin — `app.example.com` while Convex serves `*.convex.site` — add it:
+
+```ts
+export const auth = convexAuth({
+  component: components.convexAuth,
+  oauth: {
+    trustedOrigins: ["https://app.example.com"],
+    github: {
+      /* ... */
+    },
+  },
+});
 ```
+
+`emailAndPassword.trustedOrigins` is merged into the same allowlist, so a single entry under either field covers OAuth, magic-link, and email routes.
 
 ## Server-side OAuth
 

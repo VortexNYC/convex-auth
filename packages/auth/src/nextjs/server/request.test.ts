@@ -101,6 +101,12 @@ describe("session-triple landing", () => {
         "__Host-__convexAuthLandingVerifier=lv-1",
       ],
       ["/dashboard?token=TOK&refreshToken=REF&landingVerifier=lv-attacker", ""],
+      // Empty param + empty cookie value — "" == "" must not satisfy the
+      // strict check; both normalize to absent.
+      [
+        "/dashboard?token=TOK&refreshToken=REF&landingVerifier=",
+        "__Host-__convexAuthLandingVerifier=",
+      ],
     ] as const) {
       const request = getRequest(path, cookie === "" ? HTML : { ...HTML, cookie });
       const result = await handleAuthenticationInRequest(request, options);
@@ -122,6 +128,30 @@ describe("session-triple landing", () => {
     if (result.kind !== "redirect") throw new Error("unreachable");
     const setCookies = result.response.headers.getSetCookie();
     expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=TOK"))).toBeDefined();
+  });
+
+  it("never lands a triple on a cross-origin request, even in compat mode", async () => {
+    // A credentialed cross-origin fetch can carry `accept: text/html` and the
+    // session triple — CORS-failed responses still reach the browser's cookie
+    // store, so writing auth cookies here is a login-CSRF write. Compat mode
+    // relaxes the verifier check, never the same-origin requirement.
+    const request = getRequest("/dashboard?token=TOK&refreshToken=REF&landingVerifier=lv-1", {
+      ...HTML,
+      origin: "https://evil.example.com",
+    });
+    const result = await handleAuthenticationInRequest(request, {
+      ...options,
+      requireLandingVerifier: false,
+    } as typeof options);
+    expect(result.kind).toBe("redirect");
+    if (result.kind !== "redirect") throw new Error("unreachable");
+    const location = result.response.headers.get("Location") ?? "";
+    expect(location).not.toContain("token=");
+    const setCookies = result.response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.includes("__convexAuthToken="))).toBeUndefined();
+    expect(setCookies.find((h) => h.includes("__convexAuthRefreshToken="))).toBeUndefined();
+    // No verifier mint on a cross-origin response either.
+    expect(setCookies.find((h) => h.includes("__convexAuthLandingVerifier="))).toBeUndefined();
   });
 
   it("ignores a lone ?token (password-reset links carry one)", async () => {

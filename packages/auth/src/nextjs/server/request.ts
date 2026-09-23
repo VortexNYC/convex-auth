@@ -59,22 +59,38 @@ export async function handleAuthenticationInRequest(
     redirectUrl.searchParams.delete("refreshToken");
     redirectUrl.searchParams.delete("sessionId");
     redirectUrl.searchParams.delete("landingVerifier");
+    const isCors = isCorsRequest(request);
     const response = NextResponse.redirect(redirectUrl);
+    // The landing redirect writes auth cookies — 302s are heuristically
+    // cacheable, so pin them to the browser that earned them.
+    response.headers.set("Cache-Control", "private, no-store");
     // Any landing redirect is a good moment to establish the verifier cookie
     // on a browser that lacks one — rejected landings self-heal this way.
-    if (cookieVerifier === null) {
+    // Cross-origin requests get no Set-Cookie at all (the strip invariant).
+    if (cookieVerifier === null && !isCors) {
       setLandingVerifierCookie(response, generateLandingVerifier(), request.headers);
     }
-    const paramVerifier = requestUrl.searchParams.get("landingVerifier");
+    // `get` returns "" for a bare `?landingVerifier=` — normalize to null
+    // so empty param + empty cookie can never satisfy the strict check.
+    const paramVerifier = requestUrl.searchParams.get("landingVerifier") || null;
     if (
-      requireLandingVerifier &&
-      (paramVerifier === null || cookieVerifier === null || paramVerifier !== cookieVerifier)
+      // A cross-origin request never lands a session — CORS-failed
+      // responses still reach the browser's cookie store, so a credentialed
+      // fetch carrying a triple would otherwise write auth cookies even in
+      // verifier-compat mode.
+      isCors ||
+      (requireLandingVerifier &&
+        (paramVerifier === null || cookieVerifier === null || paramVerifier !== cookieVerifier))
     ) {
       // The triple did not land in the browser that initiated the flow —
       // strip the params and let the app render signed-out rather than
       // write an attacker-controlled session into the victim's cookies.
       logVerbose(
-        `Rejected session params: landing verifier ${paramVerifier === null ? "absent" : "mismatch"}`,
+        `Rejected session params: ${
+          isCors
+            ? "cross-origin request"
+            : `landing verifier ${paramVerifier === null ? "absent" : "mismatch"}`
+        }`,
         verbose,
       );
       return { kind: "redirect", response };
@@ -88,8 +104,11 @@ export async function handleAuthenticationInRequest(
     return { kind: "redirect", response };
   }
 
-  // Refresh the session proactively when the access token is near expiry.
-  const refreshTokens = await getRefreshedTokens(options);
+  // Refresh the session proactively when the access token is near expiry —
+  // skipped on cross-origin requests. `validateCors` already cleared the
+  // request jar, but the skip is made explicit so the invariant does not
+  // depend on cookie-mutation propagation through `next/headers`.
+  const refreshTokens = isCorsRequest(request) ? undefined : await getRefreshedTokens(options);
   // Establish the verifier on same-origin navigations that lack one, so any
   // browser that renders the app carries it before page JS can run a
   // session-minting call through the proxy. Mint-if-absent only —

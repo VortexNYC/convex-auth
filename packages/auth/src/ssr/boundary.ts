@@ -96,26 +96,43 @@ export async function handleAuthRequestBoundary(
     redirectUrl.searchParams.delete("landingVerifier");
     const response = new Response(null, {
       status: 302,
-      headers: { Location: redirectUrl.toString() },
+      headers: {
+        Location: redirectUrl.toString(),
+        // The landing redirect writes auth cookies — 302s are heuristically
+        // cacheable, so pin them to the browser that earned them.
+        "Cache-Control": "private, no-store",
+      },
     });
     // Any landing redirect is a good moment to establish the verifier cookie
     // on a browser that lacks one — rejected landings self-heal this way.
-    if (cookieVerifier === null) {
+    // Cross-origin requests get no Set-Cookie at all (the strip invariant).
+    if (cookieVerifier === null && strippedCookieHeader === undefined) {
       response.headers.append(
         "Set-Cookie",
         buildLandingVerifierSetCookie(generateLandingVerifier(), isLocalhost),
       );
     }
-    const paramVerifier = requestUrl.searchParams.get("landingVerifier");
+    // `get` returns "" for a bare `?landingVerifier=` — normalize to null
+    // so empty param + empty cookie can never satisfy the strict check.
+    const paramVerifier = requestUrl.searchParams.get("landingVerifier") || null;
     if (
-      requireLandingVerifier &&
-      (paramVerifier === null || cookieVerifier === null || paramVerifier !== cookieVerifier)
+      // A cross-origin request never lands a session — CORS-failed
+      // responses still reach the browser's cookie store, so a credentialed
+      // fetch carrying a triple would otherwise write auth cookies even in
+      // verifier-compat mode.
+      strippedCookieHeader !== undefined ||
+      (requireLandingVerifier &&
+        (paramVerifier === null || cookieVerifier === null || paramVerifier !== cookieVerifier))
     ) {
       // The triple did not land in the browser that initiated the flow —
       // strip the params and let the app render signed-out rather than
       // write an attacker-controlled session into the victim's cookies.
       logVerbose(
-        `Rejected session params: landing verifier ${paramVerifier === null ? "absent" : "mismatch"}`,
+        `Rejected session params: ${
+          strippedCookieHeader !== undefined
+            ? "cross-origin request"
+            : `landing verifier ${paramVerifier === null ? "absent" : "mismatch"}`
+        }`,
         verbose,
         "ConvexAuthSsr",
       );

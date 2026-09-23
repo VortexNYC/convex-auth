@@ -2,7 +2,7 @@ import { useAction, useConvex, useQuery } from "convex/react";
 import type { FunctionReference } from "convex/server";
 import type { NativeAuthUser } from "../convex-runtime/native/types.js";
 import type { ConvexAuthSessionListItem } from "./auth-client-types";
-import { getOrCreateLandingVerifier } from "./landingVerifier.js";
+import { getOrCreateLandingVerifier, readLandingVerifier } from "./landingVerifier.js";
 import {
   createContext,
   useCallback,
@@ -121,7 +121,7 @@ export type NativeAuthSignInMagicLinkArgs = {
   errorCallbackURL?: string;
   metadata?: Record<string, string>;
   /**
-   * Browser binding nonce — set internally by the provider in cookie mode;
+   * Browser binding nonce — set internally by the provider;
    * do not pass a client-chosen value.
    */
   landingVerifier?: string;
@@ -135,7 +135,7 @@ export type NativeAuthSignInWithRedirectArgs = {
   requestSignUp?: boolean;
   link?: boolean;
   /**
-   * Browser binding nonce — set internally by the provider in cookie mode;
+   * Browser binding nonce — set internally by the provider;
    * do not pass a client-chosen value.
    */
   landingVerifier?: string;
@@ -500,6 +500,17 @@ export type ConvexAuthProviderProps = {
    * framework caches — e.g. Next.js's Router Cache — after sign-in/sign-out.
    */
   onAuthChange?: (authenticated: boolean) => unknown;
+  /**
+   * Token mode only: require URL session-triple landings
+   * (`?token=&refreshToken=`) to carry a `landingVerifier` param matching
+   * this browser's verifier cookie — binds OAuth/magic-link landings to the
+   * browser that initiated the flow. Defaults to `true`. Set `false` when
+   * flows are initiated outside the browser (e.g. a server calling
+   * `signInWithRedirect`) or when magic links must open in a different
+   * browser than the requesting one. Cookie mode enforces the same binding
+   * at the SSR boundary via the middleware's `requireLandingVerifier`.
+   */
+  requireLandingVerifier?: boolean;
 };
 
 /**
@@ -567,6 +578,24 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
         initialRefresh = searchParams.get("refreshToken");
         initialSessionId = searchParams.get("sessionId");
         if (initialToken) {
+          // A session triple on the URL is bearer credentials — ingest it
+          // only when it was bound to this browser at initiation: the
+          // `landingVerifier` param must equal the verifier cookie. The
+          // param must be present too — an attacker handing the victim a
+          // landing link would simply strip it. `requireLandingVerifier:
+          // false` is the escape hatch for off-browser-initiated flows.
+          const paramVerifier = searchParams.get("landingVerifier");
+          const cookieVerifier = readLandingVerifier();
+          if (
+            props.requireLandingVerifier !== false &&
+            (paramVerifier === null || paramVerifier !== cookieVerifier)
+          ) {
+            initialToken = null;
+            initialRefresh = null;
+            initialSessionId = null;
+          }
+          // Strip the credentials from the URL either way — ingested or
+          // rejected, they must not linger in history.
           searchParams.delete("token");
           searchParams.delete("refreshToken");
           searchParams.delete("sessionId");
@@ -617,6 +646,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
     props.initialRefreshToken,
     props.initialSessionId,
     props.serverState,
+    props.requireLandingVerifier,
     updateSessionAction,
   ]);
 
@@ -913,15 +943,18 @@ export function useAuthActions() {
       setIsLoading(true);
       try {
         // Bind the emailed link to this browser — the verify route echoes
-        // the verifier onto the landing URL for the boundary to compare.
-        return await signInMagicLinkAction(
-          cookieMode ? { ...args, landingVerifier: getOrCreateLandingVerifier() } : args,
-        );
+        // the verifier onto the landing URL, where the cookie-mode boundary
+        // (or the token-mode URL ingestion) compares it against the cookie.
+        // `undefined` off-browser (React Native), where nothing binds.
+        return await signInMagicLinkAction({
+          ...args,
+          landingVerifier: getOrCreateLandingVerifier(),
+        });
       } finally {
         setIsLoading(false);
       }
     },
-    [cookieMode, signInMagicLinkAction],
+    [signInMagicLinkAction],
   );
 
   const signInWithRedirect = useCallback(
@@ -932,16 +965,18 @@ export function useAuthActions() {
       setIsLoading(true);
       try {
         // Bind the OAuth flow to this browser — the verifier rides the
-        // signed state and returns on the landing URL for the boundary.
-        return await client.action(
-          ctx.signInWithRedirect,
-          cookieMode ? { ...args, landingVerifier: getOrCreateLandingVerifier() } : args,
-        );
+        // signed state and returns on the landing URL, where the cookie-mode
+        // boundary (or the token-mode URL ingestion) compares it against the
+        // cookie. `undefined` off-browser (React Native), where nothing binds.
+        return await client.action(ctx.signInWithRedirect, {
+          ...args,
+          landingVerifier: getOrCreateLandingVerifier(),
+        });
       } finally {
         setIsLoading(false);
       }
     },
-    [client, cookieMode, ctx.signInWithRedirect],
+    [client, ctx.signInWithRedirect],
   );
 
   const oauthCallback = useCallback(
@@ -953,7 +988,14 @@ export function useAuthActions() {
       try {
         const result = cookieMode
           ? await callProxy<NativeAuthOAuthCallbackResult>("callback", args)
-          : await client.action(ctx.callback, args);
+          : // Token mode calls the action directly — attach this browser's
+            // verifier cookie so a flow bound at initiation still completes
+            // (the proxy substitutes it in cookie mode; RN has no cookie and
+            // sends nothing, matching the both-absent allowance).
+            await client.action(ctx.callback, {
+              ...args,
+              landingVerifier: readLandingVerifier() ?? undefined,
+            });
         if ("token" in result) {
           ctx.setToken(result.token);
           ctx.setSessionId(result.sessionId);

@@ -72,27 +72,13 @@ The generated URL is `https://<CONVEX_SITE_URL>/api/auth/magic-link/verify?token
 1. Verifies the token.
 2. Creates a user and identity if the email is new (or signs in an existing one).
 3. Issues a session token.
-4. Redirects the browser to `callbackURL` with `?token=...&sessionId=...`.
+4. Redirects the browser to `callbackURL` — or `newUserCallbackURL` when the link created a brand-new account — carrying `?token=...&refreshToken=...&sessionId=...&landingVerifier=...`.
 
-Your callback page should read the token from the query string and call `updateSession`:
+**You do not need a callback page.** `ConvexAuthProvider` ingests the session triple from the URL automatically on mount and strips the credentials from the address bar. `updateSession` only takes `{ refreshToken }` for rotation — the provider calls it for you.
 
-```tsx src/MagicLinkCallback.tsx
-import { useEffect } from "react";
-import { useAuthActions } from "@vortex-api/convex-auth/react";
+The `landingVerifier` param binds the landing to the browser that requested the link. **A magic link opened in a different browser or device than the one that requested it is rejected** — that's the point (it stops login-CSRF via forwarded links), but if your product depends on request-on-desktop-open-on-phone flows, pass `requireLandingVerifier={false}` to `ConvexAuthProvider`.
 
-export function MagicLinkCallback() {
-  const { updateSession } = useAuthActions();
-
-  useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get("token");
-    if (token) {
-      void updateSession({ token });
-    }
-  }, [updateSession]);
-
-  return <p>Finishing sign-in...</p>;
-}
-```
+All three redirect params — `callbackURL`, `newUserCallbackURL`, `errorCallbackURL` — are validated at verify time: each must be relative (resolved against `SITE_URL`) or an absolute URL on the Convex site origin, `SITE_URL`, or a `trustedOrigins` entry. An untrusted absolute URL fails the request instead of exfiltrating the session.
 
 ## Options
 

@@ -92,6 +92,19 @@ describe("session-triple landing", () => {
     expect(verifierCookie).not.toContain("HttpOnly");
   });
 
+  it("rejects an empty landingVerifier param even against an empty cookie value", async () => {
+    // `?landingVerifier=` parses to "" and an empty-valued cookie reads "" —
+    // both normalize to absent so empty==empty can never satisfy the check.
+    const request = pageRequest(
+      { cookie: "__Host-__convexAuthLandingVerifier=" },
+      "https://app.example.com/dash?token=jwt-x&refreshToken=ref-y&landingVerifier=",
+    );
+    const result = await handleAuthRequestBoundary(request, options);
+    if (result.kind !== "redirect") throw new Error("expected redirect");
+    const setCookies = result.response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.includes("__convexAuthToken="))).toBeUndefined();
+  });
+
   it("lands a param-free triple when requireLandingVerifier is disabled", async () => {
     const request = pageRequest({}, "https://app.example.com/dash?token=jwt-x&refreshToken=ref-y");
     const result = await handleAuthRequestBoundary(request, {
@@ -101,6 +114,30 @@ describe("session-triple landing", () => {
     if (result.kind !== "redirect") throw new Error("expected redirect");
     const setCookies = result.response.headers.getSetCookie();
     expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=jwt-x"))).toBeDefined();
+  });
+
+  it("never lands a triple on a cross-origin request, even in compat mode", async () => {
+    // A credentialed cross-origin fetch can carry `accept: text/html` and the
+    // session triple — CORS-failed responses still reach the browser's cookie
+    // store, so writing auth cookies here is a login-CSRF write. Compat mode
+    // relaxes the verifier check, never the same-origin requirement.
+    const request = pageRequest(
+      { origin: "https://evil.example.com" },
+      "https://app.example.com/dash?token=jwt-x&refreshToken=ref-y&landingVerifier=lv-1",
+    );
+    const result = await handleAuthRequestBoundary(request, {
+      ...options,
+      requireLandingVerifier: false,
+    });
+    if (result.kind !== "redirect") throw new Error("expected redirect");
+    const location = result.response.headers.get("Location") ?? "";
+    expect(location).not.toContain("token=");
+    const setCookies = result.response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.includes("__convexAuthToken="))).toBeUndefined();
+    expect(setCookies.find((h) => h.includes("__convexAuthRefreshToken="))).toBeUndefined();
+    // No verifier mint on a cross-origin response either — Set-Cookie is
+    // reserved for same-origin traffic.
+    expect(setCookies.find((h) => h.includes("__convexAuthLandingVerifier="))).toBeUndefined();
   });
 
   it("mints a landing verifier on navigations that lack the cookie", async () => {

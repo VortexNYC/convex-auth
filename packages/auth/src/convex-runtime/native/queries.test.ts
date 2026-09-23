@@ -498,4 +498,124 @@ describe("addNativeAuthHttpRoutes", () => {
     );
     expect(response.status).toBe(403);
   });
+
+  it("blocks same-site POSTs from an untrusted sibling origin", async () => {
+    const component = createMockComponent();
+    const routes: {
+      path?: string;
+      pathPrefix?: string;
+      method: string;
+      handler: (ctx: unknown, request: Request) => Promise<Response>;
+    }[] = [];
+    const http: HttpRouter = {
+      route: (r) => {
+        routes.push(r as any);
+        return http;
+      },
+    } as unknown as HttpRouter;
+
+    addNativeAuthHttpRoutes(
+      http,
+      component,
+      {
+        signIn: vi.fn(() => ({
+          token: "token",
+          user: { id: "user_1", email: "shlomo@example.com", emailVerified: true },
+        })),
+      } as unknown as NativeEmailAndPasswordFunctionReferences,
+      { trustedOrigins: ["https://app.example.com"] },
+    );
+    const signInRoute = routes.find((r) => r.path === "/api/auth/sign-in" && r.method === "POST");
+    expect(signInRoute).toBeDefined();
+
+    // A same-site sibling (subdomain) is still cross-origin to us — our
+    // SameSite=Lax cookies flow on the request, so the Origin must validate
+    // exactly like a cross-site POST. `same-site` was previously trusted
+    // unconditionally, letting any sibling mint sessions into the victim's
+    // cookies (login CSRF).
+    const hostile = await exec(signInRoute!.handler).handler(
+      createContext(),
+      new Request("https://api.example.com/api/auth/sign-in", {
+        method: "POST",
+        headers: {
+          "sec-fetch-site": "same-site",
+          origin: "https://evil.example.com",
+          cookie: "convex-auth-token=x",
+        },
+        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+      }),
+    );
+    expect(hostile.status).toBe(403);
+
+    // Trusted sibling origins still pass.
+    const trusted = await exec(signInRoute!.handler).handler(
+      createContext(),
+      new Request("https://api.example.com/api/auth/sign-in", {
+        method: "POST",
+        headers: {
+          "sec-fetch-site": "same-site",
+          origin: "https://app.example.com",
+        },
+        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+      }),
+    );
+    expect(trusted.status).toBe(200);
+
+    // Browsers always send Origin on cross-origin POSTs — a same-site POST
+    // with no origin signal at all is a forged-metadata client, not a page.
+    const noOrigin = await exec(signInRoute!.handler).handler(
+      createContext(),
+      new Request("https://api.example.com/api/auth/sign-in", {
+        method: "POST",
+        headers: { "sec-fetch-site": "same-site" },
+        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+      }),
+    );
+    expect(noOrigin.status).toBe(403);
+  });
+
+  it("rejects contradictory metadata — same-site claim with a foreign Origin", async () => {
+    const component = createMockComponent();
+    const routes: {
+      path?: string;
+      pathPrefix?: string;
+      method: string;
+      handler: (ctx: unknown, request: Request) => Promise<Response>;
+    }[] = [];
+    const http: HttpRouter = {
+      route: (r) => {
+        routes.push(r as any);
+        return http;
+      },
+    } as unknown as HttpRouter;
+
+    addNativeAuthHttpRoutes(
+      http,
+      component,
+      {
+        signIn: vi.fn(() => ({
+          token: "token",
+          user: { id: "user_1", email: "shlomo@example.com", emailVerified: true },
+        })),
+      } as unknown as NativeEmailAndPasswordFunctionReferences,
+      { trustedOrigins: ["https://app.example.com"] },
+    );
+    const signInRoute = routes.find((r) => r.path === "/api/auth/sign-in" && r.method === "POST");
+
+    // No browser can produce `same-origin` + a foreign Origin — a client
+    // sending contradictory headers fails closed rather than trusting the
+    // weaker signal.
+    const response = await exec(signInRoute!.handler).handler(
+      createContext(),
+      new Request("https://api.example.com/api/auth/sign-in", {
+        method: "POST",
+        headers: {
+          "sec-fetch-site": "same-origin",
+          origin: "https://evil.example.com",
+        },
+        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+      }),
+    );
+    expect(response.status).toBe(403);
+  });
 });

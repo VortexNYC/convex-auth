@@ -22,7 +22,11 @@ substitute it.
 
 Opt out per-deployment with `requireLandingVerifier: false` on the
 middleware/boundary — for releases that predate verifier threading or
-rely on opening magic links in a different browser. Token-mode and
-native clients are unaffected.
+rely on opening magic links in a different browser. Token-mode web
+clients bind the same way client-side (the provider checks the URL
+param against the cookie before ingesting a session triple; pass
+`requireLandingVerifier={false}` to opt out). React Native and other
+non-DOM runtimes never bind — there is no cookie jar to compare
+against.
 
 Closes #355.

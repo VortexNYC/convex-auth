@@ -19,8 +19,22 @@ function parseProvider(url: URL, prefix: string): string {
   return afterPrefix.split("/").filter(Boolean)[0] ?? "";
 }
 
+/**
+ * Relative redirect targets resolve against the app origin (`SITE_URL`) —
+ * bare `http://localhost` produces a port-80 URL that never reaches a dev
+ * app and silently masks a missing `SITE_URL` in production.
+ */
+function resolveRedirectUrl(target: string): URL {
+  const base = process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "http://localhost";
+  try {
+    return new URL(target, base);
+  } catch {
+    return new URL(base);
+  }
+}
+
 function buildErrorRedirect(base: string, error: string, description?: string): Response {
-  const redirect = new URL(base, base.startsWith("http") ? undefined : "http://localhost");
+  const redirect = resolveRedirectUrl(base);
   redirect.searchParams.set("error", error);
   if (description) redirect.searchParams.set("error_description", description);
   return new Response(null, {
@@ -66,7 +80,9 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
       const newUserURL = url.searchParams.get("newUserURL") ?? undefined;
       const requestSignUp = url.searchParams.get("requestSignUp") === "true";
       const link = url.searchParams.get("link") === "true";
-      const landingVerifier = url.searchParams.get("landingVerifier") ?? undefined;
+      // "" reads as absent — an empty verifier must never satisfy the
+      // strict landing check downstream.
+      const landingVerifier = url.searchParams.get("landingVerifier") || undefined;
 
       if (callbackURL && !isAllowedRedirectUrl(callbackURL, requestOrigin, trustedOrigins)) {
         return buildErrorRedirect(
@@ -87,15 +103,19 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
         );
       }
 
-      const result = await handleSignIn(config.oauth, {
-        provider,
-        callbackURL,
-        errorURL,
-        newUserURL,
-        requestSignUp,
-        link,
-        landingVerifier,
-      });
+      const result = await handleSignIn(
+        config.oauth,
+        {
+          provider,
+          callbackURL,
+          errorURL,
+          newUserURL,
+          requestSignUp,
+          link,
+          landingVerifier,
+        },
+        { baseOrigin: requestOrigin, trustedOrigins },
+      );
 
       return new Response(null, {
         status: 302,
@@ -171,15 +191,19 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
       }
 
       try {
-        const result = await handleSignIn(config.oauth, {
-          provider: parsed.provider,
-          callbackURL: parsed.callbackURL,
-          errorURL: parsed.errorURL,
-          newUserURL: parsed.newUserURL,
-          requestSignUp: parsed.requestSignUp,
-          link: parsed.link,
-          landingVerifier: parsed.landingVerifier,
-        });
+        const result = await handleSignIn(
+          config.oauth,
+          {
+            provider: parsed.provider,
+            callbackURL: parsed.callbackURL,
+            errorURL: parsed.errorURL,
+            newUserURL: parsed.newUserURL,
+            requestSignUp: parsed.requestSignUp,
+            link: parsed.link,
+            landingVerifier: parsed.landingVerifier,
+          },
+          { baseOrigin: requestOrigin, trustedOrigins },
+        );
         return new Response(JSON.stringify(result), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -282,10 +306,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
           ? Math.floor(config.oauth.sessionTtlMs / 1000)
           : undefined;
 
-      const redirect = new URL(
-        result.redirectUrl,
-        result.redirectUrl.startsWith("http") ? undefined : "http://localhost",
-      );
+      const redirect = resolveRedirectUrl(result.redirectUrl);
       redirect.searchParams.set("token", result.token);
       redirect.searchParams.set("refreshToken", result.refreshToken);
       redirect.searchParams.set("sessionId", result.sessionId);

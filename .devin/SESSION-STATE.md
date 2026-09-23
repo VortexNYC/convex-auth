@@ -12,7 +12,7 @@ branch `feat/tanstack-start-adapter`, head `71b6874`, all pushed.
   GitHub release `v2.5.2` exists.
 - **#356 fixed** — `2259e02`: family revocation now fires only for
   rotated-token replay outside the 15s grace window (`rotatedAt !==
-  undefined`). Administratively revoked tokens (sign-out,
+undefined`). Administratively revoked tokens (sign-out,
   `revokeOtherSessions`, admin, passkey removal) reject quietly — no more
   caller-family DoS, no theft-containment loss.
 - **#355 fixed** — `71b6874`: session-triple landings are bound to the
@@ -23,7 +23,7 @@ branch `feat/tanstack-start-adapter`, head `71b6874`, all pushed.
   it onto the landing URL; boundary compares param-vs-cookie before
   writing auth cookies. Proxies inject the cookie value into `callback`
   args (body-supplied values deleted). Opt-out: `requireLandingVerifier:
-  false`. Token-mode/native unaffected.
+false`. Token-mode/native unaffected.
 - **Node-20 CI saga resolved** — `91b4d71` + `b4c0081`: `.pnpmfile.cjs`
   `readPackage` hook strips `engines.node` from the 4 TanStack packages
   that poisoned pnpm's installable-graph walk (their `>=22.12` floor

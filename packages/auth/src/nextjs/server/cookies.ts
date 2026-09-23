@@ -120,7 +120,9 @@ function getCookieStore(
       setValue(trustedDeviceName, value, maxAgeMs);
     },
     get landingVerifier() {
-      return getValue(landingVerifierName);
+      // Empty reads as absent — an empty cookie must never satisfy the
+      // strict landing check against an empty `landingVerifier` param.
+      return getValue(landingVerifierName) || null;
     },
   };
 }

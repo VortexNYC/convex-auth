@@ -49,7 +49,7 @@ These are always present when `emailAndPassword` is enabled:
 | `signUp`                       | `{ email, password, name?, rememberMe? }`        | `{ token, refreshToken, user, userId, identityId? }` |
 | `signIn`                       | `{ email, password, rememberMe?, callbackURL? }` | Session or two-factor challenge.                     |
 | `signOut`                      | `{ callbackURL? }`                               | `{ success, redirect?, url? }`                       |
-| `updateSession`                | `{ token }`                                      | Refreshes the session and returns it.                |
+| `updateSession`                | `{ refreshToken }`                               | Rotates the session and returns the new pair.        |
 | `sendEmailVerification`        | `{ email, callbackURL? }`                        | `EmailSendResult`.                                   |
 | `verifyEmail`                  | `{ token }`                                      | `NativeAuthVerifyResult`.                            |
 | `sendPasswordReset`            | `{ email, redirectTo? }`                         | `EmailSendResult`.                                   |

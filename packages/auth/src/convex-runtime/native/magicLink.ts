@@ -144,7 +144,9 @@ export function nativeMagicLink(
       const metadata = JSON.stringify({
         email: normalizedEmail,
         name: args.name,
-        landingVerifier: args.landingVerifier,
+        // "" reads as absent — an empty verifier must never satisfy the
+        // strict landing check downstream.
+        landingVerifier: args.landingVerifier || undefined,
       });
 
       await ctx.runMutation(component.native.verifiers.createVerifier, {
@@ -206,8 +208,9 @@ export function nativeMagicLink(
       }
 
       // A presented verifier must equal the one bound at request time —
-      // indistinguishable from an invalid token on purpose.
-      if (args.landingVerifier !== undefined && metadata.landingVerifier !== args.landingVerifier) {
+      // indistinguishable from an invalid token on purpose. "" reads as
+      // absent (not presented) so empty values can't alias-match.
+      if (args.landingVerifier && metadata.landingVerifier !== args.landingVerifier) {
         throw new Error("INVALID_TOKEN");
       }
 
@@ -262,6 +265,7 @@ export function nativeMagicLink(
         userId: result.userId,
         identityId: result.identityId,
         landingVerifier: metadata.landingVerifier,
+        createdUser: result.createdUser,
       };
     },
   });
