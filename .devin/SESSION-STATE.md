@@ -112,3 +112,30 @@ green (includes site/changelog). CI pending on `8bab3b9`.
 - #334: staged for v3 major with migration-note plan.
 - TanStack findings confirmed already-fixed (immutable-header rebuild,
   typed-guard null throw).
+
+## Debt pass (2026-09-23, post-1f3841a)
+
+- Issue hygiene: classification labels applied across tracker
+  (`security`/`bug`/`upstream`/`debt`/`next-major`/`adapter`/`follow-up`);
+  #371 pinned as canonical roadmap. Closed with evidence: #218 (UI docs +
+  migration-equivalents table), #324 (Expo ~57.0.24, bridgeless noise
+  upstream), #333 (upstream filed). #353 auto-closes via `Closes #353` on
+  PR #354. Verified open-but-real: #254 (no public shareable links yet),
+  #203/#204/#206/#216 features, #334 (v3 gate), #337 (~Oct 18 gate).
+- Test-file `as any` sweep: all non-generated casts removed
+  (identity.test.ts ids already `GenericId`-typed from `db.insert`;
+  emailOtp/magicLink `(component as any)` redundant on `Mockify` mocks).
+- Flagged comments in untouched files folded into JSDoc
+  (`mcp.ts` export-surface contract, `component/mcp.ts` validator +
+  signing-key invariants, `migrate.ts` 2FA note, `nextjs` #56632
+  workaround on `getCookieStore`).
+- Proxy twin collapse: `runAuthProxy` core in `ssr/proxy.ts`
+  (`AuthProxyIO` seam: readCookies/jsonResponse/writeCookies/callAction/
+  log); `nextjs/server/proxy.ts` shrank 236→66 lines binding
+  `getRequestCookies`/`setAuthCookies`/`fetchAction`. Folded in a real
+  drift fix: the Next twin never validated `cookieConfig.maxAge <= 0`.
+  `parseAuthCookies` now returns `landingVerifier` too (additive).
+  `shouldProxyAuthAction` delegates. Boundary twin
+  (`boundary.ts` vs `request.ts`) still duplicated — deeper divergence,
+  separate extraction.
+- Verify: check/typecheck clean; 1697/1697 tests pass.

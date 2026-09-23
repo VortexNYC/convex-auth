@@ -28,6 +28,7 @@ export type AuthCookieReadValues = {
   refreshToken: string | null;
   twoFactorPending: string | null;
   trustedDevice: string | null;
+  landingVerifier: string | null;
 };
 
 /**
@@ -96,6 +97,7 @@ export function parseAuthCookies(request: Request): AuthCookieReadValues {
     refreshToken: jar.get(names.refreshToken) ?? null,
     twoFactorPending: jar.get(names.twoFactorPending) ?? null,
     trustedDevice: jar.get(names.trustedDevice) ?? null,
+    landingVerifier: jar.get(landingVerifierCookieName(isLocalhost)) ?? null,
   };
 }
 

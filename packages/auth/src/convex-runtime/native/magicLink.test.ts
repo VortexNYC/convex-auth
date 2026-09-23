@@ -172,7 +172,7 @@ describe("nativeMagicLink", () => {
 
     const ctx = createContext();
     await expect(handler(ctx, { email: "not-an-email" })).rejects.toThrow("Invalid email");
-    expect((component as any).native.verifiers.createVerifier).not.toHaveBeenCalled();
+    expect(component.native.verifiers.createVerifier).not.toHaveBeenCalled();
   });
 
   it("rejects when disabled", async () => {
@@ -248,10 +248,10 @@ describe("nativeMagicLink", () => {
       user: { email: "shlomo@example.com" },
     });
 
-    const consumeCall = (component as any).native.verifiers.consumeVerifier.mock.calls[0][0];
+    const consumeCall = component.native.verifiers.consumeVerifier.mock.calls[0][0];
     expect(typeof consumeCall.verifierId).toBe("string");
 
-    const provisionCall = (component as any).identity.provisionFromIdentity.mock.calls[0][0];
+    const provisionCall = component.identity.provisionFromIdentity.mock.calls[0][0];
     expect(provisionCall.identity).toMatchObject({
       provider: "magicLink",
       issuer: "native",
@@ -416,6 +416,6 @@ describe("nativeMagicLink", () => {
     await expect(exec(verifyMagicLink).handler(ctx, { token: "nope" })).rejects.toThrow(
       "SIGN_UP_DISABLED",
     );
-    expect((component as any).identity.provisionFromIdentity).not.toHaveBeenCalled();
+    expect(component.identity.provisionFromIdentity).not.toHaveBeenCalled();
   });
 });

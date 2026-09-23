@@ -35,6 +35,11 @@ const clientValidator = v.object({
   softwareVersion: v.optional(v.union(v.string(), v.null())),
 });
 
+/**
+ * The issued authorization code as read back at token exchange. `expiresAt`
+ * is included so the exchange validator can enforce the expiry the code was
+ * issued with (`McpOAuthAuthorizationCodeRecord` requires it).
+ */
 const authorizationCodeResultValidator = v.union(
   v.null(),
   v.object({
@@ -46,8 +51,6 @@ const authorizationCodeResultValidator = v.union(
     codeChallengeMethod: v.literal("S256"),
     audience: v.string(),
     resourceId: v.string(),
-    // Returned so the token-exchange validator can enforce the expiry the code
-    // was issued with (the package's McpOAuthAuthorizationCodeRecord requires it).
     expiresAt: v.number(),
   }),
 );
@@ -630,12 +633,15 @@ export const redeemRefreshToken = mutation({
   },
 });
 
+/**
+ * Latest active signing key. Signing keys are global rather than per-tenant —
+ * each distinct keyId has one row, and rotations retain old rows so in-flight
+ * tokens can verify during the retirement window.
+ */
 export const getSigningKey = query({
   args: {},
   returns: v.union(v.null(), signingKeyRecordValidator),
   handler: async (ctx) => {
-    // Signing keys are global rather than per-tenant. Each distinct keyId has one row;
-    // rotations retain old rows so in-flight tokens can verify during the retirement window.
     const { page } = await getPage(ctx, {
       table: "mcp_oauth_signing_keys",
       index: "by_status_updated_at",

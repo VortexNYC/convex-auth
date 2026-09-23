@@ -4,7 +4,7 @@ import {
   appendAuthCookies,
   isLocalHostRequest,
   parseAuthCookies,
-  parseLandingVerifierCookie,
+  type AuthCookieReadValues,
   type AuthCookieValues,
 } from "./cookies.js";
 import type { AuthTransport } from "./transport.js";
@@ -55,22 +55,46 @@ export type ConvexAuthProxyOptions = {
 };
 
 /**
- * The auth-action proxy as a fetch-shaped pipeline: `Request` in, `Response`
- * out, `Set-Cookie` headers on the response. Any adapter that can mount a
- * request handler (Next middleware, TanStack server route, a Route Handler)
- * can front this.
+ * The framework seams of the auth proxy: where cookies are read from, how a
+ * JSON response is built, how auth cookies are written onto it, how the
+ * component action is invoked, and where verbose logs go. Every adapter
+ * (Next.js, TanStack Start, Hono, …) supplies these five bindings; the
+ * request/response algorithm itself is shared in `runAuthProxy` so the
+ * adapters cannot drift.
  */
-export async function proxyAuthActionToConvex(
+export type AuthProxyIO<Action, R extends Response = Response> = {
+  readCookies(request: Request): AuthCookieReadValues | Promise<AuthCookieReadValues>;
+  jsonResponse(body: unknown, status?: number): R;
+  writeCookies(response: R, cookies: AuthCookieValues | null): void | Promise<void>;
+  callAction(
+    action: Action,
+    args: Record<string, unknown>,
+    opts: { token?: string },
+  ): Promise<unknown>;
+  log(message: string): void;
+};
+
+export type AuthProxyOptions<Action> = {
+  verbose?: boolean;
+  cookieConfig?: { maxAge: number | null };
+  actions: Partial<Record<AuthProxyIntent, Action>>;
+};
+
+/**
+ * The shared auth-action proxy pipeline: `Request` in, `Response` out, auth
+ * cookies applied through `io`. All intent gating, CSRF enforcement,
+ * confidential-field substitution, and error mapping live here — adapters
+ * only bind framework primitives.
+ */
+export async function runAuthProxy<Action, R extends Response = Response>(
   request: Request,
-  options: ConvexAuthProxyOptions,
+  options: AuthProxyOptions<Action>,
+  io: AuthProxyIO<Action, R>,
 ): Promise<Response> {
   const cookieConfig = options?.cookieConfig ?? { maxAge: null };
   if (cookieConfig.maxAge !== null && cookieConfig.maxAge <= 0) {
     throw new Error("cookieConfig.maxAge must be a positive number of seconds, or null");
   }
-  const verbose = options?.verbose ?? false;
-  const isLocalhost = isLocalHostRequest(request);
-  const cookieOpts = { isLocalhost, maxAge: cookieConfig.maxAge };
   if (request.method !== "POST") {
     return new Response("Invalid method", { status: 405 });
   }
@@ -89,28 +113,28 @@ export async function proxyAuthActionToConvex(
   const intent = body?.intent as AuthProxyIntent | undefined;
   const args: Record<string, unknown> = { ...body?.args };
   if (!intent || !SESSION_INTENTS.includes(intent)) {
-    logVerbose(`Invalid intent ${String(intent)}, returning 400`, verbose);
+    io.log(`Invalid intent ${String(intent)}, returning 400`);
     return new Response("Invalid intent", { status: 400 });
   }
-  const action = options.actions[intent] as Parameters<AuthTransport["action"]>[0] | undefined;
+  const action = options.actions[intent];
   if (!action) {
-    logVerbose(`Intent ${intent} is not configured, returning 400`, verbose);
+    io.log(`Intent ${intent} is not configured, returning 400`);
     return new Response("Action not configured", { status: 400 });
   }
 
-  const requestCookies = parseAuthCookies(request);
+  const requestCookies = await io.readCookies(request);
   const token = requestCookies.token ?? undefined;
 
   if (intent === "signOut" && token === undefined) {
-    const response = jsonResponse({ success: true });
-    appendAuthCookies(response.headers, null, cookieOpts);
+    const response = io.jsonResponse({ success: true });
+    await io.writeCookies(response, null);
     return response;
   }
 
   if (intent === "updateSession") {
     const refreshToken = requestCookies.refreshToken;
     if (refreshToken === null) {
-      return jsonResponse({ error: "No refresh token" }, 401);
+      return io.jsonResponse({ error: "No refresh token" }, 401);
     }
     args.refreshToken = refreshToken;
   }
@@ -120,7 +144,7 @@ export async function proxyAuthActionToConvex(
   if (intent === "twoFactorVerifyTOTP" || intent === "twoFactorVerifyBackupCode") {
     const pending = requestCookies.twoFactorPending;
     if (pending === null) {
-      return jsonResponse({ error: "No two-factor challenge pending" }, 401);
+      return io.jsonResponse({ error: "No two-factor challenge pending" }, 401);
     }
     args.token = pending;
   }
@@ -132,18 +156,17 @@ export async function proxyAuthActionToConvex(
     }
   }
   if (intent === "signIn" || intent === "callback") {
-    const landingVerifier = parseLandingVerifierCookie(request);
-    if (landingVerifier !== null) {
-      args.landingVerifier = landingVerifier;
+    if (requestCookies.landingVerifier !== null) {
+      args.landingVerifier = requestCookies.landingVerifier;
     } else {
       delete args.landingVerifier;
     }
   }
 
-  logVerbose(`Fetching action for intent ${intent}`, verbose);
+  io.log(`Fetching action for intent ${intent}`);
 
   try {
-    const result = await options.transport.action(
+    const result = await io.callAction(
       action,
       args,
       token !== undefined && intent !== "updateSession" ? { token } : {},
@@ -151,25 +174,50 @@ export async function proxyAuthActionToConvex(
 
     const cookiesToWrite = cookiesFromResult(result);
     const clientResult = stripConfidentialFields(result);
-    const response = jsonResponse(clientResult);
+    const response = io.jsonResponse(clientResult);
     if (intent === "signOut") {
-      appendAuthCookies(response.headers, null, cookieOpts);
+      await io.writeCookies(response, null);
     } else if (cookiesToWrite !== undefined) {
-      appendAuthCookies(response.headers, cookiesToWrite, cookieOpts);
+      await io.writeCookies(response, cookiesToWrite);
     }
     return response;
   } catch (error) {
     console.error(`Hit error while running proxy intent \`${intent}\`:`);
     console.error(error);
-    const response = jsonResponse(
+    const response = io.jsonResponse(
       { error: error instanceof Error ? error.message : "Unknown error" },
       400,
     );
     if (intent === "updateSession" || intent === "signOut") {
-      appendAuthCookies(response.headers, null, cookieOpts);
+      await io.writeCookies(response, null);
     }
     return response;
   }
+}
+
+/**
+ * The auth-action proxy as a fetch-shaped pipeline: `Request` in, `Response`
+ * out, `Set-Cookie` headers on the response. Any adapter that can mount a
+ * request handler (Next middleware, TanStack server route, a Route Handler)
+ * can front this.
+ */
+export async function proxyAuthActionToConvex(
+  request: Request,
+  options: ConvexAuthProxyOptions,
+): Promise<Response> {
+  const cookieConfig = options?.cookieConfig ?? { maxAge: null };
+  const cookieOpts = {
+    isLocalhost: isLocalHostRequest(request),
+    maxAge: cookieConfig.maxAge,
+  };
+  const verbose = options?.verbose ?? false;
+  return runAuthProxy(request, options, {
+    readCookies: parseAuthCookies,
+    jsonResponse,
+    writeCookies: (response, tokens) => appendAuthCookies(response.headers, tokens, cookieOpts),
+    callAction: (action, args, opts) => options.transport.action(action, args, opts),
+    log: (message) => logVerbose(message, verbose),
+  });
 }
 
 type SessionResult = {

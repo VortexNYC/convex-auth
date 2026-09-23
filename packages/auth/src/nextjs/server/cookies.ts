@@ -53,6 +53,12 @@ export type AuthCookieStore = {
   setTrustedDevice(value: string | null, maxAgeMs?: number): void;
 };
 
+/**
+ * Cookie store over a request/response cookie jar. `NextResponse["cookies"]`
+ * supports `delete`, but `NextRequest["cookies"]` does not — on request jars
+ * a clear is written as an expired empty cookie instead (Next.js issue 56632,
+ * https://github.com/vercel/next.js/issues/56632).
+ */
 function getCookieStore(
   requestHeaders: Headers,
   responseCookies: NextResponse["cookies"] | NextRequest["cookies"],
@@ -76,7 +82,6 @@ function getCookieStore(
       if ("size" in responseCookies) {
         responseCookies.delete(name);
       } else {
-        // https://github.com/vercel/next.js/issues/56632
         responseCookies.set(name, "", {
           ...cookieOptions,
           maxAge: undefined,
