@@ -1,6 +1,6 @@
 # Examples
 
-Each example is a runnable workspace under `examples/`. They share the same live `convex-auth` deployment and use `convex-auth` from the workspace.
+Each example is a runnable workspace under `examples/` and uses `convex-auth` from the workspace. Give each example its own Convex deployment — examples deploy different function sets and static assets, so two examples pointed at one deployment overwrite each other.
 
 Copy the `.env.example` in each example to `.env.local` and fill in your Convex deployment URL. If you want OAuth, also set the provider credentials on your deployment:
 
@@ -61,8 +61,11 @@ export const Route = createFileRoute("/_authed")({
 ```bash
 cd examples/tanstack-router
 pnpm install
+pnpm dlx convex dev   # anonymous local backend
 pnpm run dev
 ```
+
+Anonymous local backends default to `127.0.0.1:3210`/`3211`. To run several local examples at once, give each `.env.local` its own port pair (e.g. `3214`/`3215`) before the first `convex dev` — the backend binds the ports in `CONVEX_URL`/`CONVEX_SITE_URL`.
 
 ## TanStack Start (SSR)
 
