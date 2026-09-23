@@ -1,60 +1,50 @@
-# Session state — 2026-09-22 (release staged)
+# Session state — 2026-09-23 (security fixes on PR #354)
 
 Repo: `~/Projects/convex-auth` · remote `github.com/VortexNYC/convex-auth` ·
-branch `main`, head `bccf2b3` (version 2.5.1), all pushed.
+branch `feat/tanstack-start-adapter`, head `71b6874`, all pushed.
 
 ## Where things stand
 
-- **Next.js SSR adapter (#321)** — implemented, live-verified, on PR #343.
-  `packages/auth/src/nextjs/` + `examples/nextjs` demo. Live matrix proven:
-  SSR render, proxy sign-in/up, session-triple landing, middleware redirects
-  (anon + revoked), sign-out, CSRF/CORS. Status comment on #321.
-- **Component convergence** — rotation grace window + `convergeSession`,
-  bounded family scan (`.take(MAX+1)`, fail-closed), familyId on every mint.
-- **#344 fixed** — `b311f3b`: `signOut`/`stopImpersonation` now revoke the
-  whole session family via `revokeSessionFamilyBySession`. Legacy rows
-  (no familyId) use sessionId as family. Audit: `session.sign_out` for
-  voluntary sign-out, `refresh_token_reuse` kept for replay detection.
-- **External PR #345 merged** — `8c50b60`: published package now ships the
-  full `src/convex-runtime/**` tree; `convex`/`types` conditions point at
-  `src/convex-runtime/index.ts`; 3 JSX-free `.tsx`→`.ts` renames; verified
-  via `npm pack --dry-run` (234 files, no test leakage).
-- **Toolchain reverted to vite-plus 0.2.4** — `a3b00f9` + `d85baa3`.
-  The 0.3.x bump + Node-22 floor (`6fe5e1f`, `1235fd6`) were unnecessary:
-  0.2.4 ships `vp staged/check/run/pack/test` and `.vite-hooks`. Restored:
-  `vite: ^8.2.2`, `advancedChunks`, matrix `[20.x, 22.x]`, engines
-  `>=20.12.0`. Upstream issue voidzero-dev/vite-plus#2789 closed.
-  `@vitest/coverage-v8` stays pinned at 4.1.11 (matches bundled vitest).
-- **Build** — `"use client"`/`"use server"` preserved on chunks via
-  `advancedChunks` pin; mixed-directive chunk fails the build.
+- **PR #354** (`feat/tanstack-start-adapter`) — TanStack Start SSR adapter +
+  two security fixes. All CI green on `71b6874` (checks 20.x + 22.x, CodeQL,
+  deps-and-secrets, sast, secretlint, leaks, prc).
+- **Published**: `@vortex-api/convex-auth@2.5.2` is npm `latest`;
+  GitHub release `v2.5.2` exists.
+- **#356 fixed** — `2259e02`: family revocation now fires only for
+  rotated-token replay outside the 15s grace window (`rotatedAt !==
+  undefined`). Administratively revoked tokens (sign-out,
+  `revokeOtherSessions`, admin, passkey removal) reject quietly — no more
+  caller-family DoS, no theft-containment loss.
+- **#355 fixed** — `71b6874`: session-triple landings are bound to the
+  initiating browser via non-HttpOnly `__convexAuthLandingVerifier` cookie
+  (`__Host-` prefixed off localhost). Boundary mints on same-origin
+  navigations; React client attaches it to OAuth sign-in (signed state)
+  and magic-link requests (verifier record); callback/verify routes echo
+  it onto the landing URL; boundary compares param-vs-cookie before
+  writing auth cookies. Proxies inject the cookie value into `callback`
+  args (body-supplied values deleted). Opt-out: `requireLandingVerifier:
+  false`. Token-mode/native unaffected.
+- **Node-20 CI saga resolved** — `91b4d71` + `b4c0081`: `.pnpmfile.cjs`
+  `readPackage` hook strips `engines.node` from the 4 TanStack packages
+  that poisoned pnpm's installable-graph walk (their `>=22.12` floor
+  silently pruned `@rollup/*` optional binaries under Node 20).
+- **Cursor pair review** on `2259e02`+`71b6874`: no Critical/High/Medium.
+  Four Lows, all inherent or documented (localhost port-fixation,
+  first-visit mint race, insecure-context auth already broken,
+  `verifyMagicLink` not an enforcement point by design).
+- **CodeRabbit**: reviewed `2259e02` — two Minor comment-removal nits
+  (declined; comments document security invariants). Incremental review of
+  `71b6874` is rate-limited; will land when quota clears.
 
 ## Verification
 
-1,571 tests · lint 0/0 · typecheck clean · `vp fmt` clean · `next build`
-green with no env vars · live E2E on local deployment.
+1,666 tests · `pnpm run check` clean · typecheck clean (10 workspaces) ·
+`pnpm run build` green.
 
 ## Open gates / next
 
-1. **Publish 2.5.1** — one step left: `gh workflow run release.yml --ref main`
-   with no pending changesets runs `pnpm ci:publish` → npm + GitHub release.
-   Needs `NPM_TOKEN` secret set. Irreversible — confirm before dispatch.
-2. **Repo setting worth flipping**: Settings → Actions → "Allow GitHub Actions
-   to create and approve pull requests" — the release workflow can't open its
-   own version PRs; both were opened manually (#348, #350).
-3. **TanStack Start** — unblocked now that #343 merged.
-4. Deferred: #337 (post-2.4.0 + TTL window), #334 (next major),
-   feature issues #254/#216/#214/#213/#206/#204/#203, docs #218.
-   #346 residual: `revokeOtherSessions` exclude is row-level not family-level
-   (over-revokes current lineage only — safe); low-level native
-   `revokeSession` stays single-row for consumers who want it.
-
-## Restarting the demo
-
-```bash
-cd examples/nextjs
-pnpm dlx convex dev --dev-deployment local   # backend :3210, site :3211
-pnpm dev                                     # Next on :3000 (3100 if taken)
-```
-
-JWT keys + `SITE_URL` + `ALLOW_EMAIL_TOKEN_FALLBACK` are already set on the
-`anonymous-nextjs` deployment; `convex dev` reuses it.
+1. CodeRabbit incremental review of `71b6874` (pending rate limit).
+2. PR #354 merge decision — green and reviewed per the review-before-merge
+   rule once CodeRabbit's pass lands.
+3. Deferred feature issues unchanged (#254/#216/#214/#213/#206/#204/#203,
+   docs #218). Next.js remains last per the layering plan.
