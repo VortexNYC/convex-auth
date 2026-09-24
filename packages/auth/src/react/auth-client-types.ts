@@ -130,7 +130,7 @@ export type ConvexBetterAuthClient = {
   twoFactor?: ConvexBetterAuthTwoFactorApi;
 };
 
-/** @deprecated Use `ConvexAuthClient` instead. */
+/** @deprecated Use `ConvexBetterAuthClient` instead. */
 export type ConvexAuthClient = ConvexBetterAuthClient;
 
 export type ConvexBetterAuthTwoFactorApi = {

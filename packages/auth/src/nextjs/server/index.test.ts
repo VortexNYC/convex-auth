@@ -430,6 +430,35 @@ describe("createRouteMatcher", () => {
     expect(isProtected(at("/other"))).toBe(false);
   });
 
+  it("matches slash-anchored wildcard patterns with v6 parity", () => {
+    const isProtected = createRouteMatcher("/api/(.*)");
+    expect(isProtected(at("/api/"))).toBe(true);
+    expect(isProtected(at("/api/x"))).toBe(true);
+    expect(isProtected(at("/api/x/y"))).toBe(true);
+    // v6 required the slash — bare prefix and glued names must not match.
+    expect(isProtected(at("/api"))).toBe(false);
+    expect(isProtected(at("/apifoo"))).toBe(false);
+    expect(isProtected(at("/apiv2"))).toBe(false);
+  });
+
+  it("keeps glued wildcard suffix semantics from v6", () => {
+    const isProtected = createRouteMatcher("/dashboard(.*)");
+    // `(.*)` glued onto the prefix matched glued strings in v6 too.
+    expect(isProtected(at("/dashboardfoo"))).toBe(true);
+    expect(isProtected(at("/dashboard"))).toBe(true);
+  });
+
+  it("rejects bare-star and unnamed-group patterns like v6 did", () => {
+    expect(() => createRouteMatcher("/api/*")).toThrow();
+    expect(() => createRouteMatcher("/(a|b)/x")).toThrow();
+  });
+
+  it("accepts native v8 splat syntax", () => {
+    const isProtected = createRouteMatcher("/files/{*rest}");
+    expect(isProtected(at("/files/a/b"))).toBe(true);
+    expect(isProtected(at("/files"))).toBe(false);
+  });
+
   it("matches an array of routes", () => {
     const isProtected = createRouteMatcher(["/dashboard", "/settings"]);
     expect(isProtected(at("/dashboard"))).toBe(true);

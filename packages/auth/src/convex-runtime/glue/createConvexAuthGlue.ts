@@ -21,8 +21,8 @@
  *     synchronous against the cached state.
  *  4. Active-org is a HINT. `user.activeConvexAuthOrganizationId` is
  *     validated against live membership every resolve. Never trusted blind.
- *  5. Permission override is an explicit `{add, remove}` merge contract, not
- *     a raw array replacement.
+ *  5. Permissions are role-derived; the only consumer hook is the
+ *     `expandPermissions` widening applied to `role.permissions`.
  *  6. Component ids are opaque strings — never branded as consumer Convex
  *     ids (the platform owns them; see better-auth/convex GH issue #372).
  */
@@ -457,42 +457,24 @@ async function resolveComponentUserId(
 
 /**
  * Build the final permission set for a membership: role-derived
- * permissions → expansion (consumer's domain) → override merge
- * ({add, remove} contract). All three steps are noop-safe; consumers that
- * don't supply the expansion or override callbacks just get the raw
- * component-stored role.permissions.
+ * permissions → expansion (consumer's domain). Consumers that don't
+ * supply the expansion callback just get the raw component-stored
+ * role.permissions.
  */
-async function resolveMembershipPermissions<
+function resolveMembershipPermissions<
   TUser extends GlueUserMinimum,
   TAnchor extends GlueAnchorMinimum,
 >(
-  ctx: GlueCtx,
   adapters: B2BModeAdapters<TUser, TAnchor>,
-  member: {
-    _id: string;
-    organizationId: string;
-  },
   role: { key: string; permissions: readonly string[] },
-  convexAuthUserId: string,
-): Promise<string[]> {
-  const expanded =
-    adapters.expandPermissions !== undefined
-      ? adapters.expandPermissions(role.key, role.permissions)
-      : role.permissions;
-  const baseSet = new Set(expanded);
-  if (adapters.resolvePermissionOverride === undefined) {
-    return [...baseSet];
-  }
-  const override = await adapters.resolvePermissionOverride(ctx, {
-    convexAuthMemberId: toConsumerId(member._id),
-    convexAuthOrganizationId: toConsumerId(member.organizationId),
-    convexAuthUserId: toConsumerId(convexAuthUserId),
-    basePermissions: [...baseSet],
-  });
-  if (override === null) return [...baseSet];
-  for (const p of override.remove) baseSet.delete(p);
-  for (const p of override.add) baseSet.add(p);
-  return [...baseSet];
+): string[] {
+  return [
+    ...new Set(
+      adapters.expandPermissions !== undefined
+        ? adapters.expandPermissions(role.key, role.permissions)
+        : role.permissions,
+    ),
+  ];
 }
 
 async function fetchMembership<TUser extends GlueUserMinimum, TAnchor extends GlueAnchorMinimum>(
@@ -514,13 +496,7 @@ async function fetchMembership<TUser extends GlueUserMinimum, TAnchor extends Gl
   });
   if (role === null) return null;
 
-  const permissions = await resolveMembershipPermissions(
-    ctx,
-    adapters,
-    member,
-    role,
-    convexAuthUserId,
-  );
+  const permissions = resolveMembershipPermissions(adapters, role);
   return {
     convexAuthMemberId: toConsumerId(member._id),
     roleKey: role.key,
@@ -679,13 +655,7 @@ async function bootstrapExistingMembership<
   if (role === null) return null;
 
   await ensureAnchor(ctx, config, convexAuthOrganizationId, convexAuthUserId, name ?? email);
-  const permissions = await resolveMembershipPermissions(
-    ctx,
-    config.adapters,
-    firstActive,
-    role,
-    convexAuthUserId,
-  );
+  const permissions = resolveMembershipPermissions(config.adapters, role);
   return {
     convexAuthOrganizationId,
     membership: {
@@ -746,13 +716,7 @@ async function bootstrapPersonalOrganization<
   if (memberResult === undefined) return null;
   await ensureAnchor(ctx, config, convexAuthOrganizationId, convexAuthUserId, personalName);
 
-  const permissions = await resolveMembershipPermissions(
-    ctx,
-    config.adapters,
-    { _id: memberResult.memberId, organizationId: convexAuthOrganizationId },
-    ownerRole,
-    convexAuthUserId,
-  );
+  const permissions = resolveMembershipPermissions(config.adapters, ownerRole);
   return {
     convexAuthOrganizationId,
     membership: {

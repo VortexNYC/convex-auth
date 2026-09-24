@@ -139,52 +139,11 @@ export type B2BModeAdapters<
   ) => Promise<void>;
 
   /**
-   * @deprecated Per-member permission overrides are a legacy escape hatch.
-   *
-   * The canonical model is: roles carry permissions, members carry roles.
-   * Per-member overrides are an anti-pattern that:
-   *   1. Stores authorization state OUTSIDE the component's source of truth
-   *   2. Forces consumers to maintain a mirror table indexed by
-   *      convexAuthMemberId — exactly the pattern the consumer-contract
-   *      checker flags as `local-bridge-mirror` (see
-   *      docs/migration/truth-migration-playbook.md M3 "per-member
-   *      metadata triage").
-   *   3. Was already removed from a consumer (PR #23 dropped `member_settings`
-   *      entirely — feature had 0 rows in prod, was never actually used).
-   *
-   * Codex audit (2026-05-28): this adapter slot keeps the anti-pattern
-   * alive as a first-class seam. Prefer one of:
-   *   - Express the variance as a NEW role and assign it (component-truth)
-   *   - Move the override into the component (add as a member field)
-   *   - Delete the feature (the consumer precedent)
-   *
-   * The adapter remains in the API for transitional migrations only. It
-   * will be removed in a future major (planned for v0.2.0). New consumers
-   * MUST NOT implement this adapter — leave it undefined.
-   *
-   * If you find yourself wanting overrides today, ask: what role would
-   * capture this variance? That role is the right answer.
-   *
-   * `add` and `remove` operate against the role-derived `basePermissions`.
-   * Raw replacement arrays were intentionally rejected — that shape is
-   * underspecified and was how earlier integrations diverged.
-   */
-  resolvePermissionOverride?: (
-    ctx: GlueCtx,
-    args: {
-      convexAuthMemberId: string;
-      convexAuthOrganizationId: string;
-      convexAuthUserId: string;
-      basePermissions: string[];
-    },
-  ) => Promise<{ add: string[]; remove: string[] } | null>;
-
-  /**
    * OPTIONAL permission expansion applied to the role's
-   * `role.permissions` array stored in the component, BEFORE the override
-   * is merged. Consumers that use wildcards (`*` → all permissions),
-   * inheritance (`role:admin` → expands to admin's full set), or any
-   * other domain-specific expansion plug their logic here.
+   * `role.permissions` array stored in the component. Consumers that use
+   * wildcards (`*` → all permissions), inheritance (`role:admin` →
+   * expands to admin's full set), or any other domain-specific expansion
+   * plug their logic here.
    *
    * If omitted, the glue surfaces the raw component-stored permissions
    * unchanged. The legacy consumer `buildPermissionContext` path uses
@@ -308,7 +267,7 @@ export type ResolvedMembership = {
   /** Role template key (e.g. "owner", "admin", "member"). */
   roleKey: string;
   status: "active" | "invited" | "suspended";
-  /** Permissions after role expansion + optional override merge. */
+  /** Permissions after role expansion (`expandPermissions` or raw role perms). */
   permissions: string[];
 };
 
