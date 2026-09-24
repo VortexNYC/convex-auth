@@ -49,10 +49,17 @@ jobs:
       - name: Compute change scope
         id: scope
         run: |
+          files=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             files=$(git diff --name-only "${{ github.event.pull_request.base.sha }}"...HEAD)
           else
-            files=$(git diff --name-only "${{ github.event.before }}"..HEAD)
+            # push / dispatch: `before` is empty on dispatch and a zero SHA on
+            # new-branch pushes — either way, fall back to running the full
+            # wall rather than failing the diff.
+            before="${{ github.event.before }}"
+            if [ -n "$before" ] && git cat-file -e "$before" 2>/dev/null; then
+              files=$(git diff --name-only "$before"..HEAD)
+            fi
           fi
           echo "changed files:"
           echo "$files"
@@ -90,7 +97,9 @@ jobs:
 
       # Coverage runs the same suite instrumented — on 22.x it subsumes
       # the plain test run, so the suite executes once per matrix leg
-      # instead of twice.
+      # instead of twice. NOTE: `test` is recursive (vp run -r) while
+      # `test:coverage` targets @vortex-api/convex-auth only — if another
+      # package gains a test script, widen coverage to match.
       - name: Run tests
         if: steps.scope.outputs.docsonly != 'true' && matrix.node-version != '22.x'
         run: pnpm run test
