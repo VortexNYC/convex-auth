@@ -209,3 +209,27 @@ green (includes site/changelog). CI pending on `8bab3b9`.
 - `excludeFamilyId` deliberately not documented — internal component arg.
 - Verified: `blume build` clean, `blume validate` 0 broken links (was 6),
   `pnpm run check` clean, `docs:smoke` passed. Cursor review pass applied.
+
+## Post-merge debt sweep (2026-09-24, continued)
+
+- **PR #377 merged** (`6ca561e`) — docs drift audit: Next.js + TanStack
+  Start adapter guides, server-api.mdx action corrections, link fixes.
+  Cursor review caught 6 signature inaccuracies in server-api.mdx
+  (pre-existing drift) — all verified against validators and fixed.
+- **PR #378 merged** (`a56d3a1`) — apiKeys feature-gate twin drift:
+  `issueApiKey`/`issueServiceOwnedApiKey` in `component/apiKeys/` lacked
+  `allowedIpRanges` that the monolith had. Fixed + synced missing JSDoc.
+  Twins now differ only by import paths.
+- **New test**: `featureGatedParity.test.ts` pins all five component
+  twins (apiKeys/servicePrincipals/webhooks/authMd/agentAuth) to the
+  monolith after import normalization — drift now fails CI.
+- **Filed #379** — dormant `*.vitest.ts` conformance suite: 10 files,
+  5 pass (48 tests dark), 5 broken (stale `@convexnyc/auth/test` import,
+  stale module path, wasm env). Needs wire-in-or-delete decision.
+- Twin-duplication note: nested `component/<name>/` dirs are feature-gated
+  sub-components; flat `component/<name>.ts` files are the monolith's
+  functions. `organizations/organizations.ts` is a pure re-export shim.
+- Board: 16 open issues — all either time-gated debt (#337/#373/#374,
+  #379 needs triage), v3 gate (#334, staged as #375), draft
+  (#372 ~Oct 18), or features/adapters deferred by user (#203-206,
+  #213-214, #216, #254, #367-370, #371).
