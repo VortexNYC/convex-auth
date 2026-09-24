@@ -80,7 +80,7 @@ export function buildExpoTrustedOrigins(args: {
   }
 
   if (args.includeExpoDevelopmentOrigins === true) {
-    origins.push("exp://", "exp://**", "exp://192.168.*.*:*/**");
+    origins.push("exp://", "exp://*", "exp://192.168.*.*:*/**");
   }
 
   return Array.from(new Set(origins));

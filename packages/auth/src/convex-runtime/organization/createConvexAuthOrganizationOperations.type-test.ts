@@ -34,7 +34,7 @@ import {
   type ConvexAuthOrganizationOperationsComponentsHandle,
 } from "./createConvexAuthOrganizationOperations";
 
-/** A throwaway consumer DataModel, mirroring `_generated/server`. */
+/* A throwaway consumer DataModel, mirroring `_generated/server`. */
 const schema = defineSchema({
   organizations: defineTable({
     name: v.string(),
@@ -68,7 +68,7 @@ const ops = createConvexAuthOrganizationOperations<
   component,
   /** -- read callbacks get the consumer's REAL query ctx, no cast -- */
   resolveLocalOrganizationId: async (ctx, _componentOrganizationId) => {
-    /** ctx.db is the typed reader — proven below, used here without a cast. */
+    /* ctx.db is the typed reader — proven below, used here without a cast. */
     const typedReader: QueryCtx["db"] = ctx.db;
     await typedReader.query("organizations").take(1);
     return null;
@@ -81,7 +81,7 @@ const ops = createConvexAuthOrganizationOperations<
   roleCatalog: { owner: ["*"], admin: ["org:read"], member: ["org:read"] },
   /** -- write callbacks get the consumer's REAL mutation ctx, no cast -- */
   loadOrganizationForUpsert: async (ctx, _localOrganizationId) => {
-    /** ctx.db is the typed WRITER (insert/patch available) — no cast. */
+    /* ctx.db is the typed WRITER (insert/patch available) — no cast. */
     const typedWriter: MutationCtx["db"] = ctx.db;
     await typedWriter.query("organizations").take(1);
     return null;

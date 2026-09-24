@@ -41,7 +41,7 @@ async function describeResponse(res: Response): Promise<string> {
   }
 }
 
-/**
+/*
  * --- Bogus provider ----------------------------------------------------
  * A provider that is definitely not configured. A wired handler rejects it
  * with a Better-Auth validation/processing error, not a routing 404.
@@ -64,7 +64,7 @@ if (bogus.status === 404 && /no.?t found|no matching|cannot (POST|find)/i.test(b
   r.bad(`sign-in/social crashed (HTTP ${bogus.status}): ${bogusBody}`);
 }
 
-/**
+/*
  * --- Omitted provider --------------------------------------------------
  * Missing required field => Better Auth validation error (400-class), which
  * also proves the handler is parsing the request rather than 404-ing.

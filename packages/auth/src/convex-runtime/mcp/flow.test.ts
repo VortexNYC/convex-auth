@@ -276,7 +276,7 @@ describe("mcp oauth flow helpers", () => {
         resourceId: "app:mcp",
         expiresAt: 1_000,
       }),
-      now: 1_000, // now === expiresAt → expired (boundary is inclusive)
+      now: 1_000 /* now === expiresAt → expired (boundary is inclusive) */,
     });
 
     assert.deepEqual(result, {

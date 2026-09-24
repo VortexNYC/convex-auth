@@ -146,7 +146,7 @@ describe("createAuthorizationDenialAuditor — drift-proof emission", () => {
     assert.equal(emitted.length, 1);
     const event = only(emitted, "authorization denial event is missing");
     assert.equal(event.payload, null);
-    /** permission falls back to the explicit arg even with no payload. */
+    /* permission falls back to the explicit arg even with no payload. */
     assert.equal(event.permission, "reports:read");
   });
 

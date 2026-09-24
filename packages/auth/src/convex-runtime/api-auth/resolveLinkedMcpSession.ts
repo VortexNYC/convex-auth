@@ -55,7 +55,7 @@ export async function resolveLinkedMcpSession(
     throw new ApiAuthError("USER_IDENTITY_NOT_LINKED", "MCP session user is not linked.");
   }
 
-  /** Fail closed on a suspended/restricted account, mirroring the JWT bearer
+  /* Fail closed on a suspended/restricted account, mirroring the JWT bearer
    * path (resolveApiAuthContext). Without this, an MCP client could keep
    * authorizing a restricted user as long as org access + scopes still pass. */
   if (linkedUser.isRestricted) {

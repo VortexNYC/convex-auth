@@ -111,7 +111,7 @@ export function ConvexVerifyEmailScreen(props: ConvexVerifyEmailScreenProps) {
     return () => {
       cancelled = true;
     };
-    /** Re-run only if the token or client changes — onVerified should not
+    /* Re-run only if the token or client changes — onVerified should not
      * retrigger this effect even if the parent re-creates it. */
   }, [props.token, authClient, isAvailable, hasToken]);
 

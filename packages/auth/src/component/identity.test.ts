@@ -249,7 +249,7 @@ describe("provisionFromIdentity", () => {
     });
     expect(result.identityId).toBeDefined();
 
-    /**
+    /*
      * The sign-up/first-sign-in mint carries the column — this is the
      * highest-volume session path, so it must not rely on the claim fallback.
      */

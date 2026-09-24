@@ -32,7 +32,7 @@ describe("serializeAuthActions", () => {
     expect(serialized.updateSession).toBe("auth:updateSession");
     expect(serialized.verifySession).toBe("auth:verifySession");
     expect(serialized.twoFactorVerifyTOTP).toBe("auth:twoFactorVerifyTOTP");
-    /** The manifest itself must be a plain object — no symbols, no proxies. */
+    /* The manifest itself must be a plain object — no symbols, no proxies. */
     expect(Object.getOwnPropertySymbols(serialized)).toHaveLength(0);
   });
 
@@ -42,7 +42,7 @@ describe("serializeAuthActions", () => {
   });
 
   it("regression: the raw api proxy loses all references across the boundary", () => {
-    /**
+    /*
      * Documents the bug this module fixes — a bare `api.auth` serializes to {}
      * because the Proxy exposes no enumerable own properties.
      */
@@ -54,7 +54,7 @@ describe("serializeAuthActions", () => {
       signIn: makeFunctionReference("auth:signIn"),
       signUp: makeFunctionReference("auth:signUp"),
       signOut: makeFunctionReference("auth:signOut"),
-      /** A hand-assembled actions object may lack optional refs entirely. */
+      /* A hand-assembled actions object may lack optional refs entirely. */
     } as NativeAuthActions;
     const serialized = serializeAuthActions(actions);
     expect(serialized.signIn).toBe("auth:signIn");
@@ -75,7 +75,7 @@ describe("normalizeAuthActions", () => {
 
   it("rebuilt refs satisfy convex's own FunctionReference check", () => {
     const actions = normalizeAuthActions(acrossRscBoundary(serializeAuthActions(fakeApiAuth())));
-    /** `useAction`/`fetchAction` resolve names via the same global symbol. */
+    /* `useAction`/`fetchAction` resolve names via the same global symbol. */
     const ref = actions.verifySession as unknown as Record<symbol, string>;
     expect(ref[Symbol.for("functionName")]).toBe("auth:verifySession");
   });
@@ -100,7 +100,7 @@ describe("normalizeAuthActions", () => {
   });
 
   it("rebuilds a partial manifest missing signUp", () => {
-    /**
+    /*
      * A manifest that lacks the required key must still be deserialized —
      * passing it through as "live" would leave string values where the
      * provider expects refs.
@@ -112,7 +112,7 @@ describe("normalizeAuthActions", () => {
   });
 
   it("does not write to __proto__ on a hostile manifest key", () => {
-    /**
+    /*
      * JSON.parse yields __proto__ as an own enumerable property with a string
      * value — exactly the shape that would write the prototype on a plain
      * object literal.
@@ -121,7 +121,7 @@ describe("normalizeAuthActions", () => {
       '{"signUp":"auth:signUp","__proto__":"auth:evil"}',
     ) as SerializedAuthActions;
     const actions = normalizeAuthActions(manifest);
-    /**
+    /*
      * The rebuilt map is null-prototype, so __proto__ lands as data and the
      * global object prototype is untouched.
      */

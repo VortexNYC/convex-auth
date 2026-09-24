@@ -27,7 +27,7 @@ const baseArgs = {
   roleName: "admin",
   inviterLabel: "Shlomo (shlomo@example.com)",
   acceptUrl: "https://app.example.com/invite/accept?token=abc123",
-  expiresAt: Date.UTC(2026, 5, 30, 12, 0, 0), // 2026-06-30 12:00 UTC
+  expiresAt: Date.UTC(2026, 5, 30, 12, 0, 0) /* 2026-06-30 12:00 UTC */,
 };
 
 describe("renderAuthInvitationEmail", () => {
@@ -53,7 +53,7 @@ describe("renderAuthInvitationEmail", () => {
 
   it("HTML renders the expiry as a UTC string", async () => {
     const { html } = await renderAuthInvitationEmail(baseArgs);
-    /** toUTCString format includes the year and "GMT". */
+    /* toUTCString format includes the year and "GMT". */
     assert.ok(/2026/.test(html), "missing expiry year");
     assert.ok(/GMT/.test(html), "missing GMT marker");
   });

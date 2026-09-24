@@ -293,7 +293,7 @@ export function useConvexAuthClient() {
           if (typeof result.error === "string") {
             return { data: null, error: toError(result.error) };
           }
-          /** The enable action returns the session token so verification
+          /* The enable action returns the session token so verification
            * can proceed. */
           actions.setTwoFactorChallengeToken(result.token ?? token);
           return {

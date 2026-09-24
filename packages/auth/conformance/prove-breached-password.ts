@@ -17,7 +17,7 @@ const { site } = requireEnv();
 const r = makeReporter();
 const J = () => ({ "content-type": "application/json", origin: ORIGIN_WEB });
 
-/**
+/*
  * 13 chars (passes a 12-char min length) and overwhelmingly present in
  * the HIBP corpus — must be rejected by the screening, not the length.
  */

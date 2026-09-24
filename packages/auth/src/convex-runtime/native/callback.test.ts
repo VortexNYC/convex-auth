@@ -33,7 +33,7 @@ describe("isAllowedRedirectUrl", () => {
   });
 
   it("allows custom-scheme deep links only via explicit pattern trust", () => {
-    const rnTrusted = ["myapp://", "exp://", "exp://**", "exp://192.168.*.*:*/**"];
+    const rnTrusted = ["myapp://", "exp://", "exp://*", "exp://192.168.*.*:*/**"];
     expect(isAllowedRedirectUrl("myapp://auth/callback", SITE, rnTrusted)).toBe(true);
     expect(isAllowedRedirectUrl("exp://192.168.1.5:8081/auth", SITE, rnTrusted)).toBe(true);
     expect(isAllowedRedirectUrl("otherapp://auth", SITE, rnTrusted)).toBe(false);

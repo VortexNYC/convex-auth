@@ -131,7 +131,7 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
               await props.navigate?.({ to: props.forceRedirectUrl, replace: true });
             }
           } else if (session.type === "cancel" || session.type === "dismiss") {
-            /** User closed the browser without completing the flow. */
+            /* User closed the browser without completing the flow. */
           }
         } catch {
           /** expo-web-browser may not be installed or the device may not

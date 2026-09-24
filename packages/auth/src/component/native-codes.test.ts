@@ -5,7 +5,7 @@ import { convexTest } from "convex-test";
 import { api } from "./_generated/api.js";
 import schema from "./schema.js";
 
-const modules = import.meta.glob("./**/*.*s");
+const modules = import.meta.glob("./*/*.*s");
 
 describe("native verification codes", () => {
   it("creates and retrieves a verification code by token hash", async () => {
@@ -230,7 +230,7 @@ describe("native verification codes", () => {
       type: "email_verification",
     });
 
-    /**
+    /*
      * getVerificationCodeByTokenHash returns the document regardless of expiry;
      * expiry is checked by the caller.
      */
@@ -305,7 +305,7 @@ describe("native verification codes", () => {
       }),
     );
 
-    /**
+    /*
      * The pending token is minted alongside the identity the challenge was
      * issued for — the verify path (and any cookie/proxy substitution of the
      * token) needs it to mint the post-2FA session for the right identity.
@@ -331,7 +331,7 @@ describe("native verification codes", () => {
       expiresAt,
     });
 
-    /**
+    /*
      * Single-use: the first consume wins, the second gets nothing — a
      * replayed pending token cannot mint a second session.
      */
@@ -346,7 +346,7 @@ describe("native verification codes", () => {
     });
     expect(second).toBeNull();
 
-    /** Expired pending tokens refuse at consume time. */
+    /* Expired pending tokens refuse at consume time. */
     await t.mutation(api.native.codes.createVerificationCode, {
       userId,
       type: "two_factor_pending",

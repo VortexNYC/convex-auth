@@ -65,7 +65,7 @@ function makeComponent(): {
     roles: new Map(),
     orgs: new Map(),
   };
-  /**
+  /*
    * Sentinel keys so the test "FunctionReference" handles route to the
    * right fake. The runQuery dispatcher checks the key.
    */
@@ -144,7 +144,7 @@ function makeCtx(args: {
       }
       case "organizations:seedDefaultRoles": {
         const orgId = String(p.organizationId);
-        /** Seed a minimal catalog: owner only (enough for bootstrap tests). */
+        /* Seed a minimal catalog: owner only (enough for bootstrap tests). */
         const roleId = `role_${orgId}_owner`;
         state.roles.set(roleId, {
           _id: roleId,
@@ -292,7 +292,7 @@ async function expectAuthError(
   }
 }
 
-/** Consumer mode (orgs: disabled) */
+/* Consumer mode (orgs: disabled) */
 
 describe("createConvexAuthGlue — consumer mode (orgs: disabled)", () => {
   it("resolveViewer throws UNAUTHORIZED on anonymous", async () => {
@@ -346,12 +346,12 @@ describe("createConvexAuthGlue — consumer mode (orgs: disabled)", () => {
     assert.equal(viewer.mode, "consumer");
     assert.equal(viewer.user._id, "u_db_1");
     assert.equal(viewer.convexAuthUserId, "comp_user_1");
-    /** hasPermission is always true in consumer mode (no permission model). */
+    /* hasPermission is always true in consumer mode (no permission model). */
     assert.equal(viewer.hasPermission("anything"), true);
   });
 });
 
-/** B2B mode (orgs: enabled) */
+/* B2B mode (orgs: enabled) */
 
 describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
   for (const testCase of permissionMatcherConformanceCases) {
@@ -407,7 +407,7 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
     assert.equal(viewer.hasPermission("users:roles"), true);
     assert.equal(viewer.hasPermission("nope"), false);
     assert.equal(viewer.requireOrganization(), orgId);
-    viewer.requireRole("owner", "admin"); // does not throw
+    viewer.requireRole("owner", "admin"); /* does not throw */
   });
 
   it("requirePermission throws FORBIDDEN with PERMISSION_REQUIRED", async () => {
@@ -468,7 +468,7 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
       roleId: "r_owner",
       status: "active",
     });
-    /** User row points at a stale org id that has no membership. */
+    /* User row points at a stale org id that has no membership. */
     const { adapters, users, anchors } = makeAdapters([
       {
         _id: "u_db_1",
@@ -488,9 +488,9 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
     });
     const viewer = await glue.resolveViewer(ctx);
     assert.equal(viewer.convexAuthOrganizationId, goodOrg);
-    /** setActiveOrganization was called — user row now points at the right org. */
+    /* setActiveOrganization was called — user row now points at the right org. */
     assert.equal(users[0]?.activeConvexAuthOrganizationId, goodOrg);
-    /** Anchor was created on-the-fly. */
+    /* Anchor was created on-the-fly. */
     assert.equal(anchors.length, 1);
     assert.equal(anchors[0]?.convexAuthOrganizationId, goodOrg);
   });
@@ -542,13 +542,13 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
     assert.ok(viewer.convexAuthOrganizationId.startsWith("org_"));
     assert.equal(users[0]?.activeConvexAuthOrganizationId, viewer.convexAuthOrganizationId);
     assert.equal(anchors.length, 1);
-    /** Component now has exactly one org + one member. */
+    /* Component now has exactly one org + one member. */
     assert.equal(state.orgs.size, 1);
     assert.equal(state.members.length, 1);
   });
 
   it("self-heal swallows setActiveOrganization errors so QueryCtx reads don't blow up", async () => {
-    /**
+    /*
      * Repro of the production regression a consumer caught: glue's
      * self-heal path called setActiveOrganization in a QueryCtx, where
      * db.patch isn't available — the adapter threw, propagating up
@@ -576,11 +576,11 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
       {
         _id: "u_db_1",
         convexAuthUserId: componentId("users", "comp_user_1"),
-        /** No active org hint set; self-heal will fire on resolveViewer. */
+        /* No active org hint set; self-heal will fire on resolveViewer. */
       },
     ]);
     anchors.push({ _id: "a_1", convexAuthOrganizationId: goodOrg });
-    /**
+    /*
      * Override setActiveOrganization to simulate the QueryCtx db.patch
      * missing — the adapter throws to mirror what production saw.
      */
@@ -597,7 +597,7 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
       adapters,
       invitedUsersGetPersonalOrg: false,
     });
-    /**
+    /*
      * The throw inside setActiveOrganization must NOT bubble — viewer
      * resolution succeeds using the bootstrapped membership.
      */
@@ -614,7 +614,7 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
       _id: "r_owner",
       organizationId: orgId,
       key: "owner",
-      permissions: ["*"], // wildcard from the component
+      permissions: ["*"] /* wildcard from the component */,
     });
     state.members.push({
       _id: "m_owner",
@@ -635,7 +635,7 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
       identity: { subject: "u_1", issuer: "https://issuer.test" },
       component: state,
     });
-    /**
+    /*
      * expandPermissions adapter turns the wildcard into the consumer
      * catalog — the package never reads "*" semantically; the consumer
      * owns expansion.
@@ -651,7 +651,7 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
     });
     const viewer = await glue.resolveViewer(ctx);
     for (const p of CATALOG) assert.equal(viewer.hasPermission(p), true);
-    /** A perm NOT in the catalog stays denied. */
+    /* A perm NOT in the catalog stays denied. */
     assert.equal(viewer.hasPermission("danger:nuke"), false);
   });
 
@@ -684,7 +684,7 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
       identity: { subject: "u_1", issuer: "https://issuer.test" },
       component: state,
     });
-    /**
+    /*
      * Override: drop billing:read, add org:write. Merged result must
      * reflect both halves of the contract.
      */
@@ -700,9 +700,9 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
       },
     });
     const viewer = await glue.resolveViewer(ctx);
-    assert.equal(viewer.hasPermission("org:read"), true); // base kept
-    assert.equal(viewer.hasPermission("org:write"), true); // added
-    assert.equal(viewer.hasPermission("billing:read"), false); // removed
+    assert.equal(viewer.hasPermission("org:read"), true); /* base kept */
+    assert.equal(viewer.hasPermission("org:write"), true); /* added */
+    assert.equal(viewer.hasPermission("billing:read"), false); /* removed */
   });
 
   it("resolvePermissionOverride returning null: viewer uses unaltered role permissions", async () => {
@@ -747,7 +747,7 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
       },
     });
     const viewer = await glue.resolveViewer(ctx);
-    assert.equal(calls, 1); // adapter is invoked
+    assert.equal(calls, 1); /* adapter is invoked */
     assert.equal(viewer.hasPermission("dashboard:view"), true);
     assert.equal(viewer.hasPermission("anything_else"), false);
   });
@@ -790,7 +790,7 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
         expandPermissions: (k) => (k === "owner" ? ["a", "b", "c", "d"] : []),
         /** Override removes one expanded perm + adds an extra. */
         resolvePermissionOverride: async (_ctx, args) => {
-          /**
+          /*
            * basePermissions param MUST already be the expanded catalog —
            * assert that the contract holds.
            */
@@ -801,14 +801,14 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
     });
     const viewer = await glue.resolveViewer(ctx);
     assert.equal(viewer.hasPermission("a"), true);
-    assert.equal(viewer.hasPermission("b"), false); // removed
+    assert.equal(viewer.hasPermission("b"), false); /* removed */
     assert.equal(viewer.hasPermission("c"), true);
     assert.equal(viewer.hasPermission("d"), true);
-    assert.equal(viewer.hasPermission("e"), true); // added
+    assert.equal(viewer.hasPermission("e"), true); /* added */
   });
 
   it("ensureAnchor from QueryCtx throws canonical ANCHOR_MISSING, not a raw TypeError", async () => {
-    /**
+    /*
      * Reproduce the cold-start case: first request after sign-in is a
      * query (reactive list, dashboard) — selfHeal needs to create the
      * anchor but ctx has no db.insert. Without the guard the consumer's
@@ -835,7 +835,7 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
     const { adapters } = makeAdapters([
       { _id: "u_db_1", convexAuthUserId: componentId("users", "comp_user_1") },
     ]);
-    /**
+    /*
      * Critical: anchors stay empty AND insertAnchor would normally write.
      * We strip `ctx.db.insert` to simulate a QueryCtx so the guard fires.
      */
@@ -843,7 +843,7 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
       identity: { subject: "u_1", issuer: "https://issuer.test" },
       component: state,
     });
-    (ctx as { db?: unknown }).db = {}; // QueryCtx has no insert
+    (ctx as { db?: unknown }).db = {}; /* QueryCtx has no insert */
     const glue = createConvexAuthGlue<FakeUser, FakeAnchor>({
       orgs: "enabled",
       component: handle,
@@ -880,7 +880,7 @@ describe("createConvexAuthGlue — b2b mode (orgs: enabled)", () => {
       convexAuthUserId: componentId("users", "comp_user_1"),
       email: "u@x.test",
     });
-    /** Still exactly one org and one member. */
+    /* Still exactly one org and one member. */
     assert.equal(state.orgs.size, 1);
     assert.equal(state.members.length, 1);
   });

@@ -16,7 +16,7 @@ vi.mock("@simplewebauthn/server", async (importOriginal) => {
   return { ...actual, verifyAuthenticationResponse: mockVerifyAuthenticationResponse };
 });
 
-const modules = import.meta.glob("./**/*.*s");
+const modules = import.meta.glob("./*/*.*s");
 
 const RP_NAME = "Test App";
 const RP_ID = "test.example.com";
@@ -32,7 +32,7 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  /**
+  /*
    * Default: ceremonies fail verification. Tests that exercise the
    * post-verification mint path override this with mockResolvedValue.
    */
@@ -431,7 +431,7 @@ describe("passkeys", () => {
       }),
     ).rejects.toThrow("Maximum number of passkeys");
 
-    /** Revoked passkeys don't count toward the cap. */
+    /* Revoked passkeys don't count toward the cap. */
     await t.run(async (ctx) => {
       const pk = await ctx.db
         .query("auth_passkeys")
@@ -464,7 +464,7 @@ describe("passkeys", () => {
       }),
     );
 
-    /** Victim's passkey exists; attacker generates options scoped to themselves. */
+    /* Victim's passkey exists; attacker generates options scoped to themselves. */
     await t.run(async (ctx) =>
       ctx.db.insert("auth_passkeys", {
         userId: victimId,
@@ -546,7 +546,7 @@ describe("passkeys", () => {
       }),
     ).rejects.toThrow();
 
-    /** The challenge was not burned — the user can retry the ceremony. */
+    /* The challenge was not burned — the user can retry the ceremony. */
     const challenges = await t.run(async (ctx) =>
       ctx.db
         .query("auth_passkey_challenges")
@@ -1006,7 +1006,7 @@ describe("passkeys", () => {
       maxPasskeys: 1,
     })) as { challenge: string };
 
-    /** Another ceremony lands a passkey before this one verifies. */
+    /* Another ceremony lands a passkey before this one verifies. */
     await t.run(async (ctx) =>
       ctx.db.insert("auth_passkeys", {
         userId,

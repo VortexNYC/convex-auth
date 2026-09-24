@@ -36,7 +36,7 @@ export function useConvexAuthUser(authClient: ConvexBetterAuthClient | null): Co
   };
 }
 
-/** Web-first hooks; RN exports symmetric hooks via runtime.tsx. */
+/* Web-first hooks; RN exports symmetric hooks via runtime.tsx. */
 
 export type ConvexAuthSessionListState = {
   /** All active sessions for the current user. null until loaded. */
@@ -528,7 +528,7 @@ export function useConvexAuthUploadProfileImage(
   return { uploadAndSave, isUploading };
 }
 
-/**
+/*
  * Five guarded hooks covering the full 2FA surface: enroll, confirm (TOTP),
  * confirm (backup code), disable, regenerate backup codes. Each returns
  * `{ ok, error }` (plus enroll's `totpURI`/`backupCodes`) and a single
@@ -797,7 +797,7 @@ export function extractTotpSecret(totpURI: string): string | null {
     const url = new URL(totpURI);
     return url.searchParams.get("secret");
   } catch {
-    /** Some authenticator URIs aren't strictly URL-parseable; fall back to
+    /* Some authenticator URIs aren't strictly URL-parseable; fall back to
      * a regex scrape of the secret query param. */
     const match = totpURI.match(/[?&]secret=([^&]+)/i);
     const secret = match?.[1];

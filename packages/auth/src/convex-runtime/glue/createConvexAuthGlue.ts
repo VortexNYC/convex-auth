@@ -99,18 +99,6 @@ export function createConvexAuthGlue<
   return createB2BGlue(config);
 }
 
-/**
- * Consumer mode (orgs: disabled) — single-user-per-account flows. No
- * anchor, no membership, no per-org permissions.
- *
- * Mode selection is fail-safe by construction: `orgs` is a typed
- * `"enabled" | "disabled"` literal and the factory defaults every non-"disabled"
- * value to B2B (RBAC enforced), so consumer mode is reachable ONLY by explicitly
- * writing `orgs: "disabled"` — never by a typo or omission. The remaining risk is
- * that turning RBAC OFF is silent, so we announce it loudly (once per process):
- * any app that meant to enforce permissions will see this in its logs.
- */
-
 let consumerModeRbacDisabledWarned = false;
 
 function warnConsumerModeRbacDisabledOnce(): void {
@@ -126,6 +114,17 @@ function warnConsumerModeRbacDisabledOnce(): void {
   );
 }
 
+/**
+ * Consumer mode (orgs: disabled) — single-user-per-account flows. No
+ * anchor, no membership, no per-org permissions.
+ *
+ * Mode selection is fail-safe by construction: `orgs` is a typed
+ * `"enabled" | "disabled"` literal and the factory defaults every non-"disabled"
+ * value to B2B (RBAC enforced), so consumer mode is reachable ONLY by explicitly
+ * writing `orgs: "disabled"` — never by a typo or omission. The remaining risk is
+ * that turning RBAC OFF is silent, so we announce it loudly (once per process):
+ * any app that meant to enforce permissions will see this in its logs.
+ */
 function createConsumerGlue<TUser extends GlueUserMinimum>(
   config: ConsumerModeConfig<TUser>,
 ): ConsumerGlue<TUser> {

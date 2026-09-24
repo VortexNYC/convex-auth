@@ -405,7 +405,7 @@ function findDefineTableBlocks(source: string): DefineTableBlock[] {
     const openParenIdx = re.lastIndex - 1;
     const closeParenIdx = findMatchingParen(source, openParenIdx);
     if (closeParenIdx === null) {
-      /** Unbalanced — skip rather than throw; the consumer's tsc will catch
+      /* Unbalanced — skip rather than throw; the consumer's tsc will catch
        * it. */
       re.lastIndex = openParenIdx + 1;
       continue;
@@ -649,7 +649,7 @@ function findConvexFunctionBlocks(source: string): ConvexFunctionBlock[] {
     const name = match[1] ?? "";
     const kind = match[2] ?? "";
     const i = skipWhitespace(source, re.lastIndex);
-    /** Skip whitespace to the first `(` — if it isn't a call, this isn't a
+    /* Skip whitespace to the first `(` — if it isn't a call, this isn't a
      * Convex function constructor; move on. */
     if (source[i] !== "(") continue;
     const bodyStart = i;

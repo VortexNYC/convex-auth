@@ -203,7 +203,7 @@ describe("web usePasskeys", () => {
 
     await act(() => result.current.signIn());
 
-    /**
+    /*
      * The mint goes through the proxy, not the direct action — the proxy
      * writes the HttpOnly cookies the browser can't set itself.
      */

@@ -30,7 +30,7 @@ describe("validateTokenEndpointClientAuthentication", () => {
   });
 
   it("accepts a posted client secret when the deployment supports it", () => {
-    /**
+    /*
      * `supportedMethods` used to affect only the error text: a confidential
      * method could be advertised and still be refused. Machine clients
      * (client_credentials) authenticate with exactly this credential, so an
@@ -73,7 +73,7 @@ describe("validateTokenEndpointClientAuthentication", () => {
   });
 
   it("requires a credential when public clients are not allowed", () => {
-    /**
+    /*
      * A confidential-only deployment must not fall back to an unauthenticated
      * client just because none was presented.
      */

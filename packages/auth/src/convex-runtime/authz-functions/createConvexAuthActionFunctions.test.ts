@@ -19,7 +19,7 @@ import {
  * builder and the handler body is unreachable on a denial.
  */
 
-/**
+/*
  * Fake builder: convex-helpers calls builder({ args, handler }), so the returned
  * spec's `handler` IS the composed gate -> userHandler pipeline.
  */
@@ -166,7 +166,7 @@ describe("createConvexAuthActionFunctions — security contract", () => {
     const { permissionAnyAction, permissionAllAction } = makeFunctions(
       snapshot({ permissions: ["widgets:view"] }),
     );
-    /** any: holds view → allowed */
+    /* any: holds view → allowed */
     const anyOk = exec(
       permissionAnyAction(["widgets:edit", "widgets:view"])({
         args: {},
@@ -174,7 +174,7 @@ describe("createConvexAuthActionFunctions — security contract", () => {
       }),
     );
     assert.equal(await anyOk.handler(fakeCtx, {}), "ok");
-    /** all: missing edit → blocked */
+    /* all: missing edit → blocked */
     const allBlocked = exec(
       permissionAllAction(["widgets:view", "widgets:edit"])({
         args: {},

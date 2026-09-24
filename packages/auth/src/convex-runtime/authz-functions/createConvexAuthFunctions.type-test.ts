@@ -20,7 +20,7 @@ import type { Id } from "../../component/_generated/dataModel";
 import type { B2BGlue, B2BViewer } from "../glue/types";
 import { createConvexAuthFunctions } from "./createConvexAuthFunctions";
 
-/**
+/*
  * A throwaway local "consumer" DataModel + builders, mirroring what a real
  * consumer gets from `_generated/server`.
  */

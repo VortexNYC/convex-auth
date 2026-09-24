@@ -49,7 +49,7 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
   const session = await ctx.runQuery(component.native.sessions.getSessionBySessionId, {
     sessionId: refresh.sessionId,
   });
-  /** A revoked session is not rejected here: a parallel request may have
+  /* A revoked session is not rejected here: a parallel request may have
    * just rotated this pair, in which case rotateSession reports "converge"
    * and a sibling session is minted below. Rejection stays inside the
    * mutations. */
@@ -78,7 +78,7 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
   if (!user) {
     throw new Error("User not found");
   }
-  /** The identity must belong to the refresh token's user. convergeSession
+  /* The identity must belong to the refresh token's user. convergeSession
    * re-checks this inside the mutation; this earlier check keeps the action
    * from minting a candidate pair it can never commit. */
   if (!identity || identity.userId !== refresh.userId) {

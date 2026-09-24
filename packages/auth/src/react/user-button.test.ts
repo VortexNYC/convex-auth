@@ -39,7 +39,7 @@ function renderUserButton(props: Partial<ConvexUserButtonProps>): string {
 describe("ConvexUserButton — SSR smoke", () => {
   it("renders nothing (no crash) when user is null — gate the consumer's loading state", () => {
     const html = renderUserButton({ user: null });
-    /**
+    /*
      * The component intentionally returns empty markup when there is no
      * user — consumers wrap it in their own loading/anonymous gate.
      */
@@ -64,7 +64,7 @@ describe("ConvexUserButton — SSR smoke", () => {
     const html = renderUserButton({
       user: { id: "u1", email: "convex@example.com", name: null },
     });
-    /** First two chars of email, uppercased. */
+    /* First two chars of email, uppercased. */
     assert.match(html, /CO/);
   });
 

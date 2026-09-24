@@ -46,7 +46,7 @@ describe("AuthScreen", () => {
       }),
     );
     assert.match(html, /Sign in/);
-    /** No description means no second <p> in the header block. */
+    /* No description means no second <p> in the header block. */
     const headerBlock = html.match(/<div [^>]*space-y-2[^>]*>([\s\S]*?)<\/div>/);
     const headerContent = headerBlock?.[1];
     assert.ok(headerContent !== undefined, "header block missing");
@@ -63,7 +63,7 @@ describe("AuthCard", () => {
       }),
     );
     assert.match(html, /consumer-card-cls/);
-    /** Default card styling still present. */
+    /* Default card styling still present. */
     assert.match(html, /rounded-2xl/);
   });
 });
@@ -106,7 +106,7 @@ describe("AuthDivider", () => {
 
   it("without label renders just the rule structure", () => {
     const html = renderToStaticMarkup(createElement(AuthDivider, {}));
-    /** No text content beyond markup whitespace. */
+    /* No text content beyond markup whitespace. */
     assert.equal(/OR/.test(html), false);
   });
 });

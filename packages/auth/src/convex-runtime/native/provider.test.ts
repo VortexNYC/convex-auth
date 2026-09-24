@@ -247,7 +247,7 @@ function asComponent(component: MockedComponent): NativeEmailAndPasswordComponen
 }
 
 function createActions(component: MockedComponent, config?: NativeEmailAndPasswordConfig) {
-  /** Tests disable breach checking by default so they do not call the HIBP API. */
+  /* Tests disable breach checking by default so they do not call the HIBP API. */
   const testConfig = { checkBreach: false, ...config };
   return nativeEmailAndPassword(asComponent(component), testConfig);
 }
@@ -751,7 +751,7 @@ describe("nativeEmailAndPassword", () => {
     expect(component.native.sessions.revokeSessionFamilyBySession).toHaveBeenCalledWith({
       sessionId: signInResult.sessionId,
     });
-    /** The family mutation owns refresh-token revocation — no second call. */
+    /* The family mutation owns refresh-token revocation — no second call. */
     expect(component.native.refreshTokens.revokeRefreshTokensForSession).not.toHaveBeenCalled();
   });
 
@@ -1283,7 +1283,7 @@ describe("nativeEmailAndPassword", () => {
         createdAt: 0,
         updatedAt: 0,
       });
-      /**
+      /*
        * The session is already revoked — the winning parallel request rotated
        * it between our query and our mutation. The action must still converge.
        */
@@ -1301,7 +1301,7 @@ describe("nativeEmailAndPassword", () => {
       });
       component.native.users.getUserById.mockResolvedValue(user);
       component.native.identities.getIdentityById.mockResolvedValue(identity);
-      /** rotateSession reports the token was just rotated by a parallel request. */
+      /* rotateSession reports the token was just rotated by a parallel request. */
       component.native.sessions.rotateSession.mockResolvedValue("converge");
       component.native.sessions.convergeSession.mockResolvedValue({ user });
 
@@ -1324,7 +1324,7 @@ describe("nativeEmailAndPassword", () => {
         sessionId: expect.any(String),
       });
 
-      /**
+      /*
        * The sibling mint goes through convergeSession keyed on the SAME
        * predecessor hash — not through a second rotation.
        */
@@ -1371,7 +1371,7 @@ describe("nativeEmailAndPassword", () => {
       component.native.users.getUserById.mockResolvedValue(user);
       component.native.identities.getIdentityById.mockResolvedValue(identity);
       component.native.sessions.rotateSession.mockResolvedValue("converge");
-      /** The mutation re-validated and refused (dead family, caps, or identity). */
+      /* The mutation re-validated and refused (dead family, caps, or identity). */
       component.native.sessions.convergeSession.mockResolvedValue(null);
 
       const { updateSession } = createActions(component);

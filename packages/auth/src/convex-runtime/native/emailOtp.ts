@@ -184,7 +184,7 @@ export function nativeEmailOtp(
             email: normalizedEmail,
           });
           if (!user) {
-            /** Obscure the missing user to avoid email enumeration. */
+            /* Obscure the missing user to avoid email enumeration. */
             return { status: "queued" as const, emailId: "noop" };
           }
           userId = user._id;
@@ -351,7 +351,7 @@ export function nativeEmailOtp(
           return { status: true };
         }
 
-        /** A valid code with no existing password account can still set a
+        /* A valid code with no existing password account can still set a
          * new password. */
         if (result.reason === "invalid") {
           const code = await ctx.runQuery(component.native.codes.getVerificationCodeByTokenHash, {

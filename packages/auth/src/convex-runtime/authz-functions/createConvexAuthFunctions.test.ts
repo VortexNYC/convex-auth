@@ -50,7 +50,7 @@ function isFixtureId<TableName extends "users" | "organizations" | "organization
 const fakeQuery = queryGeneric;
 const fakeMutation = mutationGeneric;
 
-/**
+/*
  * The factory's builders are typed to return RegisteredMutation/Query (no
  * `.handler` on the public type). Our fake builder returns the raw composed
  * spec at runtime, so we reach into it to execute the gate -> handler pipeline.
@@ -79,7 +79,7 @@ const membership: ResolvedMembership = {
   convexAuthMemberId: COMPONENT_MEMBER_ID,
   roleKey: "member",
   status: "active",
-  permissions: ["widgets:view"], // NOTE: deliberately lacks "widgets:edit"
+  permissions: ["widgets:view"] /* NOTE: deliberately lacks "widgets:edit" */,
 };
 
 function buildViewer(
@@ -108,7 +108,7 @@ function buildViewer(
         const err = new Error(`Permission required: ${p}`) as Error & {
           data?: unknown;
         };
-        /**
+        /*
          * Shape the payload like throwAuthError's ConvexError data so the test
          * can assert it's a genuine authz denial, not an incidental throw.
          */
@@ -205,7 +205,7 @@ describe("createConvexAuthFunctions — security contract", () => {
 
   it("permissionMutation BLOCKS before the handler when the permission is missing", async () => {
     let handlerRan = false;
-    const { permissionMutation } = makeFunctions(["widgets:view"]); // no edit
+    const { permissionMutation } = makeFunctions(["widgets:view"]); /* no edit */
     const spec = exec(
       permissionMutation("widgets:edit")({
         args: {},
@@ -219,12 +219,12 @@ describe("createConvexAuthFunctions — security contract", () => {
     await assert.rejects(
       () => spec.handler(fakeCtx, {}),
       (err: Error & { data?: unknown }) => {
-        /** It's a genuine authz denial (PERMISSION_REQUIRED), not an incidental error. */
+        /* It's a genuine authz denial (PERMISSION_REQUIRED), not an incidental error. */
         assert.ok(isAuthErrorDenial(err.data), "expected a PERMISSION_REQUIRED denial");
         return true;
       },
     );
-    /** The crux: the handler body NEVER executed. The check is unbypassable. */
+    /* The crux: the handler body NEVER executed. The check is unbypassable. */
     assert.equal(handlerRan, false, "handler must not run when permission is denied");
   });
 
@@ -255,7 +255,7 @@ describe("createConvexAuthFunctions — security contract", () => {
     assert.equal(await spec.handler(fakeCtx, {}), "u1");
   });
 
-  /**
+  /*
    * TEETH: prove the difference between the factory path and a hand-rolled raw
    * mutation is REAL. The same viewer (lacking "widgets:edit") sails straight
    * into an unguarded raw handler — exactly the drift bug class the factory
@@ -295,7 +295,7 @@ describe("createConvexAuthFunctions — security contract", () => {
     );
 
     await assert.rejects(() => spec.handler(fakeCtx, {}));
-    /**
+    /*
      * The hook saw the denial — so a consumer can emit its audit row — and the
      * original error still propagated (hook cannot swallow it).
      */
@@ -311,7 +311,7 @@ describe("createConvexAuthFunctions — security contract", () => {
 
   it("omits the viewer when RESOLUTION itself fails (no trustworthy principal to attribute)", async () => {
     const denials: Array<{ hasViewer: boolean; authzCode?: unknown }> = [];
-    /** Glue whose resolveViewer throws an AUTHENTICATION_REQUIRED-style error. */
+    /* Glue whose resolveViewer throws an AUTHENTICATION_REQUIRED-style error. */
     const failingGlue: B2BGlue<LocalUser, LocalAnchor> = {
       mode: "b2b",
       resolveViewer: async () => {
@@ -360,7 +360,7 @@ describe("createConvexAuthFunctions — security contract", () => {
     assert.deepEqual(denials, []);
   });
 
-  /**
+  /*
    * Increment 5b — any/all/role wrapper coverage. Same unbypassable gate, same
    * denial path; the handler never runs when the check fails.
    */
@@ -399,7 +399,7 @@ describe("createConvexAuthFunctions — security contract", () => {
 
   it("permissionAllMutation BLOCKS when the viewer is missing ANY of the permissions", async () => {
     let ran = false;
-    const { permissionAllMutation } = makeFunctions(["widgets:view"]); // lacks edit
+    const { permissionAllMutation } = makeFunctions(["widgets:view"]); /* lacks edit */
     const spec = exec(
       permissionAllMutation(["widgets:view", "widgets:edit"])({
         args: {},
@@ -431,7 +431,7 @@ describe("createConvexAuthFunctions — security contract", () => {
 
   it("roleMutation ALLOWS the matching role and BLOCKS others (viewer role = 'member')", async () => {
     const { roleMutation } = makeFunctions(["widgets:view"]);
-    /** member is allowed */
+    /* member is allowed */
     let ran = false;
     const ok = exec(
       roleMutation(
@@ -448,7 +448,7 @@ describe("createConvexAuthFunctions — security contract", () => {
     assert.equal(await ok.handler(fakeCtx, {}), "ok");
     assert.equal(ran, true);
 
-    /** owner-only blocks a member, and the handler never runs */
+    /* owner-only blocks a member, and the handler never runs */
     let blockedRan = false;
     const blocked = exec(
       roleMutation("owner")({
@@ -529,7 +529,7 @@ describe("createConvexAuthFunctions — security contract", () => {
 
   it("a raw (hand-rolled) mutation that skips the gate is NOT protected", async () => {
     let unsafeRan = false;
-    /** This is what a consumer writes WITHOUT the factory: a raw builder, no gate. */
+    /* This is what a consumer writes WITHOUT the factory: a raw builder, no gate. */
     const rawSpec = exec(
       fakeMutation({
         args: {},
@@ -539,7 +539,7 @@ describe("createConvexAuthFunctions — security contract", () => {
         },
       }),
     );
-    /**
+    /*
      * Same under-privileged caller. Nothing stops it — proving the gate is the
      * thing doing the work, and that the matrix has teeth.
      */
@@ -551,7 +551,7 @@ describe("createConvexAuthFunctions — security contract", () => {
 
 function isAuthErrorDenial(data: unknown): boolean {
   if (isAuthErrorPayload(data)) return true;
-  /**
+  /*
    * Our fake shapes the payload to match; accept either the real predicate or
    * the structural PERMISSION_REQUIRED shape.
    */

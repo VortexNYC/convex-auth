@@ -78,7 +78,7 @@ describe("convexAuth component handle types", () => {
     // @ts-expect-error webhooks is not a core auth component
     convexAuth({ components: { core: webhooksComponent } });
 
-    /** Runtime assertion placeholder. */
+    /* Runtime assertion placeholder. */
     const _yes = true;
     void _yes;
   });

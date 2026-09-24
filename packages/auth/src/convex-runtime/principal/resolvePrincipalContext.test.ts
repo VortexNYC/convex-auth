@@ -102,7 +102,7 @@ describe("resolveAnonymousContext", () => {
 
   it("has no permissions on the anonymous principal", () => {
     const ctx = resolveAnonymousContext(baseInput);
-    /** Narrow via the discriminant — AuthPrincipal is a union. */
+    /* Narrow via the discriminant — AuthPrincipal is a union. */
     assert.equal(ctx.principal.kind, "anonymous");
     if (ctx.principal.kind === "anonymous") {
       assert.deepEqual(ctx.principal.permissions, []);

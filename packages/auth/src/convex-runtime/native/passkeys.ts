@@ -130,7 +130,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
       },
     ) => {
       const userId = await requireUserId(ctx, args.userId);
-      /** Origin/rpID always come from server config — never from the
+      /* Origin/rpID always come from server config — never from the
        * client. */
       return await ctx.runMutation(component.verifyPasskeyRegistration, {
         userId: userId as unknown as GenericId<"users">,
@@ -156,7 +156,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
       ctx: GenericActionCtx<any>,
       args: { userId?: string; credentialId?: string },
     ) => {
-      /**
+      /*
        * Credential ids are echoed back (allowCredentials) only when the caller
        * is authenticated as that user — unauthenticated callers get an empty
        * list, which is the discoverable-credential (usernameless) flow.
@@ -197,7 +197,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
         response: AuthenticationResponseJSON;
       },
     ) => {
-      /** Origin/rpID always come from server config — never from the
+      /* Origin/rpID always come from server config — never from the
        * client. */
       return await ctx.runMutation(component.verifyPasskeyAuthentication, {
         challenge: args.challenge,

@@ -7,7 +7,7 @@ import { generateKeyPair, exportJWK } from "jose";
 import schema from "../schema.js";
 import type { Id } from "../_generated/dataModel.js";
 
-const rawModules = import.meta.glob(["../_generated/**/*.*s", "./*.*s"]);
+const rawModules = import.meta.glob(["../_generated/*/*.*s", "./*.*s"]);
 const modules = Object.fromEntries(
   Object.entries(rawModules).map(([path, loader]) => {
     const withoutExt = path.replace(/\.[^.]+$/, "");
@@ -280,7 +280,7 @@ describe("admin sessions", () => {
     expect(session?.impersonatedBy).toBe(String(adminId));
     expect(session?.userId).toBe(String(userId));
 
-    /**
+    /*
      * The impersonated session carries the impersonated user's identity so
      * the refresh path can resolve it column-first.
      */
@@ -330,7 +330,7 @@ describe("admin sessions", () => {
     const adminId = await insertUser(t, "admin@example.com", "Admin", true);
     const userId = await insertUser(t, "user@example.com", "User");
 
-    /**
+    /*
      * The impersonated session plus a converged sibling in the same family —
      * both must die, or the sibling's refresh token keeps minting sessions.
      */

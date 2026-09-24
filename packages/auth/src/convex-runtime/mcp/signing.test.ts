@@ -84,7 +84,7 @@ describe("mcp oauth signing helpers", () => {
   });
 
   it("rejects an access token signed with a non-pinned algorithm", async () => {
-    /**
+    /*
      * The verifier pins `algorithms: [key.algorithm]` (ES256) and must never
      * trust the token header's `alg`. Forge a token with the SAME kid but a
      * symmetric HS256 signature — an algorithm-substitution attempt — and prove

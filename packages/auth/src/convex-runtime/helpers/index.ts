@@ -18,8 +18,8 @@ export { getPage, paginator, streamQuery } from "convex-helpers/server/paginatio
  * already declared in schema.ts and in each function's `args` become the parser,
  * rather than a hand-written guard per shape.
  *
- *   const body = parse(myArgsValidator, JSON.parse(text));   // typed, no cast
- *   if (!validate(v.object({...}), value)) { ... }           // type guard
+ *   const body = parse(myArgsValidator, JSON.parse(text)); // typed, no cast
+ *   if (!validate(v.object({...}), value)) { ... } // type guard
  *
  * Portable: convex-helpers/validators imports only `convex/values`, never
  * `convex/server`, so this works in Convex functions, packages and Node scripts.

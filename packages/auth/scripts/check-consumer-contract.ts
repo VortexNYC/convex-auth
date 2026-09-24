@@ -105,7 +105,7 @@ function main(): void {
       : { convexDir: absDir, legitAnchorTables },
   );
 
-  /**
+  /*
    * Codex audit (2026-05-28) hardening: surface bypass risks explicitly
    * even when the checker reports OK. A clean exit is necessary but not
    * sufficient — the user must know what the checker did NOT inspect.

@@ -5,7 +5,7 @@ import { convexTest } from "convex-test";
 import { makeFunctionReference } from "convex/server";
 import schema from "../schema.js";
 
-const rawModules = import.meta.glob(["../_generated/**/*.*s", "./*.*s"]);
+const rawModules = import.meta.glob(["../_generated/*/*.*s", "./*.*s"]);
 const modules = Object.fromEntries(
   Object.entries(rawModules).map(([path, loader]) => {
     const withoutExt = path.replace(/\.[^.]+$/, "");

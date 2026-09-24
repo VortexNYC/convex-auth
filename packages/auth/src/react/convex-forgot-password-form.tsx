@@ -94,7 +94,7 @@ export function ConvexForgotPasswordForm(props: ConvexForgotPasswordFormProps) {
       redirectTo: props.resetPasswordUrl,
     });
     if (!result.ok) {
-      /** Even on error, show the generic success message to avoid address
+      /* Even on error, show the generic success message to avoid address
        * enumeration. Only surface a real error if the runtime says recovery
        * is genuinely unavailable. */
       if (result.error === "Password recovery is not available on this auth client") {
