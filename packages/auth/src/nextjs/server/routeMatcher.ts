@@ -48,7 +48,7 @@ export type RouteMatcherParam =
  *
  * You can use glob patterns to match multiple routes or a function to match
  * against the request object. Path patterns and limited regular expressions
- * are supported. See: https://www.npmjs.com/package/path-to-regexp/v/6.3.0
+ * are supported. See: https://www.npmjs.com/package/path-to-regexp/v/8.4.2
  */
 export const createRouteMatcher = (routes: RouteMatcherParam) => {
   if (typeof routes === "function") {
@@ -66,9 +66,19 @@ const precomputePathRegex = (patterns: Array<string | RegExp>) => {
   );
 };
 
+// path-to-regexp v8 removed the legacy wildcard syntax this adapter
+// advertised (`/api/(.*)`, `/api/*`). Translate it to the v8 `{*param}`
+// form so existing consumer patterns keep matching identically:
+// `*`/`(.*)` map to zero-or-more segments, same as v6. Native v8 splats
+// (`{*name}`, `*name`) pass through untouched.
+function translateLegacyWildcardSyntax(path: string) {
+  let i = 0;
+  return path.replace(/\/\(\.\*\)|\(\.\*\)|\/\*(?!\w)|(?<!\{)\*(?!\w)/g, () => `{*splat${i++}}`);
+}
+
 function pathStringToRegExp(path: string) {
   try {
-    return pathToRegexp(path);
+    return pathToRegexp(translateLegacyWildcardSyntax(path)).regexp;
   } catch (e) {
     throw new Error(
       `Invalid path: ${path}.\nConsult the documentation of path-to-regexp here: https://github.com/pillarjs/path-to-regexp\n${e instanceof Error ? e.message : String(e)}`,

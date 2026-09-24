@@ -58,10 +58,6 @@ export type NativeEmailAndPasswordConfig = {
   enabled?: boolean;
   disableSignUp?: boolean;
   autoSignIn?: boolean;
-  /** @deprecated use `email.sendOnSignUp` instead. */
-  sendVerificationEmailOnSignUp?: boolean;
-  /** @deprecated use `email.sendOnSignIn` instead. */
-  sendVerificationEmailOnSignIn?: boolean;
   /**
    * When `true`, `signIn` rejects users whose email is not yet verified.
    * Default is `false` — apps must opt in to this gating.
@@ -220,8 +216,8 @@ function resolveEmailConfig(args: NativeEmailAndPasswordConfig): {
     verifyPath: email?.verifyPath ?? "/verify-email",
     resetPath: email?.resetPath ?? "/reset-password",
     sendEmail: email?.sendEmail,
-    sendOnSignUp: email?.sendOnSignUp ?? args.sendVerificationEmailOnSignUp,
-    sendOnSignIn: email?.sendOnSignIn ?? args.sendVerificationEmailOnSignIn,
+    sendOnSignUp: email?.sendOnSignUp,
+    sendOnSignIn: email?.sendOnSignIn,
   };
 }
 
