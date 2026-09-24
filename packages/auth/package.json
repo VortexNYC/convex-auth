@@ -259,7 +259,7 @@
     "@testing-library/react": "^16.2.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@vitest/coverage-v8": "4.1.10",
+    "@vitest/coverage-v8": "5.0.1",
     "convex": "^1.46.0",
     "convex-test": "0.0.58",
     "happy-dom": "^20.14.3",
