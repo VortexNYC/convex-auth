@@ -1,35 +1,12 @@
 import type { GenericActionCtx, GenericDataModel } from "convex/server";
 import type { Id } from "../../component/_generated/dataModel.js";
 import { mintToken } from "./jwt.js";
-import { base64urlToBytes } from "./password.js";
 import { generateVerificationToken, hashToken } from "./tokens.js";
 import type { NativeAuthSession, NativeEmailAndPasswordComponentHandle } from "./types.js";
 import { toNativeAuthUser } from "./types.js";
 
 const DEFAULT_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-
-/**
- * The session JWT carries the identity it was minted with as a claim — the
- * transitional resolution path for sessions minted before authSessions gained
- * the identityId column.
- */
-function identityIdFromSessionToken(token: string): Id<"auth_identities"> | undefined {
-  const parts = token.split(".");
-  if (parts.length !== 3) {
-    return undefined;
-  }
-  try {
-    const payload = JSON.parse(new TextDecoder().decode(base64urlToBytes(parts[1]))) as {
-      identityId?: unknown;
-    };
-    return typeof payload.identityId === "string"
-      ? (payload.identityId as Id<"auth_identities">)
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 export async function handleUpdateSession<DataModel extends GenericDataModel>(
   ctx: GenericActionCtx<DataModel>,
@@ -58,13 +35,12 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
   }
 
   /*
-   * The session row carries its identity; sessions minted before the column
-   * existed carry it as a JWT claim instead. A session with neither cannot
-   * name its identity — guessing a provider would bind the wrong one, so fail
-   * closed. A malformed id claim makes the query's id validator throw — treat
-   * it like a missing identity rather than a 500.
+   * The session row carries its identity. A session without it cannot name
+   * its identity — guessing a provider would bind the wrong one, so fail
+   * closed. A malformed id makes the query's id validator throw — treat it
+   * like a missing identity rather than a 500.
    */
-  const sessionIdentityId = session.identityId ?? identityIdFromSessionToken(session.token);
+  const sessionIdentityId = session.identityId;
   const [user, identity] = await Promise.all([
     ctx.runQuery(component.native.users.getUserById, { userId: refresh.userId }),
     sessionIdentityId
