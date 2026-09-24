@@ -3,7 +3,7 @@ import { handleCallback, handleSignIn, type NativeOAuthConfig } from "./oauthHan
 import { verifyOAuthState } from "./oauthState.js";
 import type { NativeOAuthComponentHandle } from "./types.js";
 import { verifyToken } from "./jwt.js";
-import { isAllowedRedirectUrl } from "./callback.js";
+import { isAllowedRedirectUrl, redirectBaseOrigin } from "./callback.js";
 import { setCookieHeader, readCookie } from "./cookies.js";
 import { parse } from "../helpers/index.js";
 import { v } from "convex/values";
@@ -19,8 +19,22 @@ function parseProvider(url: URL, prefix: string): string {
   return afterPrefix.split("/").filter(Boolean)[0] ?? "";
 }
 
+/**
+ * Relative redirect targets resolve against the app origin (`SITE_URL`) —
+ * bare `http://localhost` produces a port-80 URL that never reaches a dev
+ * app and silently masks a missing `SITE_URL` in production.
+ */
+function resolveRedirectUrl(target: string): URL {
+  const base = redirectBaseOrigin();
+  try {
+    return new URL(target, base);
+  } catch {
+    return new URL(base);
+  }
+}
+
 function buildErrorRedirect(base: string, error: string, description?: string): Response {
-  const redirect = new URL(base, base.startsWith("http") ? undefined : "http://localhost");
+  const redirect = resolveRedirectUrl(base);
   redirect.searchParams.set("error", error);
   if (description) redirect.searchParams.set("error_description", description);
   return new Response(null, {
@@ -66,34 +80,49 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
       const newUserURL = url.searchParams.get("newUserURL") ?? undefined;
       const requestSignUp = url.searchParams.get("requestSignUp") === "true";
       const link = url.searchParams.get("link") === "true";
+      const landingVerifier = url.searchParams.get("landingVerifier") || undefined;
 
-      if (callbackURL && !isAllowedRedirectUrl(callbackURL, requestOrigin, trustedOrigins)) {
+      if (
+        callbackURL &&
+        !isAllowedRedirectUrl(callbackURL, redirectBaseOrigin(requestOrigin), trustedOrigins)
+      ) {
         return buildErrorRedirect(
           process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
           "invalid_callback_url",
         );
       }
-      if (errorURL && !isAllowedRedirectUrl(errorURL, requestOrigin, trustedOrigins)) {
+      if (
+        errorURL &&
+        !isAllowedRedirectUrl(errorURL, redirectBaseOrigin(requestOrigin), trustedOrigins)
+      ) {
         return buildErrorRedirect(
           process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
           "invalid_error_url",
         );
       }
-      if (newUserURL && !isAllowedRedirectUrl(newUserURL, requestOrigin, trustedOrigins)) {
+      if (
+        newUserURL &&
+        !isAllowedRedirectUrl(newUserURL, redirectBaseOrigin(requestOrigin), trustedOrigins)
+      ) {
         return buildErrorRedirect(
           process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
           "invalid_new_user_url",
         );
       }
 
-      const result = await handleSignIn(config.oauth, {
-        provider,
-        callbackURL,
-        errorURL,
-        newUserURL,
-        requestSignUp,
-        link,
-      });
+      const result = await handleSignIn(
+        config.oauth,
+        {
+          provider,
+          callbackURL,
+          errorURL,
+          newUserURL,
+          requestSignUp,
+          link,
+          landingVerifier,
+        },
+        { baseOrigin: requestOrigin, trustedOrigins },
+      );
 
       return new Response(null, {
         status: 302,
@@ -114,6 +143,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
         newUserURL?: string;
         requestSignUp?: boolean;
         link?: boolean;
+        landingVerifier?: string;
       };
       try {
         parsed = parse(
@@ -124,6 +154,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
             newUserURL: v.optional(v.string()),
             requestSignUp: v.optional(v.boolean()),
             link: v.optional(v.boolean()),
+            landingVerifier: v.optional(v.string()),
           }),
           body,
         );
@@ -140,7 +171,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
 
       if (
         parsed.callbackURL &&
-        !isAllowedRedirectUrl(parsed.callbackURL, requestOrigin, trustedOrigins)
+        !isAllowedRedirectUrl(parsed.callbackURL, redirectBaseOrigin(requestOrigin), trustedOrigins)
       ) {
         return new Response(JSON.stringify({ success: false, reason: "invalid_callback_url" }), {
           status: 400,
@@ -149,7 +180,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
       }
       if (
         parsed.errorURL &&
-        !isAllowedRedirectUrl(parsed.errorURL, requestOrigin, trustedOrigins)
+        !isAllowedRedirectUrl(parsed.errorURL, redirectBaseOrigin(requestOrigin), trustedOrigins)
       ) {
         return new Response(JSON.stringify({ success: false, reason: "invalid_error_url" }), {
           status: 400,
@@ -158,7 +189,7 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
       }
       if (
         parsed.newUserURL &&
-        !isAllowedRedirectUrl(parsed.newUserURL, requestOrigin, trustedOrigins)
+        !isAllowedRedirectUrl(parsed.newUserURL, redirectBaseOrigin(requestOrigin), trustedOrigins)
       ) {
         return new Response(JSON.stringify({ success: false, reason: "invalid_new_user_url" }), {
           status: 400,
@@ -167,14 +198,19 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
       }
 
       try {
-        const result = await handleSignIn(config.oauth, {
-          provider: parsed.provider,
-          callbackURL: parsed.callbackURL,
-          errorURL: parsed.errorURL,
-          newUserURL: parsed.newUserURL,
-          requestSignUp: parsed.requestSignUp,
-          link: parsed.link,
-        });
+        const result = await handleSignIn(
+          config.oauth,
+          {
+            provider: parsed.provider,
+            callbackURL: parsed.callbackURL,
+            errorURL: parsed.errorURL,
+            newUserURL: parsed.newUserURL,
+            requestSignUp: parsed.requestSignUp,
+            link: parsed.link,
+            landingVerifier: parsed.landingVerifier,
+          },
+          { baseOrigin: requestOrigin, trustedOrigins },
+        );
         return new Response(JSON.stringify(result), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -247,17 +283,21 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
           ) {
             linkingUserId = payload.sub;
           }
-        } catch {
-          // Invalid access token; treat as unauthenticated.
-        }
+        } catch {}
       }
 
-      const result = await handleCallback(ctx, config.component, config.oauth, {
-        provider,
-        code,
-        state,
-        linkingUserId,
-      });
+      const result = await handleCallback(
+        ctx,
+        config.component,
+        config.oauth,
+        {
+          provider,
+          code,
+          state,
+          linkingUserId,
+        },
+        { boundaryEnforcesVerifier: true },
+      );
       if ("error" in result) {
         return buildErrorRedirect(result.redirectUrl, result.error, result.errorDescription);
       }
@@ -268,13 +308,13 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
           ? Math.floor(config.oauth.sessionTtlMs / 1000)
           : undefined;
 
-      const redirect = new URL(
-        result.redirectUrl,
-        result.redirectUrl.startsWith("http") ? undefined : "http://localhost",
-      );
+      const redirect = resolveRedirectUrl(result.redirectUrl);
       redirect.searchParams.set("token", result.token);
       redirect.searchParams.set("refreshToken", result.refreshToken);
       redirect.searchParams.set("sessionId", result.sessionId);
+      if (result.landingVerifier !== undefined) {
+        redirect.searchParams.set("landingVerifier", result.landingVerifier);
+      }
 
       const headers = new Headers();
       headers.set("Location", redirect.toString());

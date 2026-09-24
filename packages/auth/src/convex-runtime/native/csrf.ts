@@ -33,20 +33,17 @@ export function validateCsrfHeaders(
       };
     }
 
-    if (site === "cross-site") {
+    if (site === "cross-site" || site === "same-site") {
       return validateOriginOrReferer(request, trustedOrigins, { requireWhenNoCookie: true });
     }
 
-    // same-origin, same-site, or none
-    return { allowed: true };
+    return validateOriginOrReferer(request, trustedOrigins, { requireWhenNoCookie: false });
   }
 
   if (hasCookie) {
     return validateOriginOrReferer(request, trustedOrigins, { requireWhenNoCookie: true });
   }
 
-  // No cookies and no Fetch Metadata headers: treat as a first-login or
-  // non-browser request and allow the action to authenticate.
   return { allowed: true };
 }
 

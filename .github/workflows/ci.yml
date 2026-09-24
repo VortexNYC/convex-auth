@@ -40,6 +40,9 @@ jobs:
       - name: Lint and format check
         run: pnpm run check
 
+      - name: OpenAPI contract guard
+        run: node scripts/openapi-guard.mjs
+
       - name: Build packages
         run: pnpm run build
 

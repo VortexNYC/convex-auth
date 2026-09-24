@@ -192,6 +192,7 @@ function createOAuthConfig(overrides: Partial<NativeOAuthConfig> = {}): NativeOA
     google: createGoogleConfig(),
     redirectURI: "https://app.example.com/api/auth/callback/github",
     sessionTtlMs: 60_000,
+    trustedOrigins: ["https://app.example.com"],
     ...overrides,
   };
 }
@@ -267,6 +268,16 @@ describe("OAuth state and PKCE", () => {
     expect(payload.provider).toBe("github");
     expect(payload.codeVerifier).toBe("verifier");
     expect(payload.callbackURL).toBe("https://app.example.com/callback");
+  });
+
+  it("round-trips the landing verifier inside the signed state", async () => {
+    const state = await mintOAuthState({
+      provider: "github",
+      codeVerifier: "verifier",
+      landingVerifier: "lv-abc",
+    });
+    const payload = await verifyOAuthState(state);
+    expect(payload.landingVerifier).toBe("lv-abc");
   });
 
   it("rejects an expired or tampered state token", async () => {
@@ -550,6 +561,84 @@ describe("OAuth handlers", () => {
     );
   });
 
+  it("handleSignIn rejects redirect URLs outside the allowlist", async () => {
+    const config = createOAuthConfig();
+    process.env.CONVEX_SITE_URL = "https://app.example.com";
+
+    await expect(
+      handleSignIn(config, {
+        provider: "github",
+        callbackURL: "https://evil.example.com/steal",
+      }),
+    ).rejects.toThrow("Untrusted OAuth redirect URL");
+    await expect(
+      handleSignIn(config, {
+        provider: "github",
+        errorURL: "https://evil.example.com/error",
+      }),
+    ).rejects.toThrow("Untrusted OAuth redirect URL");
+    await expect(
+      handleSignIn(config, {
+        provider: "github",
+        newUserURL: "https://evil.example.com/welcome",
+      }),
+    ).rejects.toThrow("Untrusted OAuth redirect URL");
+    await expect(
+      handleSignIn(config, { provider: "github", callbackURL: "//evil.example.com/x" }),
+    ).rejects.toThrow("Untrusted OAuth redirect URL");
+
+    const trusted = await handleSignIn(config, {
+      provider: "github",
+      callbackURL: "https://app.example.com/home",
+      errorURL: "https://app.example.com/error",
+      newUserURL: "/welcome",
+    });
+    expect(new URL(trusted.url).searchParams.get("state")).toBeTruthy();
+  });
+
+  it("handleSignIn validates against the same base the landing resolves against", async () => {
+    const config = createOAuthConfig();
+    const priorSiteUrl = process.env.SITE_URL;
+    process.env.SITE_URL = "http://localhost:3000";
+    process.env.CONVEX_SITE_URL = "https://api.example.com";
+    try {
+      await expect(
+        handleSignIn(config, {
+          provider: "github",
+          callbackURL: "https:evil.example.com",
+        }),
+      ).rejects.toThrow("Untrusted OAuth redirect URL");
+
+      const trusted = await handleSignIn(config, {
+        provider: "github",
+        callbackURL: "http://localhost:3000/cb",
+        errorURL: "/error",
+      });
+      expect(new URL(trusted.url).searchParams.get("state")).toBeTruthy();
+    } finally {
+      if (priorSiteUrl === undefined) {
+        delete process.env.SITE_URL;
+      } else {
+        process.env.SITE_URL = priorSiteUrl;
+      }
+    }
+  });
+
+  it("handleSignIn honors a caller-supplied allowlist (site route path)", async () => {
+    const config = createOAuthConfig({ trustedOrigins: undefined });
+    process.env.CONVEX_SITE_URL = "https://site.example.com";
+
+    const { url } = await handleSignIn(
+      config,
+      { provider: "github", callbackURL: "https://app.example.com/home" },
+      {
+        baseOrigin: "https://site.example.com",
+        trustedOrigins: ["https://site.example.com", "https://app.example.com"],
+      },
+    );
+    expect(new URL(url).searchParams.get("state")).toBeTruthy();
+  });
+
   it("handleCallback provisions a new user and creates a session", async () => {
     const config = createOAuthConfig();
     const component = createMockComponent();
@@ -609,6 +698,65 @@ describe("OAuth handlers", () => {
     );
     expect(result.refreshToken).toBeDefined();
     expect(result.refreshToken).not.toBe(result.token);
+  });
+
+  it("handleCallback binds the flow to the initiating browser via landingVerifier", async () => {
+    const config = createOAuthConfig();
+    const component = createMockComponent();
+    const { fetch, responses } = createMockFetch();
+    config.github.fetchImpl = fetch as unknown as typeof globalThis.fetch;
+    setupGitHubResponses(createGitHubProvider(config.github), responses);
+
+    component.identity.provisionFromIdentity.mockResolvedValue({
+      userId: "user_1",
+      identityId: "identity_1",
+      createdUser: true,
+      linkedExistingIdentity: false,
+    });
+    component.native.accounts.getAccountBySubject.mockResolvedValue(null);
+    component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_doc_1");
+
+    const { url } = await handleSignIn(config, {
+      provider: "github",
+      landingVerifier: "lv-victim",
+    });
+    const state = new URL(url).searchParams.get("state")!;
+    const ctx = createContext() as unknown as GenericActionCtx<DataModel>;
+    const boundComponent = component as unknown as NativeOAuthComponentHandle;
+
+    const mismatch = await handleCallback(ctx, boundComponent, config, {
+      provider: "github",
+      code: "code-123",
+      state,
+      landingVerifier: "lv-attacker",
+    });
+    expect(mismatch).toMatchObject({ error: "landing_verifier_mismatch" });
+
+    const absent = await handleCallback(ctx, boundComponent, config, {
+      provider: "github",
+      code: "code-123",
+      state,
+    });
+    expect(absent).toMatchObject({ error: "landing_verifier_mismatch" });
+
+    const ok = await handleCallback(ctx, boundComponent, config, {
+      provider: "github",
+      code: "code-123",
+      state,
+      landingVerifier: "lv-victim",
+    });
+    if ("error" in ok) throw new Error(`unexpected error: ${ok.error}`);
+    expect(ok.landingVerifier).toBe("lv-victim");
+
+    const site = await handleCallback(
+      ctx,
+      boundComponent,
+      config,
+      { provider: "github", code: "code-123", state },
+      { boundaryEnforcesVerifier: true },
+    );
+    if ("error" in site) throw new Error(`unexpected error: ${site.error}`);
+    expect(site.landingVerifier).toBe("lv-victim");
   });
 
   it("handleCallback redirects to newUserURL for new users", async () => {
@@ -1328,6 +1476,59 @@ describe("addNativeOAuthHttpRoutes", () => {
     const setCookie = callbackResponse.headers.get("Set-Cookie");
     expect(setCookie).toMatch(/convex-auth-token=/);
     expect(setCookie).toMatch(/convex-auth-refresh-token=/);
+  });
+
+  it("threads landingVerifier from sign-in through the session landing URL", async () => {
+    const config = createOAuthConfig();
+    const component = createMockComponent();
+    const { fetch, responses } = createMockFetch();
+    config.github.fetchImpl = fetch as unknown as typeof globalThis.fetch;
+    setupGitHubResponses(createGitHubProvider(config.github), responses);
+
+    component.identity.provisionFromIdentity.mockResolvedValue({
+      userId: "user_1",
+      identityId: "identity_1",
+      createdUser: true,
+      linkedExistingIdentity: false,
+    });
+    component.native.accounts.getAccountBySubject.mockResolvedValue(null);
+    component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_doc_1");
+
+    const routes: {
+      path?: string;
+      pathPrefix?: string;
+      method: string;
+      handler: (ctx: unknown, request: Request) => Promise<Response>;
+    }[] = [];
+    const http = {
+      route: (r: {
+        path?: string;
+        pathPrefix?: string;
+        method: string;
+        handler: (ctx: unknown, request: Request) => Promise<Response>;
+      }) => routes.push(r),
+    };
+    addNativeOAuthHttpRoutes(http as unknown as import("convex/server").HttpRouter, {
+      component: component as unknown as NativeOAuthComponentHandle,
+      oauth: config,
+    });
+    const signinRoute = routes.find((r) => r.pathPrefix === "/api/auth/signin/")!;
+    const callbackRoute = routes.find((r) => r.pathPrefix === "/api/auth/callback/")!;
+
+    const signinResponse = (await exec(signinRoute.handler).handler(
+      createContext(),
+      new Request("https://app.example.com/api/auth/signin/github?landingVerifier=lv-42"),
+    )) as Response;
+    const state = new URL(signinResponse.headers.get("Location")!).searchParams.get("state")!;
+    expect((await verifyOAuthState(state)).landingVerifier).toBe("lv-42");
+
+    const callbackResponse = (await exec(callbackRoute.handler).handler(
+      createContext() as unknown as GenericActionCtx<DataModel>,
+      new Request(`https://app.example.com/api/auth/callback/github?code=code-123&state=${state}`),
+    )) as Response;
+    const landing = new URL(callbackResponse.headers.get("Location")!);
+    expect(landing.searchParams.get("landingVerifier")).toBe("lv-42");
+    expect(landing.searchParams.get("token")).toBeTruthy();
   });
 
   it("returns invalid_callback_request when the provider is missing", async () => {

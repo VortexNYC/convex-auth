@@ -16,10 +16,31 @@ export default defineConfig({
   description: "Vortex-native, full-stack authentication for Convex.",
   logo: "/logo.svg",
   content: {
-    root: "../docs",
+    sources: [
+      { type: "filesystem", root: "../docs" },
+      {
+        type: "github-releases",
+        prefix: "changelog",
+        owner: "VortexNYC",
+        repo: "convex-auth",
+      },
+    ],
   },
   deployment: {
-    site: "https://your-deployment.convex.site",
+    site: "https://resilient-blackbird-58.convex.site",
+  },
+  openapi: {
+    enabled: true,
+    sources: [
+      {
+        spec: "../openapi/auth.yaml",
+        route: "api",
+        label: "HTTP API",
+      },
+    ],
+  },
+  navigation: {
+    tabs: [{ label: "API Reference", path: "/api" }],
   },
   theme: {
     accent: {

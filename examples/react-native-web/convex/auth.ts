@@ -24,6 +24,9 @@ export const auth = convexAuth({
   emailAndPassword: {
     enabled: true,
     checkBreach: true,
+    // Redirect allowlist — the local Vite dev origins (`window.location.origin`
+    // is passed as the OAuth callbackURL).
+    trustedOrigins: [siteUrl, "http://localhost:5173", "http://localhost:5174"],
     email: {
       from: process.env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
       appOrigin: siteUrl,

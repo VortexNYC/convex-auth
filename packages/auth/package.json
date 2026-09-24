@@ -75,6 +75,16 @@
       "import": "./dist/nextjs-server.js",
       "default": "./dist/nextjs-server.js"
     },
+    "./tanstack-start": {
+      "types": "./dist/tanstack-start.d.ts",
+      "import": "./dist/tanstack-start.js",
+      "default": "./dist/tanstack-start.js"
+    },
+    "./tanstack-start/server": {
+      "types": "./dist/tanstack-start-server.d.ts",
+      "import": "./dist/tanstack-start-server.js",
+      "default": "./dist/tanstack-start-server.js"
+    },
     "./preflight": {
       "types": "./dist/preflight.d.ts",
       "import": "./dist/preflight.js",
@@ -239,6 +249,8 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@tanstack/react-router": "1.170.36",
+    "@tanstack/react-start": "1.168.54",
     "@testing-library/react": "^16.2.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
@@ -255,6 +267,8 @@
     "vitest": "^5.0.0"
   },
   "peerDependencies": {
+    "@tanstack/react-router": ">=1.132.0",
+    "@tanstack/react-start": ">=1.168.0",
     "convex": ">=1.45.0",
     "expo-constants": ">=17.0.0",
     "expo-linking": ">=7.0.0",
@@ -303,6 +317,12 @@
       "optional": true
     },
     "next": {
+      "optional": true
+    },
+    "@tanstack/react-router": {
+      "optional": true
+    },
+    "@tanstack/react-start": {
       "optional": true
     }
   }

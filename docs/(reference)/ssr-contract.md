@@ -192,6 +192,44 @@ At the request boundary (before rendering):
    params stripped (`server/request.ts`). The `refreshToken` param's presence
    discriminates a session triple from a lone password-reset `?token=`.
 
+   **Browser binding (`landingVerifier`):** an already-minted session in a
+   URL is bearer credentials in the query string — anyone holding the link
+   can land it. To close the cross-browser login-CSRF gap (an attacker
+   completing their own OAuth/magic-link flow and feeding the victim the
+   landing URL), the flow binds the minted session to the browser that
+   started it via a non-HttpOnly cookie —
+   `__convexAuthLandingVerifier` (`__Host-` prefixed off localhost). The
+   boundary mints it on same-origin HTML navigations that lack one; the
+   client reads it and attaches it to OAuth sign-in (where it rides the
+   signed state through the provider redirect) and magic-link requests
+   (where it is stored on the verifier record). The callback/verify routes
+   echo it onto the landing URL as `?landingVerifier=`, and the boundary
+   writes auth cookies only when the param equals the cookie. Rejected
+   landings are stripped and surfaced, not silent: the redirect carries
+   `?error=landing_verifier_mismatch` (verifier absent/mismatched) or
+   `?error=cross_origin` (credentialed cross-origin request) so the app
+   can render a real error instead of appearing signed-out — and on
+   same-origin rejections a fresh verifier cookie is minted so the next
+   attempt self-heals. `requireLandingVerifier: false` (middleware/boundary
+   option) restores the old behavior for deployments that predate verifier
+   threading or rely on cross-browser magic-link opens.
+
+   **Token mode binds too — in browsers.** `ConvexAuthProvider` attaches the
+   verifier to OAuth/magic-link initiation in any DOM environment (not just
+   cookie mode), and its URL-ingestion path applies the same param-vs-cookie
+   check before accepting a session triple — same login-CSRF hole, closed
+   client-side. `requireLandingVerifier={false}` on the provider is the
+   escape hatch (off-browser initiation, cross-device magic links). Native /
+   non-DOM runtimes get no verifier and no check — `document.cookie` does not
+   exist to bind against, and those flows land via deep links, not URL params
+   a web attacker could plant.
+
+   **Cross-origin requests can never land a triple.** Even with
+   `requireLandingVerifier: false`, the boundary only lands a session on a
+   same-origin navigation — a credentialed cross-origin `fetch` carrying the
+   triple gets the params stripped and **no** `Set-Cookie`, since a
+   CORS-failed response still reaches the browser's cookie store.
+
 #### Refresh races — the design load-bearing decision
 
 Our component treats a presented-but-rotated refresh token as **replay and
@@ -235,7 +273,13 @@ An endpoint the client POSTs to for session-mutating actions. On the server it:
 
 - Rejects non-POST and applies **`validateCsrfHeaders`**
   (`convex-runtime/native/csrf.ts`) — our existing CSRF primitive, stronger
-  than a bare cross-origin check.
+  than a bare cross-origin check. Fetch Metadata is a gate, not a grant:
+  `cross-site` **and** `same-site` requests must also carry an `Origin` (or
+  `Referer`) matching the request host or a trusted origin — a sibling
+  subdomain is `same-site` to the browser but cross-origin to us, and
+  `SameSite=Lax` cookies flow to it. `same-origin`/`none` requests still get
+  their `Origin` validated when present, so contradictory headers fail
+  closed rather than passing on the metadata's word.
 - Enforces an **action allowlist**.
 - Substitutes server-confidential fields from cookies — `refreshToken`, and
   the 2FA pending token where the action consumes it — the client never sends
@@ -340,6 +384,15 @@ How the adapter authenticates Convex calls on each side:
 | Transport binding         | `convex/nextjs` fetch\* per request               | `ConvexHttpClient` per request                                        |
 | Post-auth revalidation    | `router.refresh()` / cache tags                   | `router.invalidate()`                                                 |
 | Cache discipline          | `cookies()` opts out of static caching            | `Cache-Control: private, no-store` headers on session routes          |
+
+TanStack Start caveat: the rotation-override `WeakMap` and CORS-strip
+`WeakSet` are keyed on the middleware's `Request` object identity — the
+helpers assume `getRequest()` (and anything the session helpers see)
+resolves to the same object for the request's lifetime. If TanStack ever
+clones the request upstream, rotation overrides fail closed (a revoked
+cookie reads as signed-out) and the CORS strip falls back to the
+physical cookie-header rewrite, which the middleware attempts for exactly
+this reason.
 
 ## Test plan — before any adapter ships
 
@@ -448,7 +501,12 @@ Adapter-level (upstream's bar is `test-nextjs/e2e-tests` — match it):
    window) are now proven on real OCC; the adapter E2E items below remain
    the only open proof tier.
 
-3. Next.js adapter (#321) — delegated, using upstream's layout as the
-   template and this contract for the deltas.
-4. TanStack Start adapter — after the Router example (#341) merges and the
-   contract is proven on Next.js.
+3. Next.js adapter (#321) — landed; live-verified on the `examples/nextjs`
+   demo (proxy intents, rotation, family revocation, CSRF matrix).
+4. TanStack Start adapter (#353) — landed. The shared fetch-shaped core
+   (`src/ssr/`) carries the proxy pipeline, cookie schema, boundary
+   refresh, and CORS strip; the adapter layer is only the middleware/
+   provider binding. Live-verified on `examples/tanstack-start`: sign-in
+   mint, SSR seed via `beforeLoad` + `getAuthServerState`, `context.session`
+   in protected server functions, rotation, sign-out revocation, and the
+   CSRF/CORS/405 rejection matrix.

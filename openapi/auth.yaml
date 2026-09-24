@@ -1,0 +1,692 @@
+openapi: 3.1.0
+info:
+  title: Convex Auth HTTP API
+  version: 2.5.2
+  description: |
+    The HTTP surface served by the `convex-auth` component at
+    `https://<your-deployment>.convex.site`. Browser clients consume it
+    through cookies; SSR adapters (Next.js, TanStack Start) proxy it on the
+    app's own origin; React Native and token-mode clients consume it
+    directly with bearer tokens.
+
+    Redirect-bearing parameters (`callbackURL`, `errorURL`, `newUserURL`,
+    `newUserCallbackURL`, `errorCallbackURL`, `redirectTo`) are validated
+    against `SITE_URL`/`CONVEX_SITE_URL` plus any configured
+    `trustedOrigins`. Untrusted values are rejected with a 400 or an error
+    redirect — never silently followed.
+
+    Endpoints that write session cookies enforce CSRF via Fetch Metadata /
+    Origin checks; cross-site POSTs are rejected with 403.
+servers:
+  - url: https://{deployment}.convex.site
+    description: Your Convex deployment's HTTP action site
+    variables:
+      deployment:
+        default: your-deployment
+        description: Convex deployment name, e.g. `perfect-dragon-698`
+tags:
+  - name: Session
+    description: Read, rotate, and destroy sessions.
+  - name: Credentials
+    description: Email/password sign-up, sign-in, and password reset.
+  - name: OAuth
+    description: Social sign-in initiation and provider callbacks.
+  - name: Verification
+    description: Email verification and magic-link landings.
+  - name: Two-Factor
+    description: TOTP enrollment, challenge, and backup codes.
+  - name: OIDC
+    description: JWT/JWKS material for `ctx.auth.getUserIdentity()`.
+paths:
+  /api/auth/sign-up/email:
+    post:
+      tags: [Credentials]
+      summary: Create an account with email and password
+      operationId: signUpEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+                name: { type: string }
+                image: { type: string, format: uri }
+                callbackURL:
+                  type: string
+                  description: Where to land after sign-up. Must be same-origin or in `trustedOrigins`.
+                rememberMe: { type: boolean }
+                captchaToken: { type: string }
+      responses:
+        "200":
+          description: Account created; session cookies are set via `Set-Cookie`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccess" }
+        "400":
+          description: Invalid body, disabled provider, or untrusted `callbackURL`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthError" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/auth/sign-in/email:
+    post:
+      tags: [Credentials]
+      summary: Sign in with email and password
+      operationId: signInEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+                callbackURL: { type: string }
+                rememberMe: { type: boolean }
+                trustedDeviceToken:
+                  type: string
+                  description: Skips the TOTP challenge for a previously trusted device.
+      responses:
+        "200":
+          description: |
+            Signed in; `Set-Cookie` headers carry the access and refresh
+            tokens. When two-factor is required, `success` is `false` and
+            `reason` is `two_factor_required`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccess" }
+        "400":
+          description: Invalid body or untrusted `callbackURL`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthError" }
+        "401":
+          description: Bad credentials.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthError" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/auth/sign-in:
+    post:
+      tags: [Credentials]
+      summary: Alias of `/sign-in/email`
+      operationId: signIn
+      description: Same request and response contract as `/api/auth/sign-in/email`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SignInEmailBody" }
+      responses:
+        "200":
+          description: See `/api/auth/sign-in/email`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccess" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/auth/sign-up:
+    post:
+      tags: [Credentials]
+      summary: Alias of `/sign-up/email`
+      operationId: signUp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SignUpEmailBody" }
+      responses:
+        "200":
+          description: See `/api/auth/sign-up/email`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccess" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/auth/sign-in/social:
+    post:
+      tags: [OAuth]
+      summary: Begin an OAuth sign-in and return the provider authorization URL
+      operationId: signInSocial
+      description: |
+        Returns a signed provider authorization URL instead of redirecting
+        directly, so clients choose between following it (browser) or opening
+        it in a web session (React Native). Every redirect-bearing field is
+        validated against `trustedOrigins`; custom schemes (e.g.
+        `myapp://`, `exp://`) are allowed only when configured.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider]
+              properties:
+                provider:
+                  type: string
+                  examples: [google, github, discord]
+                callbackURL:
+                  type: string
+                  description: App URL to land on after the provider round-trip.
+                errorURL: { type: string }
+                newUserURL: { type: string }
+                requestSignUp: { type: boolean }
+                link:
+                  type: boolean
+                  description: Link this provider account to the signed-in user.
+                landingVerifier:
+                  type: string
+                  description: |
+                    Cookie-bound landing verifier for token-mode flows.
+                    The SSR boundary substitutes the cookie value; never
+                    trust a body-supplied value when the cookie exists.
+      responses:
+        "200":
+          description: Signed provider URL to navigate to.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  url: { type: string, format: uri }
+                  redirect: { type: boolean }
+        "400":
+          description: |
+            Unknown provider or an untrusted redirect parameter
+            (`invalid_callback_url`, `invalid_error_url`,
+            `invalid_new_user_url`).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthError" }
+  /api/auth/signin/{provider}:
+    get:
+      tags: [OAuth]
+      summary: Begin an OAuth sign-in via a plain GET navigation
+      operationId: signinSocialGet
+      description: |
+        Link-friendly variant of `/api/auth/sign-in/social` — a redirect
+        issued immediately rather than a JSON body. All redirect-bearing
+        query parameters are validated against `trustedOrigins` before the
+        provider URL is produced.
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string } }
+        - { name: callbackURL, in: query, schema: { type: string } }
+        - { name: redirectTo, in: query, schema: { type: string }, deprecated: true }
+        - { name: errorURL, in: query, schema: { type: string } }
+        - { name: newUserURL, in: query, schema: { type: string } }
+        - { name: requestSignUp, in: query, schema: { type: boolean } }
+        - { name: link, in: query, schema: { type: boolean } }
+        - { name: landingVerifier, in: query, schema: { type: string } }
+      responses:
+        "302":
+          {
+            description: Redirect to the signed provider authorization URL,
+            or the validated `errorURL` on failure,
+          }
+        "400": { description: Missing provider }
+  /api/auth/callback/{provider}:
+    get:
+      tags: [OAuth]
+      summary: OAuth provider callback (registered redirect URI)
+      operationId: oauthCallback
+      description: |
+        The URL you register with each OAuth provider
+        (`https://<deployment>.convex.site/api/auth/callback/google`).
+        Exchanges the authorization `code`, validates signed `state`, then
+        302s to the validated `callbackURL` — or `errorURL` on failure.
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string } }
+        - { name: code, in: query, schema: { type: string } }
+        - { name: state, in: query, schema: { type: string } }
+        - { name: error, in: query, schema: { type: string } }
+        - { name: error_description, in: query, schema: { type: string } }
+      responses:
+        "302": { description: Redirect to the validated app URL }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /api/auth/magic-link/verify:
+    get:
+      tags: [Verification]
+      summary: Verify a magic-link token and land on the app
+      operationId: magicLinkVerify
+      parameters:
+        - { name: token, in: query, required: true, schema: { type: string } }
+        - name: callbackURL
+          in: query
+          schema: { type: string, default: "/" }
+        - { name: newUserCallbackURL, in: query, schema: { type: string } }
+        - { name: errorCallbackURL, in: query, schema: { type: string } }
+      responses:
+        "302":
+          description: |
+            Success redirects to `callbackURL` (or `newUserCallbackURL` for
+            first-time users) with the token applied; failures redirect to
+            `errorCallbackURL` with `?error=`. All targets are validated
+            before any redirect is issued.
+        "400":
+          description: Missing token or an untrusted redirect parameter.
+  /api/auth/reset-password/{token}:
+    get:
+      tags: [Verification]
+      summary: Validate a password-reset token and land on the app
+      operationId: resetPasswordLanding
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+        - { name: callbackURL, in: query, required: true, schema: { type: string } }
+      responses:
+        "302":
+          description: |
+            Valid tokens redirect to `callbackURL` with the token applied;
+            invalid/expired tokens redirect there with `?error=INVALID_TOKEN`.
+            `callbackURL` is validated before any redirect is issued.
+        "400": { description: Missing or untrusted `callbackURL` }
+  /api/auth/verify-email:
+    get:
+      tags: [Verification]
+      summary: Verify an email address token
+      operationId: verifyEmail
+      parameters:
+        - { name: token, in: query, required: true, schema: { type: string } }
+        - { name: callbackURL, in: query, schema: { type: string } }
+      responses:
+        "302": { description: Redirect to the validated `callbackURL` }
+        "400": { description: Missing token or untrusted `callbackURL` }
+  /api/auth/send-verification-email:
+    post:
+      tags: [Verification]
+      summary: Send an email-verification message
+      operationId: sendVerificationEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+                callbackURL: { type: string }
+      responses:
+        "200":
+          description: Sent (or silently accepted — no user enumeration).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccess" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/auth/request-password-reset:
+    post:
+      tags: [Credentials]
+      summary: Request a password-reset email
+      operationId: requestPasswordReset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+                redirectTo: { type: string }
+                captchaToken: { type: string }
+      responses:
+        "200":
+          description: Sent (or silently accepted — no user enumeration).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccess" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/auth/session:
+    get:
+      tags: [Session]
+      summary: Resolve the session cookie to a user
+      operationId: getSession
+      description: |
+        Reads the `convex-auth-access-token` cookie, verifies the JWT, and
+        checks the session row (revocation, expiry). Always 200 — an
+        unauthenticated request returns `null` fields rather than an error.
+      responses:
+        "200":
+          description: Current session state.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionState" }
+  /api/auth/get-session:
+    get:
+      tags: [Session]
+      summary: Alias of `/session`
+      operationId: getSessionAlias
+      responses:
+        "200":
+          description: See `/api/auth/session`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionState" }
+  /api/auth/update-session:
+    post:
+      tags: [Session]
+      summary: Rotate a refresh token into a new session pair
+      operationId: updateSession
+      description: |
+        Exchanges a `refreshToken` for a new access/refresh pair and writes
+        session cookies. Rotation is one-time with a ~15 s convergence
+        grace for parallel refreshes; replay outside the window returns
+        `invalid_refresh_token`. CSRF-enforced: cross-site POSTs return 403.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: New pair issued; `Set-Cookie` headers are `private, no-store`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccess" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401":
+          description: Refresh token invalid, expired, or already rotated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthError" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/auth/sign-out:
+    post:
+      tags: [Session]
+      summary: Revoke the session and clear cookies
+      operationId: signOut
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  description: Access token to revoke; defaults to the cookie value.
+                callbackURL: { type: string }
+      responses:
+        "200":
+          description: Signed out; `Set-Cookie` headers clear the session cookies.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccess" }
+        "302": { description: When `callbackURL` resolves to a redirect }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/auth/two-factor/enable:
+    post:
+      tags: [Two-Factor]
+      summary: Begin TOTP enrollment
+      operationId: twoFactorEnable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string }
+                issuer: { type: string }
+      responses:
+        "200":
+          description: TOTP secret + `otpauth://` URI for the authenticator app.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccess" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/auth/two-factor/verify-totp:
+    post:
+      tags: [Two-Factor]
+      summary: Complete a TOTP challenge
+      operationId: twoFactorVerifyTotp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, examples: ["123456"] }
+                trustDevice:
+                  type: boolean
+                  description: Issue a trusted-device cookie that skips future challenges.
+      responses:
+        "200":
+          description: Challenge passed; session cookies issued.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccess" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401":
+          description: Wrong or expired code.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthError" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/auth/two-factor/verify-backup-code:
+    post:
+      tags: [Two-Factor]
+      summary: Complete a challenge with a one-time backup code
+      operationId: twoFactorVerifyBackupCode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+                trustDevice: { type: boolean }
+      responses:
+        "200":
+          description: Challenge passed; the backup code is consumed.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccess" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401":
+          description: Invalid or already-used backup code.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthError" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/auth/two-factor/disable:
+    post:
+      tags: [Two-Factor]
+      summary: Disable two-factor authentication
+      operationId: twoFactorDisable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string }
+      responses:
+        "200":
+          description: Disabled.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccess" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/auth/two-factor/generate-backup-codes:
+    post:
+      tags: [Two-Factor]
+      summary: Mint a fresh set of backup codes
+      operationId: twoFactorGenerateBackupCodes
+      description: Replaces all previously issued backup codes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string }
+      responses:
+        "200":
+          description: New codes returned once — store them out-of-band.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccess" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Csrf" }
+  /api/auth/convex/jwks:
+    get:
+      tags: [OIDC]
+      summary: Public keys for verifying Convex-auth JWTs
+      operationId: convexJwks
+      responses:
+        "200":
+          description: JWKS document.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Jwks" }
+  /.well-known/jwks.json:
+    get:
+      tags: [OIDC]
+      summary: Standard JWKS discovery path
+      operationId: wellKnownJwks
+      responses:
+        "200":
+          description: JWKS document.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Jwks" }
+  /api/auth/convex/token:
+    get:
+      tags: [OIDC]
+      summary: Exchange the session cookie for a short-lived Convex JWT
+      operationId: convexToken
+      description: |
+        Used by Convex clients that authenticate function calls with
+        `ctx.auth.getUserIdentity()`. The returned JWT is signed by the
+        deployment's `JWT_PRIVATE_KEY` and verified by `auth.config.ts`.
+      responses:
+        "200":
+          description: Signed JWT.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+components:
+  schemas:
+    AuthSuccess:
+      type: object
+      required: [success]
+      properties:
+        success: { type: boolean, enum: [true] }
+        token:
+          type: string
+          description: Access token (also delivered via `Set-Cookie` in cookie mode).
+        refreshToken:
+          type: string
+          description: Rotation token for `/api/auth/update-session`.
+        redirect:
+          type: boolean
+          description: Whether `url` should be navigated to.
+        url: { type: string, description: Validated landing URL. }
+        user: { $ref: "#/components/schemas/User" }
+    AuthError:
+      type: object
+      required: [success, reason]
+      properties:
+        success: { type: boolean, enum: [false] }
+        reason:
+          type: string
+          examples:
+            - invalid_body
+            - invalid_callback_url
+            - invalid_refresh_token
+            - two_factor_required
+            - auth_disabled
+    SessionState:
+      type: object
+      required: [user, sessionId]
+      properties:
+        user:
+          oneOf:
+            - { $ref: "#/components/schemas/User" }
+            - { type: "null" }
+        sessionId:
+          oneOf:
+            - { type: string }
+            - { type: "null" }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string, format: email }
+        name: { type: string }
+        image: { type: string }
+        emailVerified: { type: boolean }
+    SignInEmailBody:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+        callbackURL: { type: string }
+        rememberMe: { type: boolean }
+        trustedDeviceToken: { type: string }
+    SignUpEmailBody:
+      type: object
+      required: [email, password, name]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+        name: { type: string }
+        image: { type: string, format: uri }
+        callbackURL: { type: string }
+        rememberMe: { type: boolean }
+        captchaToken: { type: string }
+    Jwks:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            properties:
+              kty: { type: string }
+              kid: { type: string }
+              use: { type: string }
+              alg: { type: string }
+              n: { type: string }
+              e: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid body or an untrusted redirect parameter.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/AuthError" }
+    Csrf:
+      description: |
+        Cross-site request rejected by CSRF validation (Fetch Metadata /
+        Origin). Same-origin and explicitly trusted origins are unaffected.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/AuthError" }

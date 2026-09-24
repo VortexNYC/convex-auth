@@ -142,7 +142,7 @@ describe("nativeEmailOtp", () => {
 
     expect(result).toMatchObject({ status: "queued" });
 
-    const createCall = (component as any).native.verifiers.createVerifier.mock.calls[0]?.[0];
+    const createCall = component.native.verifiers.createVerifier.mock.calls[0]?.[0];
     expect(createCall).toMatchObject({
       type: "email-otp",
     });
@@ -171,7 +171,7 @@ describe("nativeEmailOtp", () => {
 
     const ctx = createContext();
     await expect(handler(ctx, { email: "not-an-email" })).rejects.toThrow("Invalid email");
-    expect((component as any).native.verifiers.createVerifier).not.toHaveBeenCalled();
+    expect(component.native.verifiers.createVerifier).not.toHaveBeenCalled();
   });
 
   it("rejects when disabled", async () => {
@@ -241,7 +241,7 @@ describe("nativeEmailOtp", () => {
       user: { email: "shlomo@example.com" },
     });
 
-    const provisionCall = (component as any).identity.provisionFromIdentity.mock.calls[0][0];
+    const provisionCall = component.identity.provisionFromIdentity.mock.calls[0][0];
     expect(provisionCall.identity).toMatchObject({
       provider: "emailOtp",
       issuer: "native",
@@ -292,7 +292,7 @@ describe("nativeEmailOtp", () => {
     await expect(
       exec(verifyEmailOtp).handler(ctx, { email: "shlomo@example.com", otp: "000000" }),
     ).rejects.toThrow("SIGN_UP_DISABLED");
-    expect((component as any).identity.provisionFromIdentity).not.toHaveBeenCalled();
+    expect(component.identity.provisionFromIdentity).not.toHaveBeenCalled();
   });
 
   it("sendVerificationOtp for email-verification creates a verification code for an existing user", async () => {
@@ -317,7 +317,7 @@ describe("nativeEmailOtp", () => {
 
     expect(result).toMatchObject({ status: "queued" });
 
-    const createCall = (component as any).native.codes.createVerificationCode.mock.calls[0]?.[0];
+    const createCall = component.native.codes.createVerificationCode.mock.calls[0]?.[0];
     expect(createCall).toMatchObject({
       userId: "user_1",
       type: "email_verification",
@@ -352,7 +352,7 @@ describe("nativeEmailOtp", () => {
     });
 
     expect(result).toMatchObject({ status: "queued", emailId: "noop" });
-    expect((component as any).native.codes.createVerificationCode).not.toHaveBeenCalled();
+    expect(component.native.codes.createVerificationCode).not.toHaveBeenCalled();
     expect(sendVerificationOTP).not.toHaveBeenCalled();
   });
 
@@ -386,7 +386,7 @@ describe("nativeEmailOtp", () => {
 
     expect(result).toMatchObject({ success: true });
 
-    const verifyCall = (component as any).identity.verifyEmail.mock.calls[0][0];
+    const verifyCall = component.identity.verifyEmail.mock.calls[0][0];
     expect(verifyCall.provider).toBe("emailOtp");
     expect(verifyCall.issuer).toBe("native");
     expect(typeof verifyCall.tokenHash).toBe("string");
@@ -423,7 +423,7 @@ describe("nativeEmailOtp", () => {
 
     expect(result).toMatchObject({ status: true });
 
-    const resetCall = (component as any).identity.resetPassword.mock.calls[0][0];
+    const resetCall = component.identity.resetPassword.mock.calls[0][0];
     expect(resetCall.provider).toBe("password");
     expect(resetCall.issuer).toBe("native");
     expect(resetCall.revokeSessions).toBe(true);
@@ -456,7 +456,7 @@ describe("nativeEmailOtp", () => {
     const otp = sendVerificationOTP.mock.calls[0][0].otp;
 
     const tokenHash = await new Promise<string>((resolve) => {
-      const createCall = (component as any).native.codes.createVerificationCode.mock.calls[0]?.[0];
+      const createCall = component.native.codes.createVerificationCode.mock.calls[0]?.[0];
       resolve(createCall.tokenHash);
     });
 
@@ -507,7 +507,7 @@ describe("nativeEmailOtp", () => {
     });
 
     expect(result).toMatchObject({ status: true });
-    expect((component as any).identity.provisionFromIdentity).toHaveBeenCalled();
+    expect(component.identity.provisionFromIdentity).toHaveBeenCalled();
   });
 
   it("sendVerificationOtp for change-email uses the authenticated user's id", async () => {
@@ -533,7 +533,7 @@ describe("nativeEmailOtp", () => {
 
     expect(result).toMatchObject({ status: "queued" });
 
-    const createCall = (component as any).native.codes.createVerificationCode.mock.calls[0]?.[0];
+    const createCall = component.native.codes.createVerificationCode.mock.calls[0]?.[0];
     expect(createCall).toMatchObject({
       userId: "user_1",
       type: "email_change",
@@ -577,7 +577,7 @@ describe("nativeEmailOtp", () => {
 
     expect(result).toMatchObject({ status: true });
 
-    const changeCall = (component as any).identity.changeEmail.mock.calls[0][0];
+    const changeCall = component.identity.changeEmail.mock.calls[0][0];
     expect(changeCall.newEmail).toBe("new@example.com");
     expect(typeof changeCall.tokenHash).toBe("string");
   });

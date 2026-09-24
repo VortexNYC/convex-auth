@@ -1,6 +1,6 @@
 # Examples
 
-Each example is a runnable workspace under `examples/`. They share the same live `convex-auth` deployment and use `convex-auth` from the workspace.
+Each example is a runnable workspace under `examples/` and uses `convex-auth` from the workspace. Give each example its own Convex deployment — examples deploy different function sets and static assets, so two examples pointed at one deployment overwrite each other.
 
 Copy the `.env.example` in each example to `.env.local` and fill in your Convex deployment URL. If you want OAuth, also set the provider credentials on your deployment:
 
@@ -61,7 +61,43 @@ export const Route = createFileRoute("/_authed")({
 ```bash
 cd examples/tanstack-router
 pnpm install
+pnpm dlx convex dev   # anonymous local backend
 pnpm run dev
+```
+
+Anonymous local backends default to `127.0.0.1:3210`/`3211`. To run several local examples at once, give each `.env.local` its own port pair (e.g. `3214`/`3215`) before the first `convex dev` — the backend binds the ports in `CONVEX_URL`/`CONVEX_SITE_URL`.
+
+## TanStack Start (SSR)
+
+`examples/tanstack-start` is a full SSR app using `@tanstack/react-start` and the `@vortex-api/convex-auth/tanstack-start` adapter. Sessions live in app-origin HttpOnly cookies; every request passes through `convexAuthRequestMiddleware`, which also serves the intent-based `/api/auth` proxy.
+
+```ts
+// src/start.ts
+import { createStart } from "@tanstack/react-start";
+import { convexAuthRequestMiddleware } from "@vortex-api/convex-auth/tanstack-start/server";
+import { api } from "../convex/_generated/api";
+
+export const startInstance = createStart(() => ({
+  requestMiddleware: [convexAuthRequestMiddleware({ actions: api.auth })],
+}));
+```
+
+The root route resolves the verified session in `beforeLoad` and seeds `ConvexAuthTanstackStartProvider` (cookie mode). A pathless `_authed` route guards navigation as UX, while protected `createServerFn`s declare `convexAuthFunctionMiddleware`, which attaches the revocation-aware `context.session` — the real security boundary.
+
+```tsx
+const getDashboardData = createServerFn({ method: "GET" })
+  .middleware([convexAuthFunctionMiddleware({ actions: api.auth })])
+  .handler(async ({ context }) => {
+    if (context.session === null) throw new Error("Unauthorized");
+    return { user: context.session.user };
+  });
+```
+
+```bash
+cd examples/tanstack-start
+pnpm install
+pnpm dlx convex dev   # local backend on :3212
+pnpm run dev          # app on :3200
 ```
 
 ## Server with Hono

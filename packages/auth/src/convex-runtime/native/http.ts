@@ -12,7 +12,7 @@ import {
   type NativeEmailAndPasswordComponentHandle,
   toNativeAuthUser,
 } from "./types.js";
-import { isAllowedRedirectUrl } from "./callback.js";
+import { isAllowedRedirectUrl, redirectBaseOrigin } from "./callback.js";
 import { validateCsrfHeaders } from "./csrf.js";
 import { setCookieHeader, clearCookieHeader, readCookie } from "./cookies.js";
 
@@ -39,11 +39,22 @@ function callAction<TReturn>(ctx: unknown, action: unknown, args: unknown): Prom
   return actionFn(ctx, args);
 }
 
+/**
+ * Relative callback URLs resolve against the app origin (`SITE_URL`) —
+ * bare `http://localhost` would produce a port-80 URL that never reaches a
+ * dev app, and silently masks a missing `SITE_URL` in production.
+ */
+function resolveCallbackUrl(callbackURL: string): URL {
+  const base = redirectBaseOrigin();
+  try {
+    return new URL(callbackURL, base);
+  } catch {
+    return new URL(base);
+  }
+}
+
 function buildErrorRedirect(callbackURL: string, error: string): Response {
-  const redirect = new URL(
-    callbackURL,
-    callbackURL.startsWith("http") ? undefined : "http://localhost",
-  );
+  const redirect = resolveCallbackUrl(callbackURL);
   redirect.searchParams.set("error", error);
   return new Response(null, {
     status: 302,
@@ -52,10 +63,7 @@ function buildErrorRedirect(callbackURL: string, error: string): Response {
 }
 
 function buildTokenRedirect(callbackURL: string, token: string): Response {
-  const redirect = new URL(
-    callbackURL,
-    callbackURL.startsWith("http") ? undefined : "http://localhost",
-  );
+  const redirect = resolveCallbackUrl(callbackURL);
   redirect.searchParams.set("token", token);
   return new Response(null, {
     status: 302,
@@ -138,7 +146,6 @@ function buildTwoFactorVerifyResponse(
 
   const responseBody = { success: true, ...session } as Record<string, unknown>;
   if (responseBody.user && typeof responseBody.user === "object" && responseBody.user !== null) {
-    // user is already a plain object from toNativeAuthUser
   }
   return new Response(JSON.stringify(responseBody), {
     status: 200,
@@ -405,7 +412,7 @@ export function addNativeAuthHttpRoutes(
           parsed.callbackURL &&
           !isAllowedRedirectUrl(
             parsed.callbackURL,
-            new URL(request.url).origin,
+            redirectBaseOrigin(new URL(request.url).origin),
             options?.trustedOrigins ?? [],
           )
         ) {
@@ -817,15 +824,40 @@ export function addNativeAuthHttpRoutes(
           const newUserCallbackURL = url.searchParams.get("newUserCallbackURL");
           const errorCallbackURL = url.searchParams.get("errorCallbackURL");
 
-          if (!token) {
-            return buildErrorRedirect(callbackURL, "INVALID_TOKEN");
-          }
-
-          if (!isAllowedRedirectUrl(callbackURL, requestOrigin, options?.trustedOrigins ?? [])) {
+          if (
+            !isAllowedRedirectUrl(
+              callbackURL,
+              redirectBaseOrigin(requestOrigin),
+              options?.trustedOrigins ?? [],
+            )
+          ) {
             return buildErrorResponse(400, "invalid_callback_url");
+          }
+          if (
+            newUserCallbackURL &&
+            !isAllowedRedirectUrl(
+              newUserCallbackURL,
+              redirectBaseOrigin(requestOrigin),
+              options?.trustedOrigins ?? [],
+            )
+          ) {
+            return buildErrorResponse(400, "invalid_new_user_callback_url");
+          }
+          if (
+            errorCallbackURL &&
+            !isAllowedRedirectUrl(
+              errorCallbackURL,
+              redirectBaseOrigin(requestOrigin),
+              options?.trustedOrigins ?? [],
+            )
+          ) {
+            return buildErrorResponse(400, "invalid_error_callback_url");
           }
 
           const redirectTarget = errorCallbackURL ?? callbackURL;
+          if (!token) {
+            return buildErrorRedirect(redirectTarget, "INVALID_TOKEN");
+          }
 
           let result;
           try {
@@ -868,16 +900,18 @@ export function addNativeAuthHttpRoutes(
             );
           }
 
-          const redirect = new URL(
-            callbackURL,
-            callbackURL.startsWith("http") ? undefined : "http://localhost",
-          );
+          const successTarget =
+            result.createdUser === true && newUserCallbackURL ? newUserCallbackURL : callbackURL;
+          const redirect = resolveCallbackUrl(successTarget);
           redirect.searchParams.set("token", result.token);
           if (result.refreshToken) {
             redirect.searchParams.set("refreshToken", result.refreshToken);
           }
           if (result.sessionId) {
             redirect.searchParams.set("sessionId", result.sessionId);
+          }
+          if (result.landingVerifier) {
+            redirect.searchParams.set("landingVerifier", result.landingVerifier);
           }
           headers.set("Location", redirect.toString());
           return new Response(null, {
@@ -905,7 +939,13 @@ export function addNativeAuthHttpRoutes(
       if (!callbackURL) {
         return new Response("Missing callbackURL", { status: 400 });
       }
-      if (!isAllowedRedirectUrl(callbackURL, requestOrigin, options?.trustedOrigins ?? [])) {
+      if (
+        !isAllowedRedirectUrl(
+          callbackURL,
+          redirectBaseOrigin(requestOrigin),
+          options?.trustedOrigins ?? [],
+        )
+      ) {
         return new Response("Invalid callbackURL", { status: 400 });
       }
 
@@ -934,7 +974,11 @@ export function addNativeAuthHttpRoutes(
 
       if (
         callbackURL &&
-        !isAllowedRedirectUrl(callbackURL, requestOrigin, options?.trustedOrigins ?? [])
+        !isAllowedRedirectUrl(
+          callbackURL,
+          redirectBaseOrigin(requestOrigin),
+          options?.trustedOrigins ?? [],
+        )
       ) {
         return buildErrorResponse(400, "invalid_callback_url");
       }
@@ -977,6 +1021,11 @@ export function addNativeAuthHttpRoutes(
     path: "/api/auth/update-session",
     method: "POST",
     handler: httpActionGeneric(async (ctx, request) => {
+      const csrf = checkCsrf(request, options);
+      if (csrf) {
+        return csrf;
+      }
+
       const body = await request.json().catch(() => undefined);
 
       let parsed: { refreshToken: string };

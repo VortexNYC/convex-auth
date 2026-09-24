@@ -19,8 +19,6 @@ beforeAll(async () => {
 
 type RouteHandler = (ctx: unknown, request: Request) => Promise<Response>;
 
-// Captures every registered route so handlers can be invoked with a real
-// Request — the same code path the HTTP transport exercises, minus TCP.
 function captureRoutes(
   component: Record<string, unknown>,
   actions?: Record<string, unknown>,
@@ -95,8 +93,6 @@ describe("HTTP transport: /api/auth/convex/token", () => {
 
   it("rejects a revoked session even when the JWT is valid and unexpired", async () => {
     const token = await sessionJwt();
-    // Structurally valid, unexpired JWT — but the session row is revoked.
-    // The HTTP surface must stay revocation-aware, not just JWT-aware.
     const ctx = makeCtx({
       [SESSION_REF]: liveSession(token, { revokedAt: Date.now() }),
       [USER_REF]: user,
@@ -128,7 +124,6 @@ describe("HTTP transport: /api/auth/convex/token", () => {
     const payload = await verifyToken(body.token);
     expect(payload.sub).toBe("user_1");
     expect(payload.sessionId).toBe("session_1");
-    // The minted token carries the session's identity through the transport.
     expect(payload.identityId).toBe("identity_1");
   });
 });
@@ -192,8 +187,6 @@ describe("HTTP transport: /api/auth/sign-in session mint", () => {
   });
 
   it("writes the 2FA pending token to its cookie when sign-in returns a challenge", async () => {
-    // The pending token must survive as a cookie — this is the transport the
-    // SSR proxy relies on to substitute the challenge server-side.
     const session = {
       token: null,
       refreshToken: null,
@@ -222,5 +215,116 @@ describe("HTTP transport: /api/auth/sign-in session mint", () => {
 
     const body = (await res.json()) as { twoFactorChallengeToken: string };
     expect(body.twoFactorChallengeToken).toBe("pending-token-value");
+  });
+});
+
+describe("HTTP transport: /api/auth/magic-link/verify", () => {
+  it("echoes the session's landingVerifier onto the landing URL", async () => {
+    const verifyMagicLink = vi.fn(async () => ({
+      token: await sessionJwt(),
+      refreshToken: "refresh-token-value",
+      sessionId: "session_1",
+      userId: "user_1",
+      landingVerifier: "lv-bound",
+    }));
+    const routes = captureRoutes(makeComponent(), { verifyMagicLink });
+    const handler = routes.get("GET /api/auth/magic-link/verify")!;
+
+    const res = await handler(
+      makeCtx({}),
+      new Request(`${SITE}/api/auth/magic-link/verify?token=tok&callbackURL=/dash`),
+    );
+    expect(res.status).toBe(302);
+    const landing = new URL(res.headers.get("Location")!);
+    expect(landing.searchParams.get("landingVerifier")).toBe("lv-bound");
+    expect(landing.searchParams.get("token")).toBeTruthy();
+    expect(verifyMagicLink.mock.calls[0][1]).not.toHaveProperty("landingVerifier");
+  });
+
+  it("omits landingVerifier from the landing URL when none was bound", async () => {
+    const verifyMagicLink = vi.fn(async () => ({
+      token: await sessionJwt(),
+      refreshToken: "refresh-token-value",
+      sessionId: "session_1",
+      userId: "user_1",
+    }));
+    const routes = captureRoutes(makeComponent(), { verifyMagicLink });
+    const handler = routes.get("GET /api/auth/magic-link/verify")!;
+
+    const res = await handler(
+      makeCtx({}),
+      new Request(`${SITE}/api/auth/magic-link/verify?token=tok&callbackURL=/dash`),
+    );
+    const landing = new URL(res.headers.get("Location")!);
+    expect(landing.searchParams.has("landingVerifier")).toBe(false);
+  });
+
+  it("rejects unvalidated errorCallbackURL and newUserCallbackURL origins", async () => {
+    const verifyMagicLink = vi.fn(async () => ({
+      token: await sessionJwt(),
+      refreshToken: "refresh-token-value",
+      sessionId: "session_1",
+      userId: "user_1",
+    }));
+    const routes = captureRoutes(makeComponent(), { verifyMagicLink });
+    const handler = routes.get("GET /api/auth/magic-link/verify")!;
+
+    const badError = await handler(
+      makeCtx({}),
+      new Request(
+        `${SITE}/api/auth/magic-link/verify?token=tok&callbackURL=/dash&errorCallbackURL=` +
+          encodeURIComponent("https://evil.example.com/fake-error"),
+      ),
+    );
+    expect(badError.status).toBe(400);
+
+    const badNewUser = await handler(
+      makeCtx({}),
+      new Request(
+        `${SITE}/api/auth/magic-link/verify?token=tok&callbackURL=/dash&newUserCallbackURL=` +
+          encodeURIComponent("https://evil.example.com/welcome"),
+      ),
+    );
+    expect(badNewUser.status).toBe(400);
+    expect(verifyMagicLink).not.toHaveBeenCalled();
+  });
+
+  it("rejects a protocol-relative callbackURL — it resolves cross-origin", async () => {
+    const verifyMagicLink = vi.fn();
+    const routes = captureRoutes(makeComponent(), { verifyMagicLink });
+    const handler = routes.get("GET /api/auth/magic-link/verify")!;
+
+    const res = await handler(
+      makeCtx({}),
+      new Request(
+        `${SITE}/api/auth/magic-link/verify?token=tok&callbackURL=` +
+          encodeURIComponent("//evil.example.com/dash"),
+      ),
+    );
+    expect(res.status).toBe(400);
+    expect(verifyMagicLink).not.toHaveBeenCalled();
+  });
+
+  it("lands new users on newUserCallbackURL when the session was created", async () => {
+    const verifyMagicLink = vi.fn(async () => ({
+      token: await sessionJwt(),
+      refreshToken: "refresh-token-value",
+      sessionId: "session_1",
+      userId: "user_1",
+      createdUser: true,
+    }));
+    const routes = captureRoutes(makeComponent(), { verifyMagicLink });
+    const handler = routes.get("GET /api/auth/magic-link/verify")!;
+
+    const res = await handler(
+      makeCtx({}),
+      new Request(
+        `${SITE}/api/auth/magic-link/verify?token=tok&callbackURL=/dash&newUserCallbackURL=/welcome`,
+      ),
+    );
+    expect(res.status).toBe(302);
+    const landing = new URL(res.headers.get("Location")!);
+    expect(landing.pathname).toBe("/welcome");
+    expect(landing.searchParams.get("token")).toBeTruthy();
   });
 });

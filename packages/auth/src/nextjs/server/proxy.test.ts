@@ -209,9 +209,6 @@ describe("session-minting actions", () => {
       .find((h) => h.startsWith("__Host-__convexAuthTwoFactorPending="));
     expect(pending).toContain("challenge-tok");
     expect(pending).toContain("Max-Age=300");
-    // A pending challenge supersedes any existing session: the pair is
-    // cleared so a stale session can't resurrect on the next server render
-    // while the client shows the challenge form.
     const tokenCookie = response.headers
       .getSetCookie()
       .find((h) => h.startsWith("__Host-__convexAuthToken="));
@@ -264,6 +261,27 @@ describe("server-side substitutions", () => {
       actions.updateSession,
       { refreshToken: "cookie-refresh" },
       expect.objectContaining({}),
+    );
+  });
+
+  it("omits the access token for updateSession so an expired JWT cannot reject the refresh", async () => {
+    fetchActionMock.mockResolvedValue({ token: "t2", refreshToken: "r2" });
+    mocks.jar = mocks.makeJar({
+      "__Host-__convexAuthToken": "expired-jwt",
+      "__Host-__convexAuthRefreshToken": "cookie-refresh",
+    });
+    const request = postRequest(
+      { intent: "updateSession", args: {} },
+      {
+        cookie:
+          "__Host-__convexAuthToken=expired-jwt; __Host-__convexAuthRefreshToken=cookie-refresh",
+      },
+    );
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.updateSession,
+      { refreshToken: "cookie-refresh" },
+      expect.not.objectContaining({ token: expect.anything() }),
     );
   });
 
@@ -386,6 +404,85 @@ describe("server-side substitutions", () => {
         password: "pw",
         trustedDeviceToken: "trusted-tok",
       },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("deletes a body-supplied trustedDeviceToken when the cookie is absent", async () => {
+    fetchActionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    const request = postRequest({
+      intent: "signIn",
+      args: { email: "a@b.c", password: "pw", trustedDeviceToken: "forged" },
+    });
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.signIn,
+      { email: "a@b.c", password: "pw" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("signIn injects the landing-verifier cookie and drops a forged body value", async () => {
+    fetchActionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    mocks.jar = mocks.makeJar({
+      "__Host-__convexAuthLandingVerifier": "lv-cookie",
+    });
+    const request = postRequest(
+      {
+        intent: "signIn",
+        args: { email: "a@b.c", password: "pw", landingVerifier: "lv-forged" },
+      },
+      { cookie: "__Host-__convexAuthLandingVerifier=lv-cookie" },
+    );
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.signIn,
+      { email: "a@b.c", password: "pw", landingVerifier: "lv-cookie" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("signIn deletes a body-supplied landingVerifier when the cookie is absent", async () => {
+    fetchActionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    const request = postRequest({
+      intent: "signIn",
+      args: { email: "a@b.c", password: "pw", landingVerifier: "lv-forged" },
+    });
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.signIn,
+      { email: "a@b.c", password: "pw" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("injects the landing-verifier cookie into callback args", async () => {
+    fetchActionMock.mockResolvedValue({ token: "t", refreshToken: "r", sessionId: "s" });
+    mocks.jar = mocks.makeJar({
+      "__Host-__convexAuthLandingVerifier": "lv-cookie",
+    });
+    const request = postRequest(
+      { intent: "callback", args: { provider: "github", code: "c", state: "st" } },
+      { cookie: "__Host-__convexAuthLandingVerifier=lv-cookie" },
+    );
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.callback,
+      { provider: "github", code: "c", state: "st", landingVerifier: "lv-cookie" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("deletes a body-supplied landingVerifier when the cookie is absent", async () => {
+    fetchActionMock.mockResolvedValue({ token: "t", refreshToken: "r", sessionId: "s" });
+    const request = postRequest({
+      intent: "callback",
+      args: { provider: "github", code: "c", state: "st", landingVerifier: "lv-forged" },
+    });
+    await proxyAuthActionToConvex(request, options);
+    expect(fetchActionMock).toHaveBeenCalledWith(
+      actions.callback,
+      { provider: "github", code: "c", state: "st" },
       expect.objectContaining({}),
     );
   });

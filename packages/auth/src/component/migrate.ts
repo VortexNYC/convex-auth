@@ -63,6 +63,7 @@ function issuerFromLegacy(provider: string, legacyIssuer?: string | null) {
 /**
  * Migrate a single Better Auth user into the native `users` table.
  * Idempotent: returns the existing user if the email is already present.
+ * Two-factor secrets are not migrated; users re-enroll after signing in.
  */
 export const migrateUser = internalMutation({
   args: { legacyUser: legacyUserValidator },
@@ -82,8 +83,6 @@ export const migrateUser = internalMutation({
       name: args.legacyUser.name,
       image: args.legacyUser.image ?? undefined,
       emailVerified: args.legacyUser.emailVerified,
-      // Two-factor secrets are not migrated, so leave 2FA disabled.
-      // Users can re-enroll once they sign in with the native runtime.
       isActive: true,
       createdAt: args.legacyUser.createdAt,
       updatedAt: args.legacyUser.updatedAt,

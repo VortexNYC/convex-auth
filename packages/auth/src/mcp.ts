@@ -1,11 +1,12 @@
-// Explicit public surface. Previously `export *` re-exported 91+ internal
-// symbols for consumers that do not exist (this package is intended for external consumers;
-// see docs/go-live-roadmap.md). This is the exact contract of the two real
-// consumers: external apps (`convex-auth/mcp`) and this package's own
-// Convex component (`component/mcp.ts`, via `../dist/mcp.js`). Add a symbol
-// here only when one of those actually needs it.
+/**
+ * Explicit public surface for `convex-auth/mcp`. The exports are grouped by
+ * consumer: external apps first, the MCP `oauth-client-credentials` grant
+ * (machine-to-machine, no user present) in the middle, and this package's own
+ * Convex component (`component/mcp.ts`, via `../dist/mcp.js`) last. Add a
+ * symbol only when one of those consumers actually needs it — `export *` here
+ * previously leaked 91+ internal symbols.
+ */
 export {
-  // external consumer
   buildAuthorizationServerMetadata,
   buildEmptyJwks,
   buildMcpOAuthIssuer,
@@ -32,14 +33,11 @@ export {
   rotateMcpOAuthSigningKey,
   shouldPublishMcpOAuthSigningKey,
   signMcpOAuthAccessTokenWithStoredKey,
-  // MCP `io.modelcontextprotocol/oauth-client-credentials`: machine-to-machine
-  // access for callers with no user present.
   validateMcpOAuthClientCredentialsTokenExchange,
   validateMcpOAuthClientIdMetadataDocument,
   verifyMcpOAuthClientAssertion,
   validateTokenEndpointClientAuthentication,
   verifyMcpOAuthAccessTokenWithStoredKeys,
-  // Convex component consumer (component/mcp.ts)
   createMcpOAuthDynamicClient,
   createMcpOAuthRefreshToken,
   createMcpOAuthRefreshTokenPolicy,

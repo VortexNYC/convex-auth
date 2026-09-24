@@ -71,10 +71,10 @@ describe("identity verification and password reset", () => {
     });
     expect(code?.consumedAt).toBeDefined();
 
-    const identity = await t.run((ctx) => ctx.db.get("auth_identities", identityId as any));
+    const identity = await t.run((ctx) => ctx.db.get("auth_identities", identityId));
     expect(identity?.emailVerified).toBe(true);
 
-    const user = await t.run((ctx) => ctx.db.get("users", userId as any));
+    const user = await t.run((ctx) => ctx.db.get("users", userId));
     expect(user?.emailVerified).toBe(true);
   });
 
@@ -201,10 +201,10 @@ describe("identity verification and password reset", () => {
     });
     expect(code?.consumedAt).toBeDefined();
 
-    const account = await t.run((ctx) => ctx.db.get("authAccounts", accountId as any));
+    const account = await t.run((ctx) => ctx.db.get("authAccounts", accountId));
     expect(account?.credentialHash).toBe("new-hash");
 
-    const session = await t.run((ctx) => ctx.db.get("authSessions", sessionId as any));
+    const session = await t.run((ctx) => ctx.db.get("authSessions", sessionId));
     expect(session?.revokedAt).toBeDefined();
   });
 

@@ -35,6 +35,9 @@ export const auth = convexAuth({
   emailAndPassword: {
     enabled: true,
     checkBreach: true,
+    // Redirect allowlist — the Next.js app origin for local dev. `SITE_URL`
+    // is also merged when set (see README step: `convex env set SITE_URL`).
+    trustedOrigins: [siteUrl, "http://localhost:3000"],
     email: {
       from: process.env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
       appOrigin: siteUrl,

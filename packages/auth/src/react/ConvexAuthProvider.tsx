@@ -2,6 +2,7 @@ import { useAction, useConvex, useQuery } from "convex/react";
 import type { FunctionReference } from "convex/server";
 import type { NativeAuthUser } from "../convex-runtime/native/types.js";
 import type { ConvexAuthSessionListItem } from "./auth-client-types";
+import { getOrCreateLandingVerifier, readLandingVerifier } from "./landingVerifier.js";
 import {
   createContext,
   useCallback,
@@ -36,16 +37,12 @@ function createBrowserStorage(store: Storage): TokenStorage {
     set: (key, value) => {
       try {
         store.setItem(key, value);
-      } catch {
-        // ignore storage quota / private mode errors
-      }
+      } catch {}
     },
     remove: (key) => {
       try {
         store.removeItem(key);
-      } catch {
-        // ignore
-      }
+      } catch {}
     },
   };
 }
@@ -119,6 +116,11 @@ export type NativeAuthSignInMagicLinkArgs = {
   newUserCallbackURL?: string;
   errorCallbackURL?: string;
   metadata?: Record<string, string>;
+  /**
+   * Browser binding nonce — set internally by the provider;
+   * do not pass a client-chosen value.
+   */
+  landingVerifier?: string;
 };
 
 export type NativeAuthSignInWithRedirectArgs = {
@@ -128,6 +130,11 @@ export type NativeAuthSignInWithRedirectArgs = {
   newUserURL?: string;
   requestSignUp?: boolean;
   link?: boolean;
+  /**
+   * Browser binding nonce — set internally by the provider;
+   * do not pass a client-chosen value.
+   */
+  landingVerifier?: string;
 };
 
 export type NativeAuthSignInWithRedirectResult = { url: string };
@@ -137,6 +144,11 @@ export type NativeAuthOAuthCallbackArgs = {
   code: string;
   state: string;
   linkingUserId?: string;
+  /**
+   * Landing verifier bound at sign-in initiation. The provider injects this
+   * from the browser's cookie — callers should not set it directly.
+   */
+  landingVerifier?: string;
 };
 
 export type NativeAuthOAuthCallbackSuccess = {
@@ -211,8 +223,6 @@ export type NativeAuthTwoFactorVerifyArgs = {
   trustDevice?: boolean;
 };
 
-// Two-factor verification returns a full session on success, identical to
-// a completed sign-in.
 export type NativeAuthTwoFactorVerifyResult = NativeAuthSession;
 
 export type NativeAuthTwoFactorDisableArgs = {
@@ -489,6 +499,17 @@ export type ConvexAuthProviderProps = {
    * framework caches — e.g. Next.js's Router Cache — after sign-in/sign-out.
    */
   onAuthChange?: (authenticated: boolean) => unknown;
+  /**
+   * Token mode only: require URL session-triple landings
+   * (`?token=&refreshToken=`) to carry a `landingVerifier` param matching
+   * this browser's verifier cookie — binds OAuth/magic-link landings to the
+   * browser that initiated the flow. Defaults to `true`. Set `false` when
+   * flows are initiated outside the browser (e.g. a server calling
+   * `signInWithRedirect`) or when magic links must open in a different
+   * browser than the requesting one. Cookie mode enforces the same binding
+   * at the SSR boundary via the middleware's `requireLandingVerifier`.
+   */
+  requireLandingVerifier?: boolean;
 };
 
 /**
@@ -510,26 +531,16 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
     props.serverState?.sessionId ?? props.initialSessionId ?? null,
   );
   const [twoFactorChallengeToken, setTwoFactorChallengeToken] = useState<string | null>(null);
-  // A server-seeded token was verified during this render — the client is
-  // already authenticated; `setAuth`'s async handshake only confirms it.
   const [isAuthReady, setIsAuthReady] = useState(cookieMode && seedToken !== null);
   const [storage, setStorage] = useState<TokenStorage | null>(null);
   const isHydrating = useRef(true);
 
-  // The user attached to the most recently accepted server state — the
-  // no-flash paint fallback while the live `verifySession` query is loading.
-  // State, not a ref: a newer payload may carry a fresh user over an
-  // unchanged token, and the context memo must see that change.
   const [serverUser, setServerUser] = useState<NativeAuthUser | null>(
     props.serverState?.user ?? props.initialUser ?? null,
   );
 
   useEffect(() => {
     if (cookieMode) {
-      // Cookie mode: the server middleware owns refresh and the token lives
-      // in memory only. No storage, no URL ingestion, no mount-time refresh.
-      // What does run: re-seeding from a newer serverState — middleware may
-      // have rotated the session since this client mounted.
       const serverState = props.serverState;
       if (serverState !== undefined && serverState._timeFetched > lastAppliedServerStateFetch) {
         lastAppliedServerStateFetch = serverState._timeFetched;
@@ -549,16 +560,26 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
 
     if (!initialToken && typeof window !== "undefined" && window.location) {
       const searchParams = new URLSearchParams(window.location.search);
-      // If the URL carries a reset flag, the token is a password-reset
-      // token, not a session token. Leave it for the reset form to consume.
       if (!searchParams.has("reset")) {
         initialToken = searchParams.get("token");
         initialRefresh = searchParams.get("refreshToken");
         initialSessionId = searchParams.get("sessionId");
         if (initialToken) {
+          const paramVerifier = searchParams.get("landingVerifier");
+          const cookieVerifier = readLandingVerifier();
+          if (
+            props.requireLandingVerifier !== false &&
+            (paramVerifier === null || paramVerifier !== cookieVerifier)
+          ) {
+            initialToken = null;
+            initialRefresh = null;
+            initialSessionId = null;
+            searchParams.set("error", "landing_verifier_mismatch");
+          }
           searchParams.delete("token");
           searchParams.delete("refreshToken");
           searchParams.delete("sessionId");
+          searchParams.delete("landingVerifier");
           const cleaned =
             searchParams.toString() === ""
               ? window.location.pathname
@@ -605,6 +626,7 @@ export function ConvexAuthProvider(props: ConvexAuthProviderProps) {
     props.initialRefreshToken,
     props.initialSessionId,
     props.serverState,
+    props.requireLandingVerifier,
     updateSessionAction,
   ]);
 
@@ -810,8 +832,6 @@ export function useAuthActions() {
       callAuthProxy(apiRoute, intent, args) as Promise<T>,
     [apiRoute],
   );
-  // Apply a minted session to state. In cookie mode the refresh token never
-  // reaches the browser — the proxy already wrote it to an HttpOnly cookie.
   const applySession = useCallback(
     (session: SessionLike) => {
       ctx.setToken(session.token ?? null);
@@ -900,7 +920,10 @@ export function useAuthActions() {
       }
       setIsLoading(true);
       try {
-        return await signInMagicLinkAction(args);
+        return await signInMagicLinkAction({
+          ...args,
+          landingVerifier: getOrCreateLandingVerifier(),
+        });
       } finally {
         setIsLoading(false);
       }
@@ -915,7 +938,10 @@ export function useAuthActions() {
       }
       setIsLoading(true);
       try {
-        return await client.action(ctx.signInWithRedirect, args);
+        return await client.action(ctx.signInWithRedirect, {
+          ...args,
+          landingVerifier: getOrCreateLandingVerifier(),
+        });
       } finally {
         setIsLoading(false);
       }
@@ -932,7 +958,10 @@ export function useAuthActions() {
       try {
         const result = cookieMode
           ? await callProxy<NativeAuthOAuthCallbackResult>("callback", args)
-          : await client.action(ctx.callback, args);
+          : await client.action(ctx.callback, {
+              ...args,
+              landingVerifier: readLandingVerifier() ?? undefined,
+            });
         if ("token" in result) {
           ctx.setToken(result.token);
           ctx.setSessionId(result.sessionId);
@@ -1027,10 +1056,6 @@ export function useAuthActions() {
   const signOut = useCallback(
     async (args?: { callbackURL?: string }): Promise<NativeAuthSignOutResult> => {
       if (cookieMode) {
-        // Cookie mode always proxies — only the server can clear HttpOnly
-        // cookies — even when no access token is held in memory. Local state
-        // clears regardless of the result so a proxy failure can't leave the
-        // client half-authenticated while the cookies are gone.
         setIsLoading(true);
         try {
           return await callProxy<NativeAuthSignOutResult>("signOut", {
@@ -1275,10 +1300,6 @@ export function useAuthActions() {
     ctx.token ? { token: ctx.token, sessionId: ctx.sessionId ?? undefined } : "skip",
   );
   const isSessionLoading = ctx.token !== null && session === undefined;
-  // While the live query resolves, fall back to the server-provided user so
-  // the first paint is already authenticated (cookie mode no-flash). The
-  // fallback only applies while a token exists — after sign-out the query
-  // skips and the user must be null.
   const user =
     session === undefined
       ? ctx.token !== null

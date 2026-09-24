@@ -287,7 +287,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -322,7 +322,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -356,7 +356,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -389,7 +389,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -425,7 +425,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -465,7 +465,7 @@ describe("addNativeAuthHttpRoutes", () => {
     }[] = [];
     const http: HttpRouter = {
       route: (r) => {
-        routes.push(r as any);
+        routes.push(r as (typeof routes)[number]);
         return http;
       },
     } as unknown as HttpRouter;
@@ -497,5 +497,168 @@ describe("addNativeAuthHttpRoutes", () => {
       }),
     );
     expect(response.status).toBe(403);
+  });
+
+  it("blocks same-site POSTs from an untrusted sibling origin", async () => {
+    const component = createMockComponent();
+    const routes: {
+      path?: string;
+      pathPrefix?: string;
+      method: string;
+      handler: (ctx: unknown, request: Request) => Promise<Response>;
+    }[] = [];
+    const http: HttpRouter = {
+      route: (r) => {
+        routes.push(r as (typeof routes)[number]);
+        return http;
+      },
+    } as unknown as HttpRouter;
+
+    addNativeAuthHttpRoutes(
+      http,
+      component,
+      {
+        signIn: vi.fn(() => ({
+          token: "token",
+          user: { id: "user_1", email: "shlomo@example.com", emailVerified: true },
+        })),
+      } as unknown as NativeEmailAndPasswordFunctionReferences,
+      { trustedOrigins: ["https://app.example.com"] },
+    );
+    const signInRoute = routes.find((r) => r.path === "/api/auth/sign-in" && r.method === "POST");
+    expect(signInRoute).toBeDefined();
+
+    const hostile = await exec(signInRoute!.handler).handler(
+      createContext(),
+      new Request("https://api.example.com/api/auth/sign-in", {
+        method: "POST",
+        headers: {
+          "sec-fetch-site": "same-site",
+          origin: "https://evil.example.com",
+          cookie: "convex-auth-token=x",
+        },
+        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+      }),
+    );
+    expect(hostile.status).toBe(403);
+
+    const trusted = await exec(signInRoute!.handler).handler(
+      createContext(),
+      new Request("https://api.example.com/api/auth/sign-in", {
+        method: "POST",
+        headers: {
+          "sec-fetch-site": "same-site",
+          origin: "https://app.example.com",
+        },
+        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+      }),
+    );
+    expect(trusted.status).toBe(200);
+
+    const noOrigin = await exec(signInRoute!.handler).handler(
+      createContext(),
+      new Request("https://api.example.com/api/auth/sign-in", {
+        method: "POST",
+        headers: { "sec-fetch-site": "same-site" },
+        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+      }),
+    );
+    expect(noOrigin.status).toBe(403);
+  });
+
+  it("rejects contradictory metadata — same-site claim with a foreign Origin", async () => {
+    const component = createMockComponent();
+    const routes: {
+      path?: string;
+      pathPrefix?: string;
+      method: string;
+      handler: (ctx: unknown, request: Request) => Promise<Response>;
+    }[] = [];
+    const http: HttpRouter = {
+      route: (r) => {
+        routes.push(r as (typeof routes)[number]);
+        return http;
+      },
+    } as unknown as HttpRouter;
+
+    addNativeAuthHttpRoutes(
+      http,
+      component,
+      {
+        signIn: vi.fn(() => ({
+          token: "token",
+          user: { id: "user_1", email: "shlomo@example.com", emailVerified: true },
+        })),
+      } as unknown as NativeEmailAndPasswordFunctionReferences,
+      { trustedOrigins: ["https://app.example.com"] },
+    );
+    const signInRoute = routes.find((r) => r.path === "/api/auth/sign-in" && r.method === "POST");
+
+    const response = await exec(signInRoute!.handler).handler(
+      createContext(),
+      new Request("https://api.example.com/api/auth/sign-in", {
+        method: "POST",
+        headers: {
+          "sec-fetch-site": "same-origin",
+          origin: "https://evil.example.com",
+        },
+        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+      }),
+    );
+    expect(response.status).toBe(403);
+  });
+
+  it("blocks cross-site POSTs to update-session (session fixation)", async () => {
+    const component = createMockComponent();
+    const routes: {
+      path?: string;
+      pathPrefix?: string;
+      method: string;
+      handler: (ctx: unknown, request: Request) => Promise<Response>;
+    }[] = [];
+    const http: HttpRouter = {
+      route: (r) => {
+        routes.push(r as (typeof routes)[number]);
+        return http;
+      },
+    } as unknown as HttpRouter;
+
+    addNativeAuthHttpRoutes(
+      http,
+      component,
+      {
+        updateSession: vi.fn(() => ({
+          token: "token",
+          refreshToken: "rotated",
+        })),
+      } as unknown as NativeEmailAndPasswordFunctionReferences,
+      { trustedOrigins: ["https://app.example.com"] },
+    );
+    const updateSessionRoute = routes.find(
+      (r) => r.path === "/api/auth/update-session" && r.method === "POST",
+    );
+    expect(updateSessionRoute).toBeDefined();
+
+    const hostile = await exec(updateSessionRoute!.handler).handler(
+      createContext(),
+      new Request("https://api.example.com/api/auth/update-session", {
+        method: "POST",
+        headers: {
+          "sec-fetch-site": "cross-site",
+          origin: "https://evil.example.com",
+        },
+        body: JSON.stringify({ refreshToken: "attacker-refresh" }),
+      }),
+    );
+    expect(hostile.status).toBe(403);
+
+    const allowed = await exec(updateSessionRoute!.handler).handler(
+      createContext(),
+      new Request("https://api.example.com/api/auth/update-session", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken: "attacker-refresh" }),
+      }),
+    );
+    expect(allowed.status).not.toBe(403);
   });
 });

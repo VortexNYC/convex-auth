@@ -55,6 +55,11 @@ export const auth = convexAuth({
     rpName: "Convex Auth Demo",
   },
   oauth: {
+    // Deep-link landing targets — the app scheme (dev-client/standalone builds
+    // via `Linking.createURL`) and Expo Go's `exp://` URLs. These have no
+    // WHATWG origin, so the redirect allowlist only admits them through
+    // explicit scheme patterns (same set `buildExpoTrustedOrigins` emits).
+    trustedOrigins: ["convex-auth-rn://", "exp://", "exp://**", "exp://192.168.*.*:*/**"],
     github: {
       clientId: process.env.GITHUB_CLIENT_ID ?? "",
       clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",

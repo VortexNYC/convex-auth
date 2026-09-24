@@ -9,7 +9,11 @@ import { ReactNode } from "react";
 import type { NativeAuthActions } from "../../react/ConvexAuthProvider.js";
 import { ConvexAuthNextjsClientProvider } from "../client.js";
 import { serializeAuthActions } from "../serialization.js";
-import { getRequestCookies, getRequestCookiesInMiddleware } from "./cookies.js";
+import {
+  getRequestCookies,
+  getRequestCookiesInMiddleware,
+  setLandingVerifierCookie,
+} from "./cookies.js";
 import { proxyAuthActionToConvex, shouldProxyAuthAction } from "./proxy.js";
 import { handleAuthenticationInRequest } from "./request.js";
 import {
@@ -65,9 +69,6 @@ export async function ConvexAuthNextjsServerProvider(props: {
     <ConvexAuthNextjsClientProvider
       serverState={serverState}
       apiRoute={apiRoute}
-      // api.auth is a Proxy of Symbol-keyed FunctionReferences — it would
-      // serialize to `{}` across the RSC boundary, so send name strings and
-      // let the client rebuild the references.
       actions={serializeAuthActions(actions)}
     >
       {children}
@@ -95,7 +96,6 @@ export function convexAuthNextjsCookieState(request: NextRequest): {
   hasSessionCookie: boolean;
   tokenExpired: boolean | null;
 } {
-  // `nextUrl.hostname` keeps IPv6 brackets (`[::1]`).
   const hostname = request.nextUrl.hostname.replace(/^\[|\]$/g, "");
   const isLocalhost =
     ["localhost", "127.0.0.1", "::1"].includes(hostname) || hostname.endsWith(".localhost");
@@ -168,9 +168,6 @@ async function fetchSession(
   }
 }
 
-// RSC-only memoization: React `cache()` dedupes per render pass. Middleware
-// is not a React render context, so it must not share this — it memoizes on a
-// per-request closure instead.
 const fetchSessionCached = cache(fetchSession);
 
 /**
@@ -240,6 +237,15 @@ export type ConvexAuthNextjsMiddlewareOptions = {
    */
   cookieConfig?: { maxAge: number | null };
   /**
+   * Require session-triple landings (`?token=&refreshToken=`) to carry a
+   * `landingVerifier` param matching the landing-verifier cookie minted at
+   * flow initiation — binds OAuth/magic-link landings to the browser that
+   * started the flow. Defaults to `true`; set `false` only for deployments
+   * that predate verifier threading (e.g. magic links opened in a different
+   * browser than the requesting one).
+   */
+  requireLandingVerifier?: boolean;
+  /**
    * Turn on debugging logs.
    */
   verbose?: boolean;
@@ -285,7 +291,6 @@ export function convexAuthNextjsMiddleware(
     }
     logVerbose(`Begin middleware for request with URL ${request.url}`, verbose);
     const requestUrl = new URL(request.url);
-    // Proxy session-minting actions to the Convex backend
     const apiRoute = options?.apiRoute ?? "/api/auth";
     if (shouldProxyAuthAction(request, apiRoute)) {
       logVerbose(
@@ -298,23 +303,18 @@ export function convexAuthNextjsMiddleware(
       `Not proxying auth action to Convex, path ${requestUrl.pathname} does not match ${apiRoute}`,
       verbose,
     );
-    // Land session redirects into cookies, refresh tokens if necessary
     const authResult = await handleAuthenticationInRequest(request, options);
 
-    // If redirecting, proceed — the middleware will run again on next request
     if (authResult.kind === "redirect") {
       logVerbose(`Redirecting to ${authResult.response.headers.get("Location")}`, verbose);
       return authResult.response;
     }
 
     let response: Response | null = null;
-    // Forward cookies to request for custom handler
     if (authResult.kind === "refreshTokens" && authResult.refreshTokens !== undefined) {
       logVerbose(`Forwarding cookies to request`, verbose);
       await setAuthCookiesInMiddleware(request, authResult.refreshTokens);
     }
-    // Memoized per request — repeat `isAuthenticated()` calls in one handler
-    // pay one query; a later request always re-verifies (never RSC `cache()`).
     let sessionPromise: Promise<VerifiedSession> | undefined;
     if (handler === undefined) {
       logVerbose(`No custom handler`, verbose);
@@ -355,16 +355,25 @@ export function convexAuthNextjsMiddleware(
         });
     }
 
-    // Port the cookies from the auth middleware to the response. Mutating a
-    // NextResponse directly preserves its body; `NextResponse.next(response)`
-    // only forwards headers/status.
-    if (authResult.kind === "refreshTokens" && authResult.refreshTokens !== undefined) {
-      if (response instanceof NextResponse) {
-        await setAuthCookies(response, authResult.refreshTokens, cookieConfig);
-        return response;
+    const refreshedTokens =
+      authResult.kind === "refreshTokens" ? authResult.refreshTokens : undefined;
+    const mintedLandingVerifier =
+      authResult.kind === "refreshTokens" ? authResult.landingVerifier : undefined;
+    if (refreshedTokens !== undefined || mintedLandingVerifier !== undefined) {
+      const nextResponse =
+        response instanceof NextResponse
+          ? response
+          : new NextResponse(response.body, {
+              status: response.status,
+              statusText: response.statusText,
+              headers: new Headers(response.headers),
+            });
+      if (refreshedTokens !== undefined) {
+        await setAuthCookies(nextResponse, refreshedTokens, cookieConfig);
       }
-      const nextResponse = NextResponse.next(response);
-      await setAuthCookies(nextResponse, authResult.refreshTokens, cookieConfig);
+      if (mintedLandingVerifier !== undefined) {
+        setLandingVerifierCookie(nextResponse, mintedLandingVerifier, request.headers);
+      }
       return nextResponse;
     }
 
@@ -398,8 +407,6 @@ export function nextjsMiddlewareRedirect(
 ) {
   const url = request.nextUrl.clone();
 
-  // Parse the incoming route so we can split path & query correctly.
-  // Prepend a dummy origin because URL() requires absolute URLs.
   const parsed = new URL(route, "http://dummy");
 
   url.pathname = parsed.pathname;
@@ -436,13 +443,6 @@ async function convexAuthNextjsServerState(options: {
       _timeFetched: Date.now(),
     };
   }
-  // Resolve the session now so the client provider's first paint is already
-  // authenticated. `verifySession` is revocation-aware — a revoked session
-  // resolves null even while its JWT is still structurally valid, and we must
-  // not seed that dead JWT into the client: default Convex auth verifies
-  // signature+exp only, so a seeded-but-revoked token would stay "live" on the
-  // websocket for its remaining lifetime. Fail closed — an unreachable
-  // backend renders signed-out rather than resurrecting a dead session.
   const session = await fetchSessionCached(
     token,
     getFunctionName(options.actions.verifySession),

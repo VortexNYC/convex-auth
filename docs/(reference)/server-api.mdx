@@ -49,7 +49,7 @@ These are always present when `emailAndPassword` is enabled:
 | `signUp`                       | `{ email, password, name?, rememberMe? }`        | `{ token, refreshToken, user, userId, identityId? }` |
 | `signIn`                       | `{ email, password, rememberMe?, callbackURL? }` | Session or two-factor challenge.                     |
 | `signOut`                      | `{ callbackURL? }`                               | `{ success, redirect?, url? }`                       |
-| `updateSession`                | `{ token }`                                      | Refreshes the session and returns it.                |
+| `updateSession`                | `{ refreshToken }`                               | Rotates the session and returns the new pair.        |
 | `sendEmailVerification`        | `{ email, callbackURL? }`                        | `EmailSendResult`.                                   |
 | `verifyEmail`                  | `{ token }`                                      | `NativeAuthVerifyResult`.                            |
 | `sendPasswordReset`            | `{ email, redirectTo? }`                         | `EmailSendResult`.                                   |
@@ -124,6 +124,11 @@ export default http;
 | `GET /api/auth/reset-password/:token` | Validate a password-reset token.           |
 | `GET /api/auth/magic-link/verify`     | Validate a magic link and issue a session. |
 | `GET /api/auth/callback/:provider`    | OAuth provider callback.                   |
+
+The full wire contract — every route, request field, response shape, and error
+reason — is maintained as an OpenAPI document and rendered at
+[API Reference](/api). The spec is the source of truth; this table is the
+overview.
 
 ## Calling actions from the client
 

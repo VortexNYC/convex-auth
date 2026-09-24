@@ -169,6 +169,110 @@ describe("native sessions", () => {
     expect(kept?.revokedAt).toBeUndefined();
   });
 
+  it("a replayed sibling token revoked by revoke-other-sessions cannot nuke the caller's session", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    for (const [sessionId, hash, familyId] of [
+      ["session-A", "hash-A", "fam-A"],
+      ["session-B", "hash-B", "fam-A"],
+      ["session-C", "hash-C", "fam-C"],
+    ] as const) {
+      await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+        sessionId,
+        familyId,
+        userId,
+        identityId: identityDocId,
+        token: `token-${sessionId}`,
+        sessionExpiresAt: now + 1_000_000,
+        refreshTokenHash: hash,
+        refreshTokenExpiresAt: now + 1_000_000,
+      });
+    }
+
+    await t.mutation(api.native.sessions.revokeSessionsForUser, {
+      userId,
+      excludeSessionId: "session-A",
+    });
+
+    const replay = await t.mutation(api.native.sessions.rotateSession, {
+      oldRefreshTokenHash: "hash-B",
+      newSessionId: "session-evil",
+      newSessionToken: "token-evil",
+      newSessionExpiresAt: now + 1_000_000,
+      newRefreshTokenHash: "hash-evil",
+      newRefreshTokenExpiresAt: now + 1_000_000,
+      provider: "password",
+      issuer: "native",
+    });
+    expect(replay).toBeNull();
+
+    const [caller, evil, auditEvents] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-A"))
+          .unique(),
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-evil"))
+          .unique(),
+        ctx.db.query("auth_audit_events").take(10),
+      ]),
+    );
+    expect(caller?.revokedAt).toBeUndefined();
+    expect(evil).toBeNull();
+    expect(auditEvents.filter((e) => e.eventType === "refresh_token_reuse")).toHaveLength(0);
+  });
+
+  it("excludeFamilyId spares every session and refresh token in the caller's family", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const identityDocId = await insertIdentity(t, userId);
+    const now = Date.now();
+
+    for (const [sessionId, hash, familyId] of [
+      ["session-A", "hash-A", "fam-A"],
+      ["session-B", "hash-B", "fam-A"],
+      ["session-C", "hash-C", "fam-C"],
+    ] as const) {
+      await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
+        sessionId,
+        familyId,
+        userId,
+        identityId: identityDocId,
+        token: `token-${sessionId}`,
+        sessionExpiresAt: now + 1_000_000,
+        refreshTokenHash: hash,
+        refreshTokenExpiresAt: now + 1_000_000,
+      });
+    }
+
+    const revoked = await t.mutation(api.native.sessions.revokeSessionsForUser, {
+      userId,
+      excludeSessionId: "session-A",
+      excludeFamilyId: "fam-A",
+    });
+    expect(revoked).toBe(1);
+
+    const [sessions, tokens] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db.query("authSessions").take(10),
+        ctx.db.query("authRefreshTokens").take(10),
+      ]),
+    );
+    const sessionById = Object.fromEntries(sessions.map((s) => [s.sessionId, s]));
+    expect(sessionById["session-A"].revokedAt).toBeUndefined();
+    expect(sessionById["session-B"].revokedAt).toBeUndefined();
+    expect(sessionById["session-C"].revokedAt).toBeDefined();
+    const tokenByHash = Object.fromEntries(tokens.map((t) => [t.tokenHash, t]));
+    expect(tokenByHash["hash-A"].revokedAt).toBeUndefined();
+    expect(tokenByHash["hash-B"].revokedAt).toBeUndefined();
+    expect(tokenByHash["hash-C"].revokedAt).toBeDefined();
+  });
+
   it("revokes sessions beyond a single 1000-row page", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
@@ -399,8 +503,6 @@ describe("native sessions", () => {
       issuer: "native",
     });
 
-    // Attacker replays the spent token after the rotation grace window has
-    // closed — inside the window it would converge instead (see tests below).
     await t.run(async (ctx) => {
       const spent = await ctx.db
         .query("authRefreshTokens")
@@ -438,7 +540,6 @@ describe("native sessions", () => {
       ]),
     );
 
-    // The legitimate rotated-in session and token are dead too.
     expect(liveSession?.revokedAt).toBeDefined();
     expect(liveRefresh?.revokedAt).toBeDefined();
     expect(noSession3).toBeNull();
@@ -460,8 +561,6 @@ describe("native sessions", () => {
     const identityDocId = await insertIdentity(t, userId);
     const now = Date.now();
 
-    // A root session plus two converged siblings — the shape convergeSession
-    // mints when concurrent tabs race one sign-in lineage.
     for (const [sessionId, token, hash] of [
       ["s-1", "t-1", "h-1"],
       ["s-2", "t-2", "h-2"],
@@ -478,7 +577,6 @@ describe("native sessions", () => {
         refreshTokenExpiresAt: now + 1_000_000,
       });
     }
-    // A separate device signs in independently — its own family survives.
     await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
       sessionId: "other",
       userId,
@@ -490,7 +588,6 @@ describe("native sessions", () => {
       refreshTokenExpiresAt: now + 1_000_000,
     });
 
-    // Signing out via any member kills the whole lineage.
     const revoked = await t.mutation(api.native.sessions.revokeSessionFamilyBySession, {
       sessionId: "s-2",
     });
@@ -522,8 +619,6 @@ describe("native sessions", () => {
     const userId = await insertUser(t);
     const now = Date.now();
 
-    // Pre-family-tracking rows: session has no familyId, its refresh token is
-    // reachable only through by_session.
     await t.run(async (ctx) => {
       await ctx.db.insert("authSessions", {
         sessionId: "legacy-1",
@@ -569,8 +664,6 @@ describe("native sessions", () => {
     await insertIdentity(t, userId);
     const now = Date.now();
 
-    // Oldest rows first: a family that has rotated past one page leaves the
-    // live session and refresh token beyond the first 1,000 index rows.
     await t.run(async (ctx) => {
       for (let i = 0; i < 1100; i++) {
         await ctx.db.insert("authRefreshTokens", {
@@ -579,7 +672,8 @@ describe("native sessions", () => {
           userId,
           familyId: "fam-1",
           expiresAt: now + 1_000_000,
-          revokedAt: now - 1,
+          revokedAt: now - 60_000,
+          rotatedAt: now - 60_000,
           createdAt: now,
           updatedAt: now,
         });
@@ -639,7 +733,6 @@ describe("native sessions", () => {
     const identityDocId = await insertIdentity(t, userId);
     const now = Date.now();
 
-    // A second, unrelated sign-in (different device / family).
     await t.mutation(api.native.sessions.createSessionAndRefreshToken, {
       sessionId: "other-session",
       userId,
@@ -669,7 +762,6 @@ describe("native sessions", () => {
       provider: "password",
       issuer: "native",
     });
-    // Age the spent token past the grace window so the replay revokes.
     await t.run(async (ctx) => {
       const spent = await ctx.db
         .query("authRefreshTokens")
@@ -723,7 +815,6 @@ describe("native sessions", () => {
       issuer: "native",
     });
 
-    // The concurrent loser presents the same predecessor token.
     const loser = await t.mutation(api.native.sessions.rotateSession, {
       oldRefreshTokenHash: "hash-1",
       newSessionId: "session-3",
@@ -736,7 +827,6 @@ describe("native sessions", () => {
     });
     expect(loser).toBe("converge");
 
-    // The family must be intact: no mint happened yet, nothing revoked.
     const [winner, winnerToken, noSession3] = await t.run(async (ctx) =>
       Promise.all([
         ctx.db
@@ -852,8 +942,6 @@ describe("native sessions", () => {
       issuer: "native",
     });
 
-    // Simulate a predecessor that already converged the maximum number of
-    // parallel losers.
     await t.run(async (ctx) => {
       const spent = await ctx.db
         .query("authRefreshTokens")
@@ -872,7 +960,6 @@ describe("native sessions", () => {
     });
     expect(overCap).toBeNull();
 
-    // Fail-soft: the cap must not take down the legitimate family.
     const winner = await t.run(async (ctx) =>
       ctx.db
         .query("authSessions")
@@ -908,8 +995,6 @@ describe("native sessions", () => {
       issuer: "native",
     });
 
-    // Sign-out lands inside the grace window: every family session dies while
-    // the predecessor's rotatedAt is still fresh.
     await t.run(async (ctx) => {
       const winner = await ctx.db
         .query("authSessions")
@@ -928,7 +1013,6 @@ describe("native sessions", () => {
     });
     expect(result).toBeNull();
 
-    // No resurrection: session-3 must not exist.
     const noSession3 = await t.run(async (ctx) =>
       ctx.db
         .query("authSessions")
@@ -964,8 +1048,6 @@ describe("native sessions", () => {
       issuer: "native",
     });
 
-    // A family that already holds 10 live sessions (the winner plus 9
-    // siblings) is at the bound — no more converge mints.
     await t.run(async (ctx) => {
       for (let i = 0; i < 9; i++) {
         await ctx.db.insert("authSessions", {
@@ -1047,7 +1129,7 @@ describe("native sessions", () => {
     });
   });
 
-  it("convergeSession revokes the family for a token revoked without rotation", async () => {
+  it("convergeSession rejects a token revoked without rotation without nuking the family", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
     const identityDocId = await insertIdentity(t, userId);
@@ -1062,7 +1144,6 @@ describe("native sessions", () => {
       refreshTokenHash: "hash-1",
       refreshTokenExpiresAt: now + 1_000_000,
     });
-    // Sign-out / manual revocation — never rotated through.
     await t.run(async (ctx) => {
       const token = await ctx.db
         .query("authRefreshTokens")
@@ -1081,7 +1162,7 @@ describe("native sessions", () => {
     });
     expect(result).toBeNull();
 
-    const [session, refresh] = await t.run(async (ctx) =>
+    const [session, refresh, minted, auditEvents] = await t.run(async (ctx) =>
       Promise.all([
         ctx.db
           .query("authSessions")
@@ -1091,16 +1172,22 @@ describe("native sessions", () => {
           .query("authRefreshTokens")
           .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
           .unique(),
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "session-3"))
+          .unique(),
+        ctx.db.query("auth_audit_events").take(10),
       ]),
     );
-    expect(session?.revokedAt).toBeDefined();
+    expect(session?.revokedAt).toBeUndefined();
     expect(refresh?.revokedAt).toBeDefined();
+    expect(minted).toBeNull();
+    expect(auditEvents).toHaveLength(0);
   });
 
   it("rotateSession resolves identity from the session JWT for non-password providers", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
-    // OAuth-style identity — provider is the OAuth provider id, not "password".
     const oauthDocId = await insertIdentity(t, userId, {
       identityId: "github_subject_1",
       provider: "github",
@@ -1109,14 +1196,9 @@ describe("native sessions", () => {
     });
     const now = Date.now();
 
-    // The session token is a JWT whose payload carries the identity doc id —
-    // decode (not verify) is enough to resolve which identity minted it.
     const payload = Buffer.from(JSON.stringify({ identityId: oauthDocId })).toString("base64url");
     const sessionJwt = `header.${payload}.signature`;
 
-    // The row deliberately lacks the identityId column (a pre-column session):
-    // resolution must fall through to the JWT claim. Direct inserts, since
-    // createSessionAndRefreshToken now requires the column on new mints.
     await t.run(async (ctx) => {
       await ctx.db.insert("authSessions", {
         sessionId: "session-1",
@@ -1154,10 +1236,6 @@ describe("native sessions", () => {
     const identityDocId = await insertIdentity(t, userId);
     const now = Date.now();
 
-    // Neither the column nor a JWT claim — the provider/issuer args must NOT
-    // be used to guess an identity (a non-password session would silently
-    // bind the password identity to the rotated token). Direct inserts, since
-    // createSessionAndRefreshToken now requires the column on new mints.
     await t.run(async (ctx) => {
       await ctx.db.insert("authSessions", {
         sessionId: "session-1",
@@ -1189,8 +1267,6 @@ describe("native sessions", () => {
     });
     expect(result).toBeNull();
 
-    // And the identity that does exist must not have been touched — no
-    // session minted against it either.
     const [session2, identity] = await t.run(async (ctx) =>
       Promise.all([
         ctx.db
@@ -1215,7 +1291,6 @@ describe("native sessions", () => {
     });
     const now = Date.now();
 
-    // Pre-column predecessor: no identityId column, JWT claim only.
     const payload = Buffer.from(JSON.stringify({ identityId: oauthDocId })).toString("base64url");
     const sessionJwt = `header.${payload}.signature`;
     await t.run(async (ctx) => {
@@ -1237,7 +1312,6 @@ describe("native sessions", () => {
       });
     });
 
-    // Winning rotation resolves the claim and mints the live family member.
     const rotated = await t.mutation(api.native.sessions.rotateSession, {
       oldRefreshTokenHash: "hash-1",
       newSessionId: "session-2",
@@ -1260,7 +1334,6 @@ describe("native sessions", () => {
     });
     expect(result).not.toBeNull();
 
-    // The sibling carries the resolved doc id — not the raw claim string.
     const sibling = await t.run(async (ctx) =>
       ctx.db
         .query("authSessions")
@@ -1276,9 +1349,6 @@ describe("native sessions", () => {
     await insertIdentity(t, userId);
     const now = Date.now();
 
-    // All grace conditions pass — rotatedAt fresh, a live family member,
-    // under every cap — but the predecessor session has neither column nor
-    // claim. The mutation must refuse rather than write identityId: undefined.
     await t.run(async (ctx) => {
       await ctx.db.insert("authSessions", {
         sessionId: "session-1",
@@ -1334,14 +1404,10 @@ describe("native sessions", () => {
       ]),
     );
     expect(noSession3).toBeNull();
-    // The refusal must not consume a redemption — the predecessor stays
-    // convergable for the legitimate parallel request.
     expect(predecessor?.graceRedemptions ?? 0).toBe(0);
   });
 
   it("propagates impersonatedBy through rotation and convergence", async () => {
-    // An impersonated session must not silently lose impersonation on
-    // refresh — getImpersonationState reads it off the session row.
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
     const adminId = await t.run(async (ctx) =>
@@ -1401,7 +1467,6 @@ describe("native sessions", () => {
     );
     expect(rotatedSession?.impersonatedBy).toBe(adminId);
 
-    // A converged sibling of the impersonated session keeps it too.
     const converged = await t.mutation(api.native.sessions.convergeSession, {
       predecessorRefreshTokenHash: "hash-1",
       newSessionId: "session-3",
@@ -1422,8 +1487,6 @@ describe("native sessions", () => {
   });
 
   it("refuses convergence when the family exceeds the scan budget", async () => {
-    // A truncated family scan cannot prove liveness or the live-session cap
-    // exactly — the converge must refuse rather than mint on an undercount.
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
     const now = Date.now();
@@ -1440,8 +1503,6 @@ describe("native sessions", () => {
         createdAt: now,
         updatedAt: now,
       });
-      // One live member keeps the family alive; the remaining rows push the
-      // family past the scan budget so the count cannot be proven exact.
       for (let i = 0; i < 2000; i++) {
         await ctx.db.insert("authSessions", {
           sessionId: `dead-${i}`,
@@ -1487,9 +1548,6 @@ describe("native sessions", () => {
   });
 
   it("returns rotated refresh token rows through the public query", async () => {
-    // Rows carrying familyId/rotatedAt/graceRedemptions must survive the
-    // query's returns validator — a real deployment enforces it even though
-    // action-level mocks dispatch to the raw handler.
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
     const now = Date.now();

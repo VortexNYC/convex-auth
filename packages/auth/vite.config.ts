@@ -3,11 +3,6 @@ import fsSync from "node:fs";
 import path from "node:path";
 import { defineConfig } from "vite-plus";
 
-// "use client" / "use server" are module-level directives in source, but
-// bundling drops them once a directive module lands in a shared chunk —
-// Next.js then treats client components (or server actions) as plain server
-// modules and the build fails. Scan the source tree once so each emitted
-// chunk can re-declare the directive its modules carry.
 const moduleDirectives = new Map<string, string>();
 for (const file of fsSync.readdirSync("src", {
   recursive: true,
@@ -22,12 +17,9 @@ for (const file of fsSync.readdirSync("src", {
 }
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-// Every module carrying a "use server" prologue — drives the chunk pin below
-// so new server-action files are captured automatically.
 const serverActionIds = [...moduleDirectives]
   .filter(([, directive]) => directive === "use server")
   .map(([id]) => id);
-// `/$^/` never matches — an empty id list must pin nothing, not everything.
 const serverActionPattern =
   serverActionIds.length > 0 ? new RegExp(serverActionIds.map(escapeRe).join("|")) : /$^/;
 
@@ -35,8 +27,6 @@ export default defineConfig({
   test: {
     server: {
       deps: {
-        // The package's dist imports `argon2_wasm_bg.wasm` directly; it must be
-        // transformed by the wasm plugin below instead of externalized to Node.
         inline: ["argon2id-wasm"],
       },
     },
@@ -51,9 +41,6 @@ export default defineConfig({
           return null;
         }
         const bytes = await fs.readFile(path);
-        // Mirrors the Convex bundler's wasmPlugin exactly: default-export a
-        // compiled WebAssembly.Module so wasm-bindgen init takes the same
-        // code path under vitest as it does in production.
         return `export default new WebAssembly.Module(new Uint8Array(Buffer.from(${JSON.stringify(bytes.toString("base64"))}, "base64")));`;
       },
     },
@@ -78,6 +65,8 @@ export default defineConfig({
         "react-native-passkeys": "src/react-native/usePasskeys.ts",
         nextjs: "src/nextjs/index.tsx",
         "nextjs-server": "src/nextjs/server/index.tsx",
+        "tanstack-start": "src/tanstack-start/index.ts",
+        "tanstack-start-server": "src/tanstack-start/server/index.ts",
         ui: "src/ui.entry.ts",
         mcp: "src/mcp.ts",
         "component/convex.config": "src/component/convex.config.ts",
@@ -112,11 +101,6 @@ export default defineConfig({
       outputOptions: {
         advancedChunks: {
           groups: [
-            // A chunk carries exactly one directive — pin every "use server"
-            // module into the action chunk so it can never be bundled into a
-            // "use client" chunk (where Next would reject or mis-scope it).
-            // Co-chunking action modules is fine: all exports of a
-            // "use server" module are actions by definition.
             {
               name: "server-actions",
               test: serverActionPattern,

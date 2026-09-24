@@ -20,6 +20,7 @@ import {
 import { mintToken } from "./jwt.js";
 import { generateVerificationToken, hashToken } from "./tokens.js";
 import { encryptOAuthTokens } from "./oauthCrypto.js";
+import { isAllowedRedirectUrl, redirectBaseOrigin } from "./callback.js";
 import type { NativeOAuthComponentHandle } from "./types.js";
 
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -65,6 +66,11 @@ export type NativeOAuthSignInArgs = {
   link?: boolean;
   /** Untrusted client data preserved through the OAuth redirect. */
   additionalData?: Record<string, unknown>;
+  /**
+   * Landing verifier from the initiating browser's cookie. Bound into the
+   * signed state so the callback can echo it onto the session landing URL.
+   */
+  landingVerifier?: string;
 };
 
 export type NativeOAuthCallbackArgs = {
@@ -73,6 +79,12 @@ export type NativeOAuthCallbackArgs = {
   state: string;
   /** User to link this OAuth account to when the sign-in state was initiated with `link: true`. */
   linkingUserId?: string;
+  /**
+   * Landing verifier the completing browser presented (injected from its
+   * cookie by the session proxy). When provided, it must equal the verifier
+   * bound at initiation — a mismatch means the flow crossed browsers.
+   */
+  landingVerifier?: string;
 };
 
 export type NativeOAuthCallbackResult = {
@@ -83,6 +95,8 @@ export type NativeOAuthCallbackResult = {
   sessionId: string;
   redirectUrl: string;
   createdUser: boolean;
+  /** Echoed verifier — the site callback appends it to the landing URL. */
+  landingVerifier?: string;
 };
 
 export type NativeOAuthCallbackErrorResult = {
@@ -121,7 +135,21 @@ function getRedirectURI(config: NativeOAuthConfig, provider: NativeOAuthProvider
 export async function handleSignIn(
   config: NativeOAuthConfig,
   args: NativeOAuthSignInArgs,
+  options?: { baseOrigin?: string; trustedOrigins?: string[] },
 ): Promise<{ url: string }> {
+  const baseOrigin = options?.baseOrigin ?? redirectBaseOrigin();
+  const trustedOrigins = options?.trustedOrigins ?? [
+    ...(config.trustedOrigins ?? []),
+    ...(process.env.SITE_URL ? [process.env.SITE_URL] : []),
+    ...(process.env.CONVEX_SITE_URL ? [process.env.CONVEX_SITE_URL] : []),
+  ];
+  for (const redirectUrl of [args.callbackURL, args.errorURL, args.newUserURL]) {
+    if (redirectUrl && !isAllowedRedirectUrl(redirectUrl, baseOrigin, trustedOrigins)) {
+      throw new Error(
+        `Untrusted OAuth redirect URL: ${redirectUrl}. Add its origin to oauth.trustedOrigins.`,
+      );
+    }
+  }
   const provider = getProvider(config, args.provider);
   const redirectURI = getRedirectURI(config, provider);
   const codeVerifier = await generateCodeVerifier();
@@ -134,6 +162,7 @@ export async function handleSignIn(
     requestSignUp: args.requestSignUp,
     link: args.link,
     additionalData: args.additionalData,
+    landingVerifier: args.landingVerifier || undefined,
   });
   const url = await provider.createAuthorizationURL({
     state,
@@ -161,6 +190,7 @@ export async function handleCallback<DataModel extends GenericDataModel>(
   component: NativeOAuthComponentHandle,
   config: NativeOAuthConfig,
   args: NativeOAuthCallbackArgs,
+  options?: { boundaryEnforcesVerifier?: boolean },
 ): Promise<NativeOAuthCallbackResult | NativeOAuthCallbackErrorResult> {
   let statePayload: OAuthStatePayload;
   try {
@@ -171,6 +201,16 @@ export async function handleCallback<DataModel extends GenericDataModel>(
 
   if (statePayload.provider !== args.provider) {
     return { error: "provider_mismatch", redirectUrl: resolveErrorURL(statePayload) };
+  }
+
+  if (
+    options?.boundaryEnforcesVerifier !== true &&
+    statePayload.landingVerifier !== (args.landingVerifier || undefined)
+  ) {
+    return {
+      error: "landing_verifier_mismatch",
+      redirectUrl: resolveErrorURL(statePayload),
+    };
   }
 
   const provider = getProvider(config, args.provider);
@@ -359,5 +399,6 @@ export async function handleCallback<DataModel extends GenericDataModel>(
     sessionId,
     redirectUrl,
     createdUser: identityResult.createdUser,
+    landingVerifier: statePayload.landingVerifier,
   };
 }

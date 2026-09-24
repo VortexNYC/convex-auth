@@ -1,5 +1,13 @@
 import { cookies as nextCookies, headers as nextHeaders } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  isLocalHost as isLocalHostShared,
+  LANDING_VERIFIER_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  TOKEN_COOKIE,
+  TRUSTED_DEVICE_COOKIE,
+  TWO_FACTOR_PENDING_COOKIE,
+} from "../../ssr/cookies.js";
 
 /**
  * Before Next.js 15 introduced Async Request APIs
@@ -13,14 +21,15 @@ type RememberNext14<F> = F extends (...args: infer Args) => infer Return
 const cookies = nextCookies as RememberNext14<typeof nextCookies>;
 const headers = nextHeaders as RememberNext14<typeof nextHeaders>;
 
-export const TOKEN_COOKIE = "__convexAuthToken";
-export const REFRESH_TOKEN_COOKIE = "__convexAuthRefreshToken";
-export const TWO_FACTOR_PENDING_COOKIE = "__convexAuthTwoFactorPending";
-export const TRUSTED_DEVICE_COOKIE = "__convexAuthTrustedDevice";
+export {
+  LANDING_VERIFIER_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  TOKEN_COOKIE,
+  TRUSTED_DEVICE_COOKIE,
+  TWO_FACTOR_PENDING_COOKIE,
+} from "../../ssr/cookies.js";
 
 export async function getRequestCookies() {
-  // maxAge doesn't matter for request cookies since they're only relevant for
-  // the length of the request
   return getCookieStore(await headers(), await cookies(), {
     maxAge: null,
   });
@@ -44,10 +53,22 @@ export type AuthCookieStore = {
   refreshToken: string | null;
   readonly twoFactorPending: string | null;
   readonly trustedDevice: string | null;
+  /**
+   * The landing verifier — a CSRF binding nonce, not a credential. It is
+   * non-HttpOnly (the client reads it to bind flow initiation) and is never
+   * cleared by `setValue`-based auth-cookie writes.
+   */
+  readonly landingVerifier: string | null;
   setTwoFactorPending(value: string | null, maxAgeMs?: number): void;
   setTrustedDevice(value: string | null, maxAgeMs?: number): void;
 };
 
+/**
+ * Cookie store over a request/response cookie jar. `NextResponse["cookies"]`
+ * supports `delete`, but `NextRequest["cookies"]` does not — on request jars
+ * a clear is written as an expired empty cookie instead (Next.js issue 56632,
+ * https://github.com/vercel/next.js/issues/56632).
+ */
 function getCookieStore(
   requestHeaders: Headers,
   responseCookies: NextResponse["cookies"] | NextRequest["cookies"],
@@ -61,18 +82,16 @@ function getCookieStore(
   const refreshTokenName = prefix + REFRESH_TOKEN_COOKIE;
   const twoFactorPendingName = prefix + TWO_FACTOR_PENDING_COOKIE;
   const trustedDeviceName = prefix + TRUSTED_DEVICE_COOKIE;
+  const landingVerifierName = prefix + LANDING_VERIFIER_COOKIE;
   function getValue(name: string) {
     return responseCookies.get(name)?.value ?? null;
   }
   const cookieOptions = getCookieOptions(isLocalhost, cookieConfig);
   function setValue(name: string, value: string | null, maxAgeMs?: number) {
     if (value === null) {
-      // Only request cookies have a `size` property
       if ("size" in responseCookies) {
         responseCookies.delete(name);
       } else {
-        // See https://github.com/vercel/next.js/issues/56632
-        // for why .delete({}) doesn't work:
         responseCookies.set(name, "", {
           ...cookieOptions,
           maxAge: undefined,
@@ -111,12 +130,33 @@ function getCookieStore(
     setTrustedDevice(value, maxAgeMs) {
       setValue(trustedDeviceName, value, maxAgeMs);
     },
+    get landingVerifier() {
+      return getValue(landingVerifierName) || null;
+    },
   };
 }
 
+/**
+ * Write the landing verifier on a response. Non-HttpOnly — the client reads
+ * it to bind OAuth/magic-link initiation to this browser — session-scoped,
+ * and `Secure` everywhere except localhost.
+ */
+export function setLandingVerifierCookie(
+  response: NextResponse,
+  value: string,
+  requestHeaders: Headers,
+) {
+  const isLocalhost = isLocalHost(requestHeaders.get("Host") ?? "");
+  const prefix = isLocalhost ? "" : "__Host-";
+  response.cookies.set(prefix + LANDING_VERIFIER_COOKIE, value, {
+    httpOnly: false,
+    secure: !isLocalhost,
+    sameSite: "lax",
+    path: "/",
+  });
+}
+
 function getCookieOptions(isLocalhost: boolean, cookieConfig: { maxAge: number | null }) {
-  // Safari does not send cookies with `secure: true` on http:// domains
-  // including localhost, so set `secure: false` there.
   return {
     secure: !isLocalhost,
     httpOnly: true,
@@ -126,16 +166,4 @@ function getCookieOptions(isLocalhost: boolean, cookieConfig: { maxAge: number |
   } as const;
 }
 
-function isLocalHost(host: string) {
-  // IPv6 hosts arrive bracketed (`[::1]:3000`); strip brackets before the
-  // port split so the hostname survives.
-  const hostname = host.startsWith("[")
-    ? host.slice(1, host.indexOf("]"))
-    : (host.split(":")[0] ?? "");
-  return (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "::1" ||
-    hostname.endsWith(".localhost")
-  );
-}
+const isLocalHost = isLocalHostShared;

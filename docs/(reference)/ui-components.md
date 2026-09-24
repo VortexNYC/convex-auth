@@ -2038,3 +2038,22 @@ hidden (no way to know which email to resend to). |
 | `exhaustedDeliveries` | `Partial<ConvexWebhookDeliveryCopy>`     |             |
 | `processQueueLabel`   | `string`                                 |             |
 | `secretTitle`         | `string`                                 |             |
+
+## Migrating from Clerk or WorkOS
+
+| convex-auth component                                               | Clerk equivalent                                  | WorkOS equivalent                 |
+| ------------------------------------------------------------------- | ------------------------------------------------- | --------------------------------- |
+| `ConvexAuthProvider`                                                | `ClerkProvider`                                   | — (AuthKit is hosted)             |
+| `ConvexAuthSignInPage` / `ConvexAuthSignUpPage`                     | `SignIn` / `SignUp`                               | AuthKit hosted flow               |
+| `ConvexAuthSignInButton` / `SignUpButton` / `SignOutButton`         | `SignInButton` / `SignUpButton` / `SignOutButton` | —                                 |
+| `AuthSignedInBoundary` / `AuthSignedOutBoundary`                    | `SignedIn` / `SignedOut`                          | —                                 |
+| `ConvexUserButton`                                                  | `UserButton`                                      | `UsersManagement` widget (hosted) |
+| `ConvexUserProfile`                                                 | `UserProfile`                                     | `UserProfile` widget              |
+| `ConvexOrganizationSwitcher`                                        | `OrganizationSwitcher`                            | —                                 |
+| `ConvexOrganizationList`                                            | `OrganizationList`                                | —                                 |
+| `ConvexCreateOrganization`                                          | `CreateOrganization`                              | —                                 |
+| `ConvexOrganizationProfile`                                         | `OrganizationProfile`                             | —                                 |
+| `ConvexOrganizationMembersSurface` / `ConvexOrganizationMemberList` | `OrganizationProfile` members view                | Admin Portal users table          |
+| `ConvexOrganizationInviteForm`                                      | `OrganizationProfile` invite tab                  | —                                 |
+
+No Clerk or WorkOS equivalents exist for `ConvexApiKeyCreateForm` / `ConvexApiKeyList`, the `ConvexWebhook*` delivery surfaces, `ConvexSecurityAuditList`, `ConvexOrganizationRoleManagerSurface` (custom-role RBAC editor), or the standalone `ConvexEnableTwoFactorForm` / `ConvexVerifyTwoFactorForm` / `ConvexChangeEmailForm` — those are convex-auth capabilities with no drop-in counterpart to migrate.

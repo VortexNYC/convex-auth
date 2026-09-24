@@ -56,7 +56,6 @@ const actions = {
 };
 
 const options = { actions } as never;
-// NextFetchEvent has no public constructor; the middleware only forwards it.
 const event = {} as NextFetchEvent;
 
 function makeJwt(claims: { exp?: number; iat?: number }): string {
@@ -84,7 +83,7 @@ describe("convexAuthNextjsMiddleware", () => {
       headers: { host: "app.example.com" },
     });
     const response = await middleware(request, event);
-    expect(response?.status).toBe(405); // GET hits the proxy → method rejected
+    expect(response?.status).toBe(405);
   });
 
   it("proxies the api route on POST", async () => {
@@ -113,15 +112,15 @@ describe("convexAuthNextjsMiddleware", () => {
     });
     const response = await middleware(request, event);
     expect(response?.status).toBe(405);
-    // A non-matching path passes through untouched
     const other = await middleware(getRequest("/api/auth", { accept: "text/html" }), event);
     expect(other?.headers.get("x-middleware-next")).toBe("1");
   });
 
   it("lands the session triple into cookies via redirect", async () => {
     const middleware = convexAuthNextjsMiddleware(options);
-    const request = getRequest("/app?token=T&refreshToken=R&sessionId=S", {
+    const request = getRequest("/app?token=T&refreshToken=R&sessionId=S&landingVerifier=lv-1", {
       accept: "text/html",
+      cookie: "__Host-__convexAuthLandingVerifier=lv-1",
     });
     const response = await middleware(request, event);
     expect(response?.status).toBe(307);
@@ -129,6 +128,33 @@ describe("convexAuthNextjsMiddleware", () => {
     expect(
       response?.headers.getSetCookie().find((h) => h.startsWith("__Host-__convexAuthToken=T")),
     ).toBeDefined();
+  });
+
+  it("rejects the session triple when the landing verifier mismatches", async () => {
+    const middleware = convexAuthNextjsMiddleware(options);
+    const request = getRequest("/app?token=T&refreshToken=R&sessionId=S&landingVerifier=lv-x", {
+      accept: "text/html",
+      cookie: "__Host-__convexAuthLandingVerifier=lv-1",
+    });
+    const response = await middleware(request, event);
+    expect(response?.status).toBe(307);
+    expect(response?.headers.get("Location")).toBe(
+      "https://app.example.com/app?error=landing_verifier_mismatch",
+    );
+    expect(
+      response?.headers.getSetCookie().find((h) => h.startsWith("__Host-__convexAuthToken=")),
+    ).toBeUndefined();
+  });
+
+  it("mints a landing verifier cookie on same-origin navigations that lack one", async () => {
+    const middleware = convexAuthNextjsMiddleware(options);
+    const response = await middleware(getRequest("/dashboard", { accept: "text/html" }), event);
+    const verifier = response?.headers
+      .getSetCookie()
+      .find((h) => h.startsWith("__Host-__convexAuthLandingVerifier="));
+    expect(verifier).toBeDefined();
+    expect(verifier).toContain("Secure");
+    expect(verifier).not.toContain("HttpOnly");
   });
 
   it("passes through a plain authenticated-free request", async () => {
@@ -185,8 +211,6 @@ describe("convexAuthNextjsMiddleware", () => {
     const request = getRequest("/dashboard", {
       cookie: `__Host-__convexAuthToken=${makeJwt({ iat: soon - 600, exp: soon })}; __Host-__convexAuthRefreshToken=old-refresh`,
     });
-    // getRefreshedTokens reads the next/headers jar — keep it in sync with
-    // the request cookie header.
     mocks.jar = mocks.makeJar({
       "__Host-__convexAuthToken": makeJwt({ iat: soon - 600, exp: soon }),
       "__Host-__convexAuthRefreshToken": "old-refresh",
@@ -197,7 +221,6 @@ describe("convexAuthNextjsMiddleware", () => {
     expect(
       setCookies.find((h) => h.startsWith("__Host-__convexAuthRefreshToken=rotated-refresh")),
     ).toBeDefined();
-    // And the downstream handler sees the rotated pair
     expect(request.cookies.get("__Host-__convexAuthToken")?.value).toBe("rotated");
     expect(request.cookies.get("__Host-__convexAuthRefreshToken")?.value).toBe("rotated-refresh");
   });
@@ -231,11 +254,9 @@ describe("convexAuthNextjsMiddleware", () => {
       cookie: "__Host-__convexAuthToken=live-tok",
     });
     await middleware(request, event);
-    // Two calls, one query — memoized on the request closure.
     expect(fetchQueryMock).toHaveBeenCalledTimes(1);
 
     await middleware(request, event);
-    // A new request re-verifies — no RSC cache is shared into middleware.
     expect(fetchQueryMock).toHaveBeenCalledTimes(2);
   });
 
@@ -258,6 +279,36 @@ describe("convexAuthNextjsMiddleware", () => {
     const response = await middleware(request, event);
     expect(response?.status).toBe(201);
     expect(await response?.json()).toEqual({ preserved: true });
+    expect(
+      response?.headers
+        .getSetCookie()
+        .find((h) => h.startsWith("__Host-__convexAuthToken=rotated")),
+    ).toBeDefined();
+  });
+
+  it("preserves a custom handler's plain Response body when porting cookies", async () => {
+    const soon = Math.floor(Date.now() / 1000) + 30;
+    fetchActionMock.mockResolvedValue({
+      token: "rotated",
+      refreshToken: "rotated-refresh",
+    });
+    const middleware = convexAuthNextjsMiddleware(async () => {
+      return new Response("plain-body", {
+        status: 202,
+        headers: { "x-custom": "kept" },
+      });
+    }, options);
+    const request = getRequest("/dashboard", {
+      cookie: `__Host-__convexAuthToken=${makeJwt({ iat: soon - 600, exp: soon })}; __Host-__convexAuthRefreshToken=old`,
+    });
+    mocks.jar = mocks.makeJar({
+      "__Host-__convexAuthToken": makeJwt({ iat: soon - 600, exp: soon }),
+      "__Host-__convexAuthRefreshToken": "old",
+    });
+    const response = await middleware(request, event);
+    expect(response?.status).toBe(202);
+    expect(await response?.text()).toBe("plain-body");
+    expect(response?.headers.get("x-custom")).toBe("kept");
     expect(
       response?.headers
         .getSetCookie()
@@ -358,7 +409,6 @@ describe("nextjsMiddlewareRedirect", () => {
     expect(location.origin).toBe("https://app.example.com");
     expect(location.pathname).toBe("/login");
     expect(location.searchParams.get("next")).toBe("/dashboard");
-    // The original query is replaced, not merged
     expect(location.searchParams.get("x")).toBeNull();
   });
 });

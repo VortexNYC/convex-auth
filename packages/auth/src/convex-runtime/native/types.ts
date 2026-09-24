@@ -112,6 +112,16 @@ export type NativeAuthSession = {
   twoFactorCookieMaxAgeMs?: number;
   trustDeviceToken?: string;
   trustDeviceMaxAgeMs?: number;
+  /**
+   * The browser-binding nonce echoed back on OAuth/magic-link session
+   * results so the verify/callback route can carry it onto the landing URL.
+   */
+  landingVerifier?: string;
+  /**
+   * Set when the sign-in created a brand-new user — lets callback routes
+   * honor `newUserCallbackURL`-style destinations.
+   */
+  createdUser?: boolean;
 };
 
 export type NativeVerificationCodeDoc = {
@@ -459,7 +469,7 @@ export type NativeEmailAndPasswordComponentHandle = {
       revokeSessionsForUser: FunctionReference<
         "mutation",
         "public" | "internal",
-        { userId: string; excludeSessionId?: string },
+        { userId: string; excludeSessionId?: string; excludeFamilyId?: string },
         number,
         string
       >;

@@ -13,8 +13,6 @@ const mockClient = {
 
 vi.mock("convex/react", () => ({
   useConvex: () => mockClient,
-  // Stable per-ref identity — the real useAction memoizes; a fresh vi.fn()
-  // per render would retrigger the provider's effects forever.
   useAction: (ref: unknown) => {
     const key = ref as string;
     if (!actionMocks.has(key)) {
@@ -50,6 +48,8 @@ const baseActions = {
   updateSession: ref("updateSession"),
   verifySession: ref("verifySession"),
   twoFactorVerifyTOTP: ref("twoFactorVerifyTOTP"),
+  signInMagicLink: ref("signInMagicLink"),
+  signInWithRedirect: ref("signInWithRedirect"),
 } as NativeAuthActions;
 
 const sessionResult = {
@@ -99,7 +99,9 @@ beforeEach(() => {
   actionMocks.clear();
   fetchMock.mockReset();
   mockClient.setAuth.mockClear();
+  mockClient.action.mockClear();
   window.localStorage.clear();
+  document.cookie = "__convexAuthLandingVerifier=; Max-Age=0; Path=/";
   latestActions = null;
 });
 
@@ -116,7 +118,6 @@ describe("ConvexAuthProvider cookie mode", () => {
     await waitFor(() => expect(latestActions?.token).toBe("server-token"));
     expect(latestActions?.sessionId).toBe("server-session");
     expect(latestActions?.isAuthenticated).toBe(true);
-    // No browser persistence in cookie mode
     expect(window.localStorage.length).toBe(0);
     expect(latestActions?.refreshToken).toBeNull();
   });
@@ -130,8 +131,6 @@ describe("ConvexAuthProvider cookie mode", () => {
     renderProvider({ storageMode: "cookies" });
     await waitFor(() => expect(latestActions).not.toBeNull());
     expect(latestActions?.token).toBeNull();
-    // The URL is left for the middleware to strip — the client never
-    // touches it in cookie mode.
     expect(window.location.search).toContain("token=url-token");
     window.history.replaceState(null, "", "/");
   });
@@ -152,10 +151,8 @@ describe("ConvexAuthProvider cookie mode", () => {
     expect(call.credentials).toBe("same-origin");
     expect(latestActions?.token).toBe("minted-token");
     expect(latestActions?.sessionId).toBe("minted-session");
-    // The proxy strips refreshToken from the JSON body; state never holds it.
     expect(latestActions?.refreshToken).toBeNull();
     expect(window.localStorage.length).toBe(0);
-    // The direct action was never invoked
     expect(actionMocks.get("signIn")).not.toHaveBeenCalled();
   });
 
@@ -209,6 +206,46 @@ describe("ConvexAuthProvider cookie mode", () => {
     expect(latestActions?.isAuthenticated).toBe(false);
   });
 
+  it("attaches the landing-verifier cookie value to magic-link initiation", async () => {
+    renderProvider({ storageMode: "cookies" });
+    await waitFor(() => expect(latestActions).not.toBeNull());
+
+    await act(() => latestActions!.signInWithMagicLink({ email: "a@b.c" } as never));
+
+    const call = actionMocks.get("signInMagicLink")!.mock.calls[0][0] as Record<string, unknown>;
+    expect(call.email).toBe("a@b.c");
+    const verifier = call.landingVerifier as string;
+    expect(verifier).toBeTruthy();
+    expect(document.cookie).toContain(`__convexAuthLandingVerifier=${verifier}`);
+  });
+
+  it("reuses the existing verifier cookie instead of minting a new one", async () => {
+    document.cookie = "__convexAuthLandingVerifier=lv-existing; Path=/; SameSite=Lax";
+    renderProvider({ storageMode: "cookies" });
+    await waitFor(() => expect(latestActions).not.toBeNull());
+
+    mockClient.action.mockResolvedValue({ url: "https://provider.example/authorize" });
+    await act(() => latestActions!.signInWithRedirect({ provider: "github" } as never));
+
+    expect(mockClient.action).toHaveBeenLastCalledWith(
+      "signInWithRedirect",
+      expect.objectContaining({ provider: "github", landingVerifier: "lv-existing" }),
+    );
+  });
+
+  it("attaches the verifier in token mode too — browser landings are bound", async () => {
+    renderProvider({ storageMode: "localStorage" });
+    await waitFor(() => expect(latestActions).not.toBeNull());
+
+    mockClient.action.mockResolvedValue({ url: "https://provider.example/authorize" });
+    await act(() => latestActions!.signInWithRedirect({ provider: "github" } as never));
+
+    const args = mockClient.action.mock.calls.at(-1)![1] as Record<string, unknown>;
+    const verifier = args.landingVerifier as string;
+    expect(verifier).toBeTruthy();
+    expect(document.cookie).toContain(`__convexAuthLandingVerifier=${verifier}`);
+  });
+
   it("fires onAuthChange on transitions, not on mount", async () => {
     const onAuthChange = vi.fn();
     proxyOk(sessionResult);
@@ -221,9 +258,6 @@ describe("ConvexAuthProvider cookie mode", () => {
     expect(onAuthChange).toHaveBeenCalledTimes(1);
   });
 
-  // `lastAppliedServerStateFetch` is module-scoped — the tests below use
-  // strictly increasing fixed timestamps so the watermark ordering is
-  // deterministic regardless of wall-clock timing.
   it("re-seeds from a newer serverState after a server-side rotation", async () => {
     const base = 1_700_000_000_000;
     const { rerender } = renderProvider({
@@ -237,7 +271,6 @@ describe("ConvexAuthProvider cookie mode", () => {
     });
     await waitFor(() => expect(latestActions?.token).toBe("token-v1"));
 
-    // Middleware rotated the pair; the next RSC payload carries the new token.
     rerender(
       React.createElement(
         ConvexAuthProvider,
@@ -257,7 +290,6 @@ describe("ConvexAuthProvider cookie mode", () => {
     await waitFor(() => expect(latestActions?.token).toBe("token-v2"));
     expect(latestActions?.sessionId).toBe("s2");
 
-    // A stale payload (older watermark — e.g. cached router entry) is ignored.
     rerender(
       React.createElement(
         ConvexAuthProvider,
@@ -301,8 +333,6 @@ describe("ConvexAuthProvider cookie mode", () => {
         React.createElement(SessionProbe),
       ),
     );
-    // First paint: no waiting — the server-verified session is already
-    // authenticated even before the live query and setAuth handshake resolve.
     expect(session?.isAuthenticated).toBe(true);
     expect(session?.user?.id).toBe("u1");
   });
@@ -364,16 +394,47 @@ describe("ConvexAuthProvider localStorage mode (regression)", () => {
     expect(window.localStorage.getItem("convex-auth-refresh-token")).toBe("client-refresh");
   });
 
-  it("still ingests tokens from the URL", async () => {
+  it("ingests a verifier-bound URL triple", async () => {
+    document.cookie = "__convexAuthLandingVerifier=lv-bound; Path=/; SameSite=Lax";
     window.history.replaceState(
       null,
       "",
-      "/?token=url-token&refreshToken=url-refresh&sessionId=url-session",
+      "/?token=url-token&refreshToken=url-refresh&sessionId=url-session&landingVerifier=lv-bound",
     );
     renderProvider();
     await waitFor(() => expect(latestActions?.token).toBe("url-token"));
     expect(latestActions?.refreshToken).toBe("url-refresh");
     expect(window.location.search).not.toContain("token=");
+    expect(window.location.search).not.toContain("landingVerifier=");
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("rejects a URL triple without a matching landingVerifier", async () => {
+    for (const url of [
+      "/?token=url-token&refreshToken=url-refresh&sessionId=url-session",
+      "/?token=url-token&refreshToken=url-refresh&sessionId=url-session&landingVerifier=lv-other",
+    ]) {
+      window.history.replaceState(null, "", url);
+      renderProvider();
+      await waitFor(() => expect(latestActions).not.toBeNull());
+      expect(latestActions?.token ?? null).toBeNull();
+      expect(window.location.search).not.toContain("token=");
+      cleanup();
+      actionMocks.clear();
+      latestActions = null;
+    }
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("ingests an unbound triple when requireLandingVerifier is disabled", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/?token=url-token&refreshToken=url-refresh&sessionId=url-session",
+    );
+    renderProvider({ requireLandingVerifier: false });
+    await waitFor(() => expect(latestActions?.token).toBe("url-token"));
+    expect(latestActions?.refreshToken).toBe("url-refresh");
     window.history.replaceState(null, "", "/");
   });
 });

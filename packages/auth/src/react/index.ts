@@ -18,6 +18,7 @@ export * from "./convex-auth-client-screens";
 export * from "./create-organization";
 export * from "./email-templates";
 export * from "./invite-sign-up";
+export * from "./landingVerifier";
 export * from "./organization-list";
 export * from "./organization-members";
 export * from "./organization-roles";

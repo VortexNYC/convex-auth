@@ -20,6 +20,7 @@ export function nativeOAuth(component: NativeOAuthComponentHandle, config: Nativ
       newUserURL: v.optional(v.string()),
       requestSignUp: v.optional(v.boolean()),
       link: v.optional(v.boolean()),
+      landingVerifier: v.optional(v.string()),
     },
     returns: v.object({ url: v.string() }),
     handler: async (
@@ -31,6 +32,7 @@ export function nativeOAuth(component: NativeOAuthComponentHandle, config: Nativ
         newUserURL?: string;
         requestSignUp?: boolean;
         link?: boolean;
+        landingVerifier?: string;
       },
     ) => {
       return await handleSignIn(config, args);
@@ -43,6 +45,7 @@ export function nativeOAuth(component: NativeOAuthComponentHandle, config: Nativ
       code: v.string(),
       state: v.string(),
       linkingUserId: v.optional(v.string()),
+      landingVerifier: v.optional(v.string()),
     },
     returns: v.union(
       v.object({
@@ -53,6 +56,7 @@ export function nativeOAuth(component: NativeOAuthComponentHandle, config: Nativ
         sessionId: v.string(),
         redirectUrl: v.string(),
         createdUser: v.boolean(),
+        landingVerifier: v.optional(v.string()),
       }),
       v.object({
         error: v.string(),
@@ -62,7 +66,13 @@ export function nativeOAuth(component: NativeOAuthComponentHandle, config: Nativ
     ),
     handler: async (
       ctx: GenericActionCtx<DataModel>,
-      args: { provider: string; code: string; state: string; linkingUserId?: string },
+      args: {
+        provider: string;
+        code: string;
+        state: string;
+        linkingUserId?: string;
+        landingVerifier?: string;
+      },
     ) => {
       const result = await handleCallback(ctx, component, config, args);
       if ("error" in result) {
