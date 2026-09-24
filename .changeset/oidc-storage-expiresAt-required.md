@@ -1,4 +1,6 @@
-## "@vortex-api/convex-auth": major
+---
+"@vortex-api/convex-auth": major
+---
 
 `OidcProviderStorageAdapter.getSessionByToken` now requires `expiresAt` (#334)
 
