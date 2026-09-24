@@ -51,7 +51,8 @@
     "entire:recap": "entire recap",
     "entire:session:tokens": "entire session tokens",
     "entire:import:claude-code": "entire import claude-code",
-    "prepare": "vp config --no-agent"
+    "prepare": "vp config --no-agent",
+    "smoke:release": "node scripts/smoke-release.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.1",
