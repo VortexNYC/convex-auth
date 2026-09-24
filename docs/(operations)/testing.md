@@ -29,6 +29,25 @@ async function signUpUser(email: string) {
 }
 ```
 
+## Registering the component in `convex-test`
+
+`@vortex-api/convex-auth/test` (note: `/test`, not `/testing`) exports the pieces `convex-test` needs to mount the component inside your own harness:
+
+```ts
+import { register } from "@vortex-api/convex-auth/test";
+import { convexTest } from "convex-test";
+import { components } from "./convex/_generated/api";
+
+const t = convexTest(schema, modules);
+register(t); // t.registerComponent("convexAuth", schema, modules)
+
+await t.query(components.convexAuth.status.get);
+```
+
+Also exported: `convexAuthTest` (default), `modules` (the component's `import.meta.glob` map), and `schema`.
+
+The component installs children (`rateLimiter`, `mcpOauth` as `mcp`) via `component.use`. They are not registered by `register` — any code path that calls `components.rateLimiter` or `components.mcp` needs those components registered through their own package test entries.
+
 ## Conformance consumer
 
 The internal `packages/conformance-consumer` is the source of truth for native-runtime conformance. It is not published, but its `convex/auth.ts` and generated `_generated` files are the reference configuration when writing your own tests.
