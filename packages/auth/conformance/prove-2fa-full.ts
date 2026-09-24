@@ -105,7 +105,7 @@ async function enroll(): Promise<{
   return { email, pw, cookie, secret, backup: eb.backupCodes };
 }
 
-// A: sign-in round trip
+/** A: sign-in round trip */
 {
   const u = await enroll();
   const si = await fetch(`${site}/api/auth/sign-in`, {
@@ -137,7 +137,7 @@ async function enroll(): Promise<{
   }
 }
 
-// B: backup code + no reuse
+/** B: backup code + no reuse */
 {
   const u = await enroll();
   const si = await fetch(`${site}/api/auth/sign-in`, {
@@ -171,7 +171,7 @@ async function enroll(): Promise<{
   else r.ok(`B: used backup code rejected on reuse (HTTP ${r2.status})`);
 }
 
-// C: trusted device
+/** C: trusted device */
 {
   const u = await enroll();
   const si = await fetch(`${site}/api/auth/sign-in`, {
@@ -196,7 +196,7 @@ async function enroll(): Promise<{
   else r.ok("C: trusted device skips 2FA");
 }
 
-// D: disable removes requirement
+/** D: disable removes requirement */
 {
   const u = await enroll();
   const dis = await fetch(`${site}/api/auth/two-factor/disable`, {
@@ -219,7 +219,7 @@ async function enroll(): Promise<{
   }
 }
 
-// E: regenerate invalidates old backup codes
+/** E: regenerate invalidates old backup codes */
 {
   const u = await enroll();
   const re = await fetch(`${site}/api/auth/two-factor/generate-backup-codes`, {

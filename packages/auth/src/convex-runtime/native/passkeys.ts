@@ -42,8 +42,10 @@ export type PasskeyComponentApi = {
   renamePasskey: FunctionReference<"mutation", "public" | "internal">;
 };
 
-// The authenticated user's id, or throw. `argUserId`, when provided by a
-// caller, must match the identity — never the other way around.
+/**
+ * The authenticated user's id, or throw. `argUserId`, when provided by a
+ * caller, must match the identity — never the other way around.
+ */
 async function requireUserId(
   ctx: { auth: { getUserIdentity(): Promise<{ subject: string } | null> } },
   argUserId?: string,
@@ -66,8 +68,10 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
   const maxPasskeys = config.maxPasskeysPerUser;
   const sessionTtlMs = config.sessionTtlMs;
   const refreshTokenTtlMs = config.refreshTokenTtlMs;
-  // Default to enforcing UV — matching the behavior before this was
-  // configurable. Only an explicit "preferred"/"discouraged" relaxes it.
+  /**
+   * Default to enforcing UV — matching the behavior before this was
+   * configurable. Only an explicit "preferred"/"discouraged" relaxes it.
+   */
   const requireUserVerification = (config.userVerification ?? "required") === "required";
   const userVerification = config.userVerification ?? "required";
 
@@ -126,7 +130,8 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
       },
     ) => {
       const userId = await requireUserId(ctx, args.userId);
-      // Origin/rpID always come from server config — never from the client.
+      /** Origin/rpID always come from server config — never from the
+       * client. */
       return await ctx.runMutation(component.verifyPasskeyRegistration, {
         userId: userId as unknown as GenericId<"users">,
         identifier: args.identifier,
@@ -151,9 +156,11 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
       ctx: GenericActionCtx<any>,
       args: { userId?: string; credentialId?: string },
     ) => {
-      // Credential ids are echoed back (allowCredentials) only when the caller
-      // is authenticated as that user — unauthenticated callers get an empty
-      // list, which is the discoverable-credential (usernameless) flow.
+      /**
+       * Credential ids are echoed back (allowCredentials) only when the caller
+       * is authenticated as that user — unauthenticated callers get an empty
+       * list, which is the discoverable-credential (usernameless) flow.
+       */
       const identity = await ctx.auth.getUserIdentity();
       return await ctx.runMutation(component.generatePasskeyAuthenticationOptions, {
         userId: args.userId as unknown as GenericId<"users"> | undefined,
@@ -190,7 +197,8 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
         response: AuthenticationResponseJSON;
       },
     ) => {
-      // Origin/rpID always come from server config — never from the client.
+      /** Origin/rpID always come from server config — never from the
+       * client. */
       return await ctx.runMutation(component.verifyPasskeyAuthentication, {
         challenge: args.challenge,
         response: args.response,

@@ -42,7 +42,7 @@ describe("webhook signing helpers", () => {
     const signature = await signConvexWebhookPayload(secret, payload);
 
     assert.equal(await verifyConvexWebhookSignature(secret, payload, signature), true);
-    // Wrong secret, tampered payload, wrong/empty/missing signature all fail closed.
+    /** Wrong secret, tampered payload, wrong/empty/missing signature all fail closed. */
     assert.equal(await verifyConvexWebhookSignature("cvxsec_other", payload, signature), false);
     assert.equal(await verifyConvexWebhookSignature(secret, payload + " ", signature), false);
     assert.equal(await verifyConvexWebhookSignature(secret, payload, "deadbeef"), false);
@@ -59,7 +59,7 @@ describe("webhook signing helpers", () => {
 
     const forged = new Headers({ "x-convex-signature": "00".repeat(32) });
     assert.equal(await verifyConvexWebhookRequest({ secret, payload, headers: forged }), false);
-    // No signature header at all → rejected.
+    /** No signature header at all → rejected. */
     assert.equal(
       await verifyConvexWebhookRequest({
         secret,

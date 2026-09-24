@@ -34,7 +34,7 @@ import {
   type ConvexAuthOrganizationOperationsComponentsHandle,
 } from "./createConvexAuthOrganizationOperations";
 
-// A throwaway consumer DataModel, mirroring `_generated/server`.
+/** A throwaway consumer DataModel, mirroring `_generated/server`. */
 const schema = defineSchema({
   organizations: defineTable({
     name: v.string(),
@@ -44,7 +44,7 @@ const schema = defineSchema({
 });
 type DM = DataModelFromSchemaDefinition<typeof schema>;
 
-// The consumer's REAL ctx types — note: NO `auth` is required by the suite.
+/** The consumer's REAL ctx types — note: NO `auth` is required by the suite. */
 type QueryCtx = GenericQueryCtx<DM>;
 type MutationCtx = GenericMutationCtx<DM>;
 
@@ -52,7 +52,7 @@ type LocalOrgId = string & { readonly __brand: "LocalOrgId" };
 type LocalUserId = string & { readonly __brand: "LocalUserId" };
 type TestRole = "owner" | "admin" | "member";
 
-// --- assertion helpers ---------------------------------------------------
+/** --- assertion helpers --------------------------------------------------- */
 type Expect<T extends true> = T;
 type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 
@@ -66,9 +66,9 @@ const ops = createConvexAuthOrganizationOperations<
   MutationCtx
 >({
   component,
-  // -- read callbacks get the consumer's REAL query ctx, no cast --
+  /** -- read callbacks get the consumer's REAL query ctx, no cast -- */
   resolveLocalOrganizationId: async (ctx, _componentOrganizationId) => {
-    // ctx.db is the typed reader — proven below, used here without a cast.
+    /** ctx.db is the typed reader — proven below, used here without a cast. */
     const typedReader: QueryCtx["db"] = ctx.db;
     await typedReader.query("organizations").take(1);
     return null;
@@ -79,15 +79,15 @@ const ops = createConvexAuthOrganizationOperations<
   },
   validateRoleKey: (key): key is TestRole => key === "owner" || key === "admin" || key === "member",
   roleCatalog: { owner: ["*"], admin: ["org:read"], member: ["org:read"] },
-  // -- write callbacks get the consumer's REAL mutation ctx, no cast --
+  /** -- write callbacks get the consumer's REAL mutation ctx, no cast -- */
   loadOrganizationForUpsert: async (ctx, _localOrganizationId) => {
-    // ctx.db is the typed WRITER (insert/patch available) — no cast.
+    /** ctx.db is the typed WRITER (insert/patch available) — no cast. */
     const typedWriter: MutationCtx["db"] = ctx.db;
     await typedWriter.query("organizations").take(1);
     return null;
   },
   backfillOrganizationBridgeId: async (ctx, _localOrganizationId, componentOrganizationId) => {
-    // writer-only side effect, ctx.db.patch is reachable without a cast.
+    /** writer-only side effect, ctx.db.patch is reachable without a cast. */
     void ctx.db;
     void componentOrganizationId;
   },
@@ -97,7 +97,7 @@ const ops = createConvexAuthOrganizationOperations<
   },
 });
 
-// The suite methods accept the consumer's REAL ctx with NO cast (no `asGlueCtx`).
+/** The suite methods accept the consumer's REAL ctx with NO cast (no `asGlueCtx`). */
 export type QueryCtxAccepted = Expect<
   Equal<QueryCtx extends Parameters<typeof ops.reads.resolveMemberships>[0] ? true : false, true>
 >;
@@ -108,7 +108,7 @@ export type MutationCtxAccepted = Expect<
   >
 >;
 
-// Default (no ctx type args) still resolves to GlueCtx — back-compat guard.
+/** Default (no ctx type args) still resolves to GlueCtx — back-compat guard. */
 type DefaultOps = ReturnType<
   typeof createConvexAuthOrganizationOperations<LocalOrgId, LocalUserId, TestRole>
 >;
@@ -117,9 +117,11 @@ export type DefaultRequiresAuth = Expect<
   Equal<DefaultReadCtx extends { auth: unknown } ? true : false, true>
 >;
 
-// --- split-component bag guard ------------------------------------------------
-// Compile-time proof that the factory can be wired with the independently
-// mounted `core`, `organizations`, and `apiKeys` components (architecture A).
+/**
+ * --- split-component bag guard ------------------------------------------------
+ * Compile-time proof that the factory can be wired with the independently
+ * mounted `core`, `organizations`, and `apiKeys` components (architecture A).
+ */
 declare const coreComponent: CoreComponentApi<"convexAuthCore">;
 declare const organizationsComponent: OrganizationsComponentApi<"convexAuthOrganizations">;
 declare const apiKeysComponent: ApiKeysComponentApi<"convexAuthApiKeys">;

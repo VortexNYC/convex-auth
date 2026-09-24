@@ -171,7 +171,9 @@ const INTERNAL_FUNCTION_KINDS: ReadonlySet<string> = new Set([
 const CONTRACT_DOC = "docs/(reference)/consumer-contract.mdx";
 
 function isExcluded(relPath: string): boolean {
-  // Skip generated code, tests, and node_modules.
+  /**
+   * Skip generated code, tests, and node_modules.
+   */
   const parts = relPath.split(sep);
   if (parts.includes("_generated")) return true;
   if (parts.includes("node_modules")) return true;
@@ -219,9 +221,13 @@ function checkLocalTruthTable(
 ): ConsumerContractViolation[] {
   const found: ConsumerContractViolation[] = [];
   for (const table of FORBIDDEN_TABLES) {
-    // Form A: `someName: defineTable(` where someName === table (property declaration in a schema map).
+    /**
+     * Form A: `someName: defineTable(` where someName === table (property declaration in a schema map).
+     */
     const propPattern = new RegExp(`(^|[^A-Za-z0-9_])${table}\\s*:\\s*defineTable\\s*\\(`);
-    // Form B: `defineTable("table_name"` — defensive; not idiomatic in convex but possible.
+    /**
+     * Form B: `defineTable("table_name"` — defensive; not idiomatic in convex but possible.
+     */
     const callPattern = new RegExp(`defineTable\\s*\\(\\s*["'\`]${table}["'\`]`);
     if (propPattern.test(line) || callPattern.test(line)) {
       found.push({
@@ -303,8 +309,10 @@ function checkBidirectionalMirrorWriter(
 ): ConsumerContractViolation[] {
   const found: ConsumerContractViolation[] = [];
   for (const name of FORBIDDEN_MIRROR_WRITERS) {
-    // Detect function declaration / arrow assignment / export of the symbol.
-    // Allow `ensureConvexAuthOrganization` — that's the sanctioned anchor mapper.
+    /**
+     * Detect function declaration / arrow assignment / export of the symbol.
+     * Allow `ensureConvexAuthOrganization` — that's the sanctioned anchor mapper.
+     */
     const decl = new RegExp(
       `(?:^|[^A-Za-z0-9_])(?:function\\s+|const\\s+|let\\s+|var\\s+|export\\s+(?:async\\s+)?function\\s+|export\\s+const\\s+|export\\s+let\\s+|export\\s+\\{[^}]*\\b)${name}(?:\\b|\\s|\\()`,
     );
@@ -397,7 +405,8 @@ function findDefineTableBlocks(source: string): DefineTableBlock[] {
     const openParenIdx = re.lastIndex - 1;
     const closeParenIdx = findMatchingParen(source, openParenIdx);
     if (closeParenIdx === null) {
-      // Unbalanced — skip rather than throw; the consumer's tsc will catch it.
+      /** Unbalanced — skip rather than throw; the consumer's tsc will catch
+       * it. */
       re.lastIndex = openParenIdx + 1;
       continue;
     }
@@ -415,8 +424,10 @@ function findBridgeColumns(
   bodyStartLine: number,
 ): Array<{ name: string; line: number }> {
   const cols: Array<{ name: string; line: number }> = [];
-  // `<name>: v.<...>` — convex column declarations. Property-key delimiters
-  // are start-of-string, whitespace, `,`, `{`, or `(`.
+  /**
+   * `<name>: v.<...>` — convex column declarations. Property-key delimiters
+   * are start-of-string, whitespace, `,`, `{`, or `(`.
+   */
   const re = /(?:^|[\s,{(])([A-Za-z_][A-Za-z0-9_]*)\s*:\s*v\./g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(body)) !== null) {
@@ -638,12 +649,14 @@ function findConvexFunctionBlocks(source: string): ConvexFunctionBlock[] {
     const name = match[1] ?? "";
     const kind = match[2] ?? "";
     const i = skipWhitespace(source, re.lastIndex);
-    // Skip whitespace to the first `(` — if it isn't a call, this isn't a
-    // Convex function constructor; move on.
+    /** Skip whitespace to the first `(` — if it isn't a call, this isn't a
+     * Convex function constructor; move on. */
     if (source[i] !== "(") continue;
     const bodyStart = i;
-    // Consume one or more consecutive balanced call groups `( ... )` at depth 0
-    // so currying (`permissionQuery("p")( ... )`) is captured fully.
+    /**
+     * Consume one or more consecutive balanced call groups `( ... )` at depth 0
+     * so currying (`permissionQuery("p")( ... )`) is captured fully.
+     */
     const bodyEnd = findConsecutiveCallGroupsEnd(source, i);
     if (bodyEnd === null) {
       continue;
@@ -714,9 +727,11 @@ export function checkConsumerContract(
     } catch {
       continue;
     }
-    // Strip comments so documentation prose about forbidden patterns
-    // doesn't trigger the rules. Whitespace is preserved so line/column
-    // numbers in violation messages still point at the right place.
+    /**
+     * Strip comments so documentation prose about forbidden patterns
+     * doesn't trigger the rules. Whitespace is preserved so line/column
+     * numbers in violation messages still point at the right place.
+     */
     const source = stripComments(rawSource);
     const lines = source.split(/\r?\n/);
     for (let i = 0; i < lines.length; i++) {

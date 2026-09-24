@@ -203,8 +203,10 @@ describe("web usePasskeys", () => {
 
     await act(() => result.current.signIn());
 
-    // The mint goes through the proxy, not the direct action — the proxy
-    // writes the HttpOnly cookies the browser can't set itself.
+    /**
+     * The mint goes through the proxy, not the direct action — the proxy
+     * writes the HttpOnly cookies the browser can't set itself.
+     */
     expect(verifyAuthentication).not.toHaveBeenCalled();
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/auth");

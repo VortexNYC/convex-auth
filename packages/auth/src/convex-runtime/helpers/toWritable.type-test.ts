@@ -44,9 +44,11 @@ type MerchantDomain = {
 
 declare const domain: MerchantDomain;
 
-// The failure this helper ends: the domain model is not assignable to the write
-// type. Uncommenting this is a compile error, which is why the helper exists.
-// const rejected: MerchantWrite = domain;
+/**
+ * The failure this helper ends: the domain model is not assignable to the write
+ * type. Uncommenting this is a compile error, which is why the helper exists.
+ * const rejected: MerchantWrite = domain;
+ */
 
 /** The helper closes the gap — including the array nested inside an array element. */
 const accepted: MerchantWrite = toWritable(domain);

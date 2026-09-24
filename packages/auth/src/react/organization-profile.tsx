@@ -25,8 +25,6 @@ export {
   ORGANIZATION_SESSION_TIMEOUT_MIN,
 } from "./organization-security";
 
-// ─── Types ────────────────────────────────────────────────────────────────
-
 export type ConvexOrgProfileOrganization = {
   _id: string;
   name: string;
@@ -108,8 +106,6 @@ export type ConvexOrgProfileProps = {
   onDelete?: () => void | Promise<void>;
   renderDeleteConfirm?: (args: { onConfirm: () => void; onCancel: () => void }) => ReactNode;
 };
-
-// ─── Default copy ──────────────────────────────────────────────────────────
 
 const defaultCopy: Required<ConvexOrgProfileCopy> = {
   title: "Workspace settings",
@@ -531,7 +527,8 @@ function DefaultDeleteConfirm(props: {
   const { copy, onConfirm, onCancel } = props;
 
   return (
-    // convex-allow-color: modal scrim — intentionally dark in both light and dark
+    /** convex-allow-color: modal scrim — intentionally dark in both light
+     * and dark */
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="border-foreground/10 bg-background w-full max-w-sm rounded-lg border p-5 shadow-xl">
         <h4 className="text-foreground text-base font-semibold">{copy.confirmDeleteTitle}</h4>
@@ -573,8 +570,6 @@ function DeleteConfirm(props: {
     <DefaultDeleteConfirm copy={copy} onConfirm={onConfirm} onCancel={onCancel} />
   );
 }
-
-// ─── Component ────────────────────────────────────────────────────────────
 
 export function ConvexOrganizationProfile(props: ConvexOrgProfileProps) {
   const {

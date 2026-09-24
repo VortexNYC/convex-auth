@@ -240,6 +240,12 @@ export const generatePasskeyRegistrationOptions = mutation({
   },
 });
 
+/**
+ * The passkey cap is re-checked here, not only at options time — two parallel
+ * registration ceremonies must not both land past the limit. The challenge is
+ * burned only once the ceremony has verified (single-use): a failed attempt
+ * can be retried, a successful one cannot be replayed.
+ */
 export const verifyPasskeyRegistration = mutation({
   args: {
     userId: v.id("users"),
@@ -284,8 +290,6 @@ export const verifyPasskeyRegistration = mutation({
       throw new Error("This passkey has already been registered");
     }
 
-    // Re-check the cap here, not only at options time — two parallel
-    // registration ceremonies must not both land past the limit.
     const maxPasskeys = args.maxPasskeys ?? MAX_PASSKEYS_PER_USER;
     const userPasskeys = await getUserPasskeys(ctx, args.userId);
     if (userPasskeys.filter((pk) => !pk.revokedAt).length >= maxPasskeys) {
@@ -311,8 +315,6 @@ export const verifyPasskeyRegistration = mutation({
       throw new Error("Passkey registration could not be verified");
     }
 
-    // Single-use: burn the challenge only once the ceremony has verified, so a
-    // failed attempt can be retried but a successful one cannot be replayed.
     await ctx.db.delete(challengeRecord._id);
 
     const { registrationInfo } = verification;
@@ -482,6 +484,13 @@ const authenticationResponseValidator = v.object({
   authenticatorAttachment: v.optional(v.string()),
 });
 
+/**
+ * `enumerateCredentials` echoes the user's credential ids into
+ * `allowCredentials` only when the caller is authenticated as `userId` —
+ * otherwise an unauthenticated caller could enumerate another user's
+ * passkeys. Discoverable-credential sign-in still works with an empty
+ * `allowCredentials`.
+ */
 export const generatePasskeyAuthenticationOptions = mutation({
   args: {
     userId: v.optional(v.id("users")),
@@ -491,10 +500,6 @@ export const generatePasskeyAuthenticationOptions = mutation({
     userVerification: v.optional(
       v.union(v.literal("required"), v.literal("preferred"), v.literal("discouraged")),
     ),
-    // Only when the caller is authenticated as `userId` may we echo that
-    // user's credential ids back — otherwise an unauthenticated caller could
-    // enumerate another user's passkeys. Discoverable-credential sign-in still
-    // works with an empty allowCredentials.
     enumerateCredentials: v.optional(v.boolean()),
   },
   returns: v.record(v.string(), v.any()),
@@ -549,13 +554,21 @@ const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const TWO_FACTOR_PENDING_TTL_MS = 10 * 60 * 1000;
 
-// SimpleWebAuthn throws (rather than returning `verified: false`) when the
-// authenticator presents a non-increasing signature counter. Detect that
-// specific failure so the caller can treat it as cloned-credential evidence.
+/**
+ * SimpleWebAuthn throws (rather than returning `verified: false`) when the
+ * authenticator presents a non-increasing signature counter. Detect that
+ * specific failure so the caller can treat it as cloned-credential evidence.
+ */
 export function isCounterRegressionError(err: unknown): boolean {
   return err instanceof Error && /Response counter value .*lower than expected/.test(err.message);
 }
 
+/**
+ * The challenge was scoped to a user when options were generated — the
+ * authenticating credential must belong to that same user. The challenge is
+ * burned only once the ceremony has verified (single-use): a failed attempt
+ * can be retried, a successful one cannot be replayed.
+ */
 export const verifyPasskeyAuthentication = mutation({
   args: {
     challenge: v.string(),
@@ -603,8 +616,6 @@ export const verifyPasskeyAuthentication = mutation({
       throw new Error("Passkey not found or has been revoked");
     }
 
-    // The challenge was scoped to a user when options were generated — the
-    // authenticating credential must belong to that same user.
     if (challengeRecord.userId && passkey.userId !== challengeRecord.userId) {
       throw new Error("Passkey does not match the user this challenge was issued for");
     }
@@ -653,8 +664,6 @@ export const verifyPasskeyAuthentication = mutation({
       throw new Error("Passkey authentication could not be verified");
     }
 
-    // Single-use: burn the challenge only once the ceremony has verified, so a
-    // failed attempt can be retried but a successful one cannot be replayed.
     await ctx.db.delete(challengeRecord._id);
 
     const { authenticationInfo } = verification;

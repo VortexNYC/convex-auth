@@ -44,8 +44,8 @@ export function throwAuthError(
   message?: string,
 ): never {
   const resolvedMessage = message ?? defaultMessage(code, authzCode);
-  // Inline literal so TypeScript infers a Value-compatible shape for
-  // ConvexError. Named-interface payloads lose this inference.
+  /** Inline literal so TypeScript infers a Value-compatible shape for
+   * ConvexError. Named-interface payloads lose this inference. */
   if (authzCode !== undefined) {
     throw new ConvexError({
       code,

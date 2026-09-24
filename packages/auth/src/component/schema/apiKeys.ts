@@ -32,14 +32,12 @@ export const api_keys = defineTable({
   status: apiKeyStatusValidator,
   lastUsedAt: v.optional(v.number()),
   lastUsedIp: v.optional(v.string()),
-  // Fixed-window rate limiting, per key.
   rateLimitEnabled: v.optional(v.boolean()),
   rateLimitTimeWindowMs: v.optional(v.number()),
   rateLimitMax: v.optional(v.number()),
   requestCount: v.optional(v.number()),
   windowStartedAt: v.optional(v.number()),
   lastRequestAt: v.optional(v.number()),
-  // Quota, independent of the rate limit: a total budget that refills on an interval.
   remaining: v.optional(v.number()),
   refillAmount: v.optional(v.number()),
   refillIntervalMs: v.optional(v.number()),

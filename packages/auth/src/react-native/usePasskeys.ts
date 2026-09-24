@@ -15,10 +15,12 @@ export interface UseNativePasskeysArgs {
 type RegistrationOptions = Parameters<typeof create>[0];
 type AuthenticationOptions = Parameters<typeof get>[0];
 
-// iOS surfaces user cancellation as a thrown error (ASAuthorization
-// errorDomain 1001 / "cancelled"), Android Credential Manager returns null —
-// and may even yield a credential object with no response. Normalize all of
-// those to null so callers get one "cancelled" path.
+/**
+ * iOS surfaces user cancellation as a thrown error (ASAuthorization
+ * errorDomain 1001 / "cancelled"); Android Credential Manager returns null —
+ * and may even yield a credential object with no response. Callers normalize
+ * all of those to one "cancelled" path.
+ */
 function isCancellationError(err: unknown): boolean {
   return err instanceof Error && /cancel/i.test(`${err.name} ${err.message}`);
 }

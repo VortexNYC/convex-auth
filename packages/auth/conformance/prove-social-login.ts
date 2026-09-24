@@ -26,11 +26,13 @@ const { site } = requireEnv();
 const r = makeReporter();
 const J = () => ({ "content-type": "application/json", origin: ORIGIN_WEB });
 
-// Better Auth's catch-all returns 404 with a JSON body that mentions "Not
-// found" when no route matches. A mounted social endpoint receiving a bogus
-// provider returns a 400-class error instead. We treat any non-404 as "route
-// mounted"; for a 404 we inspect the body to distinguish "route not mounted"
-// from a provider-specific not-found that still proves the handler ran.
+/**
+ * Better Auth's catch-all returns 404 with a JSON body that mentions "Not
+ * found" when no route matches. A mounted social endpoint receiving a bogus
+ * provider returns a 400-class error instead. We treat any non-404 as "route
+ * mounted"; for a 404 we inspect the body to distinguish "route not mounted"
+ * from a provider-specific not-found that still proves the handler ran.
+ */
 async function describeResponse(res: Response): Promise<string> {
   try {
     return JSON.stringify(await res.clone().json());
@@ -39,9 +41,11 @@ async function describeResponse(res: Response): Promise<string> {
   }
 }
 
-// --- Bogus provider ----------------------------------------------------
-// A provider that is definitely not configured. A wired handler rejects it
-// with a Better-Auth validation/processing error, not a routing 404.
+/**
+ * --- Bogus provider ----------------------------------------------------
+ * A provider that is definitely not configured. A wired handler rejects it
+ * with a Better-Auth validation/processing error, not a routing 404.
+ */
 const bogus = await fetch(`${site}/api/auth/sign-in/social`, {
   method: "POST",
   headers: J(),
@@ -60,9 +64,11 @@ if (bogus.status === 404 && /no.?t found|no matching|cannot (POST|find)/i.test(b
   r.bad(`sign-in/social crashed (HTTP ${bogus.status}): ${bogusBody}`);
 }
 
-// --- Omitted provider --------------------------------------------------
-// Missing required field => Better Auth validation error (400-class), which
-// also proves the handler is parsing the request rather than 404-ing.
+/**
+ * --- Omitted provider --------------------------------------------------
+ * Missing required field => Better Auth validation error (400-class), which
+ * also proves the handler is parsing the request rather than 404-ing.
+ */
 const omitted = await fetch(`${site}/api/auth/sign-in/social`, {
   method: "POST",
   headers: J(),

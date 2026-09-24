@@ -10,18 +10,19 @@ import {
   type ActionAuthSnapshot,
 } from "./createConvexAuthActionFunctions";
 
-// ---------------------------------------------------------------------------
-// Proof matrix for Increment 5b-action — permission-gated ACTIONS.
-//
-// Actions cannot read the db, so the wrapper resolves auth via a consumer
-// snapshot resolver (an internal query that runs the glue), reconstructs a
-// lightweight viewer, gates BEFORE the handler, and injects the viewer. The
-// invariant matches the query/mutation wrappers: the check is baked into the
-// builder and the handler body is unreachable on a denial.
-// ---------------------------------------------------------------------------
+/**
+ * Proof matrix for Increment 5b-action — permission-gated ACTIONS.
+ * Actions cannot read the db, so the wrapper resolves auth via a consumer
+ * snapshot resolver (an internal query that runs the glue), reconstructs a
+ * lightweight viewer, gates BEFORE the handler, and injects the viewer. The
+ * invariant matches the query/mutation wrappers: the check is baked into the
+ * builder and the handler body is unreachable on a denial.
+ */
 
-// Fake builder: convex-helpers calls builder({ args, handler }), so the returned
-// spec's `handler` IS the composed gate -> userHandler pipeline.
+/**
+ * Fake builder: convex-helpers calls builder({ args, handler }), so the returned
+ * spec's `handler` IS the composed gate -> userHandler pipeline.
+ */
 const fakeAction = actionGeneric;
 const exec = (registered: unknown) => {
   if ((typeof registered !== "object" && typeof registered !== "function") || registered === null) {
@@ -165,7 +166,7 @@ describe("createConvexAuthActionFunctions — security contract", () => {
     const { permissionAnyAction, permissionAllAction } = makeFunctions(
       snapshot({ permissions: ["widgets:view"] }),
     );
-    // any: holds view → allowed
+    /** any: holds view → allowed */
     const anyOk = exec(
       permissionAnyAction(["widgets:edit", "widgets:view"])({
         args: {},
@@ -173,7 +174,7 @@ describe("createConvexAuthActionFunctions — security contract", () => {
       }),
     );
     assert.equal(await anyOk.handler(fakeCtx, {}), "ok");
-    // all: missing edit → blocked
+    /** all: missing edit → blocked */
     const allBlocked = exec(
       permissionAllAction(["widgets:view", "widgets:edit"])({
         args: {},

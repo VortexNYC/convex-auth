@@ -28,10 +28,12 @@ export type BetterAuthSessionState = {
 };
 
 export type BetterAuthResponse = {
-  // When two-factor is enabled for the account, sign-in does NOT
-  // complete — the native server returns `data.twoFactorRedirect: true` and
-  // a short-lived 2FA-pending challenge token. Consumers check this flag to
-  // route into <ConvexVerifyTwoFactorForm>. Absent on every non-2FA flow.
+  /**
+   * When two-factor is enabled for the account, sign-in does NOT complete —
+   * the native server returns `data.twoFactorRedirect: true` and a
+   * short-lived 2FA-pending challenge token. Consumers check this flag to
+   * route into <ConvexVerifyTwoFactorForm>. Absent on every non-2FA flow.
+   */
   data?: ({ twoFactorRedirect?: boolean } & Record<string, unknown>) | null;
   error: {
     message?: string | null;

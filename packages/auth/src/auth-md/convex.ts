@@ -323,6 +323,10 @@ export function createAuthMdServiceAuthRuntime(
       return await exchangeAssertion(ctx, claims);
     },
 
+    /**
+     * The component re-checks the delegating authority and revokes the old
+     * credential in the same mutation, so exactly one stays live per chain.
+     */
     async refreshAccessToken(ctx, args) {
       const claims = await verifyAuthMdAccessToken({
         accessToken: args.accessToken,
@@ -331,8 +335,6 @@ export function createAuthMdServiceAuthRuntime(
         resource,
         now: now(),
       });
-      // The component re-checks the delegating authority and revokes the old
-      // credential in the same mutation, so exactly one stays live per chain.
       const authority = await ctx.runMutation(
         config.component.authMd.refreshServiceAuthCredential,
         {

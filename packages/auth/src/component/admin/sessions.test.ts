@@ -280,8 +280,10 @@ describe("admin sessions", () => {
     expect(session?.impersonatedBy).toBe(String(adminId));
     expect(session?.userId).toBe(String(userId));
 
-    // The impersonated session carries the impersonated user's identity so
-    // the refresh path can resolve it column-first.
+    /**
+     * The impersonated session carries the impersonated user's identity so
+     * the refresh path can resolve it column-first.
+     */
     const sessionRow = await t.run((ctx) =>
       ctx.db
         .query("authSessions")
@@ -328,8 +330,10 @@ describe("admin sessions", () => {
     const adminId = await insertUser(t, "admin@example.com", "Admin", true);
     const userId = await insertUser(t, "user@example.com", "User");
 
-    // The impersonated session plus a converged sibling in the same family —
-    // both must die, or the sibling's refresh token keeps minting sessions.
+    /**
+     * The impersonated session plus a converged sibling in the same family —
+     * both must die, or the sibling's refresh token keeps minting sessions.
+     */
     await insertSession(t, userId, "imp-1", { familyId: "fam-imp", impersonatedBy: adminId });
     await insertRefreshToken(t, userId, "imp-1", "fam-imp");
     await insertSession(t, userId, "imp-2", { familyId: "fam-imp" });

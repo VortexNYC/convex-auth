@@ -1,8 +1,6 @@
 import { cn } from "./lib/ui";
 import { useCallback, type KeyboardEvent } from "react";
 
-// ─── Types ────────────────────────────────────────────────────────────────
-
 export type ConvexOrgListOrganization = {
   _id: string;
   name: string;
@@ -71,8 +69,6 @@ export type ConvexOrgListProps = {
   showInvitations?: boolean;
 };
 
-// ─── Default copy ──────────────────────────────────────────────────────────
-
 const defaultCopy: Required<ConvexOrgListCopy> = {
   title: "Workspaces",
   description: "Select a workspace or manage invitations.",
@@ -103,8 +99,6 @@ function formatDate(ts?: number): string {
     return "";
   }
 }
-
-// ─── Component ────────────────────────────────────────────────────────────
 
 export function ConvexOrganizationList(props: ConvexOrgListProps) {
   const {

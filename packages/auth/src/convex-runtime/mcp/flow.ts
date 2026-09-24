@@ -303,6 +303,19 @@ export async function validateMcpOAuthAuthorizationCodeTokenExchange<
  * client record and the hashing scheme. This establishes that the grant is
  * permitted, the method is supported, and the requested scopes stay inside the
  * client's registered ceiling.
+ *
+ * Enforcement details that are easy to get wrong:
+ *
+ * - The grant must be one the client registered for — without this an
+ *   authorization-code client could mint a user-less token for itself.
+ * - The client must authenticate the way it registered. Checking only the
+ *   deployment's supported set lets a client registered for one confidential
+ *   method authenticate with another — a downgrade the client never agreed to.
+ * - A confidential client that presents nothing must not authenticate as a
+ *   public one: the `none` default would let a no-credential request skip both
+ *   verification blocks and mint a token with nothing checked.
+ * - An omitted `scope` means "everything this client is entitled to", never
+ *   "everything the server offers".
  */
 export async function validateMcpOAuthClientCredentialsTokenExchange<
   TClient extends McpOAuthClient,
@@ -372,8 +385,6 @@ export async function validateMcpOAuthClientCredentialsTokenExchange<
     return unknownClientFailure();
   }
 
-  // The grant must be one the client registered for. Without this an
-  // authorization-code client could mint a user-less token for itself.
   if (!(client.grantTypes ?? []).includes("client_credentials")) {
     return tokenExchangeFailure(400, {
       error: "unauthorized_client",
@@ -381,9 +392,6 @@ export async function validateMcpOAuthClientCredentialsTokenExchange<
     });
   }
 
-  // The client must authenticate the way it registered. Checking only the
-  // deployment's supported set lets a client registered for one confidential
-  // method authenticate with another — a downgrade the client never agreed to.
   const presentedMethod =
     parsed.clientAssertion !== null && parsed.clientAssertion.length > 0
       ? "private_key_jwt"
@@ -393,10 +401,6 @@ export async function validateMcpOAuthClientCredentialsTokenExchange<
           ? "client_secret_post"
           : null;
   const registeredMethod = client.tokenEndpointAuthMethod ?? "none";
-  // A confidential client that presents nothing must not authenticate as a
-  // public one. Without this, the `none` default in client authentication lets
-  // a no-credential request through and both verification blocks below are
-  // skipped, minting a token with nothing checked.
   if (presentedMethod === null && registeredMethod !== "none") {
     return tokenExchangeFailure(401, {
       error: "invalid_client",
@@ -450,8 +454,6 @@ export async function validateMcpOAuthClientCredentialsTokenExchange<
     }
   }
 
-  // Omitted scope means "everything this client is entitled to", never
-  // "everything the server offers".
   const requestedScopes =
     parsed.scope === null
       ? [...client.allowedScopes]
@@ -531,11 +533,15 @@ function hasRequiredTokenRequestParams(
   );
 }
 
+/**
+ * Whether the authorization code is expired. Fails closed — a record whose
+ * `expiresAt` is missing or mistyped counts as expired, so a consumer that
+ * ignored the package-stamped expiry contract cannot mint live codes.
+ */
 function isAuthorizationCodeExpired(
   authorizationCode: McpOAuthAuthorizationCodeRecord,
   now: number,
 ): boolean {
-  // Fail closed when a consumer ignored the package-stamped expiry contract.
   return typeof authorizationCode.expiresAt !== "number" || now >= authorizationCode.expiresAt;
 }
 

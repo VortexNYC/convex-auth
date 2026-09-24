@@ -9,9 +9,11 @@ import { toNativeAuthUser } from "./types.js";
 const DEFAULT_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-// The session JWT carries the identity it was minted with as a claim — the
-// transitional resolution path for sessions minted before authSessions gained
-// the identityId column.
+/**
+ * The session JWT carries the identity it was minted with as a claim — the
+ * transitional resolution path for sessions minted before authSessions gained
+ * the identityId column.
+ */
 function identityIdFromSessionToken(token: string): Id<"auth_identities"> | undefined {
   const parts = token.split(".");
   if (parts.length !== 3) {
@@ -47,18 +49,21 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
   const session = await ctx.runQuery(component.native.sessions.getSessionBySessionId, {
     sessionId: refresh.sessionId,
   });
-  // A revoked session is not rejected here: a parallel request may have just
-  // rotated this pair, in which case rotateSession reports "converge" and a
-  // sibling session is minted below. Rejection stays inside the mutations.
+  /** A revoked session is not rejected here: a parallel request may have
+   * just rotated this pair, in which case rotateSession reports "converge"
+   * and a sibling session is minted below. Rejection stays inside the
+   * mutations. */
   if (!session || session.expiresAt <= now) {
     throw new Error("Invalid refresh token");
   }
 
-  // The session row carries its identity; sessions minted before the column
-  // existed carry it as a JWT claim instead. A session with neither cannot
-  // name its identity — guessing a provider would bind the wrong one, so fail
-  // closed. A malformed id claim makes the query's id validator throw — treat
-  // it like a missing identity rather than a 500.
+  /**
+   * The session row carries its identity; sessions minted before the column
+   * existed carry it as a JWT claim instead. A session with neither cannot
+   * name its identity — guessing a provider would bind the wrong one, so fail
+   * closed. A malformed id claim makes the query's id validator throw — treat
+   * it like a missing identity rather than a 500.
+   */
   const sessionIdentityId = session.identityId ?? identityIdFromSessionToken(session.token);
   const [user, identity] = await Promise.all([
     ctx.runQuery(component.native.users.getUserById, { userId: refresh.userId }),
@@ -73,9 +78,9 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
   if (!user) {
     throw new Error("User not found");
   }
-  // The identity must belong to the refresh token's user. convergeSession
-  // re-checks this inside the mutation; this earlier check keeps the action
-  // from minting a candidate pair it can never commit.
+  /** The identity must belong to the refresh token's user. convergeSession
+   * re-checks this inside the mutation; this earlier check keeps the action
+   * from minting a candidate pair it can never commit. */
   if (!identity || identity.userId !== refresh.userId) {
     throw new Error("Identity not found");
   }
@@ -119,9 +124,11 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
   }
 
   if (result === "converge") {
-    // A parallel request already rotated this token inside the grace window.
-    // Mint a sibling pair in the same family rather than letting its session
-    // be revoked as replay.
+    /**
+     * A parallel request already rotated this token inside the grace window.
+     * Mint a sibling pair in the same family rather than letting its session
+     * be revoked as replay.
+     */
     const convergePair = await mintSessionPair();
     const convergeResult = await ctx.runMutation(component.native.sessions.convergeSession, {
       predecessorRefreshTokenHash: oldRefreshTokenHash,

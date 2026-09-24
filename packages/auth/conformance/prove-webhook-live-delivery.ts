@@ -95,12 +95,16 @@ let endpointId: string | undefined;
 let eventId = "";
 
 try {
-  // 0. Reset: clear any proof endpoints left by prior runs so this event fans
-  //    out to exactly one endpoint (otherwise stale endpoints duplicate it).
+  /**
+   * 0. Reset: clear any proof endpoints left by prior runs so this event fans
+   *    out to exactly one endpoint (otherwise stale endpoints duplicate it).
+   */
   await fetch(`${SITE}/api/proofs/webhook-reset`, { method: "POST" });
 
-  // 1. Fire: create endpoint + enqueue + kick immediate processing. The sink
-  //    URL is derived server-side from the deployment origin (no SSRF surface).
+  /**
+   * 1. Fire: create endpoint + enqueue + kick immediate processing. The sink
+   *    URL is derived server-side from the deployment origin (no SSRF surface).
+   */
   const fireRes = await fetch(`${SITE}/api/proofs/fire-webhook`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -120,7 +124,7 @@ try {
   if (deliveryId === undefined) throw new Error("Missing delivery id");
   ok(`fire: endpoint created + 1 delivery enqueued (eventId ${eventId})`);
 
-  // 2. Poll the sink until the cron delivers (real async round trip).
+  /** 2. Poll the sink until the cron delivers (real async round trip). */
   let received: SinkRow[] = [];
   for (let attempt = 0; attempt < 30 && received.length === 0; attempt += 1) {
     await sleep(1000);
@@ -142,7 +146,7 @@ try {
 
   const row = received[0];
   if (row) {
-    // 3. Signature verifies against the endpoint secret.
+    /** 3. Signature verifies against the endpoint secret. */
     const expected = createHmac("sha256", secret).update(row.bodyJson).digest("hex");
     const got = row.signature ?? "";
     const gotBuf = Buffer.from(got, "utf8");
@@ -164,7 +168,7 @@ try {
     }
   }
 
-  // 4. The delivery row reached `delivered` with a 2xx response status.
+  /** 4. The delivery row reached `delivered` with a 2xx response status. */
   let delivery: DeliveryRow = null;
   for (let attempt = 0; attempt < 15; attempt += 1) {
     const res = await fetch(
@@ -186,7 +190,7 @@ try {
     bad(`delivery row: status was '${delivery?.status ?? "missing"}', expected 'delivered'`);
   }
 } finally {
-  // Cleanup so repeated CI runs stay isolated.
+  /** Cleanup so repeated CI runs stay isolated. */
   await fetch(`${SITE}/api/proofs/webhook-cleanup`, {
     method: "POST",
     headers: { "content-type": "application/json" },

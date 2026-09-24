@@ -23,7 +23,7 @@ export function ConvexApiKeyCreated({ apiKey, classNames, onClose }: ConvexApiKe
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // ignore
+      /** ignore */
     }
   }, [apiKey]);
 

@@ -137,12 +137,14 @@ export type CreateOrganizationInvitationArgs<
   TOrganizationId extends string,
   TUserId extends string,
   TInvitationId extends string,
-  // The role carried by the invitation. Defaults to the built-in template union
-  // for convenience, but any consumer that seeds a custom role catalog into the
-  // convexAuth component (the system stores invitations by `roleId`, not a fixed
-  // union) passes its OWN role keys here — e.g. Aqua's "owner" | "accountant" |
-  // "viewer". The role flows straight through to `insertInvitation`, which maps
-  // it to the catalog roleId.
+  /**
+   * The role carried by the invitation. Defaults to the built-in template
+   * union for convenience, but any consumer that seeds a custom role catalog
+   * into the convexAuth component (the system stores invitations by `roleId`,
+   * not a fixed union) passes its OWN role keys here — e.g. Aqua's "owner" |
+   * "accountant" | "viewer". The role flows straight through to
+   * `insertInvitation`, which maps it to the catalog roleId.
+   */
   TRole extends string = OrganizationRoleTemplate,
 > = {
   organizationId: TOrganizationId;

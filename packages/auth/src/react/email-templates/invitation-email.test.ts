@@ -53,7 +53,7 @@ describe("renderAuthInvitationEmail", () => {
 
   it("HTML renders the expiry as a UTC string", async () => {
     const { html } = await renderAuthInvitationEmail(baseArgs);
-    // toUTCString format includes the year and "GMT".
+    /** toUTCString format includes the year and "GMT". */
     assert.ok(/2026/.test(html), "missing expiry year");
     assert.ok(/GMT/.test(html), "missing GMT marker");
   });

@@ -1,8 +1,6 @@
 import { cn } from "./lib/ui";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-// ─── Types ────────────────────────────────────────────────────────────────
-
 export type ConvexOrgSwitcherOrganization = {
   _id: string;
   name: string;
@@ -62,8 +60,6 @@ export type ConvexOrgSwitcherProps = {
     onClick: () => void;
   }) => ReactNode;
 };
-
-// ─── Default copy ──────────────────────────────────────────────────────────
 
 const defaultCopy: Required<ConvexOrgSwitcherCopy> = {
   currentOrganizationLabel: "Current workspace",
@@ -517,8 +513,6 @@ function OrganizationSwitcherDropdown(props: {
     </div>
   );
 }
-
-// ─── Component ────────────────────────────────────────────────────────────
 
 export function ConvexOrganizationSwitcher(props: ConvexOrgSwitcherProps) {
   const {

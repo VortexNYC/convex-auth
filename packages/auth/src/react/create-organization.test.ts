@@ -39,16 +39,16 @@ function render(props: Partial<ConvexCreateOrganizationProps>): string {
 describe("ConvexCreateOrganization — SSR smoke", () => {
   it("renders the form with name + slug inputs and submit button", () => {
     const html = render({ onCreate: noop });
-    // Name + slug inputs.
+    /** Name + slug inputs. */
     const inputCount = (html.match(/<input/g) ?? []).length;
     assert.ok(inputCount >= 2, `expected ≥2 inputs, got ${inputCount}`);
-    // Submit button present.
+    /** Submit button present. */
     assert.match(html, /type="submit"/);
   });
 
   it("renders the default title and description", () => {
     const html = render({ onCreate: noop });
-    // Defaults come from defaultCopy in create-organization.tsx.
+    /** Defaults come from defaultCopy in create-organization.tsx. */
     assert.match(html, /<h3/);
     assert.match(html, /<p/);
   });
@@ -63,8 +63,10 @@ describe("ConvexCreateOrganization — SSR smoke", () => {
 
   it("submit button is disabled when onCreate is undefined", () => {
     const html = render({});
-    // Disabled boolean attribute on the submit button (consumers wire
-    // the mutation handler; the button reflects that wiring).
+    /**
+     * Disabled boolean attribute on the submit button (consumers wire
+     * the mutation handler; the button reflects that wiring).
+     */
     assert.match(html, /type="submit"[^>]+disabled/);
   });
 

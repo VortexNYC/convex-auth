@@ -9,17 +9,16 @@ import { isAuthErrorPayload } from "../glue/throwAuthError";
 import type { B2BGlue, B2BViewer, GlueCtx, ResolvedMembership } from "../glue/types";
 import { createConvexAuthFunctions } from "./createConvexAuthFunctions";
 
-// ---------------------------------------------------------------------------
-// Fakes. The factory is a thin wrapper over convex-helpers customMutation /
-// customQuery + the glue's viewer. We don't need a Convex deployment to prove
-// its security contract — we need to prove the gate runs BEFORE the handler and
-// that a viewer lacking the permission can never reach the handler body.
-//
-// Fake builder: `(spec) => spec`. convex-helpers' customFnBuilder calls
-// `builder({ args, returns, handler: composedHandler })`, so the returned spec's
-// `handler` IS the composed `gate -> userHandler` pipeline. Invoking it runs the
-// real authorization path.
-// ---------------------------------------------------------------------------
+/**
+ * Fakes. The factory is a thin wrapper over convex-helpers customMutation /
+ * customQuery + the glue's viewer. We don't need a Convex deployment to prove
+ * its security contract — we need to prove the gate runs BEFORE the handler and
+ * that a viewer lacking the permission can never reach the handler body.
+ * Fake builder: `(spec) => spec`. convex-helpers' customFnBuilder calls
+ * `builder({ args, returns, handler: composedHandler })`, so the returned spec's
+ * `handler` IS the composed `gate -> userHandler` pipeline. Invoking it runs the
+ * real authorization path.
+ */
 
 type LocalUser = { _id: string; convexAuthUserId?: Id<"users"> };
 type LocalAnchor = {
@@ -51,9 +50,11 @@ function isFixtureId<TableName extends "users" | "organizations" | "organization
 const fakeQuery = queryGeneric;
 const fakeMutation = mutationGeneric;
 
-// The factory's builders are typed to return RegisteredMutation/Query (no
-// `.handler` on the public type). Our fake builder returns the raw composed
-// spec at runtime, so we reach into it to execute the gate -> handler pipeline.
+/**
+ * The factory's builders are typed to return RegisteredMutation/Query (no
+ * `.handler` on the public type). Our fake builder returns the raw composed
+ * spec at runtime, so we reach into it to execute the gate -> handler pipeline.
+ */
 const exec = (registered: unknown) => {
   if ((typeof registered !== "object" && typeof registered !== "function") || registered === null) {
     throw new TypeError("expected an executable spec");
@@ -98,15 +99,19 @@ function buildViewer(
     convexAuthOrganizationId: COMPONENT_ORGANIZATION_ID,
     membership: { ...membership, permissions, roleKey },
     hasPermission: has,
-    // Mirrors the real glue: throws a typed auth error when the permission is
-    // absent. This is the ONLY enforcement point the factory relies on.
+    /**
+     * Mirrors the real glue: throws a typed auth error when the permission is
+     * absent. This is the ONLY enforcement point the factory relies on.
+     */
     requirePermission: (p: string) => {
       if (!has(p)) {
         const err = new Error(`Permission required: ${p}`) as Error & {
           data?: unknown;
         };
-        // Shape the payload like throwAuthError's ConvexError data so the test
-        // can assert it's a genuine authz denial, not an incidental throw.
+        /**
+         * Shape the payload like throwAuthError's ConvexError data so the test
+         * can assert it's a genuine authz denial, not an incidental throw.
+         */
         err.data = {
           code: "FORBIDDEN",
           authzCode: "PERMISSION_REQUIRED",
@@ -116,8 +121,10 @@ function buildViewer(
       }
     },
     requireOrganization: () => COMPONENT_ORGANIZATION_ID,
-    // Mirrors the real glue: throws PERMISSION_REQUIRED when the viewer's role
-    // is not among the allowed keys.
+    /**
+     * Mirrors the real glue: throws PERMISSION_REQUIRED when the viewer's role
+     * is not among the allowed keys.
+     */
     requireRole: (...allowedRoleKeys: string[]) => {
       if (!allowedRoleKeys.includes(roleKey)) {
         const err = new Error(`Role required: one of [${allowedRoleKeys.join(", ")}]`) as Error & {
@@ -212,12 +219,12 @@ describe("createConvexAuthFunctions — security contract", () => {
     await assert.rejects(
       () => spec.handler(fakeCtx, {}),
       (err: Error & { data?: unknown }) => {
-        // It's a genuine authz denial (PERMISSION_REQUIRED), not an incidental error.
+        /** It's a genuine authz denial (PERMISSION_REQUIRED), not an incidental error. */
         assert.ok(isAuthErrorDenial(err.data), "expected a PERMISSION_REQUIRED denial");
         return true;
       },
     );
-    // The crux: the handler body NEVER executed. The check is unbypassable.
+    /** The crux: the handler body NEVER executed. The check is unbypassable. */
     assert.equal(handlerRan, false, "handler must not run when permission is denied");
   });
 
@@ -248,14 +255,14 @@ describe("createConvexAuthFunctions — security contract", () => {
     assert.equal(await spec.handler(fakeCtx, {}), "u1");
   });
 
-  // -------------------------------------------------------------------------
-  // TEETH: prove the difference between the factory path and a hand-rolled raw
-  // mutation is REAL. The same viewer (lacking "widgets:edit") sails straight
-  // into an unguarded raw handler — exactly the drift bug class the factory
-  // exists to close. If this ever stops being true (e.g. the factory's gate
-  // silently no-ops), the contract test above would also pass trivially, so the
-  // two together pin the behavior.
-  // -------------------------------------------------------------------------
+  /**
+   * TEETH: prove the difference between the factory path and a hand-rolled raw
+   * mutation is REAL. The same viewer (lacking "widgets:edit") sails straight
+   * into an unguarded raw handler — exactly the drift bug class the factory
+   * exists to close. If this ever stops being true (e.g. the factory's gate
+   * silently no-ops), the contract test above would also pass trivially, so the
+   * two together pin the behavior.
+   */
   it("fires onAuthorizationDenied before re-throwing, with the granular authzCode + resolved viewer — and the handler still never runs", async () => {
     let handlerRan = false;
     const denials: Array<{
@@ -269,8 +276,10 @@ describe("createConvexAuthFunctions — security contract", () => {
         denials.push({
           permission,
           authzCode: readAuthzCode(error),
-          // A permission denial happens AFTER resolution → viewer present, so
-          // the audit can attribute the denial to the authenticated principal.
+          /**
+           * A permission denial happens AFTER resolution → viewer present, so
+           * the audit can attribute the denial to the authenticated principal.
+           */
           attributedUserId: viewer?.convexAuthUserId,
         });
       },
@@ -286,8 +295,10 @@ describe("createConvexAuthFunctions — security contract", () => {
     );
 
     await assert.rejects(() => spec.handler(fakeCtx, {}));
-    // The hook saw the denial — so a consumer can emit its audit row — and the
-    // original error still propagated (hook cannot swallow it).
+    /**
+     * The hook saw the denial — so a consumer can emit its audit row — and the
+     * original error still propagated (hook cannot swallow it).
+     */
     assert.deepEqual(denials, [
       {
         permission: "widgets:edit",
@@ -300,7 +311,7 @@ describe("createConvexAuthFunctions — security contract", () => {
 
   it("omits the viewer when RESOLUTION itself fails (no trustworthy principal to attribute)", async () => {
     const denials: Array<{ hasViewer: boolean; authzCode?: unknown }> = [];
-    // Glue whose resolveViewer throws an AUTHENTICATION_REQUIRED-style error.
+    /** Glue whose resolveViewer throws an AUTHENTICATION_REQUIRED-style error. */
     const failingGlue: B2BGlue<LocalUser, LocalAnchor> = {
       mode: "b2b",
       resolveViewer: async () => {
@@ -349,10 +360,10 @@ describe("createConvexAuthFunctions — security contract", () => {
     assert.deepEqual(denials, []);
   });
 
-  // -------------------------------------------------------------------------
-  // Increment 5b — any/all/role wrapper coverage. Same unbypassable gate, same
-  // denial path; the handler never runs when the check fails.
-  // -------------------------------------------------------------------------
+  /**
+   * Increment 5b — any/all/role wrapper coverage. Same unbypassable gate, same
+   * denial path; the handler never runs when the check fails.
+   */
 
   it("permissionAnyMutation ALLOWS when the viewer holds at least one permission", async () => {
     let ran = false;
@@ -420,7 +431,7 @@ describe("createConvexAuthFunctions — security contract", () => {
 
   it("roleMutation ALLOWS the matching role and BLOCKS others (viewer role = 'member')", async () => {
     const { roleMutation } = makeFunctions(["widgets:view"]);
-    // member is allowed
+    /** member is allowed */
     let ran = false;
     const ok = exec(
       roleMutation(
@@ -437,7 +448,7 @@ describe("createConvexAuthFunctions — security contract", () => {
     assert.equal(await ok.handler(fakeCtx, {}), "ok");
     assert.equal(ran, true);
 
-    // owner-only blocks a member, and the handler never runs
+    /** owner-only blocks a member, and the handler never runs */
     let blockedRan = false;
     const blocked = exec(
       roleMutation("owner")({
@@ -518,7 +529,7 @@ describe("createConvexAuthFunctions — security contract", () => {
 
   it("a raw (hand-rolled) mutation that skips the gate is NOT protected", async () => {
     let unsafeRan = false;
-    // This is what a consumer writes WITHOUT the factory: a raw builder, no gate.
+    /** This is what a consumer writes WITHOUT the factory: a raw builder, no gate. */
     const rawSpec = exec(
       fakeMutation({
         args: {},
@@ -528,8 +539,10 @@ describe("createConvexAuthFunctions — security contract", () => {
         },
       }),
     );
-    // Same under-privileged caller. Nothing stops it — proving the gate is the
-    // thing doing the work, and that the matrix has teeth.
+    /**
+     * Same under-privileged caller. Nothing stops it — proving the gate is the
+     * thing doing the work, and that the matrix has teeth.
+     */
     const result = await rawSpec.handler(fakeCtx, {});
     assert.equal(unsafeRan, true);
     assert.equal(result, "leaked");
@@ -538,8 +551,10 @@ describe("createConvexAuthFunctions — security contract", () => {
 
 function isAuthErrorDenial(data: unknown): boolean {
   if (isAuthErrorPayload(data)) return true;
-  // Our fake shapes the payload to match; accept either the real predicate or
-  // the structural PERMISSION_REQUIRED shape.
+  /**
+   * Our fake shapes the payload to match; accept either the real predicate or
+   * the structural PERMISSION_REQUIRED shape.
+   */
   return (
     typeof data === "object" &&
     data !== null &&

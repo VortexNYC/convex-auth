@@ -261,8 +261,10 @@ describe("mcp oauth flow helpers", () => {
         redirectUris: ["http://127.0.0.1:8788/callback"],
         allowedScopes: ["app:organization:read"],
       }),
-      // Valid PKCE so the ONLY reason this fails is expiry — proving the expiry
-      // gate runs and is not masked by the PKCE check.
+      /**
+       * Valid PKCE so the ONLY reason this fails is expiry — proving the expiry
+       * gate runs and is not masked by the PKCE check.
+       */
       consumeAuthorizationCode: () => ({
         clientId: "client_123",
         subjectId: "user_123",
@@ -312,8 +314,10 @@ describe("mcp oauth flow helpers", () => {
             redirectUris: ["http://127.0.0.1:8788/callback"],
             allowedScopes: ["app:organization:read"],
           }),
-          // A misbehaving consumer that ignored the contract and dropped expiresAt.
-          // The validator must reject rather than treat it as never-expiring.
+          /**
+           * A misbehaving consumer that ignored the contract and dropped expiresAt.
+           * The validator must reject rather than treat it as never-expiring.
+           */
           consumeAuthorizationCode: () => ({
             clientId: "client_123",
             subjectId: "user_123",

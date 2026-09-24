@@ -135,7 +135,7 @@ export function removeLegacyFromConvexConfig(content: string): string {
     );
     result = result.replace(regex, "");
   }
-  // collapse multiple blank lines left behind
+  /** collapse multiple blank lines left behind */
   return result.replace(/\n{3,}/g, "\n\n");
 }
 

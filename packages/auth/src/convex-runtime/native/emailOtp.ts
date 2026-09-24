@@ -11,7 +11,9 @@ import {
   type VerificationCodeType,
 } from "./types.js";
 
-// Common RFC-style email validation regex.
+/**
+ * Common RFC-style email validation regex.
+ */
 const EMAIL_REGEX =
   /^(?!\.)(?!.*\.\.)([A-Z0-9_+-]\.?)+[A-Z0-9_+-]@([A-Z0-9][A-Z0-9-]*\.)+[A-Z]{2,}$/i;
 
@@ -182,7 +184,7 @@ export function nativeEmailOtp(
             email: normalizedEmail,
           });
           if (!user) {
-            // Obscure the missing user to avoid email enumeration.
+            /** Obscure the missing user to avoid email enumeration. */
             return { status: "queued" as const, emailId: "noop" };
           }
           userId = user._id;
@@ -349,7 +351,8 @@ export function nativeEmailOtp(
           return { status: true };
         }
 
-        // A valid code with no existing password account can still set a new password.
+        /** A valid code with no existing password account can still set a
+         * new password. */
         if (result.reason === "invalid") {
           const code = await ctx.runQuery(component.native.codes.getVerificationCodeByTokenHash, {
             tokenHash,
@@ -398,7 +401,6 @@ export function nativeEmailOtp(
                 });
               }
 
-              // Consume the verification code.
               await ctx.runMutation(component.native.codes.consumeVerificationCode, {
                 tokenHash,
                 type: "password_reset",

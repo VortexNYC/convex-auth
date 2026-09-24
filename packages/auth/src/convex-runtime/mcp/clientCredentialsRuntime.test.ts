@@ -85,14 +85,18 @@ describe("handleMcpOAuthTokenRequest — client_credentials", () => {
     const body: Record<string, unknown> = await response.json();
     assert.equal(body.access_token, "machine.jwt.token");
     assert.equal(body.token_type, "Bearer");
-    // No refresh token: a machine client re-authenticates with its own
-    // credential, so a refresh token would be a second standing secret.
+    /**
+     * No refresh token: a machine client re-authenticates with its own
+     * credential, so a refresh token would be a second standing secret.
+     */
     assert.equal(body.refresh_token, undefined);
   });
 
   it("does not fall through to another grant when the credential is rejected", async () => {
-    // The important rule. If a rejected machine credential fell through, it
-    // would get a second evaluation as an authorization-code request.
+    /**
+     * The important rule. If a rejected machine credential fell through, it
+     * would get a second evaluation as an authorization-code request.
+     */
     const response = await handleMcpOAuthTokenRequest({
       request: tokenRequest({
         grant_type: "client_credentials",
@@ -126,7 +130,7 @@ describe("handleMcpOAuthTokenRequest — client_credentials", () => {
   });
 
   it("leaves the endpoint user-only when the machine grant is not configured", async () => {
-    // Omitting clientCredentials must not quietly enable it.
+    /** Omitting clientCredentials must not quietly enable it. */
     const response = await handleMcpOAuthTokenRequest({
       request: tokenRequest({
         grant_type: "client_credentials",

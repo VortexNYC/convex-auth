@@ -449,11 +449,13 @@ describe("setOrganizationMemberStatus", () => {
 });
 
 describe("custom consumer role catalog (TRole generic)", () => {
-  // Regression: invitations carry a roleId in the convexAuth component, so the
-  // policy helper must accept a consumer's OWN role union (not just the built-in
-  // template). Proves both that a custom union compiles through the generic AND
-  // that the role string flows to the consumer callbacks unchanged. Role validity
-  // is consumer-owned — the callback maps only catalog-backed keys to a roleId.
+  /**
+   * Regression: invitations carry a roleId in the convexAuth component, so the
+   * policy helper must accept a consumer's OWN role union (not just the built-in
+   * template). Proves both that a custom union compiles through the generic AND
+   * that the role string flows to the consumer callbacks unchanged. Role validity
+   * is consumer-owned — the callback maps only catalog-backed keys to a roleId.
+   */
   type AquaRole = "owner" | "accountant" | "viewer";
 
   it("threads a custom role union through create + redeem unchanged", async () => {

@@ -31,10 +31,12 @@ const { site } = requireEnv();
 const r = makeReporter();
 const J = () => ({ "content-type": "application/json", origin: ORIGIN_WEB });
 
-// Better Auth returns 200 for forget-password regardless of whether the
-// address exists (anti-enumeration). A mounted, wired endpoint must NOT
-// 404 (route missing) or 500 (callback threw). Sign up first so the
-// account is real and the reset callback path is actually exercised.
+/**
+ * Better Auth returns 200 for forget-password regardless of whether the
+ * address exists (anti-enumeration). A mounted, wired endpoint must NOT
+ * 404 (route missing) or 500 (callback threw). Sign up first so the
+ * account is real and the reset callback path is actually exercised.
+ */
 const email = uniqueEmail("acctmail");
 const password = strongPassword("acctmail");
 
@@ -50,8 +52,10 @@ if (signUp.status >= 200 && signUp.status < 300) {
 }
 const cookie = mergeCookies(signUp);
 
-// --- Password reset request -------------------------------------------
-// Better Auth route: POST /request-password-reset (alias: /forget-password).
+/**
+ * --- Password reset request -------------------------------------------
+ * Better Auth route: POST /request-password-reset (alias: /forget-password).
+ */
 const reset = await fetch(`${site}/api/auth/request-password-reset`, {
   method: "POST",
   headers: J(),
@@ -64,14 +68,18 @@ if (reset.status === 404) {
 } else if (reset.status >= 200 && reset.status < 300) {
   r.ok(`request-password-reset accepted (HTTP ${reset.status})`);
 } else {
-  // 4xx that isn't 404 (e.g. validation) still proves the route exists
-  // and didn't crash; flag it for visibility but don't fail the suite.
+  /**
+   * 4xx that isn't 404 (e.g. validation) still proves the route exists
+   * and didn't crash; flag it for visibility but don't fail the suite.
+   */
   r.ok(`request-password-reset reachable, returned HTTP ${reset.status} (route mounted, no crash)`);
 }
 
-// --- Email verification send ------------------------------------------
-// Better Auth route: POST /send-verification-email. Requires a valid
-// session for the target user (uses the signed-up cookie).
+/**
+ * --- Email verification send ------------------------------------------
+ * Better Auth route: POST /send-verification-email. Requires a valid
+ * session for the target user (uses the signed-up cookie).
+ */
 const verify = await fetch(`${site}/api/auth/send-verification-email`, {
   method: "POST",
   headers: { ...J(), cookie },

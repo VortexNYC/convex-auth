@@ -1,8 +1,6 @@
 import { cn } from "./lib/ui";
 import { useCallback, useState, type FormEvent, type ReactNode } from "react";
 
-// ─── Types ────────────────────────────────────────────────────────────────
-
 export type ConvexCreateOrganizationInput = {
   name: string;
   slug: string;
@@ -56,8 +54,6 @@ export type ConvexCreateOrganizationProps = {
   renderHeader?: (args: { title: ReactNode; description: ReactNode }) => ReactNode;
 };
 
-// ─── Default copy ──────────────────────────────────────────────────────────
-
 const defaultCopy: Required<ConvexCreateOrganizationCopy> = {
   title: "Create workspace",
   description: "Set up a new workspace for your team.",
@@ -83,8 +79,6 @@ function resolveCopy(
 }
 
 const slugRegex = /^[a-z0-9-]+$/;
-
-// ─── Component ────────────────────────────────────────────────────────────
 
 function CreateOrganizationHeader(props: {
   classNames?: ConvexCreateOrganizationClassNames;

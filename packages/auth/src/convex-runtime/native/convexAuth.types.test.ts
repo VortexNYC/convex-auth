@@ -11,8 +11,10 @@ import type { ComponentApi as WebhooksComponentApi } from "../../component/webho
 import { convexAuth } from "./convexAuth";
 import type { NativeEmailAndPasswordComponentHandle } from "./types";
 
-// Compile-time checks that the full, core, and organizations components can be
-// passed to convexAuth() as components.core.
+/**
+ * Compile-time checks that the full, core, and organizations components can be
+ * passed to convexAuth() as components.core.
+ */
 type _AssertFullSatisfiesNativeHandle =
   FullComponentApi<"convexAuth"> extends NativeEmailAndPasswordComponentHandle ? true : false;
 type _AssertCoreSatisfiesNativeHandle =
@@ -29,7 +31,7 @@ describe("convexAuth component handle types", () => {
     const organizationsComponent =
       {} as unknown as OrganizationsComponentApi<"convexAuthOrganizations">;
 
-    // If these compile, the config accepts all three generated component handles.
+    /** If these compile, the config accepts all three generated component handles. */
     convexAuth({ component: fullComponent });
     convexAuth({ component: coreComponent });
     convexAuth({ component: organizationsComponent });
@@ -48,7 +50,7 @@ describe("convexAuth component handle types", () => {
       ],
     };
 
-    // oauthProvider requires the full component (mcp namespace) at runtime.
+    /** oauthProvider requires the full component (mcp namespace) at runtime. */
     convexAuth({ component: fullComponent, oauthProvider: testOauthProvider });
 
     const agentAuthComponent = {} as unknown as AgentAuthComponentApi<"convexAuthAgentAuth">;
@@ -59,8 +61,10 @@ describe("convexAuth component handle types", () => {
       {} as unknown as ServicePrincipalsComponentApi<"convexAuthServicePrincipals">;
     const webhooksComponent = {} as unknown as WebhooksComponentApi<"convexAuthWebhooks">;
 
-    // These are not valid as the core native-auth handle because they do not
-    // expose the email/password, session, and verifier functions.
+    /**
+     * These are not valid as the core native-auth handle because they do not
+     * expose the email/password, session, and verifier functions.
+     */
     // @ts-expect-error agentAuth is not a core auth component
     convexAuth({ components: { core: agentAuthComponent } });
     // @ts-expect-error apiKeys is not a core auth component
@@ -74,7 +78,7 @@ describe("convexAuth component handle types", () => {
     // @ts-expect-error webhooks is not a core auth component
     convexAuth({ components: { core: webhooksComponent } });
 
-    // Runtime assertion placeholder.
+    /** Runtime assertion placeholder. */
     const _yes = true;
     void _yes;
   });

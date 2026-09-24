@@ -411,13 +411,11 @@ export function getMcpOAuthSessionTokenFromRequest(request: Request): string | n
     return separatorIndex === -1 ? signedCookie : signedCookie.slice(0, separatorIndex);
   }
 
-  // Fallback to the native convex-auth access-token cookie.
   const nativeCookie = getCookie(request.headers, "convex-auth-token");
   if (nativeCookie) {
     return nativeCookie;
   }
 
-  // Fallback to an Authorization: Bearer header.
   const authHeader = request.headers.get("authorization");
   if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
     return authHeader.slice("bearer ".length).trim();
@@ -580,11 +578,18 @@ export async function handleMcpOAuthClientRegistrationRequest(args: {
   );
 }
 
+/**
+ * Dispatch a token request to the matching grant handler.
+ *
+ * The machine (`client_credentials`) grant is tried first: it is the only
+ * grant with no user, so it must not fall through to a path that assumes one.
+ * Only an `unsupported_grant_type` mismatch may fall through to the next
+ * handler — a real failure is terminal, otherwise a rejected machine
+ * credential would get a second attempt classified as a different grant.
+ */
 export async function handleMcpOAuthTokenRequest<TClient extends McpOAuthClient>(
   args: McpOAuthTokenRequestArgs<TClient>,
 ): Promise<Response> {
-  // Machine grant first: it is the only one with no user, so it must not fall
-  // through to a path that assumes one.
   if (args.clientCredentials !== undefined) {
     const machineGrant = await validateMcpOAuthClientCredentialsTokenExchange({
       request: args.request.clone(),
@@ -596,9 +601,6 @@ export async function handleMcpOAuthTokenRequest<TClient extends McpOAuthClient>
     if (machineGrant.ok) {
       return await handleMcpOAuthClientCredentialsExchange(args, machineGrant);
     }
-    // Only a grant_type mismatch may fall through; a real failure is terminal,
-    // otherwise a rejected machine credential would get a second attempt as a
-    // different grant.
     if (machineGrant.body.error !== "unsupported_grant_type") {
       return jsonResponse(machineGrant.status, machineGrant.body);
     }
@@ -620,6 +622,12 @@ export async function handleMcpOAuthTokenRequest<TClient extends McpOAuthClient>
   return await handleMcpOAuthAuthorizationCodeExchange(args);
 }
 
+/**
+ * Issue an access token for a `client_credentials` grant.
+ *
+ * No refresh token is issued: a machine client re-authenticates with its own
+ * credential, so a refresh token would only add a second standing secret.
+ */
 async function handleMcpOAuthClientCredentialsExchange<TClient extends McpOAuthClient>(
   args: McpOAuthTokenRequestArgs<TClient>,
   grant: McpOAuthClientCredentialsTokenExchangeSuccess<TClient>,
@@ -648,8 +656,6 @@ async function handleMcpOAuthClientCredentialsExchange<TClient extends McpOAuthC
     return jsonResponse(token.status, token.body);
   }
 
-  // No refresh token: a machine client re-authenticates with its own
-  // credential, so a refresh token would only add a second standing secret.
   return jsonResponse(200, {
     access_token: token.accessToken,
     token_type: token.tokenType,

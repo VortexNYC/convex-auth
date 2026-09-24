@@ -27,7 +27,7 @@ describe("assertMcpOAuthClientIdMetadataUrl", () => {
   });
 
   it("rejects plaintext http", () => {
-    // Metadata fetched over http can be rewritten in flight.
+    /** Metadata fetched over http can be rewritten in flight. */
     const result = assertMcpOAuthClientIdMetadataUrl("http://client.dev/oauth/metadata.json");
     assert.equal(result.ok, false);
   });
@@ -46,8 +46,10 @@ describe("assertMcpOAuthClientIdMetadataUrl", () => {
   });
 
   it("refuses to fetch our own network (SSRF)", () => {
-    // The client chooses what the server connects to, so these are the
-    // cheapest paths to internal services and cloud metadata.
+    /**
+     * The client chooses what the server connects to, so these are the
+     * cheapest paths to internal services and cloud metadata.
+     */
     for (const candidate of [
       "https://localhost/metadata.json",
       "https://127.0.0.1/metadata.json",
@@ -98,8 +100,10 @@ describe("isMcpOAuthClientIdMetadataAddressAllowed", () => {
   });
 
   it("blocks non-canonical spellings of the same address", () => {
-    // A resolver returns whatever form it was given: dns.lookup yields
-    // `0:0:0:0:0:0:0:1`, not `::1`. Matching one spelling admits the rest.
+    /**
+     * A resolver returns whatever form it was given: dns.lookup yields
+     * `0:0:0:0:0:0:0:1`, not `::1`. Matching one spelling admits the rest.
+     */
     for (const address of [
       "0:0:0:0:0:0:0:1",
       "0:0:0:0:0:0:0:0",
@@ -118,8 +122,10 @@ describe("isMcpOAuthClientIdMetadataAddressAllowed", () => {
   });
 
   it("blocks IPv4-mapped addresses in hex form", () => {
-    // Node normalises [::ffff:10.0.0.1] to [::ffff:a00:1], so the dotted
-    // spelling never reaches this guard through a real URL.
+    /**
+     * Node normalises [::ffff:10.0.0.1] to [::ffff:a00:1], so the dotted
+     * spelling never reaches this guard through a real URL.
+     */
     for (const address of [
       "::ffff:a00:1", // 10.0.0.1
       "::ffff:7f00:1", // 127.0.0.1
@@ -143,8 +149,10 @@ describe("isMcpOAuthClientIdMetadataAddressAllowed", () => {
 
 describe("CIMD URL guard against normalised IPv6 literals", () => {
   it("refuses private addresses that survive URL normalisation", () => {
-    // The layer that matters: by the time a client_id reaches us, the URL
-    // parser has already rewritten the host. These are the forms it produces.
+    /**
+     * The layer that matters: by the time a client_id reaches us, the URL
+     * parser has already rewritten the host. These are the forms it produces.
+     */
     for (const literal of [
       "::ffff:10.0.0.1",
       "::ffff:127.0.0.1",
@@ -183,8 +191,10 @@ describe("validateMcpOAuthClientIdMetadataDocument", () => {
   });
 
   it("rejects a document claiming a different client_id", () => {
-    // The binding that makes CIMD safe: without it any origin could serve a
-    // document impersonating another client.
+    /**
+     * The binding that makes CIMD safe: without it any origin could serve a
+     * document impersonating another client.
+     */
     const result = validateMcpOAuthClientIdMetadataDocument({
       clientIdUrl: CLIENT_ID,
       document: document({ client_id: "https://evil.example/metadata.json" }),
@@ -226,8 +236,10 @@ describe("validateMcpOAuthClientIdMetadataDocument", () => {
   });
 
   it("flags a cross-origin client_uri without failing", () => {
-    // Usable, but the consent screen must be able to say the displayed
-    // identity is not the origin that served the document.
+    /**
+     * Usable, but the consent screen must be able to say the displayed
+     * identity is not the origin that served the document.
+     */
     const result = validateMcpOAuthClientIdMetadataDocument({
       clientIdUrl: CLIENT_ID,
       document: document({ client_uri: "https://trusted-brand.example" }),

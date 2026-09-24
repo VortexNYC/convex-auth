@@ -29,6 +29,19 @@ export const MCP_OAUTH_CLIENT_ASSERTION_MAX_LIFETIME_SECONDS = 300;
  * client that claims to be calling, the signature under that client's own
  * registered algorithm, and RFC 7523's claim set (`iss` and `sub` both the
  * client id, `aud` the token endpoint, `exp` present and bounded).
+ *
+ * Key selection: when the assertion names a `kid` it must match a registered
+ * key; when it does not, a single registered key is unambiguous and anything
+ * else fails. The verify is pinned to the key's own algorithm rather than the
+ * assertion header's — trusting the header would let a caller downgrade the
+ * algorithm and forge an assertion.
+ *
+ * RFC 7523 §3: for client authentication `iss` and `sub` are both the client;
+ * enforcing both stops a client signing an assertion that names another.
+ *
+ * The returned `assertionId` is the JWT `jti`, surfaced so the caller can
+ * reject replays. Assertions are short-lived, so a replay store need only
+ * retain ids until they expire.
  */
 export async function verifyMcpOAuthClientAssertion(
   args: McpOAuthClientAssertionVerifyArgs,
@@ -51,8 +64,6 @@ export async function verifyMcpOAuthClientAssertion(
     return failure("client_assertion is not a well-formed JWT");
   }
 
-  // Select the client's registered key. When the assertion names a `kid` it
-  // must match one we hold; otherwise a single registered key is unambiguous.
   const candidateKeys = args.clientKeys;
   if (candidateKeys.length === 0) {
     return failure("Client has no registered assertion key");
@@ -74,9 +85,6 @@ export async function verifyMcpOAuthClientAssertion(
       args.assertion,
       await importJWK(key.publicJwk, key.algorithm),
       {
-        // Pin to the key's own algorithm rather than the assertion header's,
-        // matching verifyMcpOAuthAccessToken. Trusting the header would let a
-        // caller downgrade the algorithm and forge an assertion.
         algorithms: [key.algorithm],
         audience: args.tokenEndpoint,
         currentDate: new Date(now),
@@ -87,8 +95,6 @@ export async function verifyMcpOAuthClientAssertion(
     return failure("client_assertion signature or claims are invalid");
   }
 
-  // RFC 7523 §3: for client authentication `iss` and `sub` are both the client.
-  // Enforcing both stops a client signing an assertion that names another.
   if (payload.iss !== args.clientId || payload.sub !== args.clientId) {
     return failure("client_assertion iss and sub must both be the client id");
   }
@@ -109,8 +115,6 @@ export async function verifyMcpOAuthClientAssertion(
     ok: true,
     clientId: args.clientId,
     keyId: key.keyId,
-    // `jti` lets the caller reject replays. Assertions are short-lived, so a
-    // store need only retain ids until they expire.
     assertionId: typeof payload.jti === "string" ? payload.jti : null,
     expiresAt,
   };

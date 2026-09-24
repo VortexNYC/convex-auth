@@ -20,15 +20,19 @@ import {
   type ConvexAuthOrganizationOperationsConfig,
 } from "./createConvexAuthOrganizationOperations";
 
-// Compile-time check that the legacy full component satisfies the operations
-// handle, so existing consumers do not break.
+/**
+ * Compile-time check that the legacy full component satisfies the operations
+ * handle, so existing consumers do not break.
+ */
 type _AssertFullComponentSatisfiesHandle =
   FullComponentApi<"convexAuth"> extends ConvexAuthOrganizationOperationsComponentHandle
     ? true
     : false;
 
-// Compile-time checks that the split `components` bag can be satisfied by the
-// feature-gated components.
+/**
+ * Compile-time checks that the split `components` bag can be satisfied by the
+ * feature-gated components.
+ */
 type _AssertCoreSatisfiesComponentsCore =
   CoreComponentApi<"convexAuthCore"> extends ConvexAuthOrganizationOperationsComponentsHandle["core"]
     ? true
@@ -42,9 +46,7 @@ type _AssertApiKeysSatisfiesComponentsApiKeys =
     ? true
     : false;
 
-// ---------------------------------------------------------------------------
-// Test domain: branded local ids + a fixed role-template literal union.
-// ---------------------------------------------------------------------------
+/** Test domain: branded local ids + a fixed role-template literal union. */
 
 type LocalOrgId = string & { readonly __brand: "LocalOrgId" };
 type LocalUserId = string & { readonly __brand: "LocalUserId" };
@@ -106,13 +108,13 @@ function isFixtureId<
   return value.length > 0;
 }
 
-// ---------------------------------------------------------------------------
-// Fake component handle: each op is a unique marker object. The fake
-// runQuery/runMutation dispatch off identity of the marker.
-// ---------------------------------------------------------------------------
+/**
+ * Fake component handle: each op is a unique marker object. The fake
+ * runQuery/runMutation dispatch off identity of the marker.
+ */
 
 const operationRefs = {
-  // organizations
+  /** organizations */
   getMember: componentApi.organizations.getMember,
   getMemberByIdForSystem: componentApi.organizations.getMemberByIdForSystem,
   getMemberByUserOrganization: componentApi.organizations.getMemberByUserOrganization,
@@ -131,7 +133,7 @@ const operationRefs = {
   getInvitationByTokenHash: componentApi.organizations.getInvitationByTokenHash,
   getInvitationByEmailId: componentApi.organizations.getInvitationByEmailId,
   listInvitationsByOrganization: componentApi.organizations.listInvitationsByOrganization,
-  // apiKeys
+  /** apiKeys */
   getApiKey: componentApi.apiKeys.getApiKey,
   getApiKeyByPrefix: componentApi.apiKeys.getApiKeyByPrefix,
   getApiKeyByRequestId: componentApi.apiKeys.getApiKeyByRequestId,
@@ -190,9 +192,7 @@ const fakeComponent: ConvexAuthOrganizationOperationsComponentHandle = {
   },
 };
 
-// ---------------------------------------------------------------------------
-// Fake world: component-side rows + local anchors + a query/mutation log.
-// ---------------------------------------------------------------------------
+/** Fake world: component-side rows + local anchors + a query/mutation log. */
 
 type Roles = Record<string, { key: string }>;
 type Members = Record<
@@ -211,9 +211,9 @@ type Members = Record<
 type World = {
   roles: Roles;
   members: Members;
-  // component-org-id → local-org-id anchors
+  /** component-org-id → local-org-id anchors */
   orgAnchors: Record<string, LocalOrgId>;
-  // component-user-id → local-user-id anchors
+  /** component-user-id → local-user-id anchors */
   userAnchors: Record<string, LocalUserId>;
   mutationLog: Array<{ op: string; args: unknown }>;
 };
@@ -288,7 +288,7 @@ function makeOperations(
     validateRoleKey: isTestRole,
     roleCatalog: TEST_ROLE_CATALOG,
     loadOrganizationForUpsert: async (_ctx, localOrganizationId) => {
-      // find the component org id whose anchor is this local org
+      /** find the component org id whose anchor is this local org */
       const entry = Object.entries(world.orgAnchors).find(
         ([, local]) => local === localOrganizationId,
       );
@@ -313,9 +313,7 @@ function makeOperations(
   });
 }
 
-// ---------------------------------------------------------------------------
-// READER SAFETY
-// ---------------------------------------------------------------------------
+/** READER SAFETY */
 
 describe("createConvexAuthOrganizationOperations — reader safety", () => {
   it("DROPS a member whose role key is not a valid consumer template", async () => {
@@ -467,14 +465,14 @@ describe("createConvexAuthOrganizationOperations — reader safety", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// WRITER ENSURE-CHAIN
-// ---------------------------------------------------------------------------
+/** WRITER ENSURE-CHAIN */
 
 describe("createConvexAuthOrganizationOperations — writer ensure-chain", () => {
   it("upsertMember ensures org→role, backfills a NEW component org id, resolves optional invitedBy", async () => {
-    // The local org has NO bridge yet; upsertOrganization returns a fresh id we
-    // expect to be backfilled onto the local anchor.
+    /**
+     * The local org has NO bridge yet; upsertOrganization returns a fresh id we
+     * expect to be backfilled onto the local anchor.
+     */
     const world = makeWorld({
       orgAnchors: {}, // no bridge yet
       userAnchors: {
@@ -500,10 +498,10 @@ describe("createConvexAuthOrganizationOperations — writer ensure-chain", () =>
 
     assert.equal(memberId, "cMemberNew");
 
-    // backfill happened: the component org id is now anchored to the local org.
+    /** backfill happened: the component org id is now anchored to the local org. */
     assert.equal(world.orgAnchors.cOrgNew, orgId("local-org-1"));
 
-    // ensure-chain order: upsertOrganization, then ensureRole, then upsertMember.
+    /** ensure-chain order: upsertOrganization, then ensureRole, then upsertMember. */
     const opOrder = world.mutationLog.map((m) => m.op);
     const orgIdx = opOrder.indexOf("upsertOrganization");
     const roleIdx = opOrder.indexOf("ensureRole");
@@ -513,7 +511,7 @@ describe("createConvexAuthOrganizationOperations — writer ensure-chain", () =>
       "ensure order org→role→member",
     );
 
-    // upsertMember received the resolved component bridge ids, not local ids.
+    /** upsertMember received the resolved component bridge ids, not local ids. */
     const upsertMemberArgs = requireRecord(
       world.mutationLog.find((m) => m.op === "upsertMember")?.args,
     );
@@ -591,7 +589,7 @@ describe("createConvexAuthOrganizationOperations — writer ensure-chain", () =>
     });
     const ops = makeOperations(world);
     await ops.writes.ensureOrganization(ctx, orgId("local-org-1"));
-    // anchor unchanged; only one component org id mapping exists.
+    /** anchor unchanged; only one component org id mapping exists. */
     assert.deepEqual(Object.keys(world.orgAnchors), ["cOrg1"]);
   });
 
@@ -606,16 +604,14 @@ describe("createConvexAuthOrganizationOperations — writer ensure-chain", () =>
   });
 });
 
-// ---------------------------------------------------------------------------
-// COMPILE-TIME TYPE ASSERTIONS — DTOs carry branded ids / role union, not string
-// ---------------------------------------------------------------------------
+/** COMPILE-TIME TYPE ASSERTIONS — DTOs carry branded ids / role union, not string */
 
 describe("createConvexAuthOrganizationOperations — generics flow branded ids", () => {
   it("read DTOs carry the consumer's branded id + role types (compile-time)", () => {
     type Equals<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 
     type Membership = ResolvedComponentMembership<LocalOrgId, TestRole>;
-    // organizationId is the branded LocalOrgId, NOT string.
+    /** organizationId is the branded LocalOrgId, NOT string. */
     type TypeProofs = [
       Equals<Membership["organizationId"], LocalOrgId>,
       Equals<Membership["organizationId"] extends string ? true : false, true>,
@@ -631,16 +627,14 @@ describe("createConvexAuthOrganizationOperations — generics flow branded ids",
     ];
     const typeProofs: TypeProofs = [true, true, true, true, true];
     assert.deepEqual(typeProofs, [true, true, true, true, true]);
-    // and NOT loosely string:
+    /** and NOT loosely string: */
     const isNotString: Equals<Membership["organizationId"], string> = false;
     assert.equal(isNotString, false);
-    // roleTemplate and invitation ids are proven by TypeProofs above.
+    /** roleTemplate and invitation ids are proven by TypeProofs above. */
   });
 });
 
-// ---------------------------------------------------------------------------
-// ERROR POLICY (typed default + consumer createError seam)
-// ---------------------------------------------------------------------------
+/** ERROR POLICY (typed default + consumer createError seam) */
 
 describe("createConvexAuthOrganizationOperations — error policy", () => {
   it("throws a typed ConvexAuthOrganizationOperationsError (never a bare Error) for a writer with no runMutation", async () => {
@@ -703,7 +697,7 @@ describe("createConvexAuthOrganizationOperations — error policy", () => {
   });
 
   it("throws the CONSUMER's own error when createError is supplied (consumer-clean, no catch/remap)", async () => {
-    // A stand-in for a consumer's ConvexError({ code, message }).
+    /** A stand-in for a consumer's ConvexError({ code, message }). */
     class FakeConvexError extends Error {
       readonly data: { code: string; message: string };
       constructor(data: { code: string; message: string }) {
@@ -732,7 +726,7 @@ describe("createConvexAuthOrganizationOperations — error policy", () => {
           status: "active",
         }),
       (error: unknown) => {
-        // The consumer's error is thrown directly — NOT the package default.
+        /** The consumer's error is thrown directly — NOT the package default. */
         assert.ok(error instanceof FakeConvexError);
         assert.ok(!(error instanceof ConvexAuthOrganizationOperationsError));
         assert.equal(error.data.code, "user_bridge_id_missing");

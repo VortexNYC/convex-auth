@@ -39,6 +39,14 @@ export type AuthMdServiceAuthHttpServer<TContext> = {
   handleHttpRequest(ctx: TContext, request: Request): Promise<Response>;
 };
 
+/**
+ * Serves the service-auth HTTP endpoints (identity registration, token
+ * exchange, revocation).
+ *
+ * The revoke endpoint swallows revocation failures: RFC 7009 requires an
+ * invalid or already-revoked token to be indistinguishable from a successful
+ * revocation, so the handler always answers 200.
+ */
 export function createAuthMdServiceAuthHttpServer<TContext>(
   config: CreateAuthMdServiceAuthHttpServerConfig<TContext>,
 ): AuthMdServiceAuthHttpServer<TContext> {
@@ -90,10 +98,7 @@ export function createAuthMdServiceAuthHttpServer<TContext>(
             await config.authority.revokeAccessToken(ctx, {
               accessToken: token,
             });
-          } catch {
-            // RFC 7009 requires an invalid or already-revoked token to be
-            // indistinguishable from a successful revocation.
-          }
+          } catch {}
           return new Response(null, { status: 200, headers: noStoreHeaders() });
         }
         return oauthError(404, "invalid_request");

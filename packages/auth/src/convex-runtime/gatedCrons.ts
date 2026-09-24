@@ -12,8 +12,10 @@ const cronRegistrationMethods = new Set<PropertyKey>([
   "weekly",
 ] satisfies CronRegistrationMethod[]);
 
-// Read via globalThis so this module typechecks in non-node tsconfigs (browser
-// sandboxes) while still seeing the Convex runtime's process.env.
+/**
+ * Read via globalThis so this module typechecks in non-node tsconfigs (browser
+ * sandboxes) while still seeing the Convex runtime's process.env.
+ */
 const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
 
 function cronsAreEnabled(): boolean {

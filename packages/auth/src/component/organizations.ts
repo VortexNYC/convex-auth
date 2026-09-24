@@ -640,6 +640,10 @@ export const seedDefaultRoles = mutation({
   },
 });
 
+/**
+ * Cross-organization IDOR guard: a role id from another tenant must not be
+ * deletable by a caller acting in this org.
+ */
 export const deleteRole = mutation({
   args: {
     roleId: v.id("organization_roles"),
@@ -649,8 +653,6 @@ export const deleteRole = mutation({
   handler: async (ctx, { roleId, organizationId }) => {
     const role = await requireRoleById(ctx, roleId);
     if (role.organizationId !== organizationId) {
-      // Cross-organization IDOR guard: a role id from another tenant must not
-      // be deletable by a caller acting in this org.
       throw new Error("Organization role not found");
     }
     if (role.isSystem) {
@@ -686,9 +688,11 @@ export const deleteRole = mutation({
   },
 });
 
-// Tenant-scoped read: the DEFAULT, safe-by-construction reader. A role id from
-// another org does not resolve (returns null, no existence leak). This is what a
-// tenant-facing wrapper should reach for — pass the caller's own org.
+/**
+ * Tenant-scoped read: the DEFAULT, safe-by-construction reader. A role id from
+ * another org does not resolve (returns null, no existence leak). This is what
+ * a tenant-facing wrapper should reach for — pass the caller's own org.
+ */
 export const getRole = query({
   args: {
     roleId: v.id("organization_roles"),
@@ -794,8 +798,10 @@ export const getMemberByUserOrganization = query({
   },
 });
 
-// Tenant-scoped read (DEFAULT, safe-by-construction). A member id from another
-// org does not resolve. Tenant-facing wrappers pass the caller's own org.
+/**
+ * Tenant-scoped read (DEFAULT, safe-by-construction). A member id from another
+ * org does not resolve. Tenant-facing wrappers pass the caller's own org.
+ */
 export const getMember = query({
   args: {
     memberId: v.id("organization_members"),
@@ -811,9 +817,11 @@ export const getMember = query({
   },
 });
 
-// Unscoped member lookup for internal server-side use only — e.g. when the
-// caller has a component member id but has not yet resolved the org.
-// Never expose this from a client-facing query/mutation.
+/**
+ * Unscoped member lookup for internal server-side use only — e.g. when the
+ * caller has a component member id but has not yet resolved the org.
+ * Never expose this from a client-facing query/mutation.
+ */
 export const getMemberByIdForSystem = query({
   args: {
     memberId: v.id("organization_members"),
@@ -879,6 +887,12 @@ export const listMembershipsByUser = query({
   },
 });
 
+/**
+ * Assigns a role to a member. Cross-organization IDOR guard: prevents granting
+ * a role to a member of another tenant (privilege escalation across the org
+ * boundary). `requireRole` binds the role to the member's org, so once the
+ * member is confirmed in `organizationId`, the role is necessarily in it too.
+ */
 export const setMemberRole = mutation({
   args: {
     memberId: v.id("organization_members"),
@@ -890,12 +904,8 @@ export const setMemberRole = mutation({
   handler: async (ctx, { memberId, organizationId, roleId, assignedBy }) => {
     const member = await requireMember(ctx, memberId);
     if (member.organizationId !== organizationId) {
-      // Cross-organization IDOR guard: prevents granting a role to a member of
-      // another tenant (privilege escalation across the org boundary).
       throw new Error("Organization member not found");
     }
-    // requireRole binds the role to the member's org, so once the member is
-    // confirmed in `organizationId`, the role is necessarily in it too.
     await requireRole(ctx, roleId, member.organizationId);
     await ctx.db.patch("organization_members", memberId, {
       roleId,
@@ -993,11 +1003,13 @@ export const getInvitationByEmailId = query({
   },
 });
 
-// Tenant-scoped read (DEFAULT, safe-by-construction). An invitation id from
-// another org does not resolve — invitee email/role/expiry never leak cross-org.
-// Tenant-facing wrappers pass the caller's own org. For the genuine
-// "resolve an invitation by id to DISCOVER its org" system flow (which cannot
-// pre-supply the org), use `getInvitationByIdForSystem` below.
+/**
+ * Tenant-scoped read (DEFAULT, safe-by-construction). An invitation id from
+ * another org does not resolve — invitee email/role/expiry never leak
+ * cross-org. Tenant-facing wrappers pass the caller's own org. For the genuine
+ * "resolve an invitation by id to DISCOVER its org" system flow (which cannot
+ * pre-supply the org), use `getInvitationByIdForSystem` below.
+ */
 export const getInvitation = query({
   args: {
     invitationId: v.id("organization_invitations"),
@@ -1013,13 +1025,15 @@ export const getInvitation = query({
   },
 });
 
-// EXPLICITLY UNSCOPED system reader. The ONLY legitimate use is resolving an
-// invitation by id to discover the org it belongs to (you cannot scope a read by
-// the very value you are trying to learn) — e.g. an invitation-email render or a
-// provider delivery webhook that carries only the id. The deliberately verbose,
-// greppable name makes any tenant-facing misuse obvious in review/CI. NEVER call
-// this from a client-exposed `query`/`mutation`; use `getInvitation` (scoped) or
-// the org-scoped list/lookup queries instead.
+/**
+ * EXPLICITLY UNSCOPED system reader. The ONLY legitimate use is resolving an
+ * invitation by id to discover the org it belongs to (you cannot scope a read
+ * by the very value you are trying to learn) — e.g. an invitation-email
+ * render or a provider delivery webhook that carries only the id. The
+ * deliberately verbose, greppable name makes any tenant-facing misuse obvious
+ * in review/CI. NEVER call this from a client-exposed `query`/`mutation`; use
+ * `getInvitation` (scoped) or the org-scoped list/lookup queries instead.
+ */
 export const getInvitationByIdForSystem = query({
   args: {
     invitationId: v.id("organization_invitations"),
@@ -1226,6 +1240,10 @@ export const resendInvitation = mutation({
   },
 });
 
+/**
+ * Cross-organization IDOR guard: an invitation addressed by id alone could
+ * belong to another tenant — refused unless it lives in the named org.
+ */
 export const recordInvitationEmailDelivery = mutation({
   args: {
     invitationId: v.id("organization_invitations"),
@@ -1239,8 +1257,6 @@ export const recordInvitationEmailDelivery = mutation({
   handler: async (ctx, args) => {
     const invitation = await requireInvitation(ctx, args.invitationId);
     if (invitation.organizationId !== args.organizationId) {
-      // Cross-organization IDOR guard: an invitation addressed by id alone could
-      // belong to another tenant. Refuse unless it lives in the named org.
       throw new Error("Organization invitation not found");
     }
     await ctx.db.patch("organization_invitations", args.invitationId, {

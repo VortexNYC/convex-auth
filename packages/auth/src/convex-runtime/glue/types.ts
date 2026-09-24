@@ -22,18 +22,16 @@ import type {
   GenericQueryCtx,
 } from "convex/server";
 
-// Type-only: erased at compile time, so this adds NO runtime dependency and no
-// bundle edge from packages/convex to the component. It exists purely so the
-// handle's arg/return types come from the component's own validators.
+/** Type-only: erased at compile time, so this adds NO runtime dependency and
+ * no bundle edge from packages/convex to the component. It exists purely so
+ * the handle's arg/return types come from the component's own validators. */
 import type { ComponentApi as ConvexAuthGeneratedComponentApi } from "../../component/_generated/component";
 import type { AuthErrorAuthzCode, AuthErrorCode } from "./throwAuthError";
 
-// ----------------------------------------------------------------------------
-// Generic ctx shape used by adapters. We mirror the surface Convex query/
-// mutation contexts actually expose, so consumers can pass `ctx` straight in.
-// ----------------------------------------------------------------------------
-
 /**
+ * Generic ctx shape used by adapters. We mirror the surface Convex query/
+ * mutation contexts actually expose, so consumers can pass `ctx` straight in.
+ *
  * NOTE on runQuery / runMutation typing: these mirror Convex's exported
  * generic ctx method signatures. Consumers can pass their generated ctx objects
  * straight through without widening the package contract to `any`.
@@ -51,10 +49,6 @@ export type GlueCtx = {
   runMutation?: GenericMutationCtx<GenericDataModel>["runMutation"];
   db?: unknown;
 };
-
-// ----------------------------------------------------------------------------
-// Consumer-provided adapter callbacks
-// ----------------------------------------------------------------------------
 
 /**
  * The minimum shape the glue needs to know about a "local user" row.
@@ -203,13 +197,11 @@ export type B2BModeAdapters<
   expandPermissions?: (roleKey: string, permissions: readonly string[]) => readonly string[];
 };
 
-// ----------------------------------------------------------------------------
-// Component handle — the typed reference the consumer constructs in
-// `convex.config.ts` via `components.convexAuth`. We don't type the full
-// FunctionReference tree; the glue only calls a known subset.
-// ----------------------------------------------------------------------------
-
 /**
+ * Component handle — the typed reference the consumer constructs in
+ * `convex.config.ts` via `components.convexAuth`. We don't type the full
+ * FunctionReference tree; the glue only calls a known subset.
+ *
  * The component's API, derived from Convex's generated `ComponentApi` — the
  * exact shape consumers receive at `components.convexAuth`. Deriving beats
  * declaring: mounted visibility, serialized ids, args, and return types all
@@ -258,9 +250,9 @@ export type ConvexAuthComponentHandle = {
   >;
 };
 
-// ----------------------------------------------------------------------------
-// Config types — discriminated by `orgs` literal
-// ----------------------------------------------------------------------------
+/**
+ * Config types — discriminated by `orgs` literal
+ */
 
 export type ConsumerModeConfig<TUser extends GlueUserMinimum> = {
   orgs: "disabled";
@@ -305,10 +297,10 @@ export type GlueConfig<TUser extends GlueUserMinimum, TAnchor extends GlueAnchor
   | ConsumerModeConfig<TUser>
   | B2BModeConfig<TUser, TAnchor>;
 
-// ----------------------------------------------------------------------------
-// Viewer return types — separate shape per mode so the type system enforces
-// "no `requireOrganization` in consumer mode."
-// ----------------------------------------------------------------------------
+/**
+ * Viewer return types — separate shape per mode so the type system enforces
+ * "no `requireOrganization` in consumer mode."
+ */
 
 export type ResolvedMembership = {
   /** Component member id. */
@@ -352,9 +344,9 @@ export type Viewer<TUser extends GlueUserMinimum, TAnchor extends GlueAnchorMini
   | ConsumerViewer<TUser>
   | B2BViewer<TUser, TAnchor>;
 
-// ----------------------------------------------------------------------------
-// The factory return type
-// ----------------------------------------------------------------------------
+/**
+ * The factory return type
+ */
 
 export type ConsumerGlue<TUser extends GlueUserMinimum> = {
   mode: "consumer";
@@ -390,5 +382,7 @@ export type Glue<TUser extends GlueUserMinimum, TAnchor extends GlueAnchorMinimu
   | ConsumerGlue<TUser>
   | B2BGlue<TUser, TAnchor>;
 
-// Re-export error types so consumers only need one import path.
+/**
+ * Re-export error types so consumers only need one import path.
+ */
 export type { AuthErrorAuthzCode, AuthErrorCode };

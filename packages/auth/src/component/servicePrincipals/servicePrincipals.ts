@@ -187,12 +187,15 @@ export const listServicePrincipals = query({
   },
 });
 
+/**
+ * `actingOrganizationId` is the org the CALLER is acting in — the principal
+ * must already belong to it, else this is a cross-org IDOR (escalate another
+ * tenant's API-key scope via `permissions`). It is distinct from
+ * `organizationId`, which is the value to SET.
+ */
 export const setServicePrincipalDetails = mutation({
   args: {
     servicePrincipalId: v.id("service_principals"),
-    // The org the CALLER is acting in. The principal must already belong to it,
-    // else this is a cross-org IDOR (escalate another tenant's API-key scope via
-    // `permissions`). Distinct from `organizationId`, which is the value to SET.
     actingOrganizationId: v.id("organizations"),
     name: v.optional(v.string()),
     description: v.optional(v.union(v.string(), v.null())),

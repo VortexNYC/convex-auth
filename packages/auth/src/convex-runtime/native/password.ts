@@ -15,8 +15,10 @@ const ARGON2ID_PREFIX = "$argon2id$";
 const DEFAULT_DKLEN = 32;
 const DEFAULT_SALT_BYTES = 16;
 const DEFAULT_PBKDF2_ITERATIONS = 100_000;
-// Better Auth's default scrypt config, used before migration to convex-auth.
-// It stores hashes as lowercase hex "salt:derivedKey" (salt = 16 bytes, dkLen = 64).
+/**
+ * Better Auth's default scrypt config, used before migration to convex-auth.
+ * It stores hashes as lowercase hex "salt:derivedKey" (salt = 16 bytes, dkLen = 64).
+ */
 const BETTER_AUTH_SCRYPT_N = 16384;
 const BETTER_AUTH_SCRYPT_R = 16;
 const BETTER_AUTH_SCRYPT_P = 1;
@@ -42,9 +44,12 @@ function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
   return result === 0;
 }
 
+/**
+ * Hashes a password with Rust/WASM argon2id (~10x faster than pure JS in the
+ * isolate), emitting a standard PHC string:
+ * `$argon2id$v=19$m=...,t=...,p=...$salt$hash`.
+ */
 export async function hashPassword(password: string): Promise<string> {
-  // Rust/WASM argon2id (~10x faster than pure JS in the isolate) emitting a
-  // standard PHC string: $argon2id$v=19$m=...,t=...,p=...$salt$hash.
   return await wasmHashPassword(password);
 }
 
@@ -107,15 +112,19 @@ function parseArgon2idHash(hash: string): {
   }
 }
 
+/**
+ * Verifies against the argon2id family of stored hashes. PHC format
+ * (argon2id-wasm output) has six "$"-separated segments with "v=19" alone in
+ * position 2; our legacy format packs all params there, so segment count
+ * selects the verifier. Only a malformed PHC string means "wrong hash" — a
+ * WASM init failure is infrastructure and fails loudly, not as "wrong
+ * password".
+ */
 async function verifyArgon2id(password: string, hash: string): Promise<boolean> {
-  // PHC format (argon2id-wasm output) has six "$"-separated segments with
-  // "v=19" alone in position 2; our legacy format packs all params there.
   if (hash.split("$").length === 6) {
     try {
       return await wasmVerifyPassword(password, hash);
     } catch (cause) {
-      // Only a malformed PHC string means "wrong hash". A WASM init failure is
-      // infrastructure — fail loudly, not as "wrong password".
       if (cause instanceof Error && cause.message.includes("Failed to initialize")) {
         throw cause;
       }
@@ -197,8 +206,10 @@ async function verifyScrypt(password: string, hash: string): Promise<boolean> {
   }
 }
 
-// Better Auth's default password hasher uses scrypt with fixed parameters and
-// stores the result as lowercase hex "salt:derivedKey".
+/**
+ * Better Auth's default password hasher uses scrypt with fixed parameters and
+ * stores the result as lowercase hex "salt:derivedKey".
+ */
 function isBetterAuthScryptHash(hash: string): boolean {
   const [salt, derived] = hash.split(":");
   if (!salt || !derived) {
@@ -214,8 +225,10 @@ function isBetterAuthScryptHash(hash: string): boolean {
   return /^[0-9a-f]+$/i.test(salt) && /^[0-9a-f]+$/i.test(derived);
 }
 
-// Better Auth passes the salt as a lowercase hex *string* (not the decoded
-// bytes) and NFKC-normalizes the password before scrypt.
+/**
+ * Better Auth passes the salt as a lowercase hex *string* (not the decoded
+ * bytes) and NFKC-normalizes the password before scrypt.
+ */
 function parseBetterAuthScryptHash(hash: string): {
   salt: string;
   expected: Uint8Array;

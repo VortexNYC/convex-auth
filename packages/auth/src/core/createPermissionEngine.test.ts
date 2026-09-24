@@ -5,17 +5,16 @@ import { describe, it } from "vitest";
 
 import { createPermissionEngine } from "./createPermissionEngine";
 
-// ---------------------------------------------------------------------------
-// Proof matrix for Increment 5a — the wildcard permission engine.
-//
-// THE invariant: the matching semantics (`*` super, `domain:*` domain-wildcard,
-// exact) are defined ONCE in the package. A consumer cannot author a subtly
-// wrong matcher. `expandPermissions` resolves a role's wildcard grants against
-// the registry; `hasPermission` never grants something the user's permission
-// set does not actually cover.
-// ---------------------------------------------------------------------------
+/**
+ * Proof matrix for Increment 5a — the wildcard permission engine.
+ * THE invariant: the matching semantics (`*` super, `domain:*` domain-wildcard,
+ * exact) are defined ONCE in the package. A consumer cannot author a subtly
+ * wrong matcher. `expandPermissions` resolves a role's wildcard grants against
+ * the registry; `hasPermission` never grants something the user's permission
+ * set does not actually cover.
+ */
 
-// A small registry across two domains plus an unrelated one.
+/** A small registry across two domains plus an unrelated one. */
 const REGISTRY = {
   "companies:view": "",
   "companies:edit": "",
@@ -59,7 +58,7 @@ describe("createPermissionEngine — hasPermission (wildcard matching)", () => {
   it("`domain:*` grants only that domain", () => {
     assert.equal(engine.hasPermission(["companies:*"], "companies:view"), true);
     assert.equal(engine.hasPermission(["companies:*"], "companies:delete"), true);
-    // does NOT leak into another domain
+    /** does NOT leak into another domain */
     assert.equal(engine.hasPermission(["companies:*"], "contacts:view"), false);
     assert.equal(engine.hasPermission(["companies:*"], "reports:view"), false);
   });
@@ -87,9 +86,9 @@ describe("createPermissionEngine — expandPermissions (role → concrete keys)"
       manager,
       ["companies:delete", "companies:edit", "companies:view", "contacts:view"].toSorted(),
     );
-    // contacts:edit was NOT granted (manager only has contacts:view exact)
+    /** contacts:edit was NOT granted (manager only has contacts:view exact) */
     assert.equal(manager.includes("contacts:edit"), false);
-    // reports:view not granted at all
+    /** reports:view not granted at all */
     assert.equal(manager.includes("reports:view"), false);
   });
 

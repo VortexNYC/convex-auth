@@ -46,7 +46,7 @@ describe("webhook endpoint lifecycle", () => {
         url,
       );
     }
-    // Public hosts and public IP literals still pass.
+    /** Public hosts and public IP literals still pass. */
     assert.equal(
       normalizeConvexWebhookEndpointUrl("https://hooks.example.com/in"),
       "https://hooks.example.com/in",
