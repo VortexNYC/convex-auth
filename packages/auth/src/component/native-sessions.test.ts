@@ -614,6 +614,50 @@ describe("native sessions", () => {
     });
   });
 
+  it("revokeSessionFamilyBySession leaves familyId-less rows unpatched but still revokes their tokens", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+    const now = Date.now();
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authSessions", {
+        sessionId: "legacy-1",
+        userId,
+        token: "t-legacy",
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("authRefreshTokens", {
+        tokenHash: "h-legacy",
+        sessionId: "legacy-1",
+        userId,
+        expiresAt: now + 1_000_000,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    await t.mutation(api.native.sessions.revokeSessionFamilyBySession, {
+      sessionId: "legacy-1",
+    });
+
+    const [session, token] = await t.run(async (ctx) =>
+      Promise.all([
+        ctx.db
+          .query("authSessions")
+          .withIndex("by_session_id", (q) => q.eq("sessionId", "legacy-1"))
+          .unique(),
+        ctx.db
+          .query("authRefreshTokens")
+          .withIndex("by_token_hash", (q) => q.eq("tokenHash", "h-legacy"))
+          .unique(),
+      ]),
+    );
+    expect(session?.revokedAt).toBeUndefined();
+    expect(token?.revokedAt).toBeDefined();
+  });
+
   it("family replay revocation reaches live rows beyond a 1000-row page", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
