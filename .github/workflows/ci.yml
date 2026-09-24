@@ -76,14 +76,16 @@ jobs:
         run: node scripts/openapi-guard.mjs
 
       # The built artifact is identical across Node versions — building
-      # once on 22.x is enough. Runtime compat on 20.x is proven by
-      # typecheck + the test suite below.
+      # once on 22.x is enough. Typecheck resolves the package's own
+      # dist/ output, so it must run after build — and tsc results don't
+      # vary by Node version, so it lives on the 22.x leg too. The 20.x
+      # leg's unique value is proving runtime compat via the test suite.
       - name: Build packages
         if: steps.scope.outputs.docsonly != 'true' && matrix.node-version == '22.x'
         run: pnpm run build
 
       - name: Typecheck
-        if: steps.scope.outputs.docsonly != 'true'
+        if: steps.scope.outputs.docsonly != 'true' && matrix.node-version == '22.x'
         run: pnpm run typecheck
 
       # Coverage runs the same suite instrumented — on 22.x it subsumes
