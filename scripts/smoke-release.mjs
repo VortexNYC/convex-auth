@@ -3,28 +3,44 @@
  * smoke:release — pre-release proof that the packed package works on real deployments.
  *
  * For each example:
- *   1. npm pack @vortex-api/convex-auth -> tarball
+ *   1. Build @vortex-api/convex-auth (same as prepublishOnly), then npm pack
  *   2. Copy the example to a scratch dir, rewrite the dep to file:<tarball>, npm install
  *   3. Push to the example's OWN configured deployment (convex dev --once)
  *   4. Functional smoke: sign-up + sign-in over HTTP against CONVEX_SITE_URL
  *
  * Safety:
- *   - Refuses to push to `prod:*` deployments (use --allow-prod to override).
+ *   - Refuses `prod:*` deployment targets unless --allow-prod is passed.
+ *   - For cloud deployments the SITE_URL host must match the deployment name,
+ *     so a misconfigured env can't green-light a stale deployment.
  *   - `anonymous:*` deployments are local backends bound to the example's own
  *     directory — pushing from the scratch copy would spawn a fresh backend with
- *     no env vars (and fail env validation by design). So for anonymous targets
- *     the script verifies the tarball installs and runs the functional smoke
- *     against the live backend a `convex dev` watcher keeps synced to source.
+ *     no env vars (and fail env validation by design). For anonymous targets the
+ *     script proves the tarball installs and runs the functional smoke against
+ *     the live backend a `convex dev` watcher keeps synced to source — that
+ *     exercises the running environment, not the packed artifact. The full
+ *     pack->push->flow proof comes from the cloud dev deployments.
  *
  * Usage:
  *   node scripts/smoke-release.mjs                 # all examples
  *   node scripts/smoke-release.mjs --example react --example server
- *   node scripts/smoke-release.mjs --skip-functional
+ *   node scripts/smoke-release.mjs --example=react
+ *   node scripts/smoke-release.mjs --skip-functional   # install + push only
+ *   node scripts/smoke-release.mjs --keep              # keep scratch dir
+ *   node scripts/smoke-release.mjs --allow-prod        # permit prod:* targets
  */
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { randomBytes } from "node:crypto";
 
 const ROOT = new URL("..", import.meta.url).pathname;
 const EXAMPLES_DIR = join(ROOT, "examples");
@@ -32,14 +48,24 @@ const PKG_DIR = join(ROOT, "packages", "auth");
 
 const args = process.argv.slice(2);
 const flag = (n) => args.includes(`--${n}`);
-const optValues = (n) =>
-  args.flatMap((a, i) =>
-    a === `--${n}` && args[i + 1] && !args[i + 1].startsWith("--")
-      ? [args[i + 1]]
-      : a.startsWith(`--${n}=`)
-        ? [a.split("=")[1]]
-        : [],
-  );
+
+function optValues(n) {
+  const out = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === `--${n}`) {
+      const v = args[i + 1];
+      if (v === undefined || v.startsWith("--")) {
+        console.error(`--${n} requires a value`);
+        process.exit(2);
+      }
+      out.push(v);
+      i++;
+    } else if (args[i].startsWith(`--${n}=`)) {
+      out.push(args[i].slice(n.length + 3));
+    }
+  }
+  return out;
+}
 
 const ONLY = optValues("example");
 const SKIP_FUNCTIONAL = flag("skip-functional");
@@ -68,7 +94,7 @@ function run(cmd, argv, opts = {}) {
   return execFileSync(cmd, argv, {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 300_000,
+    timeout: 600_000,
     ...opts,
   });
 }
@@ -79,7 +105,7 @@ function readEnvLocal(dir) {
     const p = join(dir, name);
     if (!existsSync(p)) continue;
     for (const line of readFileSync(p, "utf8").split("\n")) {
-      const m = line.match(/^([A-Z_]+)\s*=\s*(.+?)\s*(?:#.*)?$/);
+      const m = line.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(.+?)\s*(?:#.*)?$/);
       if (m && !(m[1] in env)) env[m[1]] = m[2].replace(/^["']|["']$/g, "");
     }
   }
@@ -145,6 +171,11 @@ async function smokeExample(name, tgz, scratch) {
 
   const isAnonymous = result.deployment.startsWith("anonymous:");
   if (isAnonymous) {
+    if (SKIP_FUNCTIONAL) {
+      result.push = "watcher-owned";
+      result.notes.push("functional skipped — install-only proof for anonymous target");
+      return result;
+    }
     if (!siteUrl) {
       result.push = "no-live-backend";
       result.notes.push("no SITE_URL var — functional skipped");
@@ -162,6 +193,19 @@ async function smokeExample(name, tgz, scratch) {
       return result;
     }
   } else {
+    // Cloud dev deployment: the site URL must match the deployment we push to,
+    // otherwise the functional check could hit a stale/other deployment.
+    const deployName = result.deployment.replace(/^dev:/, "");
+    if (!siteUrl) {
+      result.push = "FAILED";
+      result.notes.push("no SITE_URL var — cannot verify the pushed deployment");
+      return result;
+    }
+    if (!siteUrl.includes(deployName)) {
+      result.push = "FAILED";
+      result.notes.push(`site URL host does not match deployment ${deployName}`);
+      return result;
+    }
     try {
       run("npx", ["convex", "dev", "--once"], { cwd: dir });
       result.push = "ok";
@@ -173,75 +217,98 @@ async function smokeExample(name, tgz, scratch) {
     }
   }
 
-  if (SKIP_FUNCTIONAL || !siteUrl) {
-    if (!siteUrl) result.notes.push("no SITE_URL var — functional skipped");
+  if (SKIP_FUNCTIONAL) return result;
+  if (!siteUrl) {
+    result.signup = "skipped";
+    result.notes.push("no SITE_URL var — functional skipped");
     return result;
   }
 
   const email = `smoke-${Date.now()}-${name}@smoke.invalid`;
-  const password = "Sm0ke.Release!Passw0rd";
+  const password = `Sm0ke.${randomBytes(6).toString("base64url")}!Rls`;
   const up = await post(`${siteUrl}/api/auth/sign-up/email`, {
     name: "Release Smoke",
     email,
     password,
   });
   result.signup =
-    up.status === 200 && up.json?.token && up.json?.refreshToken ? "ok" : `HTTP ${up.status}`;
+    up.status === 200 && up.json?.token && up.json?.refreshToken
+      ? "ok"
+      : `HTTP ${up.status} ${JSON.stringify(up.json).slice(0, 120)}`;
   if (result.signup !== "ok") return result;
 
   const inRes = await post(`${siteUrl}/api/auth/sign-in/email`, { email, password });
-  result.signin = inRes.status === 200 && inRes.json?.token ? "ok" : `HTTP ${inRes.status}`;
+  result.signin =
+    inRes.status === 200 && inRes.json?.token
+      ? "ok"
+      : `HTTP ${inRes.status} ${JSON.stringify(inRes.json).slice(0, 120)}`;
   return result;
 }
 
-const examples = (
-  ONLY.length
-    ? ONLY
-    : (await import("node:fs")).readdirSync(EXAMPLES_DIR).filter((d) => {
-        const p = join(EXAMPLES_DIR, d);
-        return existsSync(join(p, "package.json")) && existsSync(join(p, "convex"));
-      })
-).sort();
+const available = readdirSync(EXAMPLES_DIR).filter((d) => {
+  const p = join(EXAMPLES_DIR, d);
+  return existsSync(join(p, "package.json")) && existsSync(join(p, "convex"));
+});
 
-const scratch = mkdtempSync(join(tmpdir(), "ca-smoke-"));
-console.log(`Packing @vortex-api/convex-auth…`);
-const packOut = run("npm", ["pack", "--pack-destination", scratch], { cwd: PKG_DIR });
-const tgz = join(scratch, packOut.trim().split("\n").at(-1).trim());
-console.log(`Tarball: ${tgz}\nScratch: ${scratch}\n`);
-
-const results = [];
-for (const ex of examples) {
-  process.stdout.write(`▸ ${ex} … `);
-  try {
-    const r = await smokeExample(ex, tgz, scratch);
-    results.push(r);
-    console.log(
-      `install=${r.install ? "✓" : "✗"} push=${r.push} signup=${r.signup} signin=${r.signin}` +
-        (r.notes.length ? `  (${r.notes.join("; ")})` : ""),
-    );
-  } catch (e) {
-    results.push({
-      name: ex,
-      install: false,
-      push: "FAILED",
-      signup: "-",
-      signin: "-",
-      notes: [String(e).slice(0, 200)],
-    });
-    console.log(`FAILED: ${String(e).split("\n")[0].slice(0, 160)}`);
+if (ONLY.length) {
+  const bad = ONLY.filter((n) => !available.includes(n));
+  if (bad.length) {
+    console.error(`Unknown example(s): ${bad.join(", ")}. Available: ${available.join(", ")}`);
+    process.exit(2);
   }
 }
+const examples = (ONLY.length ? ONLY : available).sort();
 
-const failures = results.filter(
-  (r) =>
-    !r.install ||
-    r.push === "FAILED" ||
-    r.push === "REFUSED" ||
-    r.push === "no-live-backend" ||
-    (!SKIP_FUNCTIONAL &&
-      ((r.signup !== "ok" && r.signup !== "-") || (r.signin !== "ok" && r.signin !== "-"))),
-);
-console.log(`\n${results.length - failures.length}/${results.length} examples passed.`);
-if (!KEEP && failures.length === 0) rmSync(scratch, { recursive: true, force: true });
-else console.log(`Scratch kept: ${scratch}`);
+const scratch = mkdtempSync(join(tmpdir(), "ca-smoke-"));
+const results = [];
+let failures = [];
+
+try {
+  // Match the publish lifecycle: prepublishOnly builds before the tarball is made.
+  console.log(`Building @vortex-api/convex-auth…`);
+  run("pnpm", ["--filter", "@vortex-api/convex-auth", "run", "build"], { cwd: ROOT });
+  console.log(`Packing…`);
+  const packOut = run("npm", ["pack", "--pack-destination", scratch], { cwd: PKG_DIR });
+  const tgz = join(scratch, packOut.trim().split("\n").at(-1).trim());
+  console.log(`Tarball: ${tgz}\nScratch: ${scratch}\n`);
+
+  for (const ex of examples) {
+    process.stdout.write(`▸ ${ex} … `);
+    try {
+      const r = await smokeExample(ex, tgz, scratch);
+      results.push(r);
+      console.log(
+        `install=${r.install ? "✓" : "✗"} push=${r.push} signup=${r.signup} signin=${r.signin}` +
+          (r.notes.length ? `  (${r.notes.join("; ")})` : ""),
+      );
+    } catch (e) {
+      results.push({
+        name: ex,
+        install: false,
+        push: "FAILED",
+        signup: "-",
+        signin: "-",
+        notes: [String(e).slice(0, 200)],
+      });
+      console.log(`FAILED: ${String(e).split("\n")[0].slice(0, 160)}`);
+    }
+  }
+
+  failures = results.filter((r) => {
+    if (!r.install) return true;
+    if (r.push !== "ok" && r.push !== "watcher-owned") return true;
+    if (!SKIP_FUNCTIONAL && (r.signup !== "ok" || r.signin !== "ok")) return true;
+    return false;
+  });
+
+  if (results.length === 0) {
+    console.error("\nNo examples ran — refusing to pass an empty gate.");
+    failures = [{ name: "(none)" }];
+  }
+
+  console.log(`\n${results.length - failures.length}/${results.length} examples passed.`);
+} finally {
+  if (!KEEP && failures.length === 0) rmSync(scratch, { recursive: true, force: true });
+  else console.log(`Scratch kept: ${scratch}`);
+}
 process.exit(failures.length ? 1 : 0);
