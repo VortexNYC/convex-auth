@@ -1,4 +1,6 @@
-## "@vortex-api/convex-auth": patch
+---
+"@vortex-api/convex-auth": patch
+---
 
 Drop pre-`credentialId` session compat in `revokePasskeySessions` (#337)
 
