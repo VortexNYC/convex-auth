@@ -37,26 +37,9 @@ async function getUserPasskeys(ctx: { db: QueryCtx["db"] }, userId: string) {
   });
 }
 
-function sessionTokenIdentityId(token: string): string | undefined {
-  const parts = token.split(".");
-  if (parts.length !== 3) {
-    return undefined;
-  }
-  try {
-    const payload: unknown = JSON.parse(new TextDecoder().decode(base64urlToBytes(parts[1])));
-    if (payload !== null && typeof payload === "object" && "identityId" in payload) {
-      const identityId = (payload as { identityId: unknown }).identityId;
-      return typeof identityId === "string" ? identityId : undefined;
-    }
-    return undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 async function revokePasskeySessions(
   ctx: { db: MutationCtx["db"] },
-  passkey: { userId: Id<"users">; credentialId: string; identityId?: string },
+  passkey: { userId: Id<"users">; credentialId: string },
   now: number,
 ) {
   const userSessions = await getAllRows(ctx, {
@@ -67,10 +50,7 @@ async function revokePasskeySessions(
     absoluteMaxRows: MAX_USER_PASSKEY_ROWS,
   });
   const belongsToPasskey = (session: (typeof userSessions)[number]) =>
-    session.credentialId === passkey.credentialId ||
-    (session.credentialId === undefined &&
-      passkey.identityId !== undefined &&
-      sessionTokenIdentityId(session.token) === passkey.identityId);
+    session.credentialId === passkey.credentialId;
   const matchedSessions = userSessions.filter(belongsToPasskey);
   const familyIds = new Set(matchedSessions.map((s) => s.familyId ?? s.sessionId));
 
@@ -131,11 +111,7 @@ async function revokePasskeySessions(
     absoluteMaxRows: MAX_FAMILY_MEMBERS,
   });
   for (const code of pendingCodes) {
-    if (
-      code.consumedAt === undefined &&
-      (code.credentialId === passkey.credentialId ||
-        (passkey.identityId !== undefined && code.identityId === passkey.identityId))
-    ) {
+    if (code.consumedAt === undefined && code.credentialId === passkey.credentialId) {
       await ctx.db.patch(code._id, { consumedAt: now, updatedAt: now });
     }
   }
