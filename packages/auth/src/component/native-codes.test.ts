@@ -5,7 +5,7 @@ import { convexTest } from "convex-test";
 import { api } from "./_generated/api.js";
 import schema from "./schema.js";
 
-const modules = import.meta.glob("./*/*.*s");
+const modules = import.meta.glob("./**/*.*s");
 
 describe("native verification codes", () => {
   it("creates and retrieves a verification code by token hash", async () => {

@@ -16,7 +16,7 @@ vi.mock("@simplewebauthn/server", async (importOriginal) => {
   return { ...actual, verifyAuthenticationResponse: mockVerifyAuthenticationResponse };
 });
 
-const modules = import.meta.glob("./*/*.*s");
+const modules = import.meta.glob("./**/*.*s");
 
 const RP_NAME = "Test App";
 const RP_ID = "test.example.com";
