@@ -66,14 +66,15 @@ const precomputePathRegex = (patterns: Array<string | RegExp>) => {
   );
 };
 
-// path-to-regexp v8 removed the legacy wildcard syntax this adapter
-// advertised (`/api/(.*)`, `/api/*`). Translate it to the v8 `{*param}`
-// form so existing consumer patterns keep matching identically:
-// `*`/`(.*)` map to zero-or-more segments, same as v6. Native v8 splats
-// (`{*name}`, `*name`) pass through untouched.
+// path-to-regexp v8 removed the unnamed-group wildcard syntax this
+// adapter advertised (`X/(.*)` and glued `X(.*)`). Translate it to the
+// v8 `{*param}` form so existing consumer patterns keep matching
+// identically: `/(.*)` → `/{*splat}` (slash required, zero-or-more
+// segments) and `(.*)` → `{*splat}` (glued suffix). Native v8 splats
+// pass through untouched; bare `*` still throws, as it did in v6.
 function translateLegacyWildcardSyntax(path: string) {
   let i = 0;
-  return path.replace(/\/\(\.\*\)|\(\.\*\)|\/\*(?!\w)|(?<!\{)\*(?!\w)/g, () => `{*splat${i++}}`);
+  return path.replace(/(\/?)\(\.\*\)/g, (_m, slash) => `${slash}{*splat${i++}}`);
 }
 
 function pathStringToRegExp(path: string) {

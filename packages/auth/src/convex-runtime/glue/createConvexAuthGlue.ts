@@ -21,8 +21,8 @@
  *     synchronous against the cached state.
  *  4. Active-org is a HINT. `user.activeConvexAuthOrganizationId` is
  *     validated against live membership every resolve. Never trusted blind.
- *  5. Permission override is an explicit `{add, remove}` merge contract, not
- *     a raw array replacement.
+ *  5. Permissions are role-derived; the only consumer hook is the
+ *     `expandPermissions` widening applied to `role.permissions`.
  *  6. Component ids are opaque strings — never branded as consumer Convex
  *     ids (the platform owns them; see better-auth/convex GH issue #372).
  */
@@ -469,9 +469,11 @@ function resolveMembershipPermissions<
   role: { key: string; permissions: readonly string[] },
 ): string[] {
   return [
-    ...(adapters.expandPermissions !== undefined
-      ? adapters.expandPermissions(role.key, role.permissions)
-      : role.permissions),
+    ...new Set(
+      adapters.expandPermissions !== undefined
+        ? adapters.expandPermissions(role.key, role.permissions)
+        : role.permissions,
+    ),
   ];
 }
 

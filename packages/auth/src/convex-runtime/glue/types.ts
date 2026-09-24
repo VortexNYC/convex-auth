@@ -267,7 +267,7 @@ export type ResolvedMembership = {
   /** Role template key (e.g. "owner", "admin", "member"). */
   roleKey: string;
   status: "active" | "invited" | "suspended";
-  /** Permissions after role expansion + optional override merge. */
+  /** Permissions after role expansion (`expandPermissions` or raw role perms). */
   permissions: string[];
 };
 

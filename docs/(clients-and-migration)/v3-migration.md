@@ -8,13 +8,14 @@ find the entries that apply to you.
 ## Do I need to do anything?
 
 | Change                                   | You are affected if…                                                                       | Effort                                                                             |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- | ------------------------------ |
 | Landing verifier binding                 | Users open magic-link/OAuth emails in a different browser or in-app webview                | Set `requireLandingVerifier: false`, or surface `?error=landing_verifier_mismatch` |
 | `getSessionByToken` requires `expiresAt` | You wrote a custom `OidcProviderStorageAdapter`                                            | Return `expiresAt` (ms) — required field                                           |
 | Session fallback removals                | You are upgrading from **< 2.5.x** with live sessions                                      | Deploy latest 2.x first so sessions backfill                                       |
 | Provider args removed                    | You pass `sendVerificationEmailOnSignUp`/`OnSignIn` at top level                           | Move them under `email`                                                            |
 | `resolvePermissionOverride` removed      | You implemented the B2B override adapter                                                   | Model the variance as roles                                                        |
 | Stricter redirect validation             | You pass `callbackURL`/`errorURL`/`newUserURL` to `signIn` pointing at non-trusted origins | Add them to `trustedOrigins`                                                       |
+| `path-to-regexp` v8                      | Your `createRouteMatcher` patterns use unnamed groups like `/(a                            | b)/`                                                                               | Rewrite as `/:key` or `RegExp` |
 
 If none of the "you are affected" rows apply, v3 is a drop-in upgrade.
 
@@ -155,14 +156,17 @@ The adapter's runtime dependency moved v6 → v8. Your existing patterns
 still work — the adapter translates the legacy wildcard forms
 internally:
 
-- `/api/(.*)` and `/api/*` → v8 `{*splat}` (zero-or-more segments,
-  identical match semantics)
-- Native v8 syntax (`/api{*splat}`, `/api/*rest`) is also accepted
+- `/api/(.*)` → `/api/{*splat}` (slash required, zero-or-more segments —
+  identical to v6, verified pattern-by-pattern)
+- Glued `/dashboard(.*)` → `/dashboard{*splat}` (matches `/dashboardfoo`,
+  as v6 did)
+- Native v8 syntax (`/api/{*splat}`, `/api/*rest`) is also accepted
 - `RegExp` instances and predicate functions are untouched
 
-Only patterns outside the advertised contract — unnamed groups like
-`/(a|b)/` — now throw a descriptive error at `createRouteMatcher`
-construction.
+Patterns outside the advertised contract now throw a descriptive error at
+`createRouteMatcher` construction — unnamed groups like `/(a|b)/`, and
+bare `*` wildcards (which threw in v6 as well). Rewrite those as v8 named
+parameters (`/:key`) or pass `RegExp` instances.
 
 ## Everything else in 3.0.0
 
