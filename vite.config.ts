@@ -86,6 +86,20 @@ export default defineConfig({
           "@convex-dev/no-duplicate-indexes": "off",
         },
       },
+      /*
+       * Consumer-facing example code: typed `env` exists in example codegen,
+       * and exported functions are real internet-facing endpoints — both
+       * rules' intended domain. Shipped component/runtime source is exempt
+       * above: it cannot import a consumer's generated `env`, and component
+       * functions are invoked by the app's backend, not the public internet.
+       */
+      {
+        files: ["examples/*/convex/**/*.ts"],
+        rules: {
+          "@convex-dev/no-process-env": "error",
+          "@convex-dev/require-access-control": "error",
+        },
+      },
     ],
   },
   staged: {

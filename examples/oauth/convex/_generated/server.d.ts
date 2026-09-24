@@ -28,10 +28,20 @@ import type { DataModel } from "./dataModel.js";
  * `convex.config.ts`.
  */
 type Env = {
+  readonly ALLOW_EMAIL_TOKEN_FALLBACK: string | undefined;
   readonly CONVEX_CLOUD_URL: string;
   readonly CONVEX_SITE_URL: string;
+  readonly DISCORD_CLIENT_ID: string | undefined;
+  readonly DISCORD_CLIENT_SECRET: string | undefined;
+  readonly EMAIL_FROM_ADDRESS: string | undefined;
+  readonly GITHUB_CLIENT_ID: string | undefined;
+  readonly GITHUB_CLIENT_SECRET: string | undefined;
+  readonly GOOGLE_CLIENT_ID: string | undefined;
+  readonly GOOGLE_CLIENT_SECRET: string | undefined;
   readonly JWKS: string;
   readonly JWT_PRIVATE_KEY: string;
+  readonly RESEND_API_KEY: string | undefined;
+  readonly SITE_URL: string | undefined;
 };
 
 /**

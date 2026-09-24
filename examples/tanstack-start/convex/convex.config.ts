@@ -6,6 +6,8 @@ const app = defineApp({
   env: {
     JWT_PRIVATE_KEY: v.string(),
     JWKS: v.string(),
+    EMAIL_FROM_ADDRESS: v.optional(v.string()),
+    SITE_URL: v.optional(v.string()),
   },
 });
 

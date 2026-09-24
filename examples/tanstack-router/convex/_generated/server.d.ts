@@ -30,8 +30,29 @@ import type { DataModel } from "./dataModel.js";
 type Env = {
   readonly CONVEX_CLOUD_URL: string;
   readonly CONVEX_SITE_URL: string;
+  readonly ALLOW_EMAIL_TOKEN_FALLBACK: string | undefined;
+  readonly DISCORD_CLIENT_ID: string | undefined;
+  readonly DISCORD_CLIENT_SECRET: string | undefined;
+  readonly EMAIL_FROM_ADDRESS: string | undefined;
+  readonly GITHUB_CLIENT_ID: string | undefined;
+  readonly GITHUB_CLIENT_SECRET: string | undefined;
+  readonly GOOGLE_CLIENT_ID: string | undefined;
+  readonly GOOGLE_CLIENT_SECRET: string | undefined;
   readonly JWKS: string;
   readonly JWT_PRIVATE_KEY: string;
+  readonly OAUTH_OIDC_CLIENT_ID: string | undefined;
+  readonly OAUTH_OIDC_CLIENT_SECRET: string | undefined;
+  readonly OAUTH_OIDC_DISCOVERY: string | undefined;
+  readonly OAUTH_OIDC_ISSUER: string | undefined;
+  readonly OAUTH_OIDC_SCOPES: string | undefined;
+  readonly OAUTH_OIDC_USE_ID_TOKEN: string | undefined;
+  readonly OAUTH_PROVIDER_CLIENT_ID: string | undefined;
+  readonly OAUTH_PROVIDER_CLIENT_NAME: string | undefined;
+  readonly OAUTH_PROVIDER_LOGIN_URL: string | undefined;
+  readonly OAUTH_PROVIDER_REDIRECT_URIS: string | undefined;
+  readonly OAUTH_PROVIDER_SCOPES: string | undefined;
+  readonly SITE_URL: string | undefined;
+  readonly TURNSTILE_SECRET_KEY: string | undefined;
 };
 
 /**

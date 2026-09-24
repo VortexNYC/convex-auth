@@ -1,8 +1,20 @@
-import { query, mutation, action } from "./_generated/server";
+import { env, query, mutation, action, type QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { components } from "./_generated/api";
 
 const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+type AuthCtx = Pick<QueryCtx, "auth">;
+
+async function checkUserIdentity(ctx: AuthCtx) {
+  return await ctx.auth.getUserIdentity();
+}
+
+async function requireUser(ctx: AuthCtx) {
+  const identity = await checkUserIdentity(ctx);
+  if (!identity) throw new Error("UNAUTHORIZED");
+  return identity;
+}
 
 function slugify(name: string): string {
   return name
@@ -105,7 +117,7 @@ export const listMyOrganizations = query({
   args: {},
   returns: v.array(organizationSummaryValidator),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await checkUserIdentity(ctx);
     if (!identity) return [];
     const userId = identity.subject;
     const memberships = await ctx.runQuery(
@@ -140,7 +152,7 @@ export const listMyInvitations = query({
   args: {},
   returns: v.array(invitationSummaryValidator),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await checkUserIdentity(ctx);
     if (!identity) return [];
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
@@ -192,7 +204,7 @@ export const getActiveOrganization = query({
     }),
   ),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await checkUserIdentity(ctx);
     if (!identity) return null;
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
@@ -211,8 +223,7 @@ export const setActiveOrganization = mutation({
   },
   returns: v.object({}),
   handler: async (ctx, { organizationId }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    const identity = await requireUser(ctx);
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
     await ctx.runMutation(components.convexAuth.organizations.setUserActiveOrganization, {
@@ -228,7 +239,7 @@ export const listMembers = query({
   args: {},
   returns: v.array(memberListItemValidator),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await checkUserIdentity(ctx);
     if (!identity) return [];
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
@@ -281,8 +292,7 @@ export const inviteMember = action({
     token: v.string(),
   }),
   handler: async (ctx, { organizationId, email, roleTemplate }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    const identity = await requireUser(ctx);
     const userId = identity.subject;
     const role = await ctx.runQuery(components.convexAuth.organizations.getRoleByKey, {
       organizationId,
@@ -304,8 +314,8 @@ export const inviteMember = action({
       },
     );
     const siteUrl =
-      process.env.SITE_URL?.replace(/\/$/, "") ??
-      process.env.CONVEX_SITE_URL?.replace(/\/$/, "") ??
+      env.SITE_URL?.replace(/\/$/, "") ??
+      env.CONVEX_SITE_URL?.replace(/\/$/, "") ??
       "http://localhost:5174";
     const acceptUrl = `${siteUrl}/accept-invitation?token=${token}`;
     return { acceptUrl, invitationId, token };
@@ -316,6 +326,7 @@ export const suspendMember = mutation({
   args: { membershipId: v.string() },
   returns: v.object({}),
   handler: async (ctx, { membershipId }) => {
+    await requireUser(ctx);
     await ctx.runMutation(components.convexAuth.organizations.setMemberStatus, {
       memberId: membershipId,
       status: "suspended",
@@ -328,6 +339,7 @@ export const reactivateMember = mutation({
   args: { membershipId: v.string() },
   returns: v.object({}),
   handler: async (ctx, { membershipId }) => {
+    await requireUser(ctx);
     await ctx.runMutation(components.convexAuth.organizations.setMemberStatus, {
       memberId: membershipId,
       status: "active",
@@ -343,8 +355,7 @@ export const setMemberRole = mutation({
   },
   returns: v.object({}),
   handler: async (ctx, { membershipId, roleTemplate }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    const identity = await requireUser(ctx);
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
     const organizationId = user?.activeOrganizationId;
@@ -368,7 +379,7 @@ export const listRoles = query({
   args: {},
   returns: v.array(roleListItemValidator),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await checkUserIdentity(ctx);
     if (!identity) return [];
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
@@ -393,7 +404,8 @@ export const listRoles = query({
 export const listPermissions = query({
   args: {},
   returns: v.array(permissionListItemValidator),
-  handler: async () => {
+  handler: async (ctx) => {
+    await requireUser(ctx);
     return [
       { key: "organization:read", description: "View workspace details" },
       { key: "organization:members:read", description: "View members" },
@@ -414,8 +426,7 @@ export const createRole = mutation({
   },
   returns: v.string(),
   handler: async (ctx, { name, permissions }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    const identity = await requireUser(ctx);
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
     const organizationId = user?.activeOrganizationId;
@@ -439,8 +450,7 @@ export const redeemInvitation = mutation({
     accepted: v.boolean(),
   }),
   handler: async (ctx, { invitationId }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    const identity = await requireUser(ctx);
     const userId = identity.subject;
     const result = await ctx.runMutation(components.convexAuth.organizations.redeemInvitation, {
       invitationId,
@@ -459,8 +469,7 @@ export const createOrganization = mutation({
   returns: organizationSummaryValidator,
   handler: async (ctx, { name, slug: slugInput, imageUrl }) => {
     const slug = slugInput || slugify(name);
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    const identity = await requireUser(ctx);
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
     const { organizationId } = await ctx.runMutation(

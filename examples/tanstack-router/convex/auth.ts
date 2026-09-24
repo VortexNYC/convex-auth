@@ -1,9 +1,10 @@
 import { components } from "./_generated/api";
 import { convexAuth, type EmailDraft } from "@vortex-api/convex-auth/convex";
+import { env } from "./_generated/server";
 
 const siteUrl =
-  process.env.CONVEX_SITE_URL?.replace(/\/$/, "") ??
-  process.env.SITE_URL?.replace(/\/$/, "") ??
+  env.CONVEX_SITE_URL?.replace(/\/$/, "") ??
+  env.SITE_URL?.replace(/\/$/, "") ??
   "http://localhost:3000";
 
 // In a real app, sendEmail should call Resend/Postmark/SES/etc.
@@ -22,7 +23,7 @@ function extractTokenFromEmailDraft(draft: EmailDraft): string | null {
 }
 
 function fallbackTokenOrThrow(token: string | null, label: string): string {
-  if (process.env.ALLOW_EMAIL_TOKEN_FALLBACK === "true" && token != null) {
+  if (env.ALLOW_EMAIL_TOKEN_FALLBACK === "true" && token != null) {
     return token;
   }
   throw new Error(
@@ -32,10 +33,10 @@ function fallbackTokenOrThrow(token: string | null, label: string): string {
 
 export const auth = convexAuth({
   component: components.convexAuth,
-  captcha: process.env.TURNSTILE_SECRET_KEY
+  captcha: env.TURNSTILE_SECRET_KEY
     ? {
         provider: "cloudflare-turnstile",
-        secretKey: process.env.TURNSTILE_SECRET_KEY,
+        secretKey: env.TURNSTILE_SECRET_KEY,
       }
     : undefined,
   emailAndPassword: {
@@ -45,7 +46,7 @@ export const auth = convexAuth({
     // (`callbackURL: window.location.origin`).
     trustedOrigins: [siteUrl, "http://localhost:5173", "http://localhost:5174"],
     email: {
-      from: process.env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
+      from: env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
       appOrigin: siteUrl,
       sendEmail: async (draft) => {
         const token = extractTokenFromEmailDraft(draft);
@@ -57,26 +58,26 @@ export const auth = convexAuth({
   },
   oauth: {
     github: {
-      clientId: process.env.GITHUB_CLIENT_ID ?? "",
-      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
+      clientId: env.GITHUB_CLIENT_ID ?? "",
+      clientSecret: env.GITHUB_CLIENT_SECRET ?? "",
     },
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      clientId: env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: env.GOOGLE_CLIENT_SECRET ?? "",
     },
     discord: {
-      clientId: process.env.DISCORD_CLIENT_ID ?? "",
-      clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
+      clientId: env.DISCORD_CLIENT_ID ?? "",
+      clientSecret: env.DISCORD_CLIENT_SECRET ?? "",
     },
-    providers: process.env.OAUTH_OIDC_CLIENT_ID
+    providers: env.OAUTH_OIDC_CLIENT_ID
       ? {
           oidc: {
-            clientId: process.env.OAUTH_OIDC_CLIENT_ID,
-            clientSecret: process.env.OAUTH_OIDC_CLIENT_SECRET ?? "",
-            issuer: process.env.OAUTH_OIDC_ISSUER ?? "",
-            discovery: process.env.OAUTH_OIDC_DISCOVERY === "true",
-            useIdToken: process.env.OAUTH_OIDC_USE_ID_TOKEN === "true",
-            scopes: (process.env.OAUTH_OIDC_SCOPES ?? "openid,email,profile").split(","),
+            clientId: env.OAUTH_OIDC_CLIENT_ID,
+            clientSecret: env.OAUTH_OIDC_CLIENT_SECRET ?? "",
+            issuer: env.OAUTH_OIDC_ISSUER ?? "",
+            discovery: env.OAUTH_OIDC_DISCOVERY === "true",
+            useIdToken: env.OAUTH_OIDC_USE_ID_TOKEN === "true",
+            scopes: (env.OAUTH_OIDC_SCOPES ?? "openid,email,profile").split(","),
           },
         }
       : undefined,
@@ -93,19 +94,19 @@ export const auth = convexAuth({
       console.log("Linked anonymous user", anonymousUser.id, "to", newUser.id);
     },
   },
-  oauthProvider: process.env.OAUTH_PROVIDER_CLIENT_ID
+  oauthProvider: env.OAUTH_PROVIDER_CLIENT_ID
     ? {
         issuer: siteUrl,
-        loginUrl: process.env.OAUTH_PROVIDER_LOGIN_URL ?? `${siteUrl}/oauth/consent`,
+        loginUrl: env.OAUTH_PROVIDER_LOGIN_URL ?? `${siteUrl}/oauth/consent`,
         clients: [
           {
-            clientId: process.env.OAUTH_PROVIDER_CLIENT_ID,
-            name: process.env.OAUTH_PROVIDER_CLIENT_NAME ?? "Demo OIDC Client",
-            redirectUris: (process.env.OAUTH_PROVIDER_REDIRECT_URIS ?? "")
+            clientId: env.OAUTH_PROVIDER_CLIENT_ID,
+            name: env.OAUTH_PROVIDER_CLIENT_NAME ?? "Demo OIDC Client",
+            redirectUris: (env.OAUTH_PROVIDER_REDIRECT_URIS ?? "")
               .split(",")
               .map((uri) => uri.trim())
               .filter(Boolean),
-            allowedScopes: (process.env.OAUTH_PROVIDER_SCOPES ?? "openid,email,profile")
+            allowedScopes: (env.OAUTH_PROVIDER_SCOPES ?? "openid,email,profile")
               .split(",")
               .map((s) => s.trim())
               .filter(Boolean),

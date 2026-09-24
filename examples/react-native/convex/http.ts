@@ -1,5 +1,5 @@
 import { httpRouter } from "convex/server";
-import { httpAction } from "./_generated/server";
+import { env, httpAction } from "./_generated/server";
 import { auth } from "./auth";
 
 const http = httpRouter();
@@ -15,7 +15,7 @@ http.route({
   path: "/.well-known/apple-app-site-association",
   method: "GET",
   handler: httpAction(async () => {
-    const appId = process.env.PASSKEY_IOS_APP_ID;
+    const appId = env.PASSKEY_IOS_APP_ID;
     if (!appId) {
       return new Response("Not configured", { status: 404 });
     }
@@ -32,8 +32,8 @@ http.route({
   path: "/.well-known/assetlinks.json",
   method: "GET",
   handler: httpAction(async () => {
-    const packageName = process.env.PASSKEY_ANDROID_PACKAGE;
-    const sha256 = process.env.PASSKEY_ANDROID_SHA256_CERT_FINGERPRINT;
+    const packageName = env.PASSKEY_ANDROID_PACKAGE;
+    const sha256 = env.PASSKEY_ANDROID_SHA256_CERT_FINGERPRINT;
     if (!packageName || !sha256) {
       return new Response("Not configured", { status: 404 });
     }
