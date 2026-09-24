@@ -129,7 +129,7 @@ export const revokeSession = mutation({
       "sessionId",
     );
     if (session) {
-      await ctx.db.patch(session._id, { revokedAt: Date.now() });
+      await ctx.db.patch("authSessions", session._id, { revokedAt: Date.now() });
     }
     return session?._id ?? null;
   },
@@ -179,7 +179,7 @@ export const revokeSessionsForUser = mutation({
       if (isExcluded(session.sessionId, session.familyId)) {
         continue;
       }
-      await ctx.db.patch(session._id, { revokedAt: now, updatedAt: now });
+      await ctx.db.patch("authSessions", session._id, { revokedAt: now, updatedAt: now });
       revoked++;
     }
 
@@ -187,7 +187,7 @@ export const revokeSessionsForUser = mutation({
       .query("authRefreshTokens")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))) {
       if (token.revokedAt === undefined && !isExcluded(token.sessionId, token.familyId)) {
-        await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
+        await ctx.db.patch("authRefreshTokens", token._id, { revokedAt: now, updatedAt: now });
       }
     }
     return revoked;
@@ -246,12 +246,12 @@ export async function revokeSessionFamily(
     }
     seen.add(token._id);
     if (!token.revokedAt) {
-      await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
+      await ctx.db.patch("authRefreshTokens", token._id, { revokedAt: now, updatedAt: now });
     }
   }
   for (const session of familySessions) {
     if (!session.revokedAt) {
-      await ctx.db.patch(session._id, { revokedAt: now, updatedAt: now });
+      await ctx.db.patch("authSessions", session._id, { revokedAt: now, updatedAt: now });
     }
   }
 
@@ -373,8 +373,12 @@ export const rotateSession = mutation({
     }
 
     await Promise.all([
-      ctx.db.patch(refresh._id, { revokedAt: now, rotatedAt: now, updatedAt: now }),
-      ctx.db.patch(session._id, { revokedAt: now, updatedAt: now }),
+      ctx.db.patch("authRefreshTokens", refresh._id, {
+        revokedAt: now,
+        rotatedAt: now,
+        updatedAt: now,
+      }),
+      ctx.db.patch("authSessions", session._id, { revokedAt: now, updatedAt: now }),
     ]);
 
     const familyId = refresh.familyId ?? refresh.sessionId;
@@ -527,7 +531,7 @@ export const convergeSession = mutation({
       return null;
     }
 
-    await ctx.db.patch(refresh._id, {
+    await ctx.db.patch("authRefreshTokens", refresh._id, {
       graceRedemptions: (refresh.graceRedemptions ?? 0) + 1,
       updatedAt: now,
     });
@@ -584,7 +588,7 @@ export const cleanupExpiredSessions = mutation({
       .query("authSessions")
       .withIndex("by_expires_at", (q) => q.lt("expiresAt", now))
       .take(batchSize);
-    await Promise.all(expired.map((session) => ctx.db.delete(session._id)));
+    await Promise.all(expired.map((session) => ctx.db.delete("authSessions", session._id)));
     return expired.length;
   },
 });

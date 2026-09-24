@@ -88,7 +88,7 @@ export const consumeVerifier = mutation({
     if (!verifier || verifier.consumedAt || verifier.expiresAt <= now) {
       return null;
     }
-    await ctx.db.patch(verifier._id, { consumedAt: now, updatedAt: now });
+    await ctx.db.patch("authVerifiers", verifier._id, { consumedAt: now, updatedAt: now });
     return { ...verifier, consumedAt: now, updatedAt: now };
   },
 });

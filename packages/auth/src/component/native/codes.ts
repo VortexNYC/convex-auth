@@ -55,7 +55,7 @@ export const createVerificationCode = mutation({
     await Promise.all(
       existing
         .filter((code) => code.consumedAt === undefined)
-        .map((code) => ctx.db.patch(code._id, { consumedAt: now })),
+        .map((code) => ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now })),
     );
 
     return await ctx.db.insert("authVerificationCodes", {
@@ -95,8 +95,8 @@ export const consumeVerificationCode = mutation({
       return null;
     }
 
-    await ctx.db.patch(code._id, { consumedAt: now, updatedAt: now });
-    return (await ctx.db.get(code._id)) ?? null;
+    await ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now, updatedAt: now });
+    return (await ctx.db.get("authVerificationCodes", code._id)) ?? null;
   },
 });
 
@@ -113,7 +113,9 @@ export const revokeVerificationCodesForUser = mutation({
     const unconsumed = existing.filter((code) => code.consumedAt === undefined);
 
     await Promise.all(
-      unconsumed.map((code) => ctx.db.patch(code._id, { consumedAt: now, updatedAt: now })),
+      unconsumed.map((code) =>
+        ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now, updatedAt: now }),
+      ),
     );
 
     return unconsumed.length;
@@ -137,10 +139,10 @@ export const cleanupVerificationCodes = mutation({
     let deleted = 0;
     for (const code of existing) {
       if (code.consumedAt !== undefined && code.consumedAt <= minConsumedAt) {
-        await ctx.db.delete(code._id);
+        await ctx.db.delete("authVerificationCodes", code._id);
         deleted++;
       } else if (code.expiresAt <= now) {
-        await ctx.db.delete(code._id);
+        await ctx.db.delete("authVerificationCodes", code._id);
         deleted++;
       }
     }

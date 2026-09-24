@@ -25,7 +25,7 @@ export const markEmailVerified = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    await ctx.db.patch(args.userId, {
+    await ctx.db.patch("users", args.userId, {
       emailVerified: args.emailVerified,
       updatedAt: now,
     });
@@ -58,7 +58,7 @@ export const setTwoFactor = mutation({
     if (args.twoFactorBackupCodes === undefined) {
       patch.twoFactorBackupCodes = undefined;
     }
-    await ctx.db.patch(args.userId, patch);
+    await ctx.db.patch("users", args.userId, patch);
   },
 });
 
@@ -80,7 +80,7 @@ export const updateUser = mutation({
     if (args.name !== undefined) patch.name = args.name;
     if (args.image !== undefined) patch.image = args.image;
     if (args.metadataJson !== undefined) patch.metadataJson = args.metadataJson;
-    await ctx.db.patch(args.userId, patch);
+    await ctx.db.patch("users", args.userId, patch);
   },
 });
 
@@ -102,7 +102,7 @@ export const consumeBackupCode = mutation({
     }
     const next = codes.slice();
     next.splice(index, 1);
-    await ctx.db.patch(args.userId, {
+    await ctx.db.patch("users", args.userId, {
       twoFactorBackupCodes: next,
       updatedAt: Date.now(),
     });
@@ -112,7 +112,6 @@ export const consumeBackupCode = mutation({
 
 type Ctx = GenericMutationCtx<DataModel>;
 type AnyTableName = TableNamesInDataModel<DataModel>;
-type AnyId = Id<AnyTableName>;
 
 type DeletionState = {
   deletedIds: Set<string>;
@@ -122,12 +121,17 @@ function newDeletionState(): DeletionState {
   return { deletedIds: new Set<string>() };
 }
 
-async function deleteDocument(ctx: Ctx, state: DeletionState, id: AnyId) {
+async function deleteDocument<T extends AnyTableName>(
+  ctx: Ctx,
+  state: DeletionState,
+  table: T,
+  id: Id<T>,
+) {
   const key = String(id);
   if (state.deletedIds.has(key)) {
     return;
   }
-  await ctx.db.delete(id);
+  await ctx.db.delete(table, id);
   state.deletedIds.add(key);
 }
 
@@ -151,31 +155,31 @@ export const deleteUser = mutation({
     for await (const identity of ctx.db
       .query("auth_identities")
       .withIndex("by_user", (q) => q.eq("userId", userId))) {
-      await deleteDocument(ctx, state, identity._id);
+      await deleteDocument(ctx, state, "auth_identities", identity._id);
     }
 
     for await (const account of ctx.db
       .query("authAccounts")
       .withIndex("by_user", (q) => q.eq("userId", userId))) {
-      await deleteDocument(ctx, state, account._id);
+      await deleteDocument(ctx, state, "authAccounts", account._id);
     }
 
     for await (const session of ctx.db
       .query("authSessions")
       .withIndex("by_user", (q) => q.eq("userId", userId))) {
-      await deleteDocument(ctx, state, session._id);
+      await deleteDocument(ctx, state, "authSessions", session._id);
     }
 
     for await (const token of ctx.db
       .query("authRefreshTokens")
       .withIndex("by_user", (q) => q.eq("userId", userId))) {
-      await deleteDocument(ctx, state, token._id);
+      await deleteDocument(ctx, state, "authRefreshTokens", token._id);
     }
 
     for await (const code of ctx.db
       .query("authVerificationCodes")
       .withIndex("by_user_type", (q) => q.eq("userId", userId))) {
-      await deleteDocument(ctx, state, code._id);
+      await deleteDocument(ctx, state, "authVerificationCodes", code._id);
     }
 
     const memberships: Doc<"organization_members">[] = [];
@@ -197,13 +201,13 @@ export const deleteUser = mutation({
       if (orgMemberCount <= 1) {
         await deleteOrganization(ctx, state, membership.organizationId);
       }
-      await deleteDocument(ctx, state, membership._id);
+      await deleteDocument(ctx, state, "organization_members", membership._id);
     }
 
     for await (const key of ctx.db
       .query("api_keys")
       .withIndex("by_user", (q) => q.eq("userId", userId))) {
-      await deleteDocument(ctx, state, key._id);
+      await deleteDocument(ctx, state, "api_keys", key._id);
     }
 
     for await (const sp of ctx.db
@@ -221,16 +225,16 @@ export const deleteUser = mutation({
     for await (const reg of ctx.db
       .query("auth_md_registrations")
       .withIndex("by_user_status", (q) => q.eq("claimedByUserId", userId))) {
-      await deleteDocument(ctx, state, reg._id);
+      await deleteDocument(ctx, state, "auth_md_registrations", reg._id);
     }
 
     for await (const cred of ctx.db
       .query("auth_md_credentials")
       .withIndex("by_user_organization", (q) => q.eq("userId", userId))) {
-      await deleteDocument(ctx, state, cred._id);
+      await deleteDocument(ctx, state, "auth_md_credentials", cred._id);
     }
 
-    await deleteDocument(ctx, state, userId);
+    await deleteDocument(ctx, state, "users", userId);
     return { deleted: true, userId };
   },
 });
@@ -248,25 +252,25 @@ async function deleteOrganization(
   for await (const role of ctx.db
     .query("organization_roles")
     .withIndex("by_organization", (q) => q.eq("organizationId", organizationId))) {
-    await deleteDocument(ctx, state, role._id);
+    await deleteDocument(ctx, state, "organization_roles", role._id);
   }
 
   for await (const member of ctx.db
     .query("organization_members")
     .withIndex("by_organization", (q) => q.eq("organizationId", organizationId))) {
-    await deleteDocument(ctx, state, member._id);
+    await deleteDocument(ctx, state, "organization_members", member._id);
   }
 
   for await (const invitation of ctx.db
     .query("organization_invitations")
     .withIndex("by_organization", (q) => q.eq("organizationId", organizationId))) {
-    await deleteDocument(ctx, state, invitation._id);
+    await deleteDocument(ctx, state, "organization_invitations", invitation._id);
   }
 
   for await (const key of ctx.db
     .query("api_keys")
     .withIndex("by_organization", (q) => q.eq("organizationId", organizationId))) {
-    await deleteDocument(ctx, state, key._id);
+    await deleteDocument(ctx, state, "api_keys", key._id);
   }
 
   for await (const sp of ctx.db
@@ -284,16 +288,16 @@ async function deleteOrganization(
   for await (const reg of ctx.db
     .query("auth_md_registrations")
     .withIndex("by_organization_status", (q) => q.eq("organizationId", organizationId))) {
-    await deleteDocument(ctx, state, reg._id);
+    await deleteDocument(ctx, state, "auth_md_registrations", reg._id);
   }
 
   for await (const event of ctx.db
     .query("auth_audit_events")
     .withIndex("by_organization", (q) => q.eq("organizationId", organizationId))) {
-    await deleteDocument(ctx, state, event._id);
+    await deleteDocument(ctx, state, "auth_audit_events", event._id);
   }
 
-  await deleteDocument(ctx, state, organizationId);
+  await deleteDocument(ctx, state, "organizations", organizationId);
 }
 
 async function deleteServicePrincipal(
@@ -304,9 +308,9 @@ async function deleteServicePrincipal(
   for await (const key of ctx.db
     .query("api_keys")
     .withIndex("by_owner_service", (q) => q.eq("ownerServicePrincipalId", servicePrincipalId))) {
-    await deleteDocument(ctx, state, key._id);
+    await deleteDocument(ctx, state, "api_keys", key._id);
   }
-  await deleteDocument(ctx, state, servicePrincipalId);
+  await deleteDocument(ctx, state, "service_principals", servicePrincipalId);
 }
 
 async function deleteWebhookEndpoint(
@@ -317,7 +321,7 @@ async function deleteWebhookEndpoint(
   for await (const delivery of ctx.db
     .query("webhook_deliveries")
     .withIndex("by_endpoint", (q) => q.eq("endpointId", endpointId))) {
-    await deleteDocument(ctx, state, delivery._id);
+    await deleteDocument(ctx, state, "webhook_deliveries", delivery._id);
   }
-  await deleteDocument(ctx, state, endpointId);
+  await deleteDocument(ctx, state, "webhook_endpoints", endpointId);
 }

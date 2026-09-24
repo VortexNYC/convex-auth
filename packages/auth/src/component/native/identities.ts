@@ -59,7 +59,7 @@ export const markEmailVerified = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    await ctx.db.patch(args.identityId, {
+    await ctx.db.patch("auth_identities", args.identityId, {
       emailVerified: args.emailVerified,
       updatedAt: now,
     });

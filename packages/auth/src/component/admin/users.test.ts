@@ -194,7 +194,7 @@ describe("admin users", () => {
   it("rejects claimSuperAdmin for an anonymous user", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t, "anon@example.com", "Anonymous");
-    await t.run((ctx) => ctx.db.patch(userId, { isAnonymous: true }));
+    await t.run((ctx) => ctx.db.patch("users", userId, { isAnonymous: true }));
 
     await expect(
       t
@@ -206,7 +206,7 @@ describe("admin users", () => {
   it("rejects claimSuperAdmin for an inactive user", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t, "inactive@example.com", "Inactive");
-    await t.run((ctx) => ctx.db.patch(userId, { isActive: false }));
+    await t.run((ctx) => ctx.db.patch("users", userId, { isActive: false }));
 
     await expect(
       t
@@ -219,7 +219,7 @@ describe("admin users", () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t, "banned@example.com", "Banned");
     const bannedUntil = Date.now() + 60_000;
-    await t.run((ctx) => ctx.db.patch(userId, { bannedUntil }));
+    await t.run((ctx) => ctx.db.patch("users", userId, { bannedUntil }));
 
     await expect(
       t
@@ -337,7 +337,7 @@ describe("admin users", () => {
     const adminId = await insertUser(t, "admin@example.com", "Admin", true);
     await insertUser(t, "active@example.com", "Active");
     const inactiveId = await insertUser(t, "inactive@example.com", "Inactive");
-    await t.run((ctx) => ctx.db.patch(inactiveId, { isActive: false }));
+    await t.run((ctx) => ctx.db.patch("users", inactiveId, { isActive: false }));
 
     const result = await t
       .withIdentity({ subject: adminId })

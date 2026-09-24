@@ -236,7 +236,7 @@ export const banUser = mutation({
       throw new Error("User not found");
     }
 
-    await ctx.db.patch(args.userId, {
+    await ctx.db.patch("users", args.userId, {
       bannedAt: now,
       bannedUntil: args.bannedUntil,
       banReason: args.reason,
@@ -276,7 +276,7 @@ export const unbanUser = mutation({
     }
 
     const now = Date.now();
-    await ctx.db.patch(args.userId, {
+    await ctx.db.patch("users", args.userId, {
       bannedAt: undefined,
       bannedUntil: undefined,
       banReason: undefined,
@@ -331,7 +331,7 @@ export const claimSuperAdmin = mutation({
       throw new Error("A super admin already exists");
     }
 
-    await ctx.db.patch(user._id, {
+    await ctx.db.patch("users", user._id, {
       isSuperAdmin: true,
       roles: ["admin"],
       updatedAt: now,
@@ -371,34 +371,34 @@ export const removeUser = mutation({
     for await (const identity of ctx.db
       .query("auth_identities")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))) {
-      await ctx.db.delete(identity._id);
+      await ctx.db.delete("auth_identities", identity._id);
     }
 
     for await (const account of ctx.db
       .query("authAccounts")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))) {
-      await ctx.db.delete(account._id);
+      await ctx.db.delete("authAccounts", account._id);
     }
 
     for await (const session of ctx.db
       .query("authSessions")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))) {
-      await ctx.db.delete(session._id);
+      await ctx.db.delete("authSessions", session._id);
     }
 
     for await (const token of ctx.db
       .query("authRefreshTokens")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))) {
-      await ctx.db.delete(token._id);
+      await ctx.db.delete("authRefreshTokens", token._id);
     }
 
     for await (const code of ctx.db
       .query("authVerificationCodes")
       .withIndex("by_user_type", (q) => q.eq("userId", args.userId))) {
-      await ctx.db.delete(code._id);
+      await ctx.db.delete("authVerificationCodes", code._id);
     }
 
-    await ctx.db.delete(args.userId);
+    await ctx.db.delete("users", args.userId);
 
     const now = Date.now();
     await createAdminAudit(ctx, {
@@ -551,7 +551,7 @@ export const setRole = mutation({
 
     const roles = typeof args.role === "string" ? [args.role] : args.role;
     const now = Date.now();
-    await ctx.db.patch(args.userId, {
+    await ctx.db.patch("users", args.userId, {
       roles,
       isSuperAdmin: isAdminRole(roles),
       updatedAt: now,
@@ -649,9 +649,9 @@ export const setUserPassword = mutation({
         .take(1);
       const identityRecord = identityRecords[0];
       if (identityRecord !== undefined) {
-        await ctx.db.patch(identityRecord._id, { updatedAt: now });
+        await ctx.db.patch("auth_identities", identityRecord._id, { updatedAt: now });
       }
-      await ctx.db.patch(existing._id, { credentialHash, updatedAt: now });
+      await ctx.db.patch("authAccounts", existing._id, { credentialHash, updatedAt: now });
     }
 
     await createAdminAudit(ctx, {

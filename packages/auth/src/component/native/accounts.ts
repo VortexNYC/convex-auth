@@ -29,7 +29,7 @@ export const updateAccountTokens = mutation({
       update.accessTokenExpiresAt = args.accessTokenExpiresAt;
     if (args.refreshTokenExpiresAt !== undefined)
       update.refreshTokenExpiresAt = args.refreshTokenExpiresAt;
-    await ctx.db.patch(args.accountId, update);
+    await ctx.db.patch("authAccounts", args.accountId, update);
   },
 });
 
@@ -40,7 +40,7 @@ export const updateCredentialHash = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    await ctx.db.patch(args.accountId, {
+    await ctx.db.patch("authAccounts", args.accountId, {
       credentialHash: args.credentialHash,
       updatedAt: now,
     });

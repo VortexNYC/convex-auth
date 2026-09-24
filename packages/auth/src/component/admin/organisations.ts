@@ -260,7 +260,10 @@ export const updateMemberRole = mutation({
     }
 
     const now = Date.now();
-    await ctx.db.patch(args.memberId, { roleId: args.roleId, updatedAt: now });
+    await ctx.db.patch("organization_members", args.memberId, {
+      roleId: args.roleId,
+      updatedAt: now,
+    });
 
     await createAdminAudit(ctx, {
       adminId: String(admin._id),
@@ -295,7 +298,7 @@ export const removeMember = mutation({
 
     const user = member.userId ? await ctx.db.get("users", member.userId) : null;
     const now = Date.now();
-    await ctx.db.delete(args.memberId);
+    await ctx.db.delete("organization_members", args.memberId);
 
     await createAdminAudit(ctx, {
       adminId: String(admin._id),
