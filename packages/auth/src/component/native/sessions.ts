@@ -2,7 +2,6 @@ import { v, type Infer } from "convex/values";
 import { getAllRows } from "../pagination.js";
 import { getOneFrom } from "convex-helpers/server/relationships";
 import { mutation, query, type MutationCtx, type QueryCtx } from "../_generated/server.js";
-import { base64urlToBytes } from "../../convex-runtime/native/password.js";
 import type { Doc, Id } from "../_generated/dataModel.js";
 
 const MAX_SESSIONS_PER_USER = 1000;
@@ -11,23 +10,6 @@ const ROTATION_GRACE_MS = 15_000;
 const MAX_GRACE_REDEMPTIONS = 8;
 const MAX_FAMILY_LIVE_SESSIONS = 10;
 const MAX_FAMILY_SCAN_ROWS = 2000;
-
-function identityIdFromSessionToken(token: string): Id<"auth_identities"> | undefined {
-  const parts = token.split(".");
-  if (parts.length !== 3) {
-    return undefined;
-  }
-  try {
-    const payload = JSON.parse(new TextDecoder().decode(base64urlToBytes(parts[1]))) as {
-      identityId?: unknown;
-    };
-    return typeof payload.identityId === "string"
-      ? (payload.identityId as Id<"auth_identities">)
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 async function getSessionsByUser(ctx: { db: QueryCtx["db"] }, userId: string) {
   return await getAllRows(ctx, {
@@ -377,7 +359,7 @@ export const rotateSession = mutation({
       return null;
     }
 
-    const sessionIdentityId = session.identityId ?? identityIdFromSessionToken(session.token);
+    const sessionIdentityId = session.identityId;
     let identity: Doc<"auth_identities"> | null = null;
     if (sessionIdentityId) {
       try {
@@ -532,8 +514,7 @@ export const convergeSession = mutation({
       return null;
     }
 
-    const sessionIdentityId =
-      session?.identityId ?? (session ? identityIdFromSessionToken(session.token) : undefined);
+    const sessionIdentityId = session?.identityId;
     let identity: Doc<"auth_identities"> | null = null;
     if (sessionIdentityId) {
       try {

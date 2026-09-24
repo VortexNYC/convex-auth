@@ -1185,7 +1185,7 @@ describe("native sessions", () => {
     expect(auditEvents).toHaveLength(0);
   });
 
-  it("rotateSession resolves identity from the session JWT for non-password providers", async () => {
+  it("rotateSession ignores the session JWT identity claim when the column is unset", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
     const oauthDocId = await insertIdentity(t, userId, {
@@ -1217,6 +1217,7 @@ describe("native sessions", () => {
         updatedAt: now,
       });
     });
+
     const result = await t.mutation(api.native.sessions.rotateSession, {
       oldRefreshTokenHash: "hash-1",
       newSessionId: "session-2",
@@ -1227,7 +1228,15 @@ describe("native sessions", () => {
       provider: "password",
       issuer: "native",
     });
-    expect(result).toMatchObject({ identityId: oauthDocId });
+    expect(result).toBeNull();
+
+    const sibling = await t.run(async (ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-2"))
+        .unique(),
+    );
+    expect(sibling).toBeNull();
   });
 
   it("rotateSession fails closed for a session with no resolvable identity", async () => {
@@ -1278,69 +1287,6 @@ describe("native sessions", () => {
     );
     expect(session2).toBeNull();
     expect(identity).not.toBeNull();
-  });
-
-  it("convergeSession resolves a claim-only predecessor and writes the identity doc id on the sibling", async () => {
-    const t = convexTest(schema, modules);
-    const userId = await insertUser(t);
-    const oauthDocId = await insertIdentity(t, userId, {
-      identityId: "github_subject_2",
-      provider: "github",
-      subject: "github_subject_2",
-      tokenIdentifier: "github_subject_2",
-    });
-    const now = Date.now();
-
-    const payload = Buffer.from(JSON.stringify({ identityId: oauthDocId })).toString("base64url");
-    const sessionJwt = `header.${payload}.signature`;
-    await t.run(async (ctx) => {
-      await ctx.db.insert("authSessions", {
-        sessionId: "session-1",
-        userId,
-        token: sessionJwt,
-        expiresAt: now + 1_000_000,
-        createdAt: now,
-        updatedAt: now,
-      });
-      await ctx.db.insert("authRefreshTokens", {
-        tokenHash: "hash-1",
-        sessionId: "session-1",
-        userId,
-        expiresAt: now + 1_000_000,
-        createdAt: now,
-        updatedAt: now,
-      });
-    });
-
-    const rotated = await t.mutation(api.native.sessions.rotateSession, {
-      oldRefreshTokenHash: "hash-1",
-      newSessionId: "session-2",
-      newSessionToken: "token-2",
-      newSessionExpiresAt: now + 1_000_000,
-      newRefreshTokenHash: "hash-2",
-      newRefreshTokenExpiresAt: now + 1_000_000,
-      provider: "password",
-      issuer: "native",
-    });
-    expect(rotated).toMatchObject({ identityId: oauthDocId });
-
-    const result = await t.mutation(api.native.sessions.convergeSession, {
-      predecessorRefreshTokenHash: "hash-1",
-      newSessionId: "session-3",
-      newSessionToken: "token-3",
-      newSessionExpiresAt: now + 1_000_000,
-      newRefreshTokenHash: "hash-3",
-      newRefreshTokenExpiresAt: now + 1_000_000,
-    });
-    expect(result).not.toBeNull();
-
-    const sibling = await t.run(async (ctx) =>
-      ctx.db
-        .query("authSessions")
-        .withIndex("by_session_id", (q) => q.eq("sessionId", "session-3"))
-        .unique(),
-    );
-    expect(sibling?.identityId).toBe(oauthDocId);
   });
 
   it("convergeSession fails closed instead of minting an identity-less sibling", async () => {
