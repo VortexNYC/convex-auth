@@ -376,7 +376,7 @@ export const removeUser = mutation({
 
     for await (const account of ctx.db
       .query("authAccounts")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))) {
+      .withIndex("by_user_provider_issuer", (q) => q.eq("userId", args.userId))) {
       await ctx.db.delete("authAccounts", account._id);
     }
 

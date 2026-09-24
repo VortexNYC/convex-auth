@@ -23,9 +23,7 @@ export const agent_hosts = defineTable({
   createdBy: v.id("users"),
   createdAt: v.number(),
   updatedAt: v.number(),
-})
-  .index("by_organization", ["organizationId"])
-  .index("by_organization_status", ["organizationId", "status"]);
+}).index("by_organization_status", ["organizationId", "status"]);
 
 export const agent_host_keys = defineTable({
   hostId: v.id("agent_hosts"),
@@ -57,9 +55,7 @@ export const agents = defineTable({
   createdAt: v.number(),
   updatedAt: v.number(),
 })
-  .index("by_organization", ["organizationId"])
   .index("by_organization_status", ["organizationId", "status"])
-  .index("by_host", ["hostId"])
   .index("by_host_status", ["hostId", "status"]);
 
 export const agent_keys = defineTable({
@@ -87,7 +83,6 @@ export const agent_capability_grants = defineTable({
   createdAt: v.number(),
   updatedAt: v.number(),
 })
-  .index("by_agent", ["agentId"])
   .index("by_agent_status", ["agentId", "status"])
   .index("by_agent_capability", ["agentId", "capability"]);
 
@@ -130,7 +125,6 @@ export const agent_device_authorizations = defineTable({
 })
   .index("by_user_code_hash", ["userCodeHash"])
   .index("by_device_code_hash", ["deviceCodeHash"])
-  .index("by_agent", ["agentId"])
   .index("by_agent_status", ["agentId", "status"])
   .index("by_expiry", ["expiresAt"]);
 

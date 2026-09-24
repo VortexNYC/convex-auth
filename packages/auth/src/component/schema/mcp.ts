@@ -29,7 +29,6 @@ export const mcp_oauth_signing_keys = defineTable({
   updatedAt: v.number(),
 })
   .index("by_key_id", ["keyId"])
-  .index("by_status", ["status"])
   .index("by_updated_at", ["updatedAt"])
   .index("by_status_updated_at", ["status", "updatedAt"])
   .index("by_status_retired_at", ["status", "retiredAt"]);

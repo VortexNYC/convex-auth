@@ -257,7 +257,7 @@ describe("admin users", () => {
     const account = await t.run((ctx) =>
       ctx.db
         .query("authAccounts")
-        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .withIndex("by_user_provider_issuer", (q) => q.eq("userId", user._id))
         .take(1),
     );
     expect(account).toHaveLength(1);
@@ -326,7 +326,7 @@ describe("admin users", () => {
     const account = await t.run((ctx) =>
       ctx.db
         .query("authAccounts")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .withIndex("by_user_provider_issuer", (q) => q.eq("userId", userId))
         .take(1),
     );
     expect(account).toHaveLength(1);

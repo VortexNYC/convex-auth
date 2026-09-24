@@ -37,8 +37,8 @@ importers:
         specifier: 3.0.1
         version: 3.0.1
       '@convex-dev/eslint-plugin':
-        specifier: 4.0.0
-        version: 4.0.0(convex@1.46.0(react@19.2.8))(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3)
+        specifier: 5.0.0
+        version: 5.0.0(convex@1.46.0(react@19.2.8))(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3)
       '@secretlint/secretlint-rule-preset-recommend':
         specifier: ^13.0.5
         version: 13.0.5
@@ -1377,8 +1377,8 @@ packages:
     resolution: {integrity: sha512-PXzLZ8N34rxmuo4dJg3xtOXhcBse94qGjDqsteoEYrFrrZ5FSjIGwMAuOcv64ln8rHVBBD06XeVGr+/JX+plcA==}
     engines: {node: '>= 20.12.0'}
 
-  '@convex-dev/eslint-plugin@4.0.0':
-    resolution: {integrity: sha512-7bYP8Fkk+19L7LWl3xIqUqq/0yIEZNoUQHOodZKIvupqmgaMisz8NKz6OkmMwBVLUQ0sh/9+iPK1OyASANiWyw==}
+  '@convex-dev/eslint-plugin@5.0.0':
+    resolution: {integrity: sha512-UFhZ7bJBo4mTfa829/mntoAwyC9aKwXe6dxCV7PianSdAfFIbdCwCjWPBmhqn1hNlpqhVU385C/vjL8CXfxA2Q==}
     peerDependencies:
       convex: ^1.43.0
 
@@ -11306,7 +11306,7 @@ snapshots:
       fast-wrap-ansi: 0.2.2
       sisteransi: 1.0.5
 
-  '@convex-dev/eslint-plugin@4.0.0(convex@1.46.0(react@19.2.8))(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3)':
+  '@convex-dev/eslint-plugin@5.0.0(convex@1.46.0(react@19.2.8))(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3)':
     dependencies:
       '@typescript-eslint/types': 8.58.2
       '@typescript-eslint/utils': 8.58.2(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3)

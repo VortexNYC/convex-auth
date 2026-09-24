@@ -998,7 +998,7 @@ describe("Convex-native Agent Auth component", () => {
         .unique();
       const grants = await ctx.db
         .query("agent_capability_grants")
-        .withIndex("by_agent", (q) => q.eq("agentId", agent.id))
+        .withIndex("by_agent_status", (q) => q.eq("agentId", agent.id))
         .take(3);
       return { key, grants };
     });

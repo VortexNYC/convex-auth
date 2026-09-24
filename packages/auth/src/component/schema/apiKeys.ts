@@ -54,7 +54,6 @@ export const api_keys = defineTable({
   .index("by_organization", ["organizationId"])
   .index("by_user", ["userId"])
   .index("by_key_prefix", ["keyPrefix"])
-  .index("by_organization_environment", ["organizationId", "environment"])
   .index("by_owner_service", ["ownerServicePrincipalId"])
   .index("by_owner_service_status", ["ownerServicePrincipalId", "status"])
   .index("by_org_status", ["organizationId", "status"])

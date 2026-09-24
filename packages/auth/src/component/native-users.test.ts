@@ -268,7 +268,7 @@ describe("deleteUser", () => {
       let count = 0;
       for await (const _ of ctx.db
         .query("authAccounts")
-        .withIndex("by_user", (q) => q.eq("userId", bobId))) {
+        .withIndex("by_user_provider_issuer", (q) => q.eq("userId", bobId))) {
         count++;
       }
       return count;
