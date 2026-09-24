@@ -158,3 +158,28 @@ green (includes site/changelog). CI pending on `8bab3b9`.
   conditional strippedCookieHeader). CI + CodeRabbit green.
 - Remaining twin debt: none in SSR surface. `ssr/` is now the single
   source for proxy + boundary decision logic; future adapters bind io.
+
+## Comment sweep + merge state (2026-09-24)
+
+- **#354 merged** into main as `4393a6f` (squash); #353 auto-closed.
+- **PR #376** `chore/comment-sweep` — all `//` comments swept from
+  packages/** per repo rule. Semantics folded into declaration JSDoc;
+  positional/section notes use `/* */` (can't misattach as JSDoc);
+  pragmas (`///`, `@ts-expect-error`, `@vitest-environment`, `nosemgrep`)
+  kept as line comments — they're directives.
+- **TanStack example typecheck fix**: `types: ["vite/client", "node"]` —
+  the exclusive list had blocked root `@types/node` auto-inclusion, so
+  `process.env` in convex/ + pulled-in auth src was untyped. Siblings
+  auto-include; parity restored.
+- **Sweep hazards found and fixed**: `/**` inside `import.meta.glob`
+  strings and `exp://**` origin patterns got eaten by mechanical
+  `/**`→`/*` passes; JSDoc examples' `//` content got converted; all
+  restored. Rule for future mechanical passes: never match `/**` inside
+  quoted strings.
+- **#372** draft (legacy passkey-session drop, gates ~Oct 18 2026);
+  **#375** draft (OIDC expiresAt required, `next-major` v3 gate);
+  follow-ups filed: #373 identityId-JWT fallback, #374 familyId-less
+  session lookup.
+- Issue board: 15 open, all real work or explicit gates. Labels added:
+  security/bug/upstream/debt/next-major/adapter/follow-up; #371 pinned
+  roadmap with build order.
