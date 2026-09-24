@@ -256,13 +256,6 @@ export async function revokeSessionFamily(
     getRefreshTokensBySession(ctx, familyId),
     getSessionsByFamily(ctx, familyId),
   ]);
-  const legacySession = await getOneFrom(
-    ctx.db,
-    "authSessions",
-    "by_session_id",
-    familyId,
-    "sessionId",
-  );
 
   const seen = new Set<string>();
   for (const token of [...familyTokens, ...sessionTokens]) {
@@ -275,13 +268,9 @@ export async function revokeSessionFamily(
     }
   }
   for (const session of familySessions) {
-    seen.add(session._id);
     if (!session.revokedAt) {
       await ctx.db.patch(session._id, { revokedAt: now, updatedAt: now });
     }
-  }
-  if (legacySession && !seen.has(legacySession._id) && !legacySession.revokedAt) {
-    await ctx.db.patch(legacySession._id, { revokedAt: now, updatedAt: now });
   }
 
   if (auditEventType !== null) {

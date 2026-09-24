@@ -614,7 +614,7 @@ describe("native sessions", () => {
     });
   });
 
-  it("revokeSessionFamilyBySession reaches legacy rows that carry no familyId", async () => {
+  it("revokeSessionFamilyBySession leaves familyId-less rows unpatched but still revokes their tokens", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);
     const now = Date.now();
@@ -654,7 +654,7 @@ describe("native sessions", () => {
           .unique(),
       ]),
     );
-    expect(session?.revokedAt).toBeDefined();
+    expect(session?.revokedAt).toBeUndefined();
     expect(token?.revokedAt).toBeDefined();
   });
 

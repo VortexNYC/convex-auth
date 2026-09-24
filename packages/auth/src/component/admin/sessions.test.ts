@@ -52,7 +52,7 @@ async function insertSession(
       ipAddress: "127.0.0.1",
       userAgent: "test",
       revokedAt: overrides.revokedAt,
-      familyId: overrides.familyId,
+      familyId: overrides.familyId ?? sessionId,
       impersonatedBy: overrides.impersonatedBy,
       createdAt: 0,
       updatedAt: 0,

@@ -175,6 +175,7 @@ export const migrateSession = internalMutation({
       sessionId: args.legacySession.token,
       userId: args.userId,
       token: args.legacySession.token,
+      familyId: args.legacySession.token,
       expiresAt: args.legacySession.expiresAt,
       ipAddress: args.legacySession.ipAddress ?? undefined,
       userAgent: args.legacySession.userAgent ?? undefined,
