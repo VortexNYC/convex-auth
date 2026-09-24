@@ -1,5 +1,4 @@
 import type { GenericActionCtx, GenericDataModel } from "convex/server";
-import type { Id } from "../../component/_generated/dataModel.js";
 import { mintToken } from "./jwt.js";
 import { generateVerificationToken, hashToken } from "./tokens.js";
 import type { NativeAuthSession, NativeEmailAndPasswordComponentHandle } from "./types.js";
