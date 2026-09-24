@@ -28,14 +28,14 @@ The middleware intercepts auth requests and the `/api/auth` proxy internally —
 
 ### Options
 
-| Option                   | Default                              | Description                                                                                                                                                             |
-| ------------------------ | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `actions`                | required                             | The `api.auth` object re-exporting `convexAuth` actions.                                                                                                                |
-| `convexUrl`              | `CONVEX_URL`, then `VITE_CONVEX_URL` | Convex deployment URL.                                                                                                                                                  |
-| `apiRoute`               | `/api/auth`                          | Path that proxies auth actions.                                                                                                                                         |
-| `cookieConfig.maxAge`    | `null` (session cookie)              | Cookie lifetime in seconds. Must be `null` or a positive number.                                                                                                        |
-| `requireLandingVerifier` | `true`                               | Require OAuth/magic-link landings to carry a verifier param matching the cookie minted at flow start. Set `false` only for deployments that predate verifier threading. |
-| `verbose`                | `false`                              | Debug logging.                                                                                                                                                          |
+| Option                   | Default                                                     | Description                                                                                                                                                             |
+| ------------------------ | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `actions`                | required                                                    | The `api.auth` object re-exporting `convexAuth` actions.                                                                                                                |
+| `convexUrl`              | `CONVEX_URL` → `VITE_CONVEX_URL` → `NEXT_PUBLIC_CONVEX_URL` | Convex deployment URL.                                                                                                                                                  |
+| `apiRoute`               | `/api/auth`                                                 | Path that proxies auth actions.                                                                                                                                         |
+| `cookieConfig.maxAge`    | `null` (session cookie)                                     | Cookie lifetime in seconds. Must be `null` or a positive number.                                                                                                        |
+| `requireLandingVerifier` | `true`                                                      | Require OAuth/magic-link landings to carry a verifier param matching the cookie minted at flow start. Set `false` only for deployments that predate verifier threading. |
+| `verbose`                | `false`                                                     | Debug logging.                                                                                                                                                          |
 
 ## Server state + provider
 
@@ -107,13 +107,13 @@ function RootComponent() {
 
 From `@vortex-api/convex-auth/tanstack-start/server`:
 
-| Helper                                       | Returns                              | Notes                                                                     |
-| -------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------- |
-| `getAuthServerState(request, { actions })`   | `ConvexAuthServerState`              | Server-resolved state for the provider's `serverState` prop.              |
-| `getConvexAuthSession(request, { actions })` | `VerifiedSession`                    | Verified session — revocation-aware.                                      |
-| `getConvexAuthToken(request)`                | `string \| null`                     | Raw session token.                                                        |
-| `convexAuthCookieState(request)`             | `{ hasSessionCookie, tokenExpired }` | Optimistic boundary check — revocation-blind, pre-filtering only.         |
-| `convexAuthProxyHandler`                     | Route handler                        | Standalone proxy handler if you mount `/api/auth` outside the middleware. |
+| Helper                                       | Returns                              | Notes                                                                               |
+| -------------------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------- |
+| `getAuthServerState(request, { actions })`   | `ConvexAuthServerState`              | Server-resolved state for the provider's `serverState` prop.                        |
+| `getConvexAuthSession(request, { actions })` | `VerifiedSession`                    | Verified session — revocation-aware.                                                |
+| `getConvexAuthToken(request)`                | `string \| null`                     | Raw session token.                                                                  |
+| `convexAuthCookieState(request)`             | `{ hasSessionCookie, tokenExpired }` | Optimistic boundary check — revocation-blind, pre-filtering only.                   |
+| `convexAuthProxyHandler(options)`            | `(request) => Promise<Response>`     | Factory — standalone proxy handler if you mount `/api/auth` outside the middleware. |
 
 ## Route guards are UX, not security
 

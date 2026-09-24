@@ -22,7 +22,7 @@ For an example deployment `your-deployment`:
 - Google: `https://<your-deployment>.convex.site/api/auth/callback/google`
 - Discord: `https://<your-deployment>.convex.site/api/auth/callback/discord`
 
-If you run locally without `CONVEX_SITE_URL`, `convex/auth.ts` falls back to `http://localhost:3000`, so the callback path becomes `http://localhost:3000/api/auth/callback/<provider>`.
+The callback URI comes from `AUTH_REDIRECT_URL ?? CONVEX_SITE_URL` — one of them must be set (`convex dev` provides `CONVEX_SITE_URL` for your deployment automatically).
 
 ## Get your provider credentials
 
@@ -126,7 +126,7 @@ Convex already exposes the callback at `/api/auth/callback/:provider` through `a
 
 Two details matter:
 
-- **The `landingVerifier` param binds the landing to the browser that started the flow.** The provider compares it against a verifier cookie set at initiation; a landing URL missing it (or carrying one bound to a different browser) is rejected and the credentials are stripped. If you initiate OAuth outside the browser — e.g. a server calling `signInWithRedirect` — pass `requireLandingVerifier={false}` to `ConvexAuthProvider` or the landing will be rejected.
+- **The `landingVerifier` param binds the landing to the browser that started the flow.** The provider compares it against a verifier cookie set at initiation; a landing URL missing it (or carrying one bound to a different browser) is rejected and the credentials are stripped. If you initiate OAuth outside the browser — e.g. a server calling `signInWithRedirect` — disable the check or the landing will be rejected: `requireLandingVerifier={false}` on `ConvexAuthProvider` in token mode, or `requireLandingVerifier: false` on `convexAuthNextjsMiddleware` / `convexAuthRequestMiddleware` in cookie (SSR) mode.
 - **In cookie mode (`storageMode: "cookies"`) the session never reaches the URL's JavaScript at all.** The SSR middleware intercepts the triple, writes HttpOnly cookies, and redirects with the params stripped — see the [SSR contract](./ssr-contract).
 
 ## Redirect allowlist (`trustedOrigins`)
