@@ -776,7 +776,7 @@ async function ensureAnchor<TUser extends GlueUserMinimum, TAnchor extends GlueA
     toConsumerId(convexAuthOrganizationId),
   );
   if (existing !== null) return;
-  /**
+  /*
    * QueryCtx guard: the consumer's `insertAnchor` adapter would throw a
    * raw `TypeError: db.insert is not a function` when called from a
    * read-only context. Short-circuit with the canonical ANCHOR_MISSING

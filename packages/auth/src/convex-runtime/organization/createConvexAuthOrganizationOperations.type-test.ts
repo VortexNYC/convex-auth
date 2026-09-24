@@ -87,7 +87,7 @@ const ops = createConvexAuthOrganizationOperations<
     return null;
   },
   backfillOrganizationBridgeId: async (ctx, _localOrganizationId, componentOrganizationId) => {
-    /** writer-only side effect, ctx.db.patch is reachable without a cast. */
+    /* writer-only side effect, ctx.db.patch is reachable without a cast. */
     void ctx.db;
     void componentOrganizationId;
   },

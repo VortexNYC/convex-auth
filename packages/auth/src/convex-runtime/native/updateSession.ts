@@ -57,7 +57,7 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
     throw new Error("Invalid refresh token");
   }
 
-  /**
+  /*
    * The session row carries its identity; sessions minted before the column
    * existed carry it as a JWT claim instead. A session with neither cannot
    * name its identity — guessing a provider would bind the wrong one, so fail
@@ -124,7 +124,7 @@ export async function handleUpdateSession<DataModel extends GenericDataModel>(
   }
 
   if (result === "converge") {
-    /**
+    /*
      * A parallel request already rotated this token inside the grace window.
      * Mint a sibling pair in the same family rather than letting its session
      * be revoked as replay.

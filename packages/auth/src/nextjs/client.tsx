@@ -29,7 +29,7 @@ export function normalizeAuthActions(
   if (!Object.values(actions).some((v) => typeof v === "string")) {
     return actions as NativeAuthActions;
   }
-  /** Null-prototype so a `__proto__`/`constructor` key in a hand-built
+  /* Null-prototype so a `__proto__`/`constructor` key in a hand-built
    * manifest lands as data, not as a prototype write. */
   const live: Record<string, { [key: symbol]: string }> = Object.create(null);
   for (const [key, name] of Object.entries(actions)) {
@@ -71,7 +71,7 @@ export function ConvexAuthNextjsClientProvider(props: {
   children: ReactNode;
 }) {
   const { serverState, apiRoute, children } = props;
-  /** Memoized — a fresh refs object every render would bust
+  /* Memoized — a fresh refs object every render would bust
    * ConvexAuthProvider's own memoization on `actions`. */
   const actions = useMemo(() => normalizeAuthActions(props.actions), [props.actions]);
   return (

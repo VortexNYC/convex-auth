@@ -134,7 +134,7 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
             /* User closed the browser without completing the flow. */
           }
         } catch {
-          /** expo-web-browser may not be installed or the device may not
+          /* expo-web-browser may not be installed or the device may not
            * support an auth session; fall through to the system browser. */
           const { openURL } = await import("expo-linking");
           await openURL(url);

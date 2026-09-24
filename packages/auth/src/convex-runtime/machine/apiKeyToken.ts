@@ -86,7 +86,7 @@ export async function resolveStoredApiKeyCredential<TApiKey extends StoredApiKey
   const apiKey = await args.findByKeyPrefix(parsed.keyPrefix);
   const hashSecret = args.hashSecret ?? hashApiKeySecret;
 
-  /**
+  /*
    * Always run the (expensive) hash+compare, even when the prefix is unknown, so
    * response time does not reveal whether a prefix exists (timing oracle). On a
    * miss we compare against a fixed dummy hash and discard the result.

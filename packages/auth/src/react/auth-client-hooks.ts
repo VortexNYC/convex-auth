@@ -36,7 +36,7 @@ export function useConvexAuthUser(authClient: ConvexBetterAuthClient | null): Co
   };
 }
 
-/* Web-first hooks; RN exports symmetric hooks via runtime.tsx. */
+/** Web-first hooks; RN exports symmetric hooks via runtime.tsx. */
 
 export type ConvexAuthSessionListState = {
   /** All active sessions for the current user. null until loaded. */
@@ -528,7 +528,7 @@ export function useConvexAuthUploadProfileImage(
   return { uploadAndSave, isUploading };
 }
 
-/*
+/**
  * Five guarded hooks covering the full 2FA surface: enroll, confirm (TOTP),
  * confirm (backup code), disable, regenerate backup codes. Each returns
  * `{ ok, error }` (plus enroll's `totpURI`/`backupCodes`) and a single

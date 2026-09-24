@@ -56,7 +56,7 @@ export function useConvexAuthClient() {
   const currentToken = () => actions.token;
 
   const resolveTwoFactorToken = () => actions.twoFactorChallengeToken ?? actions.token;
-  /** Cookie mode holds no challenge token — the pending value lives in an
+  /* Cookie mode holds no challenge token — the pending value lives in an
    * HttpOnly cookie and the proxy substitutes it. `token` is optional on the
    * verify args precisely so this path can call through without one. */
   const challengeTokenOptional = actions.storageMode === "cookies";

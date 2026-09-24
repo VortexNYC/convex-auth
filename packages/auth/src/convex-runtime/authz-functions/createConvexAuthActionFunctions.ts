@@ -128,7 +128,7 @@ export function createConvexAuthActionFunctions<
   AVisibility extends FunctionVisibility,
   TRole extends string = string,
 >(opts: CreateConvexAuthActionFunctionsOptions<DataModel, AVisibility, TRole>) {
-  /**
+  /*
    * Resolve → check → inject, routing any failure through the denial hook before
    * re-throwing. `resolved` is captured so a permission denial (which happens
    * AFTER resolution) can be attributed to the authenticated principal.

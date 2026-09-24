@@ -171,7 +171,7 @@ const INTERNAL_FUNCTION_KINDS: ReadonlySet<string> = new Set([
 const CONTRACT_DOC = "docs/(reference)/consumer-contract.mdx";
 
 function isExcluded(relPath: string): boolean {
-  /**
+  /*
    * Skip generated code, tests, and node_modules.
    */
   const parts = relPath.split(sep);
@@ -221,11 +221,11 @@ function checkLocalTruthTable(
 ): ConsumerContractViolation[] {
   const found: ConsumerContractViolation[] = [];
   for (const table of FORBIDDEN_TABLES) {
-    /**
+    /*
      * Form A: `someName: defineTable(` where someName === table (property declaration in a schema map).
      */
     const propPattern = new RegExp(`(^|[^A-Za-z0-9_])${table}\\s*:\\s*defineTable\\s*\\(`);
-    /**
+    /*
      * Form B: `defineTable("table_name"` — defensive; not idiomatic in convex but possible.
      */
     const callPattern = new RegExp(`defineTable\\s*\\(\\s*["'\`]${table}["'\`]`);
@@ -309,7 +309,7 @@ function checkBidirectionalMirrorWriter(
 ): ConsumerContractViolation[] {
   const found: ConsumerContractViolation[] = [];
   for (const name of FORBIDDEN_MIRROR_WRITERS) {
-    /**
+    /*
      * Detect function declaration / arrow assignment / export of the symbol.
      * Allow `ensureConvexAuthOrganization` — that's the sanctioned anchor mapper.
      */
@@ -424,7 +424,7 @@ function findBridgeColumns(
   bodyStartLine: number,
 ): Array<{ name: string; line: number }> {
   const cols: Array<{ name: string; line: number }> = [];
-  /**
+  /*
    * `<name>: v.<...>` — convex column declarations. Property-key delimiters
    * are start-of-string, whitespace, `,`, `{`, or `(`.
    */
@@ -653,7 +653,7 @@ function findConvexFunctionBlocks(source: string): ConvexFunctionBlock[] {
      * Convex function constructor; move on. */
     if (source[i] !== "(") continue;
     const bodyStart = i;
-    /**
+    /*
      * Consume one or more consecutive balanced call groups `( ... )` at depth 0
      * so currying (`permissionQuery("p")( ... )`) is captured fully.
      */
@@ -727,7 +727,7 @@ export function checkConsumerContract(
     } catch {
       continue;
     }
-    /**
+    /*
      * Strip comments so documentation prose about forbidden patterns
      * doesn't trigger the rules. Whitespace is preserved so line/column
      * numbers in violation messages still point at the right place.

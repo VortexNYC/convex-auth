@@ -68,7 +68,7 @@ export function nativePasskey(component: PasskeyComponentApi, config: NativePass
   const maxPasskeys = config.maxPasskeysPerUser;
   const sessionTtlMs = config.sessionTtlMs;
   const refreshTokenTtlMs = config.refreshTokenTtlMs;
-  /**
+  /*
    * Default to enforcing UV — matching the behavior before this was
    * configurable. Only an explicit "preferred"/"discouraged" relaxes it.
    */

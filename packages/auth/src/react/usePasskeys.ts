@@ -113,7 +113,7 @@ export function usePasskeys(args: UsePasskeysArgs) {
           challenge: options.challenge as string,
           response,
         };
-        /** Cookie mode routes the mint through the adapter proxy so the
+        /* Cookie mode routes the mint through the adapter proxy so the
          * session lands in HttpOnly cookies — the client cannot set them
          * itself. */
         const result = cookieMode
