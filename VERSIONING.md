@@ -80,6 +80,15 @@ The following **are** breaking:
   link to the migration page when one exists.
 - Every PR that changes `packages/` source carries a changeset (enforced by
   the `changeset-gate` CI check) or the `no-release` label.
+- Before publishing, run `pnpm smoke:release`. It packs the npm tarball,
+  installs it into a scratch copy of each example (the same shape a consumer
+  gets), pushes to each example's own dev deployment, and exercises a real
+  sign-up/sign-in flow over HTTP. Cloud dev deployments get the full
+  pack → install → push → flow chain; `anonymous:*` deployments get install +
+  functional checks against their running local backends. The gate must report
+  all examples passing before `workflow_dispatch` on the release workflow.
+  Examples must never target `prod:*` deployments — the script refuses unless
+  `--allow-prod` is passed explicitly.
 
 ## Supported versions
 
