@@ -52,6 +52,5 @@ export const auth_identities = defineTable({
   .index("by_provider_issuer_subject", ["provider", "issuer", "subject"])
   .index("by_issuer_subject", ["issuer", "subject"])
   .index("by_token_identifier", ["tokenIdentifier"])
-  /* eslint-disable-next-line @convex-dev/no-duplicate-indexes -- by_user serves creation-ordered cursor pagination in listByUser; by_user_provider_issuer sorts by provider */
   .index("by_user", ["userId"])
   .index("by_user_provider_issuer", ["userId", "provider", "issuer"]);

@@ -51,11 +51,9 @@ export const api_keys = defineTable({
   createdAt: v.number(),
   updatedAt: v.number(),
 })
-  /* eslint-disable-next-line @convex-dev/no-duplicate-indexes -- by_organization serves creation-ordered first-N key lists; by_org_status sorts by status */
   .index("by_organization", ["organizationId"])
   .index("by_user", ["userId"])
   .index("by_key_prefix", ["keyPrefix"])
-  /* eslint-disable-next-line @convex-dev/no-duplicate-indexes -- by_owner_service serves creation-ordered first-N key lists; by_owner_service_status sorts by status */
   .index("by_owner_service", ["ownerServicePrincipalId"])
   .index("by_owner_service_status", ["ownerServicePrincipalId", "status"])
   .index("by_org_status", ["organizationId", "status"])

@@ -61,6 +61,31 @@ export default defineConfig({
           "@convex-dev/no-top-of-hour-crons": "off",
         },
       },
+      /*
+       * These schema files keep covered prefix indexes on purpose: the
+       * by_X index serves creation-ordered first-N list endpoints
+       * (listMembersByOrganization, listByUser, the api-key / webhook /
+       * service-principal / org-invitation list queries) while the
+       * covering index sorts by status/key/provider — repointing would
+       * silently change page membership and order.
+       * Kept: organization_roles.by_organization, organization_members
+       * .by_user/.by_organization, organization_invitations.by_organization,
+       * api_keys.by_organization/.by_owner_service,
+       * service_principals.by_organization, auth_identities.by_user,
+       * webhook_endpoints.by_organization, webhook_deliveries.by_endpoint.
+       */
+      {
+        files: [
+          "packages/auth/src/component/schema/apiKeys.ts",
+          "packages/auth/src/component/schema/organizations.ts",
+          "packages/auth/src/component/schema/servicePrincipals.ts",
+          "packages/auth/src/component/schema/users.ts",
+          "packages/auth/src/component/schema/webhooks.ts",
+        ],
+        rules: {
+          "@convex-dev/no-duplicate-indexes": "off",
+        },
+      },
     ],
   },
   staged: {
