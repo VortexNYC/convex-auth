@@ -1,0 +1,124 @@
+---
+title: TanStack Start
+description: SSR auth for TanStack Start with HttpOnly cookie sessions.
+sidebar:
+  order: 19
+---
+
+`@vortex-api/convex-auth/tanstack-start` and `@vortex-api/convex-auth/tanstack-start/server` are the TanStack Start SSR adapter. Sessions live in app-origin HttpOnly cookies; a request middleware lands OAuth/magic-link redirects, refreshes sessions near expiry, and serves the intent-based `/api/auth` proxy. It implements the [SSR auth contract](./ssr-contract).
+
+A working example lives in `examples/tanstack-start`.
+
+## Request middleware
+
+Register `convexAuthRequestMiddleware` in `src/start.ts`:
+
+```ts
+// src/start.ts
+import { createStart } from "@tanstack/react-start";
+import { convexAuthRequestMiddleware } from "@vortex-api/convex-auth/tanstack-start/server";
+import { api } from "../convex/_generated/api";
+
+export const startInstance = createStart(() => ({
+  requestMiddleware: [convexAuthRequestMiddleware({ actions: api.auth })],
+}));
+```
+
+The middleware intercepts auth requests and the `/api/auth` proxy internally — no separate route wiring is needed.
+
+### Options
+
+| Option                   | Default                              | Description                                                                                                                                                             |
+| ------------------------ | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `actions`                | required                             | The `api.auth` object re-exporting `convexAuth` actions.                                                                                                                |
+| `convexUrl`              | `CONVEX_URL`, then `VITE_CONVEX_URL` | Convex deployment URL.                                                                                                                                                  |
+| `apiRoute`               | `/api/auth`                          | Path that proxies auth actions.                                                                                                                                         |
+| `cookieConfig.maxAge`    | `null` (session cookie)              | Cookie lifetime in seconds. Must be `null` or a positive number.                                                                                                        |
+| `requireLandingVerifier` | `true`                               | Require OAuth/magic-link landings to carry a verifier param matching the cookie minted at flow start. Set `false` only for deployments that predate verifier threading. |
+| `verbose`                | `false`                              | Debug logging.                                                                                                                                                          |
+
+## Server state + provider
+
+Resolve auth state in the root route's `beforeLoad` via a server function, then pass it to `ConvexAuthTanstackStartProvider`:
+
+```ts
+// src/lib/auth-server.ts
+import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+import {
+  getAuthServerState,
+  getConvexAuthSession,
+} from "@vortex-api/convex-auth/tanstack-start/server";
+import { api } from "../../convex/_generated/api";
+
+/**
+ * Server-resolved auth state for the root route's `beforeLoad` — seeds the
+ * client provider and feeds route guards. Revocation-aware.
+ */
+export const getAuthState = createServerFn({ method: "GET" }).handler(async () => {
+  return await getAuthServerState(getRequest(), { actions: api.auth });
+});
+
+/**
+ * Verified session for protected loaders/server functions that don't want
+ * the full middleware context.
+ */
+export const getSession = createServerFn({ method: "GET" }).handler(async () => {
+  return await getConvexAuthSession(getRequest(), { actions: api.auth });
+});
+```
+
+```tsx
+// src/routes/__root.tsx
+import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexAuthTanstackStartProvider } from "@vortex-api/convex-auth/tanstack-start";
+import { api } from "../../convex/_generated/api";
+import { getAuthState } from "../lib/auth-server";
+
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+
+export const Route = createRootRoute({
+  beforeLoad: async () => ({
+    auth: await getAuthState(),
+  }),
+  component: RootComponent,
+});
+
+function RootComponent() {
+  const { auth } = Route.useRouteContext();
+
+  return (
+    <html lang="en">
+      <body>
+        <ConvexProvider client={convex}>
+          <ConvexAuthTanstackStartProvider actions={api.auth} serverState={auth}>
+            <Outlet />
+          </ConvexAuthTanstackStartProvider>
+        </ConvexProvider>
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+```
+
+## Server helpers
+
+From `@vortex-api/convex-auth/tanstack-start/server`:
+
+| Helper                                       | Returns                              | Notes                                                                     |
+| -------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------- |
+| `getAuthServerState(request, { actions })`   | `ConvexAuthServerState`              | Server-resolved state for the provider's `serverState` prop.              |
+| `getConvexAuthSession(request, { actions })` | `VerifiedSession`                    | Verified session — revocation-aware.                                      |
+| `getConvexAuthToken(request)`                | `string \| null`                     | Raw session token.                                                        |
+| `convexAuthCookieState(request)`             | `{ hasSessionCookie, tokenExpired }` | Optimistic boundary check — revocation-blind, pre-filtering only.         |
+| `convexAuthProxyHandler`                     | Route handler                        | Standalone proxy handler if you mount `/api/auth` outside the middleware. |
+
+## Route guards are UX, not security
+
+`beforeLoad` redirects and `convexAuthCookieState()` checks shape navigation; they are not authorization. Always verify the session at the data boundary (`getConvexAuthSession`, `verifySession`, or `ctx.auth.getUserIdentity()` inside Convex functions).
+
+## Error params
+
+Rejected landings redirect to `/?error=landing_verifier_mismatch` (verifier cookie absent or mismatched) or `/?error=cross_origin` (credentialed cross-origin request). Surface these in your UI — see the [SSR auth contract](./ssr-contract) for the full semantics.

@@ -127,7 +127,7 @@ Convex already exposes the callback at `/api/auth/callback/:provider` through `a
 Two details matter:
 
 - **The `landingVerifier` param binds the landing to the browser that started the flow.** The provider compares it against a verifier cookie set at initiation; a landing URL missing it (or carrying one bound to a different browser) is rejected and the credentials are stripped. If you initiate OAuth outside the browser — e.g. a server calling `signInWithRedirect` — pass `requireLandingVerifier={false}` to `ConvexAuthProvider` or the landing will be rejected.
-- **In cookie mode (`storageMode: "cookies"`) the session never reaches the URL's JavaScript at all.** The SSR middleware intercepts the triple, writes HttpOnly cookies, and redirects with the params stripped — see the [SSR contract](<../(reference)/ssr-contract.md>).
+- **In cookie mode (`storageMode: "cookies"`) the session never reaches the URL's JavaScript at all.** The SSR middleware intercepts the triple, writes HttpOnly cookies, and redirects with the params stripped — see the [SSR contract](./ssr-contract).
 
 ## Redirect allowlist (`trustedOrigins`)
 

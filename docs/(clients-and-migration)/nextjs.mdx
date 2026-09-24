@@ -1,0 +1,108 @@
+---
+title: Next.js
+description: SSR auth for Next.js with HttpOnly cookie sessions.
+sidebar:
+  order: 18
+---
+
+`@vortex-api/convex-auth/nextjs` and `@vortex-api/convex-auth/nextjs/server` are the Next.js SSR adapter. Sessions live in app-origin HttpOnly cookies; middleware lands OAuth/magic-link redirects, refreshes sessions near expiry, and proxies auth actions at `/api/auth`. It implements the [SSR auth contract](./ssr-contract).
+
+A working example lives in `examples/nextjs`.
+
+## Middleware
+
+Create `middleware.ts` (or `proxy.ts` on Next.js 16+) at the project root:
+
+```ts
+// middleware.ts
+import {
+  convexAuthNextjsMiddleware,
+  createRouteMatcher,
+  nextjsMiddlewareRedirect,
+} from "@vortex-api/convex-auth/nextjs/server";
+import { api } from "./convex/_generated/api";
+
+const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"]);
+
+export default convexAuthNextjsMiddleware(
+  async (request, ctx) => {
+    if (isProtectedRoute(request)) {
+      // Cheap pre-filter: no Convex call if the session cookie is absent.
+      const { hasSessionCookie } = ctx.convexAuth.cookieState();
+      if (!hasSessionCookie) {
+        return nextjsMiddlewareRedirect(request, "/sign-in");
+      }
+      // Verified check (revocation-aware) for the protected route.
+      if (!(await ctx.convexAuth.isAuthenticated())) {
+        return nextjsMiddlewareRedirect(request, "/sign-in");
+      }
+    }
+  },
+  { actions: api.auth },
+);
+
+export const config = {
+  // Only skip static assets — /api/auth must reach the middleware, which is
+  // where the auth proxy intercepts it.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};
+```
+
+The middleware context exposes `ctx.convexAuth.getToken()`, `ctx.convexAuth.isAuthenticated()` (revocation-aware), and `ctx.convexAuth.cookieState()` (cheap cookie-presence/expiry check — revocation-blind, so use it for pre-filtering only).
+
+### Options
+
+| Option                   | Default                  | Description                                                                                                                                                             |
+| ------------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `actions`                | required                 | The `api.auth` object re-exporting `convexAuth` actions.                                                                                                                |
+| `convexUrl`              | `NEXT_PUBLIC_CONVEX_URL` | Convex deployment URL.                                                                                                                                                  |
+| `apiRoute`               | `/api/auth`              | Path that proxies auth actions. Must match the `apiRoute` prop of `ConvexAuthNextjsServerProvider`.                                                                     |
+| `cookieConfig.maxAge`    | `null` (session cookie)  | Cookie lifetime in seconds. Must be `null` or a positive number.                                                                                                        |
+| `requireLandingVerifier` | `true`                   | Require OAuth/magic-link landings to carry a verifier param matching the cookie minted at flow start. Set `false` only for deployments that predate verifier threading. |
+| `verbose`                | `false`                  | Debug logging.                                                                                                                                                          |
+
+## Server provider
+
+Wrap the app in `ConvexAuthNextjsServerProvider` inside the root layout. It resolves and verifies the session from HttpOnly cookies on every server render and seeds the client provider:
+
+```tsx
+// app/layout.tsx
+import { ConvexAuthNextjsServerProvider } from "@vortex-api/convex-auth/nextjs/server";
+import { api } from "../convex/_generated/api";
+import { ConvexClientProvider } from "./providers";
+
+export default function RootLayout(props: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <ConvexClientProvider>
+          <ConvexAuthNextjsServerProvider actions={api.auth}>
+            {props.children}
+          </ConvexAuthNextjsServerProvider>
+        </ConvexClientProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+`ConvexClientProvider` is a client component that owns the `ConvexReactClient` and renders `ConvexProvider` — it must wrap the auth provider. See `examples/nextjs/app/providers.tsx`.
+
+## Server helpers
+
+From `@vortex-api/convex-auth/nextjs/server`:
+
+| Helper                                 | Returns                              | Notes                                                                                                                            |
+| -------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `convexAuthNextjsSession({ actions })` | `{ user, sessionId } \| null`        | Verified session via the `verifySession` query — revocation-aware. Memoized per request.                                         |
+| `isAuthenticatedNextjs({ actions })`   | `boolean`                            | Verified check for Server Actions and Route Handlers. Don't check auth in layouts — they don't stop nested pages from rendering. |
+| `convexAuthNextjsToken()`              | `string \| undefined`                | Raw session token from the cookie jar.                                                                                           |
+| `convexAuthNextjsCookieState(request)` | `{ hasSessionCookie, tokenExpired }` | Optimistic boundary check — revocation-blind, pre-filtering only.                                                                |
+
+## Route guards are UX, not security
+
+Middleware redirects and `cookieState()` checks shape navigation; they are not authorization. Always verify the session at the data boundary (`convexAuthNextjsSession`, `verifySession`, or `ctx.auth.getUserIdentity()` inside Convex functions).
+
+## Error params
+
+Rejected landings redirect to `/?error=landing_verifier_mismatch` (verifier cookie absent or mismatched) or `/?error=cross_origin` (credentialed cross-origin request). Surface these in your UI — see the [SSR auth contract](./ssr-contract) for the full semantics.

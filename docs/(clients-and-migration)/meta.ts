@@ -5,5 +5,12 @@ export default defineMeta({
   order: 4,
   display: "group",
   icon: "arrow-right-left",
-  pages: ["client", "react-native", "migrating-from-better-auth", "migrating-from-full-component"],
+  pages: [
+    "client",
+    "react-native",
+    "nextjs",
+    "tanstack-start",
+    "migrating-from-better-auth",
+    "migrating-from-full-component",
+  ],
 });
