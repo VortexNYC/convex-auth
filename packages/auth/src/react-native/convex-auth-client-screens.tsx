@@ -131,11 +131,11 @@ export function ExpoAuthClientSignInScreen(props: ExpoAuthClientSignInScreenProp
               await props.navigate?.({ to: props.forceRedirectUrl, replace: true });
             }
           } else if (session.type === "cancel" || session.type === "dismiss") {
-            // User closed the browser without completing the flow.
+            /* User closed the browser without completing the flow. */
           }
         } catch {
-          // expo-web-browser may not be installed or the device may not
-          // support an auth session; fall through to the system browser.
+          /* expo-web-browser may not be installed or the device may not
+           * support an auth session; fall through to the system browser. */
           const { openURL } = await import("expo-linking");
           await openURL(url);
         }

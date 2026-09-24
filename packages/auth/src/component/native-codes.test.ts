@@ -230,8 +230,10 @@ describe("native verification codes", () => {
       type: "email_verification",
     });
 
-    // getVerificationCodeByTokenHash returns the document regardless of expiry;
-    // expiry is checked by the caller.
+    /*
+     * getVerificationCodeByTokenHash returns the document regardless of expiry;
+     * expiry is checked by the caller.
+     */
     expect(code).not.toBeNull();
     expect(code?.expiresAt).toBe(1);
   });
@@ -303,9 +305,11 @@ describe("native verification codes", () => {
       }),
     );
 
-    // The pending token is minted alongside the identity the challenge was
-    // issued for — the verify path (and any cookie/proxy substitution of the
-    // token) needs it to mint the post-2FA session for the right identity.
+    /*
+     * The pending token is minted alongside the identity the challenge was
+     * issued for — the verify path (and any cookie/proxy substitution of the
+     * token) needs it to mint the post-2FA session for the right identity.
+     */
     const expiresAt = Date.now() + 300_000;
     await t.mutation(api.native.codes.createVerificationCode, {
       userId,
@@ -327,8 +331,10 @@ describe("native verification codes", () => {
       expiresAt,
     });
 
-    // Single-use: the first consume wins, the second gets nothing — a
-    // replayed pending token cannot mint a second session.
+    /*
+     * Single-use: the first consume wins, the second gets nothing — a
+     * replayed pending token cannot mint a second session.
+     */
     const first = await t.mutation(api.native.codes.consumeVerificationCode, {
       tokenHash: "pending-hash",
       type: "two_factor_pending",
@@ -340,7 +346,7 @@ describe("native verification codes", () => {
     });
     expect(second).toBeNull();
 
-    // Expired pending tokens refuse at consume time.
+    /* Expired pending tokens refuse at consume time. */
     await t.mutation(api.native.codes.createVerificationCode, {
       userId,
       type: "two_factor_pending",

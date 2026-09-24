@@ -27,13 +27,13 @@ import type {
  * hook (`buildOrganization`).
  */
 
-// ---------------------------------------------------------------------------
-// Minimal structural views of the Convex database.
-//
-// `GlueCtx.db` is `unknown` by design: the glue cannot know the consumer's
-// DataModel. These are the narrowest shapes the generated adapters actually
-// use, paired with real runtime guards below — no casts, no `any`.
-// ---------------------------------------------------------------------------
+/**
+ * Minimal structural views of the Convex database.
+ *
+ * `GlueCtx.db` is `unknown` by design: the glue cannot know the consumer's
+ * DataModel. These are the narrowest shapes the generated adapters actually
+ * use, paired with real runtime guards below — no casts, no `any`.
+ */
 
 type IndexRangeBuilder = {
   eq: (field: string, value: unknown) => IndexRangeBuilder;
@@ -81,10 +81,6 @@ function requireQueryDatabase(ctx: GlueCtx): QueryDatabase {
   }
   return ctx.db;
 }
-
-// ---------------------------------------------------------------------------
-// Config
-// ---------------------------------------------------------------------------
 
 export type ConvexAuthBackendStorage = {
   /** Local users table. Defaults to `"users"`. */
@@ -151,8 +147,6 @@ export type CreateConvexAuthBackendConfig<
 > = ConvexAuthBackendAdaptersConfig<TUser, TAnchor> & {
   component: ConvexAuthComponentHandle;
 };
-
-// ---------------------------------------------------------------------------
 
 export function createConvexAuthBackendAdapters<
   TUser extends GlueUserMinimum = GlueUserMinimum,

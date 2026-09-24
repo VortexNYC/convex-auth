@@ -66,14 +66,18 @@ const authPrincipalValidator = v.object({
   rateLimitKey: v.string(),
 });
 
+/**
+ * Classify a key's principal for rate limiting and audit. Anything that is not
+ * an explicit user-owned key resolves to "service" — the safe direction: an
+ * unrecognised machine is still a machine, and is never mistaken for a
+ * person. An organization-owned key is a machine credential with no human
+ * behind it, so it lands in the same service bucket.
+ */
 function resolveAuthPrincipal(key: Doc<"api_keys">): {
   readonly type: "human" | "service";
   readonly id?: string;
   readonly rateLimitKey: string;
 } {
-  // Anything that is not an explicit user-owned key resolves to "service". That
-  // is the safe direction: an unrecognised machine is still a machine, and is
-  // never mistaken for a person.
   const ownerType = key.ownerType ?? "user";
   if (ownerType === "service") {
     const id = key.ownerServicePrincipalId ?? key.ownerId;
@@ -84,7 +88,6 @@ function resolveAuthPrincipal(key: Doc<"api_keys">): {
     };
   }
   if (ownerType === "organization") {
-    // An organization-owned key is a machine credential with no human behind it.
     const id = key.ownerId ?? key.organizationId;
     return { type: "service", id, rateLimitKey: `service:${id ?? key._id}` };
   }
@@ -97,12 +100,15 @@ const apiKeyResultValidator = v.object({
   created: v.boolean(),
 });
 
-// This validator is the `returns` contract of every api_keys read API. It MUST name
-// every field the schema can hold: Convex output validation is exact, so a field the
-// schema stores but this omits makes `getApiKey`/`listApiKeysByOrganization` THROW on
-// any key that carries it. That is precisely what happened with the issuance-era
-// fields (`environment`, `keyStart`, the rate-limit and quota counters): issued keys
-// stored them, and every read API rejected its own rows.
+/**
+ * The `returns` contract of every api_keys read API. It MUST name every field
+ * the schema can hold: Convex output validation is exact, so a field the
+ * schema stores but this omits makes `getApiKey`/`listApiKeysByOrganization`
+ * THROW on any key that carries it. That is precisely what happened with the
+ * issuance-era fields (`environment`, `keyStart`, the rate-limit and quota
+ * counters): issued keys stored them, and every read API rejected its own
+ * rows.
+ */
 const apiKeyDocValidator = v.object({
   _id: v.id("api_keys"),
   _creationTime: v.number(),
@@ -192,6 +198,10 @@ function assertExistingServiceApiKeyOwnership(
   }
 }
 
+/**
+ * `environment` is optional so pre-environment callers keep working — an
+ * omitted value preserves what the key already has rather than erasing it.
+ */
 export const upsertApiKey = mutation({
   args: {
     apiKeyId: v.optional(v.id("api_keys")),
@@ -234,8 +244,6 @@ export const upsertApiKey = mutation({
       name,
       keyPrefix,
       keyHash,
-      // Optional so pre-environment callers keep working; an omitted value preserves
-      // what the key already has rather than erasing it.
       environment: args.environment ?? existing?.environment,
       ownerType: "user" as const,
       ownerId: args.userId,
@@ -639,11 +647,21 @@ const apiKeyVerificationFailureValidator = v.union(
   v.literal("quota_exhausted"),
 );
 
+/**
+ * Verify a presented API key.
+ *
+ * When `environment` is supplied, the key's environment must match exactly —
+ * a sandbox key must never authenticate a production request, so a caller on
+ * a money path always passes it.
+ *
+ * Lookup is two-stage: the prefix is the indexed lookup, the hash is what
+ * actually authenticates. A hash mismatch returns `not_found` — the same
+ * reason as a missing key — because a distinguishable response would confirm
+ * that a prefix names a real key.
+ */
 export const verifyApiKey = mutation({
   args: {
     presentedKey: v.string(),
-    // When supplied, the key's environment must match exactly. A sandbox key must never
-    // authenticate a production request, so a caller on a money path always passes this.
     environment: v.optional(apiKeyEnvironmentValidator),
     requiredScopes: v.optional(v.array(v.string())),
     now: v.optional(v.number()),
@@ -671,7 +689,6 @@ export const verifyApiKey = mutation({
       return { valid: false as const, reason: "malformed" as const };
     }
 
-    // The prefix is the indexed lookup; the hash is what actually authenticates.
     const keyPrefix = presented.slice(0, Math.min(presented.length, 12));
     const candidate = await findApiKeyByPrefix(ctx, keyPrefix);
     if (candidate === null) {
@@ -680,8 +697,6 @@ export const verifyApiKey = mutation({
 
     const presentedHash = await hashApiKeySecret(presented);
     if (!timingSafeEqualString(presentedHash, candidate.keyHash)) {
-      // Same reason as a missing key on purpose: a distinguishable response here would
-      // confirm that a prefix names a real key.
       return { valid: false as const, reason: "not_found" as const };
     }
     if (candidate.status !== "active") {
@@ -731,6 +746,9 @@ export const verifyApiKey = mutation({
  * Both are evaluated BEFORE the key is accepted, and the resulting counters are written
  * in the same patch that records the use -- so a rejected request never counts as a
  * successful one, and a successful one can never be double counted.
+ *
+ * The quota refills before it is checked, so a key whose interval elapsed is
+ * usable on this very request rather than only on the next one.
  */
 function evaluateApiKeyLimits(
   key: Doc<"api_keys">,
@@ -768,8 +786,6 @@ function evaluateApiKeyLimits(
 
   if (key.remaining !== undefined) {
     let remaining = key.remaining;
-    // Refill first, so a key whose interval elapsed is usable on this very request
-    // rather than only on the next one.
     if (key.refillIntervalMs !== undefined && key.refillAmount !== undefined) {
       const lastRefillAt = key.lastRefillAt ?? key.createdAt;
       if (now - lastRefillAt >= key.refillIntervalMs) {
@@ -873,6 +889,10 @@ export const issueApiKey = mutation({
  * layout is the auth contract: the first 12 characters are the indexed lookup prefix,
  * so issuance and `verifyApiKey` must derive it identically or an issued key can never
  * be found again.
+ *
+ * A prefix collision means two live keys would share a lookup prefix and one
+ * could never be verified. 24 random bytes make it vanishingly unlikely, which
+ * is exactly why it must fail loudly rather than be assumed away.
  */
 async function generateIssuedApiKeyMaterial(
   ctx: DbCtx,
@@ -886,9 +906,6 @@ async function generateIssuedApiKeyMaterial(
   const apiKey = `${brand}_${segment}_${bytesToHex(bytes)}`;
 
   const keyPrefix = apiKey.slice(0, Math.min(apiKey.length, 12));
-  // A collision here means two live keys would share a lookup prefix and one could
-  // never be verified. 24 random bytes make it vanishingly unlikely, which is exactly
-  // why it must fail loudly rather than be assumed away.
   if ((await findApiKeyByPrefix(ctx, keyPrefix)) !== null) {
     throw new Error("API key prefix already exists");
   }

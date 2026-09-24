@@ -18,7 +18,7 @@ const J = (extra?: Record<string, string>) => ({
 });
 const pw = strongPassword("cap");
 
-// (0) auto-skip if captcha is not enabled
+/** (0) auto-skip if captcha is not enabled */
 {
   const probe = await fetch(`${site}/api/auth/sign-up/email`, {
     method: "POST",
@@ -35,7 +35,7 @@ const pw = strongPassword("cap");
   }
 }
 
-// (1) sign-up WITHOUT captcha token must be blocked
+/** (1) sign-up WITHOUT captcha token must be blocked */
 {
   const r1 = await fetch(`${site}/api/auth/sign-up/email`, {
     method: "POST",
@@ -54,7 +54,7 @@ const pw = strongPassword("cap");
   }
 }
 
-// (2) request-password-reset WITHOUT captcha token must also be blocked
+/** (2) request-password-reset WITHOUT captcha token must also be blocked */
 {
   const r1b = await fetch(`${site}/api/auth/request-password-reset`, {
     method: "POST",
@@ -71,10 +71,12 @@ const pw = strongPassword("cap");
   }
 }
 
-// (3) sign-up WITH a token: the deployment validates against the
-//     provider (always-pass test secret -> success; always-fail -> 4xx).
-//     Either is a valid PASS for "real provider verification ran" — the
-//     point is the gate dispatched, not which test secret was wired.
+/**
+ * (3) sign-up WITH a token: the deployment validates against the
+ *     provider (always-pass test secret -> success; always-fail -> 4xx).
+ *     Either is a valid PASS for "real provider verification ran" — the
+ *     point is the gate dispatched, not which test secret was wired.
+ */
 {
   const r2 = await fetch(`${site}/api/auth/sign-up/email`, {
     method: "POST",
@@ -92,8 +94,10 @@ const pw = strongPassword("cap");
   }
 }
 
-// (4) sign-in WITHOUT a token MUST still work (non-regression: the
-//     deliberate scoping protects programmatic / native / MCP callers).
+/**
+ * (4) sign-in WITHOUT a token MUST still work (non-regression: the
+ *     deliberate scoping protects programmatic / native / MCP callers).
+ */
 {
   const email = uniqueEmail("capc");
   await fetch(`${site}/api/auth/sign-up/email`, {

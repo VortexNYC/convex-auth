@@ -14,8 +14,10 @@
 import { existsSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
-// Use the package's public subpath export so the script works both from the
-// dev tree (workspace) and when shipped (resolves to dist/consumer-contract.js).
+/**
+ * Use the package's public subpath export so the script works both from the
+ * dev tree (workspace) and when shipped (resolves to dist/consumer-contract.js).
+ */
 import {
   checkConsumerContract,
   type ConsumerContractViolation,
@@ -103,9 +105,11 @@ function main(): void {
       : { convexDir: absDir, legitAnchorTables },
   );
 
-  // Codex audit (2026-05-28) hardening: surface bypass risks explicitly
-  // even when the checker reports OK. A clean exit is necessary but not
-  // sufficient — the user must know what the checker did NOT inspect.
+  /*
+   * Codex audit (2026-05-28) hardening: surface bypass risks explicitly
+   * even when the checker reports OK. A clean exit is necessary but not
+   * sufficient — the user must know what the checker did NOT inspect.
+   */
   const whitelistSize = legitAnchorTables?.length ?? 0;
   const warnings: string[] = [];
   if (whitelistSize > 3) {

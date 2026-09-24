@@ -112,9 +112,10 @@ export async function processConvexWebhookDelivery(
   }
 
   try {
-    // SSRF chokepoint: every delivery passes here, so a stored internal/loopback
-    // target (however it got persisted) can never actually be fetched. Throws →
-    // routed through the catch below as an execution failure.
+    /** SSRF chokepoint: every delivery passes here, so a stored internal/
+     * loopback target (however it got persisted) can never actually be
+     * fetched. Throws → routed through the catch below as an execution
+     * failure. */
     assertWebhookHostIsDeliverable(new URL(endpoint.url).hostname);
     const signature = await signConvexWebhookPayload(endpoint.secret, args.delivery.payloadJson);
     const response = await args.fetch(endpoint.url, {

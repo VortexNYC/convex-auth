@@ -76,7 +76,7 @@ describe("resolveApiKeyPrincipal", () => {
       ownerPermissions: ["org:read", "org:write", "billing:read"],
     });
     assert.deepEqual(p.narrowedPermissions, ["org:read"]);
-    // The intersection of owner and the api key's permissions.
+    /* The intersection of owner and the api key's permissions. */
     assert.deepEqual(p.effectivePermissions, ["org:read"]);
   });
 

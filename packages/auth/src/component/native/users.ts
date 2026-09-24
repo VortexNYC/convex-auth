@@ -131,6 +131,12 @@ async function deleteDocument(ctx: Ctx, state: DeletionState, id: AnyId) {
   state.deletedIds.add(key);
 }
 
+/**
+ * Deletes a user and cascades through their identities, accounts, sessions,
+ * refresh tokens, verification codes, and organization memberships.
+ * Memberships are buffered in memory before the org loop because
+ * `deleteOrganization` deletes some of them mid-iteration.
+ */
 export const deleteUser = mutation({
   args: { userId: v.id("users") },
   returns: v.object({ deleted: v.boolean(), userId: v.id("users") }),
@@ -172,8 +178,6 @@ export const deleteUser = mutation({
       await deleteDocument(ctx, state, code._id);
     }
 
-    // We need to hold the user's memberships in memory once because
-    // deleteOrganization will delete some of them before we walk the list.
     const memberships: Doc<"organization_members">[] = [];
     for await (const membership of ctx.db
       .query("organization_members")

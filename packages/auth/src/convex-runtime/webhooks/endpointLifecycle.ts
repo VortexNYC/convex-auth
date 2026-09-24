@@ -118,15 +118,20 @@ function isBlockedIpLiteral(host: string): boolean {
   return isBlockedIpv6(host);
 }
 
+/**
+ * Blocked IPv4 ranges: 0/8 "this network", 127/8 loopback, 10/8 private,
+ * 169.254/16 link-local (incl. the 169.254.169.254 cloud metadata endpoint),
+ * 172.16/12 private, 192.168/16 private, and 224+/4 multicast + reserved.
+ */
 function isBlockedIpv4(ipv4: [number, number, number, number]): boolean {
   const [a, b] = ipv4;
-  if (a === 0) return true; // 0.0.0.0/8 "this network"
-  if (a === 127) return true; // loopback
-  if (a === 10) return true; // private
-  if (a === 169 && b === 254) return true; // link-local incl. 169.254.169.254 metadata
-  if (a === 172 && b >= 16 && b <= 31) return true; // private
-  if (a === 192 && b === 168) return true; // private
-  return a >= 224; // multicast + reserved
+  if (a === 0) return true;
+  if (a === 127) return true;
+  if (a === 10) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  return a >= 224;
 }
 
 function isBlockedIpv6(host: string): boolean {
@@ -137,9 +142,13 @@ function isBlockedIpv6(host: string): boolean {
   );
 }
 
+/**
+ * Blocked IPv6 specials: unspecified `::`, loopback `::1`, unique-local
+ * `fc00::/7` (fc/fd prefixes), and link-local `fe80::/10` (fe80–feb prefixes).
+ */
 function isBlockedIpv6SpecialAddress(host: string): boolean {
-  if (host === "::" || host === "::1") return true; // unspecified / loopback
-  if (host.startsWith("fc") || host.startsWith("fd")) return true; // unique-local fc00::/7
+  if (host === "::" || host === "::1") return true;
+  if (host.startsWith("fc") || host.startsWith("fd")) return true;
   return ["fe80", "fe9", "fea", "feb"].some((prefix) => host.startsWith(prefix));
 }
 

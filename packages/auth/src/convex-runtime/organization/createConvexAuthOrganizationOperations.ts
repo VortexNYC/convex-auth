@@ -58,19 +58,19 @@ import type { GlueCtx, PickComponentFunctions } from "../glue/types";
  */
 type Id<_TableName extends string> = string;
 
-// ----------------------------------------------------------------------------
-// Operations ctx contract
-//
-// The factory ITSELF only ever touches `ctx.runQuery` (readers) and
-// `ctx.runMutation` (writers) — it never reads `ctx.db` or `ctx.auth`. Local-row
-// access lives entirely in the consumer-supplied callbacks. So the suite is
-// generic over the consumer's REAL query/mutation ctx (constrained only to what
-// the factory uses), which lets the consumer's typed `db` flow straight into its
-// own callbacks with NO cast. The previous `GlueCtx`-typed callbacks forced
-// consumers to cast their ctx in (`auth` is required on `GlueCtx`) and re-cast
-// `ctx.db` back out of `unknown` in every callback. Defaults stay `GlueCtx`, so
-// this is fully back-compatible for any consumer that does not specify the ctx.
-// ----------------------------------------------------------------------------
+/**
+ * Operations ctx contract
+ *
+ * The factory ITSELF only ever touches `ctx.runQuery` (readers) and
+ * `ctx.runMutation` (writers) — it never reads `ctx.db` or `ctx.auth`. Local-row
+ * access lives entirely in the consumer-supplied callbacks. So the suite is
+ * generic over the consumer's REAL query/mutation ctx (constrained only to what
+ * the factory uses), which lets the consumer's typed `db` flow straight into its
+ * own callbacks with NO cast. The previous `GlueCtx`-typed callbacks forced
+ * consumers to cast their ctx in (`auth` is required on `GlueCtx`) and re-cast
+ * `ctx.db` back out of `unknown` in every callback. Defaults stay `GlueCtx`, so
+ * this is fully back-compatible for any consumer that does not specify the ctx.
+ */
 
 /** Minimal ctx the reader suite needs: a component `runQuery`. */
 export type ConvexAuthOperationsReadCtx = {
@@ -82,9 +82,9 @@ export type ConvexAuthOperationsWriteCtx = ConvexAuthOperationsReadCtx & {
   runMutation?: GenericMutationCtx<GenericDataModel>["runMutation"];
 };
 
-// ----------------------------------------------------------------------------
-// Status mapping
-// ----------------------------------------------------------------------------
+/**
+ * Status mapping
+ */
 
 /** Component member status enum (the component's source of truth). */
 export type ComponentMemberStatus = "active" | "invited" | "suspended";
@@ -125,13 +125,15 @@ function mapMemberStatus(status: ComponentMemberStatus): OperationsMemberStatus 
   }
 }
 
-// ----------------------------------------------------------------------------
-// Component result shapes are derived from the component's validators.
-// ----------------------------------------------------------------------------
+/**
+ * Component result shapes are derived from the component's validators.
+ */
 
-// Derived from the GENERATED `ComponentApi` — the same string-erased handle a
-// consumer passes as `components.convexAuth` — NOT `ApiFromModules` over the
-// source modules, whose branded ids no consumer can supply across the boundary.
+/**
+ * Derived from the GENERATED `ComponentApi` — the same string-erased handle a
+ * consumer passes as `components.convexAuth` — NOT `ApiFromModules` over the
+ * source modules, whose branded ids no consumer can supply across the boundary.
+ */
 type OperationsComponentApi = ConvexAuthGeneratedComponentApi;
 
 type ConvexAuthOrganizationOperationsIdentityModule =
@@ -172,9 +174,9 @@ type ComponentInvitation = NonNullable<
   FunctionReturnType<OperationsComponentApi["organizations"]["getInvitationByTokenHash"]>
 >;
 
-// ----------------------------------------------------------------------------
-// Consumer-facing DTOs — generic over the consumer's branded ids + role type.
-// ----------------------------------------------------------------------------
+/**
+ * Consumer-facing DTOs — generic over the consumer's branded ids + role type.
+ */
 
 /**
  * A component membership resolved + mapped into consumer domain keys. Mirrors
@@ -286,9 +288,9 @@ export type ResolvedComponentInvitation<TOrgId, TUserId, TRole extends string> =
   updatedAt: number;
 };
 
-// ----------------------------------------------------------------------------
-// Config + return shapes
-// ----------------------------------------------------------------------------
+/**
+ * Config + return shapes
+ */
 
 /**
  * The consumer's local org row projected into the fields the component
@@ -356,18 +358,18 @@ export type ConvexAuthOrganizationOperationsComponentsHandle = {
   apiKeys: ConvexAuthOrganizationOperationsComponentHandle["apiKeys"];
 };
 
-// ----------------------------------------------------------------------------
-// Errors
-//
-// Invariant violations the writers can hit at runtime (a local row the consumer
-// promised is gone, a user with no convexAuth bridge id, a writer wired with a
-// query ctx). The factory NEVER throws a bare `Error` — it throws a typed
-// `ConvexAuthOrganizationOperationsError` (carries a stable `code` + context) so
-// a consumer can branch on the failure. Better: pass `createError` in the config
-// and the factory throws the CONSUMER'S own error (e.g. a `ConvexError({ code,
-// message })`) directly at the failure site, so it surfaces structured to the
-// client with zero consumer catch/remap code.
-// ----------------------------------------------------------------------------
+/**
+ * Errors
+ *
+ * Invariant violations the writers can hit at runtime (a local row the consumer
+ * promised is gone, a user with no convexAuth bridge id, a writer wired with a
+ * query ctx). The factory NEVER throws a bare `Error` — it throws a typed
+ * `ConvexAuthOrganizationOperationsError` (carries a stable `code` + context) so
+ * a consumer can branch on the failure. Better: pass `createError` in the config
+ * and the factory throws the CONSUMER'S own error (e.g. a `ConvexError({ code,
+ * message })`) directly at the failure site, so it surfaces structured to the
+ * client with zero consumer catch/remap code.
+ */
 
 export type ConvexAuthOrganizationOperationsErrorCode =
   /** A writer was called with a ctx that has no `runMutation` (use a mutation/action ctx). */
@@ -421,18 +423,15 @@ type ConvexAuthOrganizationOperationsConfigBase<
   TReadCtx extends ConvexAuthOperationsReadCtx = GlueCtx,
   TWriteCtx extends ConvexAuthOperationsWriteCtx = GlueCtx,
 > = {
-  // -- bridge: component id → local id (the glue's anchor adapters) --
   resolveLocalOrganizationId: (
     ctx: TReadCtx,
     componentOrganizationId: Id<"organizations">,
   ) => Promise<TOrgId | null>;
   resolveLocalUserId: (ctx: TReadCtx, componentUserId: Id<"users">) => Promise<TUserId | null>;
 
-  // -- domain --
   validateRoleKey: (key: string) => key is TRole;
   roleCatalog: Readonly<Record<TRole, readonly string[]>>;
 
-  // -- writer-only: the only places the package touches a local row --
   loadOrganizationForUpsert: (
     ctx: TWriteCtx,
     localOrganizationId: TOrgId,
@@ -444,10 +443,12 @@ type ConvexAuthOrganizationOperationsConfigBase<
   ) => Promise<void>;
   loadUserBridgeId: (ctx: TWriteCtx, localUserId: TUserId) => Promise<Id<"users"> | null>;
 
-  // -- error policy: map an invariant violation to the consumer's own error --
-  // Optional. Defaults to throwing a typed `ConvexAuthOrganizationOperationsError`.
-  // Return e.g. `new ConvexError({ code, message })` to surface it structured to
-  // the client directly at the failure site.
+  /**
+   * Maps an invariant violation to the consumer's own error. Optional —
+   * defaults to throwing a typed `ConvexAuthOrganizationOperationsError`.
+   * Return e.g. `new ConvexError({ code, message })` to surface it structured
+   * to the client directly at the failure site.
+   */
   createError?: (args: ConvexAuthOrganizationOperationsErrorInput) => Error;
 };
 
@@ -677,9 +678,9 @@ export type ConvexAuthOrganizationOperations<
   writes: ConvexAuthOrganizationWrites<TOrgId, TUserId, TRole, TWriteCtx>;
 };
 
-// ----------------------------------------------------------------------------
-// Factory
-// ----------------------------------------------------------------------------
+/**
+ * Factory
+ */
 
 type ConvexAuthOrganizationOperationsRuntime<
   TOrgId,

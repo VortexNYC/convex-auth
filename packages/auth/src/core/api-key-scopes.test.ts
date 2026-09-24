@@ -68,9 +68,11 @@ describe("createApiKeyScopeRegistry", () => {
   });
 
   it("does not let a domain wildcard satisfy a bare (non-namespaced) required permission", () => {
-    // Parity with createPermissionEngine: a domain wildcard ("billing:*") matches
-    // only namespaced permissions ("billing:read"), never a bare "billing". Before
-    // the fix this returned true here and false in the engine — a scope-elevation gap.
+    /*
+     * Parity with createPermissionEngine: a domain wildcard ("billing:*") matches
+     * only namespaced permissions ("billing:read"), never a bare "billing". Before
+     * the fix this returned true here and false in the engine — a scope-elevation gap.
+     */
     const registry = createApiKeyScopeRegistry([
       { scope: "billing:sync", requiredPermissions: ["billing"] },
     ] as const);

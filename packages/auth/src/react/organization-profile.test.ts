@@ -82,8 +82,10 @@ describe("ConvexOrganizationProfile — SSR smoke", () => {
   });
 
   it("renders an edit button when isAdmin + onUpdate are wired", () => {
-    // The edit/delete actions section is gated on isAdmin — non-admins
-    // see a read-only view. Verify the admin path surfaces the edit copy.
+    /*
+     * The edit/delete actions section is gated on isAdmin — non-admins
+     * see a read-only view. Verify the admin path surfaces the edit copy.
+     */
     const html = render({
       organization: activeOrg,
       isAdmin: true,

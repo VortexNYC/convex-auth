@@ -59,6 +59,16 @@ export function buildMcpOAuthIssuer(origin: string, config: McpOAuthProtocolConf
   return `${trimTrailingSlash(origin)}${issuerPath}`;
 }
 
+/**
+ * RFC 8414 authorization-server metadata.
+ *
+ * `client_id_metadata_document_supported` implements CIMD
+ * (draft-ietf-oauth-client-id-metadata-document): MCP 2026-07-28 deprecates
+ * Dynamic Client Registration in its favour, so clients need to discover
+ * whether a URL `client_id` will be dereferenced here. The field is omitted
+ * rather than advertised as `false`, so a deployment that has not opted in
+ * publishes byte-identical metadata to before.
+ */
 export function buildAuthorizationServerMetadata(
   origin: string,
   config: McpOAuthProtocolConfig,
@@ -79,11 +89,6 @@ export function buildAuthorizationServerMetadata(
     code_challenge_methods_supported: resolved.codeChallengeMethodsSupported,
     scopes_supported: resolved.scopesSupported,
     resource: resolved.resourceId,
-    // CIMD (draft-ietf-oauth-client-id-metadata-document). MCP 2026-07-28
-    // deprecates Dynamic Client Registration in its favour, so clients need to
-    // discover whether a URL client_id will be dereferenced here. Omitted
-    // rather than advertised as false, so a deployment that has not opted in
-    // publishes byte-identical metadata to before.
     ...(resolved.clientIdMetadataDocumentSupported
       ? { client_id_metadata_document_supported: true }
       : {}),

@@ -80,9 +80,9 @@ describe("ConvexOrganizationSwitcher — SSR smoke", () => {
       organizations: [beta],
       currentOrganizationId: "org_beta",
     });
-    // First letter of "Beta Bakery" uppercased.
+    /* First letter of "Beta Bakery" uppercased. */
     assert.match(html, />B</);
-    // And NOT an img tag (no imageUrl).
+    /* And NOT an img tag (no imageUrl). */
     assert.equal(/<img[^>]+src=/.test(html), false);
   });
 
@@ -113,7 +113,7 @@ describe("ConvexOrganizationSwitcher — SSR smoke", () => {
     });
     assert.match(html, /Acme Pizza/);
     assert.match(html, /aria-expanded="false"/);
-    // Search and in-place create UI only render inside the open dropdown.
+    /* Search and in-place create UI only render inside the open dropdown. */
     assert.equal(/Search workspaces/.test(html), false);
   });
 });

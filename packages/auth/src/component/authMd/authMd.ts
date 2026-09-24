@@ -287,6 +287,14 @@ export const pollServiceAuthClaim = mutation({
   },
 });
 
+/**
+ * Consumes the assertion BEFORE minting the credential. A leaked assertion
+ * must be able to mint at most one credential — deleting this step turned any
+ * captured assertion into a credential factory for its whole lifetime, which
+ * expiry alone does not bound. If retry tolerance is ever needed, make this
+ * IDEMPOTENT (return the credential already minted for this assertion), never
+ * REUSABLE (mint a fresh one each time).
+ */
 export const consumeServiceAuthAssertion = mutation({
   args: {
     assertionId: v.id("auth_md_assertions"),
@@ -316,12 +324,6 @@ export const consumeServiceAuthAssertion = mutation({
     ) {
       throw new Error("auth.md service authority is no longer active");
     }
-    // Consume BEFORE minting. A leaked assertion must be able to mint at most one
-    // credential -- deleting this step turned any captured assertion into a credential
-    // factory for the whole lifetime, which expiry alone does not bound.
-    //
-    // If retry tolerance is ever needed, make this IDEMPOTENT (return the credential
-    // already minted for this assertion), never REUSABLE (mint a fresh one each time).
     await ctx.db.patch("auth_md_assertions", assertion._id, {
       status: "consumed",
       consumedAt: now,
@@ -409,6 +411,9 @@ export const introspectServiceAuthCredential = query({
  *
  * The old credential is revoked in the same mutation (rotation), so exactly one
  * credential is live per chain and a stolen older one cannot be used alongside it.
+ *
+ * The delegating authority is re-checked on every refresh — a credential must
+ * not outlive the human authority behind it just because it keeps rotating.
  */
 export const refreshServiceAuthCredential = mutation({
   args: {
@@ -431,8 +436,6 @@ export const refreshServiceAuthCredential = mutation({
     if (registration === null || registration.status !== "claimed") {
       throw new Error("auth.md service registration is not active");
     }
-    // Re-check the delegating authority every refresh. A credential must not outlive
-    // the human authority behind it just because it keeps rotating.
     const authority = await inspectRegistrationAuthority(ctx, registration);
     if (
       !authority.active ||

@@ -168,26 +168,31 @@ export const getWebhookEndpoint = query({
   },
 });
 
+/**
+ * SYSTEM-ONLY: returns the signing secret for the trusted delivery worker
+ * (which only holds the delivery's endpointId, no org context). Consumers MUST
+ * call this only from server-side queue processing, NEVER expose it to tenant
+ * principals. Tenant-facing secret exposure is prevented by the guarded
+ * mutations (rotate/update) — a tenant never needs the raw secret.
+ */
 export const getWebhookEndpointWithSecret = query({
   args: {
     endpointId: v.id("webhook_endpoints"),
   },
-  // SYSTEM-ONLY: returns the signing secret for the trusted delivery worker
-  // (which only holds the delivery's endpointId, no org context). Consumers MUST
-  // call this only from server-side queue processing, NEVER expose it to tenant
-  // principals. Tenant-facing secret exposure is prevented by the guarded
-  // mutations (rotate/update) — a tenant never needs the raw secret.
   returns: v.union(v.null(), webhookEndpointDocWithSecretValidator),
   handler: async (ctx, { endpointId }) => {
     return await ctx.db.get("webhook_endpoints", endpointId);
   },
 });
 
+/**
+ * `organizationId` is required: an omitted org previously triggered an
+ * unindexed full-table scan that returned EVERY tenant's endpoints
+ * (cross-tenant enumeration + a Convex cost-guard violation). Tenant
+ * isolation is now mandatory.
+ */
 export const listWebhookEndpointsByOrganization = query({
   args: {
-    // Required: an omitted org previously triggered an unindexed full-table scan
-    // that returned EVERY tenant's endpoints (cross-tenant enumeration + a Convex
-    // cost-guard violation). Tenant isolation is now mandatory.
     organizationId: v.id("organizations"),
     status: v.optional(webhookEndpointStatusValidator),
     limit: v.optional(v.number()),
@@ -511,6 +516,12 @@ export const listWebhookDeliveriesByEndpoint = query({
   },
 });
 
+/**
+ * Reads only up-to-limit PENDING rows via the `[status, nextAttemptAt]` index
+ * instead of collecting the entire due-set and filtering status in JS — that
+ * scan grew with the `webhook_deliveries` table (every delivery ever) and,
+ * fired by the retry cron on every deployment, was a top Convex DB-I/O burner.
+ */
 export const listPendingWebhookDeliveries = query({
   args: {
     limit: v.optional(v.number()),
@@ -519,10 +530,6 @@ export const listPendingWebhookDeliveries = query({
   returns: v.array(webhookDeliveryDocValidator),
   handler: async (ctx, { limit, beforeNextAttemptAt }) => {
     const resolvedLimit = resolveListLimit(limit);
-    // Read only up-to-limit PENDING rows via the [status, nextAttemptAt] index instead of
-    // collecting the entire due-set and filtering status in JS — that scan grew with the
-    // webhook_deliveries table (every delivery ever) and, fired by the retry cron on every
-    // deployment, was a top Convex DB-I/O burner.
     const startIndexKey: (string | number)[] = ["pending"];
     const endIndexKey: (string | number)[] =
       beforeNextAttemptAt !== undefined ? ["pending", beforeNextAttemptAt] : ["pending"];
@@ -562,6 +569,15 @@ async function getActiveEndpointsByOrg(
   return assertEndpointSetWithinLimit(page);
 }
 
+/**
+ * An org-scoped event reaches that org's endpoints AND any global (no-org)
+ * endpoints. Global endpoints are platform/cache subscribers — e.g. a consumer
+ * hydrating a one-way org/member read-cache from these canonical events, or a
+ * listener that must catch `organization.created` (whose org id can't have
+ * been subscribed to in advance). Both queries stay indexed
+ * (`by_org_status`); the two result sets are disjoint by `organizationId`, so
+ * no dedup is needed.
+ */
 async function listActiveEndpointsForEvent(
   ctx: DbCtx,
   organizationId: Id<"organizations"> | undefined,
@@ -569,12 +585,6 @@ async function listActiveEndpointsForEvent(
   if (organizationId === undefined) {
     return await getActiveEndpointsByOrg(ctx, organizationId);
   }
-  // An org-scoped event reaches that org's endpoints AND any global (no-org)
-  // endpoints. Global endpoints are platform/cache subscribers — e.g. a consumer
-  // hydrating a one-way org/member read-cache from these canonical events, or a
-  // listener that must catch `organization.created` (whose org id can't have been
-  // subscribed to in advance). Both queries stay indexed (by_org_status); the two
-  // result sets are disjoint by organizationId, so no dedup is needed.
   const [scoped, global] = await Promise.all([
     getActiveEndpointsByOrg(ctx, organizationId),
     getActiveEndpointsByOrg(ctx, undefined),

@@ -8,18 +8,16 @@ import { createApiAuthResolver, type ResolvedApiAuthScopeContext } from "./creat
 import { ApiAuthError } from "./errors";
 import type { McpSessionLike } from "./resolveMcpSessionAuthContext";
 
-// ---------------------------------------------------------------------------
-// Proof matrix for the scope-ceiling invariant.
-//
-// THE invariant (Increment 2): a consumer must be UNABLE to author a permissive
-// scope ceiling. api_key/oauth principals MUST NEVER bypass their scope set via
-// role, and the live-membership permission ceiling MUST always also apply. Only
-// jwt (session) principals may get role-based full access. This is baked into
-// the package-owned resolver — never a per-call-site or per-consumer argument.
-//
-// Each case below drives the resolver end-to-end through fakes and asserts the
-// fail-closed (or, for the one intended-allow case, fail-open) behavior.
-// ---------------------------------------------------------------------------
+/**
+ * Proof matrix for the scope-ceiling invariant.
+ * THE invariant (Increment 2): a consumer must be UNABLE to author a permissive
+ * scope ceiling. api_key/oauth principals MUST NEVER bypass their scope set via
+ * role, and the live-membership permission ceiling MUST always also apply. Only
+ * jwt (session) principals may get role-based full access. This is baked into
+ * the package-owned resolver — never a per-call-site or per-consumer argument.
+ * Each case below drives the resolver end-to-end through fakes and asserts the
+ * fail-closed (or, for the one intended-allow case, fail-open) behavior.
+ */
 
 type TestScope = "reports:read" | "reports:write" | "billing:read";
 
@@ -28,8 +26,10 @@ const ALL_SCOPES: TestScope[] = ["reports:read", "reports:write", "billing:read"
 type TestCtx = { marker: "test-ctx" };
 const ctx: TestCtx = { marker: "test-ctx" };
 
-// canUseScope models live permissions as the explicit list of scopes the
-// owner's CURRENT membership may exercise. permission name === scope name.
+/**
+ * canUseScope models live permissions as the explicit list of scopes the
+ * owner's CURRENT membership may exercise. permission name === scope name.
+ */
 function canUseScope(permissions: readonly string[], scope: TestScope): boolean {
   return hasPermission(permissions, scope);
 }
@@ -50,19 +50,19 @@ function buildVerifiedUserToken(overrides: Partial<VerifiedUserToken> = {}): Ver
 }
 
 type ResolverOverrides = {
-  // live membership ceiling returned by authorizeOrganizationAccess
+  /** live membership ceiling returned by authorizeOrganizationAccess */
   liveRole?: string;
   livePermissions?: string[];
   liveAccessDenied?: boolean;
-  // jwt path
+  /** jwt path */
   jwtScopes?: string[];
-  // api key path
+  /** api key path */
   apiKeyScopes?: string[];
-  // mcp path
+  /** mcp path */
   mcpScopes?: string[];
-  // suspended/restricted linked user
+  /** suspended/restricted linked user */
   restricted?: boolean;
-  // policy knob (jwt-only). intentionally NO token override exists.
+  /** policy knob (jwt-only). intentionally NO token override exists. */
   sessionFullAccessRoles?: readonly string[];
 };
 
@@ -177,8 +177,10 @@ describe("createApiAuthResolver — scope-ceiling proof matrix", () => {
   }
 
   it("owner-exceeds-scope: api_key owner CANNOT bypass the token scope set (the owner-exceeds-scope bug)", async () => {
-    // Owner role + the owner's role is in sessionFullAccessRoles, but it's an
-    // api_key principal whose scope set lacks reports:write.
+    /*
+     * Owner role + the owner's role is in sessionFullAccessRoles, but it's an
+     * api_key principal whose scope set lacks reports:write.
+     */
     const resolver = makeResolver({
       liveRole: "owner",
       livePermissions: [...ALL_SCOPES],
@@ -189,9 +191,9 @@ describe("createApiAuthResolver — scope-ceiling proof matrix", () => {
 
     assert.equal(auth.authType, "api_key");
     assert.equal(auth.role, "owner");
-    // reports:read is in scope + permitted → allowed
+    /* reports:read is in scope + permitted → allowed */
     resolver.requireScope(auth, "reports:read");
-    // reports:write is NOT in the key's scope set → owner does NOT bypass
+    /* reports:write is NOT in the key's scope set → owner does NOT bypass */
     await expectThrowsApiAuth(() => resolver.requireScope(auth, "reports:write"));
   });
 
@@ -204,7 +206,7 @@ describe("createApiAuthResolver — scope-ceiling proof matrix", () => {
     const auth = await resolver.resolveApiAuth(ctx, jwtRequest());
 
     assert.equal(auth.authType, "jwt");
-    // jwt + owner → role-based full access, even with no scope and no permission
+    /* jwt + owner → role-based full access, even with no scope and no permission */
     resolver.requireScope(auth, "reports:read");
     resolver.requireScope(auth, "billing:read");
   });
@@ -212,20 +214,20 @@ describe("createApiAuthResolver — scope-ceiling proof matrix", () => {
   it("token-with-scope-but-no-permission: scope present but live permission absent → THROWS", async () => {
     const resolver = makeResolver({
       liveRole: "member",
-      livePermissions: [], // owner's live membership grants nothing
-      apiKeyScopes: ["reports:read"], // key claims the scope
+      livePermissions: [] /* owner's live membership grants nothing */,
+      apiKeyScopes: ["reports:read"] /* key claims the scope */,
     });
     const auth = await resolver.resolveApiAuth(ctx, apiKeyRequest());
 
-    // scope ∩ permission: both required. Permission missing → deny.
+    /* scope ∩ permission: both required. Permission missing → deny. */
     await expectThrowsApiAuth(() => resolver.requireScope(auth, "reports:read"));
   });
 
   it("token-without-scope: key lacks the scope → THROWS regardless of permissions", async () => {
     const resolver = makeResolver({
       liveRole: "member",
-      livePermissions: ["reports:read"], // permitted by membership...
-      apiKeyScopes: [], // ...but the key was never granted the scope
+      livePermissions: ["reports:read"] /* permitted by membership... */,
+      apiKeyScopes: [] /* ...but the key was never granted the scope */,
     });
     const auth = await resolver.resolveApiAuth(ctx, apiKeyRequest());
 
@@ -233,11 +235,13 @@ describe("createApiAuthResolver — scope-ceiling proof matrix", () => {
   });
 
   it("stale-token: owner lost the permission after issuance → live lookup THROWS", async () => {
-    // Key still carries the scope, but the live-membership ceiling no longer
-    // grants the permission (revoked after issuance).
+    /*
+     * Key still carries the scope, but the live-membership ceiling no longer
+     * grants the permission (revoked after issuance).
+     */
     const resolver = makeResolver({
       liveRole: "member",
-      livePermissions: [], // revoked
+      livePermissions: [] /* revoked */,
       apiKeyScopes: ["reports:read"],
     });
     const auth = await resolver.resolveApiAuth(ctx, apiKeyRequest());
@@ -246,8 +250,10 @@ describe("createApiAuthResolver — scope-ceiling proof matrix", () => {
   });
 
   it("consumer-cannot-widen: no sessionFullAccessRoles value lets an api_key bypass its scope set", async () => {
-    // Even if the consumer puts the owner's role in sessionFullAccessRoles, that
-    // policy applies to jwt ONLY. api_key/oauth always get [] full-access roles.
+    /*
+     * Even if the consumer puts the owner's role in sessionFullAccessRoles, that
+     * policy applies to jwt ONLY. api_key/oauth always get [] full-access roles.
+     */
     const resolver = makeResolver({
       liveRole: "superuser",
       livePermissions: [...ALL_SCOPES],
@@ -256,8 +262,10 @@ describe("createApiAuthResolver — scope-ceiling proof matrix", () => {
     });
     const auth = await resolver.resolveApiAuth(ctx, apiKeyRequest());
 
-    // superuser is "full access" for sessions, but this is an api_key →
-    // the scope set is the hard ceiling.
+    /*
+     * superuser is "full access" for sessions, but this is an api_key →
+     * the scope set is the hard ceiling.
+     */
     await expectThrowsApiAuth(() => resolver.requireScope(auth, "billing:read"));
     await expectThrowsApiAuth(() => resolver.requireScope(auth, "reports:write"));
   });
@@ -279,8 +287,10 @@ describe("createApiAuthResolver — scope-ceiling proof matrix", () => {
   });
 
   it("restricted user via MCP fails closed (no account-suspension bypass)", async () => {
-    // A suspended user must not authorize through the MCP path just because org
-    // access + scopes still pass — parity with the JWT bearer path.
+    /*
+     * A suspended user must not authorize through the MCP path just because org
+     * access + scopes still pass — parity with the JWT bearer path.
+     */
     const resolver = makeResolver({
       liveRole: "owner",
       livePermissions: [...ALL_SCOPES],
@@ -316,8 +326,10 @@ describe("createApiAuthResolver — scope-ceiling proof matrix", () => {
   });
 
   it("type-level: ResolvedApiAuthScopeContext carries the baked surface", () => {
-    // Compile-time guard: the resolved context exposes role/permissions/scopes
-    // and the scope-typed helpers. If this drifts, the test stops compiling.
+    /*
+     * Compile-time guard: the resolved context exposes role/permissions/scopes
+     * and the scope-typed helpers. If this drifts, the test stops compiling.
+     */
     const shape: Pick<
       ResolvedApiAuthScopeContext<TestScope, string>,
       "authType" | "hasScope" | "hasPermission"

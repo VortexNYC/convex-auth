@@ -90,6 +90,10 @@ export function assertMcpOAuthClientIdMetadataUrl(
   return { ok: true, url };
 }
 
+/**
+ * Whether the URL's hostname is allowed. A bare IP literal skips DNS entirely,
+ * so it is judged here rather than left to the resolver.
+ */
 function isHostnameAllowed(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/\.$/u, "");
   if (host.length === 0 || BLOCKED_HOSTNAMES.has(host)) {
@@ -98,7 +102,6 @@ function isHostnameAllowed(hostname: string): boolean {
   if (BLOCKED_HOSTNAME_SUFFIXES.some((suffix) => host.endsWith(suffix))) {
     return false;
   }
-  // A bare IP literal skips DNS entirely, so judge it here.
   return isMcpOAuthClientIdMetadataAddressAllowed(stripIpv6Brackets(host));
 }
 
@@ -113,32 +116,38 @@ function stripIpv6Brackets(host: string): string {
  * hostname may still resolve to a private range, and re-resolving between
  * check and connect is the DNS-rebinding hole. Hostnames that are not IP
  * literals pass here and are the runtime's job to resolve.
+ *
+ * Comparison is numeric, never textual. One address has many spellings —
+ * `::1` and `0:0:0:0:0:0:0:1`; `::ffff:10.0.0.1` and `::ffff:a00:1` — and a
+ * resolver or URL parser may return any of them. Node normalises
+ * `[::ffff:10.0.0.1]` to `[::ffff:a00:1]`, so matching the dotted spelling
+ * would admit every private range in its hex form. IPv4-mapped addresses
+ * (`::ffff:a.b.c.d`) are judged by the IPv4 address they carry.
+ *
+ * Blocked: IPv4 10/8, 127/8, 0/8, 169.254/16 (link-local + cloud metadata),
+ * 172.16/12, 192.168/16, 100.64/10 (CGNAT); IPv6 unspecified `::`, loopback
+ * `::1`, unique-local `fc00::/7`, link-local `fe80::/10`. An address that
+ * cannot be parsed is refused — something we cannot evaluate is not something
+ * we should connect to.
  */
 export function isMcpOAuthClientIdMetadataAddressAllowed(address: string): boolean {
   const ipv4 = parseIpv4(address);
   if (ipv4 !== null) {
     const [a, b] = ipv4;
     if (a === 10 || a === 127 || a === 0) return false;
-    if (a === 169 && b === 254) return false; // link-local + cloud metadata
+    if (a === 169 && b === 254) return false;
     if (a === 172 && b >= 16 && b <= 31) return false;
     if (a === 192 && b === 168) return false;
-    if (a === 100 && b >= 64 && b <= 127) return false; // CGNAT
+    if (a === 100 && b >= 64 && b <= 127) return false;
     return true;
   }
 
   if (address.includes(":")) {
-    // Compare numerically, never as text. One address has many spellings —
-    // `::1` and `0:0:0:0:0:0:0:1`; `::ffff:10.0.0.1` and `::ffff:a00:1` — and a
-    // resolver or URL parser may return any of them. Node normalises
-    // `[::ffff:10.0.0.1]` to `[::ffff:a00:1]`, so matching the dotted spelling
-    // admits every private range in its hex form.
     const hextets = parseIpv6(address);
     if (hextets === null) {
-      // An address we cannot evaluate is not one we should connect to.
       return false;
     }
 
-    // IPv4-mapped (::ffff:a.b.c.d) is judged by the IPv4 address it carries.
     const isV4Mapped = hextets.slice(0, 5).every((part) => part === 0) && hextets[5] === 0xff_ff;
     if (isV4Mapped) {
       const high = hextets[6] ?? 0;
@@ -150,25 +159,25 @@ export function isMcpOAuthClientIdMetadataAddressAllowed(address: string): boole
 
     const allZeroPrefix = hextets.slice(0, 7).every((part) => part === 0);
     if (allZeroPrefix && (hextets[7] === 0 || hextets[7] === 1)) {
-      return false; // unspecified (::) and loopback (::1)
+      return false;
     }
 
     const first = hextets[0] ?? 0;
-    if ((first & 0xfe_00) === 0xfc_00) return false; // unique-local fc00::/7
-    if ((first & 0xff_c0) === 0xfe_80) return false; // link-local fe80::/10
+    if ((first & 0xfe_00) === 0xfc_00) return false;
+    if ((first & 0xff_c0) === 0xfe_80) return false;
 
     return true;
   }
 
-  // Not an IP literal — a hostname the runtime still has to resolve.
   return true;
 }
 
 /**
  * Parse any RFC 4291/5952 spelling of an IPv6 address into 8 numeric hextets.
  *
- * Handles `::` compression, a dotted-quad tail, and zone ids. Returns null for
- * anything unparseable so the caller refuses it rather than guesses.
+ * Handles `::` compression, a dotted-quad tail (`::ffff:10.0.0.1` folds into
+ * the final two hextets), and zone ids. Returns null for anything
+ * unparseable so the caller refuses it rather than guesses.
  */
 function parseIpv6(address: string): number[] | null {
   let text = address.toLowerCase();
@@ -177,7 +186,6 @@ function parseIpv6(address: string): number[] | null {
     text = text.slice(0, zone);
   }
 
-  // A dotted-quad tail (::ffff:10.0.0.1) folds into two hextets.
   const dotted = /^(.*:)(\d+\.\d+\.\d+\.\d+)$/u.exec(text);
   if (dotted !== null) {
     const octets = (dotted[2] ?? "").split(".").map((part) => Number.parseInt(part, 10));
@@ -301,12 +309,15 @@ export function validateMcpOAuthClientIdMetadataDocument(
     clientUri,
     redirectUris: normalizedRedirectUris,
     scope: typeof record.scope === "string" ? record.scope : null,
-    // Surfaced rather than fatal: the document is usable, but a consent screen
-    // must be able to tell the user the display identity is unverified.
     clientUriOriginMismatch: clientUri !== null && !isSameOrigin(clientUri, urlCheck.url),
   };
 }
 
+/**
+ * Validate one `redirect_uris` entry. Returns an error description or null.
+ * `http` is permitted only for loopback native clients, per OAuth 2.1;
+ * everything else must be `https`.
+ */
 function validateRedirectUri(candidate: string): string | null {
   let redirect: URL;
   try {
@@ -317,7 +328,6 @@ function validateRedirectUri(candidate: string): string | null {
   if (candidate.includes("*")) {
     return "redirect_uris must be exact; wildcards are not allowed";
   }
-  // http is permitted only for loopback native clients, per OAuth 2.1.
   const isLoopback =
     redirect.protocol === "http:" &&
     (redirect.hostname === "127.0.0.1" || redirect.hostname === "[::1]");

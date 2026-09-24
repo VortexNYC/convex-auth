@@ -23,7 +23,7 @@ function findPackageJsonWithVersion(start: string): string | null {
         if (typeof pkg.version === "string") return candidate;
       }
     } catch {
-      // keep walking
+      /* keep walking */
     }
     dir = dirname(dir);
   }

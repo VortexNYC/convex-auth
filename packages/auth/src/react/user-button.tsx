@@ -1,8 +1,6 @@
 import { cn } from "./lib/ui";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-// ─── Types ────────────────────────────────────────────────────────────────
-
 export type ConvexUserButtonOrganizationItem = {
   _id: string;
   name: string;
@@ -61,8 +59,6 @@ export type ConvexUserButtonProps = {
   }) => ReactNode;
 };
 
-// ─── Default copy ──────────────────────────────────────────────────────────
-
 const defaultCopy: Required<ConvexUserButtonCopy> = {
   manageAccountLabel: "Manage account",
   manageOrganizationLabel: "Manage organization",
@@ -86,8 +82,6 @@ function getInitials(name: string | null | undefined, email: string): string {
   }
   return email.slice(0, 2).toUpperCase();
 }
-
-// ─── Component ────────────────────────────────────────────────────────────
 
 export function ConvexUserButton(props: ConvexUserButtonProps) {
   const {

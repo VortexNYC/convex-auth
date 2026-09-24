@@ -122,6 +122,11 @@ export const getSession = query({
   },
 });
 
+/**
+ * Revokes the session's whole lineage, not just the presented row — a family
+ * is one sign-in lineage, and if the presented session is suspect its siblings
+ * (same lineage, minted by concurrent refreshes) are too.
+ */
 export const revokeSession = mutation({
   args: { sessionId: v.string() },
   returns: v.object({ revoked: v.boolean(), sessionId: v.string() }),
@@ -142,8 +147,6 @@ export const revokeSession = mutation({
     }
 
     const now = Date.now();
-    // A family is one sign-in lineage; if the presented session is suspect its
-    // siblings (same lineage, minted by concurrent refreshes) are too.
     await revokeSessionFamily(
       ctx,
       session.familyId ?? session.sessionId,
@@ -331,6 +334,10 @@ export const getImpersonationState = query({
   },
 });
 
+/**
+ * Ends an impersonation session by revoking the whole lineage — converged
+ * siblings and their refresh tokens would otherwise keep minting sessions.
+ */
 export const stopImpersonation = mutation({
   args: { sessionId: v.string() },
   returns: v.object({ revoked: v.boolean() }),
@@ -351,8 +358,6 @@ export const stopImpersonation = mutation({
       throw new Error("Impersonation session not found");
     }
     const now = Date.now();
-    // Revoke the whole lineage, not just the presented session — converged
-    // siblings and their refresh tokens would otherwise keep minting sessions.
     await revokeSessionFamily(
       ctx,
       session.familyId ?? session.sessionId,

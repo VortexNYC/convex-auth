@@ -43,7 +43,7 @@ const r = makeReporter();
 const NOW = 1_700_000_000_000;
 const SECRET = "cvxsec_conformance_secret_value";
 
-// A. firing / subscription matching ----------------------------------------
+/* A. firing / subscription matching ---------------------------------------- */
 const endpoints = [
   { id: "ep_subscribed", eventTypes: ["user.created", "user.updated"] },
   { id: "ep_wildcard", eventTypes: ["*"] },
@@ -59,7 +59,7 @@ if (matched.length === 2 && matched.includes("ep_subscribed") && matched.include
   r.bad(`A firing: unexpected matched endpoints ${JSON.stringify(matched)}`);
 }
 
-// B. signing round trip ------------------------------------------------------
+/* B. signing round trip ------------------------------------------------------ */
 const payload = JSON.stringify({
   id: "evt_1",
   type: "user.created",
@@ -86,7 +86,7 @@ if (tampered !== independent) {
   r.bad("B signing: tampered payload produced identical signature");
 }
 
-// C. delivery transition matrix ---------------------------------------------
+/* C. delivery transition matrix --------------------------------------------- */
 const activeEndpoint = {
   _id: "ep_subscribed",
   url: "https://receiver.test/hook",

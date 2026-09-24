@@ -64,7 +64,7 @@ describe("verifyMcpOAuthClientAssertion", () => {
     if (!result.ok) return;
     assert.equal(result.clientId, CLIENT_ID);
     assert.equal(result.keyId, "k1");
-    // `jti` is surfaced so the caller can reject replays.
+    /* `jti` is surfaced so the caller can reject replays. */
     assert.equal(result.assertionId, "assertion-1");
   });
 
@@ -83,8 +83,10 @@ describe("verifyMcpOAuthClientAssertion", () => {
   });
 
   it("rejects an assertion minted for another audience", async () => {
-    // Otherwise an assertion captured by one authorization server could be
-    // replayed against another.
+    /*
+     * Otherwise an assertion captured by one authorization server could be
+     * replayed against another.
+     */
     const { privateKey, key } = await keyPair();
     const result = await verifyMcpOAuthClientAssertion({
       assertion: await assertionFor(privateKey, {

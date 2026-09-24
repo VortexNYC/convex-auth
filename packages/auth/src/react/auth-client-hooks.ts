@@ -36,7 +36,7 @@ export function useConvexAuthUser(authClient: ConvexBetterAuthClient | null): Co
   };
 }
 
-// internally. Web-first; RN exports symmetric hooks via runtime.tsx.
+/** Web-first hooks; RN exports symmetric hooks via runtime.tsx. */
 
 export type ConvexAuthSessionListState = {
   /** All active sessions for the current user. null until loaded. */
@@ -197,8 +197,6 @@ export function useConvexAuthUpdateProfile(
   return { updateProfile, isUpdating };
 }
 
-// ---- Password-recovery hooks (PR D) ----
-
 export type ConvexAuthForgotPasswordState = {
   /**
    * Request a password-reset email. The token in the email links to a
@@ -319,8 +317,6 @@ export function useConvexAuthResetPassword(
   return { resetPassword, isResetting };
 }
 
-// ---- Email-verification hooks ----
-
 export type ConvexAuthVerifyEmailStatus = "idle" | "verifying" | "verified" | "error";
 
 export type ConvexAuthVerifyEmailState = {
@@ -425,8 +421,6 @@ export function useConvexAuthResendVerification(
   return { resend, isResending };
 }
 
-// ---- Email-change hooks ----
-
 export type ConvexAuthChangeEmailState = {
   requestChange: (args: {
     newEmail: string;
@@ -472,15 +466,14 @@ export function useConvexAuthChangeEmail(
   return { requestChange, isRequesting };
 }
 
-// ---- Profile image upload hook ----
-//
-// The package owns the orchestration (pick → upload → save), but the
-// `uploadFile` strategy is consumer-provided so the package stays
-// storage-agnostic. The canonical Convex implementation is a thin
-// wrapper around `ctx.storage.generateUploadUrl()` + a POST; the
-// package keeps that wiring out of the auth surface so consumers
-// can swap storage without touching auth.
-
+/**
+ * The package owns the orchestration (pick → upload → save), but the
+ * `uploadFile` strategy is consumer-provided so the package stays
+ * storage-agnostic. The canonical Convex implementation is a thin wrapper
+ * around `ctx.storage.generateUploadUrl()` + a POST; the package keeps that
+ * wiring out of the auth surface so consumers can swap storage without
+ * touching auth.
+ */
 export type ConvexAuthUploadProfileImageState = {
   /**
    * Pick a file → upload via the provided strategy → write the
@@ -535,16 +528,15 @@ export function useConvexAuthUploadProfileImage(
   return { uploadAndSave, isUploading };
 }
 
-// ---- Two-factor (TOTP + backup codes) hooks ----
-//
-// Five guarded hooks covering the full 2FA surface: enroll, confirm
-// (TOTP), confirm (backup code), disable, regenerate backup codes. Each
-// returns `{ ok, error }` (plus enroll's `totpURI`/`backupCodes`) and a
-// single in-flight boolean, identical in spirit to the password-recovery
-// and session hooks above. When the auth client has no `twoFactor`
-// namespace (plugin not wired), every hook returns a clear unavailable
-// error instead of throwing.
-
+/**
+ * Five guarded hooks covering the full 2FA surface: enroll, confirm (TOTP),
+ * confirm (backup code), disable, regenerate backup codes. Each returns
+ * `{ ok, error }` (plus enroll's `totpURI`/`backupCodes`) and a single
+ * in-flight boolean, identical in spirit to the password-recovery and
+ * session hooks above. When the auth client has no `twoFactor` namespace
+ * (plugin not wired), every hook returns a clear unavailable error instead
+ * of throwing.
+ */
 const TWO_FACTOR_UNAVAILABLE = "Two-factor authentication is not available on this auth client";
 
 export type ConvexAuthEnableTwoFactorResult = {
@@ -805,8 +797,8 @@ export function extractTotpSecret(totpURI: string): string | null {
     const url = new URL(totpURI);
     return url.searchParams.get("secret");
   } catch {
-    // Some authenticator URIs aren't strictly URL-parseable; fall back
-    // to a regex scrape of the secret query param.
+    /* Some authenticator URIs aren't strictly URL-parseable; fall back to
+     * a regex scrape of the secret query param. */
     const match = totpURI.match(/[?&]secret=([^&]+)/i);
     const secret = match?.[1];
     return secret === undefined ? null : decodeURIComponent(secret);

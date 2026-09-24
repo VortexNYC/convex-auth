@@ -11,20 +11,22 @@ export {
 } from "convex-helpers/server/relationships";
 export { getPage, paginator, streamQuery } from "convex-helpers/server/pagination";
 
-// Untrusted-input boundaries. `JSON.parse` returns `any`; casting that result is
-// the single largest source of `no-unsafe-type-assertion` across the fleet. These
-// validate a runtime value against a Convex validator instead — so the validators
-// already declared in schema.ts and in each function's `args` become the parser,
-// rather than a hand-written guard per shape.
-//
-//   const body = parse(myArgsValidator, JSON.parse(text));   // typed, no cast
-//   if (!validate(v.object({...}), value)) { ... }           // type guard
-//
-// Portable: convex-helpers/validators imports only `convex/values`, never
-// `convex/server`, so this works in Convex functions, packages and Node scripts.
-//
-// Caveat from upstream: without passing `db`, `v.id(table)` is only checked as a
-// string, not as an id belonging to that table. Pass `db` when that matters.
+/**
+ * Untrusted-input boundaries. `JSON.parse` returns `any`; casting that result is
+ * the single largest source of `no-unsafe-type-assertion` across the fleet. These
+ * validate a runtime value against a Convex validator instead — so the validators
+ * already declared in schema.ts and in each function's `args` become the parser,
+ * rather than a hand-written guard per shape.
+ *
+ *   const body = parse(myArgsValidator, JSON.parse(text)); // typed, no cast
+ *   if (!validate(v.object({...}), value)) { ... } // type guard
+ *
+ * Portable: convex-helpers/validators imports only `convex/values`, never
+ * `convex/server`, so this works in Convex functions, packages and Node scripts.
+ *
+ * Caveat from upstream: without passing `db`, `v.id(table)` is only checked as a
+ * string, not as an id belonging to that table. Pass `db` when that matters.
+ */
 export { ValidationError, parse, validate } from "convex-helpers/validators";
 
 /**

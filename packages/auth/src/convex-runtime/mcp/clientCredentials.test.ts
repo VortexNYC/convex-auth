@@ -16,13 +16,13 @@ const MACHINE_CLIENT: McpOAuthClient = {
 
 const CONFIDENTIAL = ["client_secret_post"] as const;
 
-/** Registered for assertions rather than a secret. */
+/* Registered for assertions rather than a secret. */
 const ASSERTION_CLIENT: McpOAuthClient = {
   ...MACHINE_CLIENT,
   tokenEndpointAuthMethod: "private_key_jwt",
 };
 
-/** Stands in for the caller's secret check; verification is its job. */
+/* Stands in for the caller's secret check; verification is its job. */
 const acceptSecret = () => true;
 
 function tokenRequest(body: Record<string, string>, headers?: Record<string, string>) {
@@ -51,8 +51,10 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
 
     assert.equal(result.ok, true);
     if (!result.ok) return;
-    // Omitted scope must mean the client's entitlement, never everything the
-    // server offers.
+    /*
+     * Omitted scope must mean the client's entitlement, never everything the
+     * server offers.
+     */
     assert.deepEqual(result.scopes, ["app:growth:read", "app:growth:write"]);
   });
 
@@ -94,7 +96,7 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
   });
 
   it("refuses a client that did not register for the grant", async () => {
-    // Otherwise any authorization-code client could mint itself a user-less token.
+    /* Otherwise any authorization-code client could mint itself a user-less token. */
     const result = await validateMcpOAuthClientCredentialsTokenExchange({
       request: tokenRequest({
         grant_type: "client_credentials",
@@ -115,7 +117,7 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
   });
 
   it("refuses when the deployment has not enabled a confidential method", async () => {
-    // Default `none` deployments must not silently accept machine credentials.
+    /* Default `none` deployments must not silently accept machine credentials. */
     const result = await validateMcpOAuthClientCredentialsTokenExchange({
       request: tokenRequest({
         grant_type: "client_credentials",
@@ -149,7 +151,7 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
   });
 
   it("refuses an assertion when the deployment cannot verify one", async () => {
-    // Fail closed: a missing verifier must never read as a verified assertion.
+    /* Fail closed: a missing verifier must never read as a verified assertion. */
     const result = await validateMcpOAuthClientCredentialsTokenExchange({
       request: tokenRequest({
         grant_type: "client_credentials",
@@ -216,7 +218,7 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
   });
 
   it("refuses a secret when the deployment cannot verify one", async () => {
-    // Same fail-closed rule as assertions: no verifier must not read as verified.
+    /* Same fail-closed rule as assertions: no verifier must not read as verified. */
     const result = await validateMcpOAuthClientCredentialsTokenExchange({
       request: tokenRequest({
         grant_type: "client_credentials",
@@ -251,8 +253,10 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
   });
 
   it("refuses a method the client did not register for", async () => {
-    // Downgrade guard: advertising two confidential methods must not let a
-    // client authenticate with one it never registered.
+    /*
+     * Downgrade guard: advertising two confidential methods must not let a
+     * client authenticate with one it never registered.
+     */
     const result = await validateMcpOAuthClientCredentialsTokenExchange({
       request: tokenRequest(
         {
@@ -261,7 +265,7 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
         },
         { authorization: "Basic c3ZjOnMzY3JldA==" },
       ),
-      resolveClient: () => MACHINE_CLIENT, // registered client_secret_post
+      resolveClient: () => MACHINE_CLIENT /* registered client_secret_post */,
       supportedMethods: ["client_secret_post", "client_secret_basic"],
       verifyClientSecret: acceptSecret,
     });
@@ -273,16 +277,18 @@ describe("validateMcpOAuthClientCredentialsTokenExchange", () => {
   });
 
   it("refuses a confidential client that presents no credential", async () => {
-    // The bypass: client authentication defaults to `none`, so a request with
-    // no secret and no assertion passed, the registered-method guard was
-    // skipped (nothing presented), and both verification blocks were skipped
-    // too — minting a token with nothing checked.
+    /*
+     * The bypass: client authentication defaults to `none`, so a request with
+     * no secret and no assertion passed, the registered-method guard was
+     * skipped (nothing presented), and both verification blocks were skipped
+     * too — minting a token with nothing checked.
+     */
     const result = await validateMcpOAuthClientCredentialsTokenExchange({
       request: tokenRequest({
         grant_type: "client_credentials",
         client_id: "svc-hermes",
       }),
-      resolveClient: () => MACHINE_CLIENT, // registered client_secret_post
+      resolveClient: () => MACHINE_CLIENT /* registered client_secret_post */,
     });
 
     assert.equal(result.ok, false);

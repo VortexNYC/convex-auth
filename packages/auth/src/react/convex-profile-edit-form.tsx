@@ -98,7 +98,7 @@ export function ConvexProfileEditForm(props: ConvexProfileEditFormProps) {
       args.image = trimmedImage;
     }
     if (Object.keys(args).length === 0) {
-      // Nothing changed — no-op success.
+      /** Nothing changed — no-op success. */
       setSuccess(copy.successMessage);
       return;
     }

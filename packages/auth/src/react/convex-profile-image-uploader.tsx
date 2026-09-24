@@ -94,8 +94,8 @@ export function ConvexProfileImageUploader(props: ConvexProfileImageUploaderProp
     const file = event.target.files?.[0];
     if (file === undefined) return;
     const result = await uploadAndSave(file);
-    // Always clear the input value so the same file can be re-picked
-    // after a failed upload.
+    /* Always clear the input value so the same file can be re-picked
+     * after a failed upload. */
     if (fileInputRef.current !== null) fileInputRef.current.value = "";
     if (!result.ok || result.url === null) {
       setError(result.error);

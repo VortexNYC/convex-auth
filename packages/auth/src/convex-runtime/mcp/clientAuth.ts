@@ -19,6 +19,9 @@ const DEFAULT_SUPPORTED_METHODS = ["none"] as const;
  * Which methods are live is decided by `supportedMethods`, defaulting to the
  * historical `none`. A deployment that has not opted in keeps the exact
  * public-client behaviour it had before.
+ *
+ * A request presenting no credential is valid only where an unauthenticated
+ * client is acceptable — i.e. `none` is live (public client + PKCE).
  */
 export function validateTokenEndpointClientAuthentication(
   args: McpOAuthTokenEndpointClientAuthArgs,
@@ -27,8 +30,6 @@ export function validateTokenEndpointClientAuthentication(
   const presented = presentedCredential(args);
 
   if (presented === null) {
-    // No credential presented. Valid only where an unauthenticated client is
-    // acceptable — i.e. `none` is live (public client + PKCE).
     if (supportedMethods.includes("none")) {
       return null;
     }
@@ -53,12 +54,14 @@ export function validateTokenEndpointClientAuthentication(
  * `client_secret_post`. Verifying the secret itself belongs to the caller,
  * which holds the stored client record — this only establishes *which* method
  * was attempted so an unsupported one fails before any comparison runs.
+ *
+ * Assertions are checked first: `private_key_jwt` is a distinct method, and a
+ * client presenting one must not be classified as (and evaluated against) a
+ * secret method.
  */
 function presentedCredential(
   args: McpOAuthTokenEndpointClientAuthArgs,
 ): McpOAuthTokenEndpointAuthMethod | null {
-  // Checked first: an assertion is a distinct method, and a client presenting
-  // one must not be classified as (and evaluated against) a secret method.
   if (typeof args.clientAssertion === "string" && args.clientAssertion.length > 0) {
     return "private_key_jwt";
   }
@@ -71,6 +74,12 @@ function presentedCredential(
   return null;
 }
 
+/**
+ * Whether the request carries a `client_secret` field at all. A parsed
+ * multipart/form-data entry counts as presented even though it holds no
+ * usable string secret — the attempt still classifies as `client_secret_post`
+ * and fails verification downstream.
+ */
 function hasClientSecret(
   clientSecret: McpOAuthTokenEndpointClientAuthArgs["clientSecret"],
 ): boolean {
@@ -80,7 +89,6 @@ function hasClientSecret(
   if (typeof clientSecret === "string") {
     return clientSecret.length > 0;
   }
-  // A parsed multipart/form-data entry: present, but carries no usable secret.
   return true;
 }
 

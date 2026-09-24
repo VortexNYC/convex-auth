@@ -11,7 +11,7 @@ import {
 
 describe("base32", () => {
   it("round-trips random bytes", () => {
-    const bytes = new Uint8Array([0x48, 0x65, 0x6c, 0x6c, 0x6f]); // "Hello"
+    const bytes = new Uint8Array([0x48, 0x65, 0x6c, 0x6c, 0x6f]); /* "Hello" */
     const encoded = encodeBase32(bytes);
     const decoded = decodeBase32(encoded);
     expect(decoded).toEqual(bytes);

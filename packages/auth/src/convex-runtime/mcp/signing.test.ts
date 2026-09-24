@@ -84,12 +84,14 @@ describe("mcp oauth signing helpers", () => {
   });
 
   it("rejects an access token signed with a non-pinned algorithm", async () => {
-    // The verifier pins `algorithms: [key.algorithm]` (ES256) and must never
-    // trust the token header's `alg`. Forge a token with the SAME kid but a
-    // symmetric HS256 signature — an algorithm-substitution attempt — and prove
-    // it is rejected rather than verified. (With the current EC-only key this
-    // also fails on key type; the test LOCKS the rejection so a future key-type
-    // change can't silently widen the accepted algorithm set.)
+    /*
+     * The verifier pins `algorithms: [key.algorithm]` (ES256) and must never
+     * trust the token header's `alg`. Forge a token with the SAME kid but a
+     * symmetric HS256 signature — an algorithm-substitution attempt — and prove
+     * it is rejected rather than verified. (With the current EC-only key this
+     * also fails on key type; the test LOCKS the rejection so a future key-type
+     * change can't silently widen the accepted algorithm set.)
+     */
     const key = await createMcpOAuthSigningKeyRecord({
       keyId: "example-mcp-key-3",
     });

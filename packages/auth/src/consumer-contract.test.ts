@@ -252,7 +252,7 @@ describe("checkConsumerContract", () => {
   });
 
   it("excludes _generated and *.test.ts files", () => {
-    // These would otherwise be violations.
+    /* These would otherwise be violations. */
     fixture.write(
       "_generated/server.ts",
       'export const x = async (ctx: unknown) => { await ctx.db.insert("organization_members", {}); };\n',
@@ -271,9 +271,11 @@ describe("checkConsumerContract", () => {
   });
 
   it("flags consumer-style camelCase mirror with convexOrgId + convexAuthUserId (name-agnostic)", () => {
-    // A consumer's actual schema (renamed table, shorthand bridge column) used
-    // to slip past the snake_case-name rule. The bridge-column rule must
-    // catch it on structure alone.
+    /*
+     * A consumer's actual schema (renamed table, shorthand bridge column) used
+     * to slip past the snake_case-name rule. The bridge-column rule must
+     * catch it on structure alone.
+     */
     fixture.write(
       "schema.ts",
       [
@@ -307,7 +309,7 @@ describe("checkConsumerContract", () => {
     assert.equal(v.message.includes("organizationMembers"), true);
     assert.equal(v.message.includes("convexOrgId"), true);
     assert.equal(v.message.includes("convexAuthUserId"), true);
-    // Must NOT flag the legitimate organizations anchor as the violating table.
+    /* Must NOT flag the legitimate organizations anchor as the violating table. */
     assert.equal(
       result.violations.some(
         (x) =>
@@ -356,14 +358,14 @@ describe("checkConsumerContract", () => {
         "",
       ].join("\n"),
     );
-    // Default config: tenants is NOT a recognized anchor → flagged.
+    /* Default config: tenants is NOT a recognized anchor → flagged. */
     const defaultResult = checkConsumerContract({ convexDir: fixture.dir });
     assert.equal(defaultResult.ok, false);
     assert.equal(
       defaultResult.violations.some((v) => v.rule === "local-bridge-mirror"),
       true,
     );
-    // Override: tenants IS an anchor → clean.
+    /* Override: tenants IS an anchor → clean. */
     const overridden = checkConsumerContract({
       convexDir: fixture.dir,
       legitAnchorTables: ["tenants", "users"],
@@ -372,9 +374,11 @@ describe("checkConsumerContract", () => {
   });
 
   it("ignores bridge-shaped columns inside v.object nested validators (no false positive on non-table prop)", () => {
-    // A non-defineTable v.object that happens to mention a bridge name in
-    // a comment-like context shouldn't trip the rule. We rely on defineTable
-    // anchoring, so this should be clean.
+    /*
+     * A non-defineTable v.object that happens to mention a bridge name in
+     * a comment-like context shouldn't trip the rule. We rely on defineTable
+     * anchoring, so this should be clean.
+     */
     fixture.write(
       "ignore-me.ts",
       [
@@ -445,8 +449,10 @@ describe("checkConsumerContract", () => {
   });
 
   it("legitAnchorTables override allows a deliberate per-member override table", () => {
-    // A consumer has `member_settings` keyed by convexAuthMemberId for per-member
-    // permission overrides — that's a legitimate one-way cache, not a mirror.
+    /*
+     * A consumer has `member_settings` keyed by convexAuthMemberId for per-member
+     * permission overrides — that's a legitimate one-way cache, not a mirror.
+     */
     fixture.write(
       "schema.ts",
       [
@@ -465,10 +471,10 @@ describe("checkConsumerContract", () => {
         "",
       ].join("\n"),
     );
-    // Default config: flagged.
+    /* Default config: flagged. */
     const defaultResult = checkConsumerContract({ convexDir: fixture.dir });
     assert.equal(defaultResult.ok, false);
-    // With explicit allow-list: clean.
+    /* With explicit allow-list: clean. */
     const overridden = checkConsumerContract({
       convexDir: fixture.dir,
       legitAnchorTables: ["organizations", "users", "member_settings"],

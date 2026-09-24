@@ -66,7 +66,7 @@ describe("@vortex-api/convex-auth/convex/helpers", () => {
       currency: v.union(v.literal("USD"), v.literal("CAD")),
     });
 
-    // The shape a wire boundary actually deals with: JSON.parse returns `any`.
+    /* The shape a wire boundary actually deals with: JSON.parse returns `any`. */
     const parsed: unknown = JSON.parse('{"invoiceId":"inv_1","amount":1250,"currency":"USD"}');
     const body = helpers.parse(validator, parsed);
     assert.strictEqual(body.invoiceId, "inv_1");
@@ -83,9 +83,11 @@ describe("@vortex-api/convex-auth/convex/helpers", () => {
 
 describe("toWritable", () => {
   it("returns a structure the caller's value does not share", () => {
-    // The point of the helper. If it were an assertion rather than a copy, the
-    // mutation would receive the caller's own array and could write through it,
-    // which is exactly what the `readonly` on the domain model forbids.
+    /*
+     * The point of the helper. If it were an assertion rather than a copy, the
+     * mutation would receive the caller's own array and could write through it,
+     * which is exactly what the `readonly` on the domain model forbids.
+     */
     const source: {
       readonly id: string;
       readonly processorAccountRefs: readonly {
@@ -106,8 +108,10 @@ describe("toWritable", () => {
   });
 
   it("copies nested arrays, not just the outermost one", () => {
-    // A shallow spread fixes the top level and leaves the nesting readonly, which
-    // is the failure this helper exists to end.
+    /*
+     * A shallow spread fixes the top level and leaves the nesting readonly, which
+     * is the failure this helper exists to end.
+     */
     const source: {
       readonly associatedIdentities: readonly {
         readonly identityRoles: readonly string[];
@@ -134,8 +138,10 @@ describe("toWritable", () => {
   });
 
   it("rejects values Convex could not store anyway", () => {
-    // structuredClone throws on functions -- the same values a validator rejects,
-    // so anything that survives this call is something a mutation can accept.
+    /*
+     * structuredClone throws on functions -- the same values a validator rejects,
+     * so anything that survives this call is something a mutation can accept.
+     */
     assert.throws(() => helpers.toWritable({ handler: () => undefined }));
   });
 });

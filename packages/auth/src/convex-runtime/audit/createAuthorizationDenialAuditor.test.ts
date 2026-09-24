@@ -7,14 +7,13 @@ import {
   type AuthorizationDenialAuditEvent,
 } from "./createAuthorizationDenialAuditor";
 
-// ---------------------------------------------------------------------------
-// Proof matrix for Increment 4a — the denial-audit emitter.
-//
-// THE drift invariant: a consumer wires emit + deriveContext ONCE and gets BOTH
-// the `onAuthorizationDenied` factory hook AND a manual `auditAndRethrow` path.
-// For the SAME denial, both paths MUST emit the identical structured event — a
-// consumer cannot let the two drift apart.
-// ---------------------------------------------------------------------------
+/**
+ * Proof matrix for Increment 4a — the denial-audit emitter.
+ * THE drift invariant: a consumer wires emit + deriveContext ONCE and gets BOTH
+ * the `onAuthorizationDenied` factory hook AND a manual `auditAndRethrow` path.
+ * For the SAME denial, both paths MUST emit the identical structured event — a
+ * consumer cannot let the two drift apart.
+ */
 
 type TestViewer = { user: { _id: string }; anchor: { _id: string } };
 type TestCtx = { marker: "ctx" };
@@ -26,8 +25,10 @@ function only<T>(values: readonly T[], message: string): T {
   return value;
 }
 
-// A ConvexError-like error carrying the package's denied error data, the way the
-// authz functions / a consumer's throwAuthorizationDenied actually throw it.
+/**
+ * A ConvexError-like error carrying the package's denied error data, the way the
+ * authz functions / a consumer's throwAuthorizationDenied actually throw it.
+ */
 function deniedError(
   overrides: Partial<{
     denialReason: string;
@@ -145,7 +146,7 @@ describe("createAuthorizationDenialAuditor — drift-proof emission", () => {
     assert.equal(emitted.length, 1);
     const event = only(emitted, "authorization denial event is missing");
     assert.equal(event.payload, null);
-    // permission falls back to the explicit arg even with no payload.
+    /* permission falls back to the explicit arg even with no payload. */
     assert.equal(event.permission, "reports:read");
   });
 

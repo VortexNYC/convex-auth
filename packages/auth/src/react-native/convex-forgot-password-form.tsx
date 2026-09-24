@@ -113,8 +113,8 @@ export function ConvexForgotPasswordForm(props: ExpoForgotPasswordFormProps) {
       redirectTo: props.resetPasswordUrl,
     });
     if (!result.ok) {
-      // Surface a real unavailable error; otherwise show generic
-      // success (avoid email enumeration).
+      /* Surface a real unavailable error; otherwise show generic success
+       * (avoid email enumeration). */
       if (result.error === "Password recovery is not available on this auth client") {
         setError(result.error);
         return;

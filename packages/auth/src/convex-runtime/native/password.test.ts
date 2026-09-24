@@ -7,7 +7,7 @@ import { bytesToBase64url, hashPassword, legacyPbkdf2Hash, verifyPassword } from
 describe("password", () => {
   it("hashes and verifies a password with argon2id", async () => {
     const hash = await hashPassword("hunter2");
-    // PHC contract: $argon2id$v=19$m=...,t=...,p=...$salt$hash (6 segments).
+    /* PHC contract: $argon2id$v=19$m=...,t=...,p=...$salt$hash (6 segments). */
     const parts = hash.split("$");
     expect(parts.length).toBe(6);
     expect(parts[2]).toBe("v=19");
@@ -32,8 +32,10 @@ describe("password", () => {
   });
 
   it("still verifies legacy (pre-WASM) argon2id hashes", async () => {
-    // Format written by the previous @noble/hashes implementation:
-    // $argon2id$v=19,m=19456,t=2,p=1$<b64url salt>$<b64url derived>
+    /*
+     * Format written by the previous @noble/hashes implementation:
+     * $argon2id$v=19,m=19456,t=2,p=1$<b64url salt>$<b64url derived>
+     */
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const derived = argon2id("hunter2", salt, { t: 2, m: 19456, p: 1, dkLen: 32, version: 0x13 });
     const legacyHash = `$argon2id$v=19,m=19456,t=2,p=1$${bytesToBase64url(salt)}$${bytesToBase64url(derived)}`;
@@ -64,8 +66,10 @@ describe("password", () => {
   it("verifies Better Auth legacy scrypt hashes", async () => {
     const password = "LongPassword123!";
     const saltHex = bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
-    // Better Auth hashes with the salt as a lowercase hex string, not decoded bytes,
-    // and normalizes the password to NFKC before scrypt.
+    /*
+     * Better Auth hashes with the salt as a lowercase hex string, not decoded bytes,
+     * and normalizes the password to NFKC before scrypt.
+     */
     const derived = await scryptAsync(password.normalize("NFKC"), saltHex, {
       N: 16384,
       r: 16,

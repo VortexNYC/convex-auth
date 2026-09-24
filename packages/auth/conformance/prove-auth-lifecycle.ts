@@ -29,7 +29,7 @@ const J = (extra?: Record<string, string>) => ({
 const email = uniqueEmail("lc");
 const password = strongPassword("lc");
 
-// sign-up
+/* sign-up */
 const su = await fetch(`${site}/api/auth/sign-up/email`, {
   method: "POST",
   headers: J(),
@@ -44,7 +44,7 @@ const sess1 = await getSession(site, cookieAfterSignUp);
 if (sess1?.user?.email === email) r.ok("sign-up -> identity restored from cookie");
 else r.bad("sign-up did not restore identity");
 
-// sign-out
+/* sign-out */
 const so = await fetch(`${site}/api/auth/sign-out`, {
   method: "POST",
   headers: J({ cookie: cookieAfterSignUp }),
@@ -68,7 +68,7 @@ const elapsed = Math.round((Date.now() - start) / 1000);
 if (revoked) r.ok(`sign-out revokes within cookieCache bound (~${elapsed}s, bound 60s)`);
 else r.bad(`sign-out did not revoke within bound (~${elapsed}s)`);
 
-// sign-in -> same user, no duplicate
+/* sign-in -> same user, no duplicate */
 const si = await fetch(`${site}/api/auth/sign-in/email`, {
   method: "POST",
   headers: J(),
@@ -78,7 +78,7 @@ const sessAfterSignIn = await getSession(site, mergeCookies(si));
 if (sessAfterSignIn?.user?.email === email) r.ok("sign-in -> SAME user resolved (no duplicate)");
 else r.bad("sign-in did not return the original user");
 
-// invalid token rejected
+/* invalid token rejected */
 const bad = await fetch(`${site}/api/auth/get-session`, {
   headers: {
     origin: ORIGIN_WEB,
@@ -91,7 +91,7 @@ const badUser =
 if (!badUser) r.ok("invalid token rejected (no user)");
 else r.bad("invalid token accepted (LEAK)");
 
-// wrong password rejected
+/* wrong password rejected */
 const wp = await fetch(`${site}/api/auth/sign-in/email`, {
   method: "POST",
   headers: J(),

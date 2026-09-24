@@ -139,6 +139,13 @@ export async function signMcpOAuthAccessToken(args: {
   };
 }
 
+/**
+ * Verify an MCP access token against the registered signing keys.
+ *
+ * The algorithm is pinned to the key's own (`ES256`) — never the token
+ * header's `alg`. Trusting the header would admit algorithm-substitution
+ * attacks; this matches the RS256-pinned user-bearer verifier.
+ */
 export async function verifyMcpOAuthAccessToken(args: {
   accessToken: string;
   signingKeys: readonly McpOAuthSigningKeyRecord[];
@@ -160,9 +167,6 @@ export async function verifyMcpOAuthAccessToken(args: {
   const { payload } = await jwtVerify(args.accessToken, verificationKey, {
     issuer: args.issuer,
     audience: args.audience,
-    // Pin the algorithm to the key's own (ES256) — never trust the token
-    // header's `alg`. Defeats algorithm-substitution attacks, matching the
-    // RS256-pinned user-bearer verifier.
     algorithms: [key.algorithm],
   });
 

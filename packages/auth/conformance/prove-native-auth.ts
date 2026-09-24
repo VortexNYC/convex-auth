@@ -59,7 +59,7 @@ function totp(secret: string): string {
 const email = uniqueEmail("nat");
 const pw = strongPassword("nat");
 
-// 1. sign-up over native transport
+/* 1. sign-up over native transport */
 const su = await fetch(`${site}/api/auth/sign-up/email`, {
   method: "POST",
   headers: NATIVE_HEADERS,
@@ -72,12 +72,12 @@ if (!su.ok) {
 const cookie = mergeCookies(su);
 r.ok("native sign-up (expo-origin, no cookie jar) -> session");
 
-// 2. get-session valid with manually-injected cookie
+/* 2. get-session valid with manually-injected cookie */
 const sess = await getSession(site, cookie, NATIVE_HEADERS);
 if (sess?.user?.email === email) r.ok("get-session valid with manually-injected cookie");
 else r.bad("get-session invalid over native transport");
 
-// 3. convex JWT verified vs JWKS (iss=site, aud=convex)
+/* 3. convex JWT verified vs JWKS (iss=site, aud=convex) */
 const tokRes = await fetch(`${site}/api/auth/convex/token`, {
   headers: { ...NATIVE_HEADERS, cookie },
 });
@@ -105,7 +105,7 @@ if (!token) {
   }
 }
 
-// 4. breach screening enforced over native transport
+/** 4. breach screening enforced over native transport */
 {
   const brk = await fetch(`${site}/api/auth/sign-up/email`, {
     method: "POST",
@@ -123,7 +123,7 @@ if (!token) {
   }
 }
 
-// 5. 2FA round trip over native transport (auto-skip if not enabled)
+/** 5. 2FA round trip over native transport (auto-skip if not enabled) */
 {
   const e2 = uniqueEmail("nat2fa");
   const s2 = await fetch(`${site}/api/auth/sign-up/email`, {
@@ -182,7 +182,7 @@ if (!token) {
   }
 }
 
-// 6. sign-out invalidates session within the cookieCache bound
+/** 6. sign-out invalidates session within the cookieCache bound */
 {
   const so = await fetch(`${site}/api/auth/sign-out`, {
     method: "POST",
@@ -210,7 +210,7 @@ if (!token) {
   else r.bad(`native sign-out did not invalidate (revoked=${revoked}, ~${elapsed}s)`);
 }
 
-// 7. Convex-native rate limit applies on native sign-in
+/** 7. Convex-native rate limit applies on native sign-in */
 {
   const e3 = uniqueEmail("natrl");
   await fetch(`${site}/api/auth/sign-up/email`, {

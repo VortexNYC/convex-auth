@@ -57,7 +57,7 @@ export function ConvexAuthAppearanceProvider({
         setTheme(stored);
       }
     } catch {
-      // storage may be unavailable (e.g., private mode)
+      /* storage may be unavailable (e.g., private mode) */
     }
   }, [defaultTheme, storageKey]);
 
@@ -72,7 +72,7 @@ export function ConvexAuthAppearanceProvider({
     try {
       window.localStorage.setItem(storageKey, theme);
     } catch {
-      // storage may be unavailable
+      /* storage may be unavailable */
     }
 
     if (typeof document !== "undefined") {

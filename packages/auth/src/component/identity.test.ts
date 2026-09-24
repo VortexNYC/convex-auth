@@ -249,8 +249,10 @@ describe("provisionFromIdentity", () => {
     });
     expect(result.identityId).toBeDefined();
 
-    // The sign-up/first-sign-in mint carries the column — this is the
-    // highest-volume session path, so it must not rely on the claim fallback.
+    /*
+     * The sign-up/first-sign-in mint carries the column — this is the
+     * highest-volume session path, so it must not rely on the claim fallback.
+     */
     const session = await t.run((ctx) =>
       ctx.db
         .query("authSessions")

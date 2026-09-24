@@ -121,12 +121,14 @@ describe("createConvexAuthBackendAdapters", () => {
   });
 
   it("NEVER re-resolves identity inside the user adapter", async () => {
-    // This is the contract violation shipped in some consumer projects and in
-    // both convex-core canonical examples: they ignore the convexAuthUserId the
-    // glue passes and re-run ctx.auth.getUserIdentity() plus a second
-    // identity.getByIdentity round-trip. The adapter contract forbids it — the
-    // glue already did that resolution. Generating the adapter makes it
-    // unwritable, and this test is what keeps it that way.
+    /*
+     * This is the contract violation shipped in some consumer projects and in
+     * both convex-core canonical examples: they ignore the convexAuthUserId the
+     * glue passes and re-run ctx.auth.getUserIdentity() plus a second
+     * identity.getByIdentity round-trip. The adapter contract forbids it — the
+     * glue already did that resolution. Generating the adapter makes it
+     * unwritable, and this test is what keeps it that way.
+     */
     const { db } = makeDb({
       users: [{ _id: "u1", convexAuthUserId: "cu_1", email: "a@b.test" }],
     });
@@ -239,8 +241,10 @@ describe("createConvexAuthBackendAdapters", () => {
   });
 
   it("silently skips the active-org hint in a read-only context", async () => {
-    // The glue's self-heal path calls this during reads and swallows throws,
-    // but skipping is cheaper and keeps the read path free of exceptions.
+    /*
+     * The glue's self-heal path calls this during reads and swallows throws,
+     * but skipping is cheaper and keeps the read path free of exceptions.
+     */
     const readOnlyDb = { query: () => ({}) };
     const adapters = createConvexAuthBackendAdapters(baseConfig);
 

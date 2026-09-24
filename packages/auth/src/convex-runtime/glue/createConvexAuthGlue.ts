@@ -79,7 +79,9 @@ function toConsumerId(id: string): string {
   return id;
 }
 
-// Factory overloads so the returned glue is precisely typed per mode.
+/**
+ * Factory overloads so the returned glue is precisely typed per mode.
+ */
 export function createConvexAuthGlue<TUser extends GlueUserMinimum>(
   config: ConsumerModeConfig<TUser>,
 ): ConsumerGlue<TUser>;
@@ -97,18 +99,6 @@ export function createConvexAuthGlue<
   return createB2BGlue(config);
 }
 
-// ---------------------------------------------------------------------------
-// Consumer mode (orgs: disabled) — single-user-per-account flows. No
-// anchor, no membership, no per-org permissions.
-//
-// Mode selection is fail-safe by construction: `orgs` is a typed
-// `"enabled" | "disabled"` literal and the factory defaults every non-"disabled"
-// value to B2B (RBAC enforced), so consumer mode is reachable ONLY by explicitly
-// writing `orgs: "disabled"` — never by a typo or omission. The remaining risk is
-// that turning RBAC OFF is silent, so we announce it loudly (once per process):
-// any app that meant to enforce permissions will see this in its logs.
-// ---------------------------------------------------------------------------
-
 let consumerModeRbacDisabledWarned = false;
 
 function warnConsumerModeRbacDisabledOnce(): void {
@@ -124,6 +114,17 @@ function warnConsumerModeRbacDisabledOnce(): void {
   );
 }
 
+/**
+ * Consumer mode (orgs: disabled) — single-user-per-account flows. No
+ * anchor, no membership, no per-org permissions.
+ *
+ * Mode selection is fail-safe by construction: `orgs` is a typed
+ * `"enabled" | "disabled"` literal and the factory defaults every non-"disabled"
+ * value to B2B (RBAC enforced), so consumer mode is reachable ONLY by explicitly
+ * writing `orgs: "disabled"` — never by a typo or omission. The remaining risk is
+ * that turning RBAC OFF is silent, so we announce it loudly (once per process):
+ * any app that meant to enforce permissions will see this in its logs.
+ */
 function createConsumerGlue<TUser extends GlueUserMinimum>(
   config: ConsumerModeConfig<TUser>,
 ): ConsumerGlue<TUser> {
@@ -168,28 +169,30 @@ function createConsumerGlue<TUser extends GlueUserMinimum>(
         user,
         convexAuthUserId: toConsumerId(convexAuthUserId),
         hasPermission: () => true,
-        requirePermission: () => {
-          // In consumer mode there is no permission model — every authenticated
-          // user is allowed. Consumers needing global RBAC should run in b2b
-          // mode with a singleton "platform" org, or fork this in their app.
-        },
+        /**
+         * In consumer mode there is no permission model — every authenticated
+         * user is allowed. Consumers needing global RBAC should run in b2b
+         * mode with a singleton "platform" org, or fork this in their app.
+         */
+        requirePermission: () => {},
       };
       return viewer;
     },
-    bootstrapNewUser: async () => {
-      // Nothing to bootstrap in consumer mode: the user mirror is created by
-      // the legacy adapter pre-commit; the glue has no other state to
-      // attach. Keep the method on the surface so the wiring shape is
-      // identical between modes (forward-compat: if a consumer switches to
-      // b2b later, only the config changes, not the call sites).
-    },
+    /**
+     * Nothing to bootstrap in consumer mode: the user mirror is created by the
+     * legacy adapter pre-commit; the glue has no other state to attach. Kept
+     * on the surface so the wiring shape is identical between modes
+     * (forward-compat: switching to b2b later changes only the config, not the
+     * call sites).
+     */
+    bootstrapNewUser: async () => {},
   };
 }
 
-// ---------------------------------------------------------------------------
-// B2B mode (orgs: enabled) — anchor, membership, role-based permissions,
-// active-org hint + validation, idempotent bootstrap + self-heal.
-// ---------------------------------------------------------------------------
+/**
+ * B2B mode (orgs: enabled) — anchor, membership, role-based permissions,
+ * active-org hint + validation, idempotent bootstrap + self-heal.
+ */
 
 function createB2BGlue<TUser extends GlueUserMinimum, TAnchor extends GlueAnchorMinimum>(
   config: B2BModeConfig<TUser, TAnchor>,
@@ -208,9 +211,11 @@ function createB2BGlue<TUser extends GlueUserMinimum, TAnchor extends GlueAnchor
   return {
     mode: "b2b",
     resolveViewer,
+    /**
+     * Idempotent: safe to call multiple times. `bootstrapMembership` itself
+     * checks for existing memberships before creating a personal org.
+     */
     bootstrapNewUser: async (ctx, args) => {
-      // Idempotent: safe to call multiple times. The helper itself checks
-      // for existing memberships before creating a personal org.
       await bootstrapMembership({
         ctx,
         config,
@@ -430,10 +435,10 @@ function buildB2BViewer<TUser extends GlueUserMinimum, TAnchor extends GlueAncho
   };
 }
 
-// ---------------------------------------------------------------------------
-// Component reads — small helpers that wrap the precisely generated mounted
-// FunctionReference signatures and normalize component ids at the boundary.
-// ---------------------------------------------------------------------------
+/**
+ * Component reads — small helpers that wrap the precisely generated mounted
+ * FunctionReference signatures and normalize component ids at the boundary.
+ */
 
 async function resolveComponentUserId(
   ctx: GlueCtx,
@@ -524,11 +529,19 @@ async function fetchMembership<TUser extends GlueUserMinimum, TAnchor extends Gl
   };
 }
 
-// ---------------------------------------------------------------------------
-// Self-heal + bootstrap — idempotent. Both call into `bootstrapMembership`
-// which is the single source of truth for "ensure this user has a usable
-// active organization."
-// ---------------------------------------------------------------------------
+/**
+ * Self-heal + bootstrap — idempotent. Both call into `bootstrapMembership`
+ * which is the single source of truth for "ensure this user has a usable
+ * active organization."
+ *
+ * The active-org hint is persisted best-effort so future requests skip the
+ * heal path: if the consumer's adapter throws (e.g. a QueryCtx that can't
+ * write — the most common case where bootstrap succeeded via the read-only
+ * "user already has membership" branch), it is swallowed. The viewer for THIS
+ * request is already correct from `bootstrapped`; the hint is persisted on
+ * the next mutation that triggers self-heal. This avoids forcing every
+ * consumer adapter to implement the same `ctx.db.patch` defensive check.
+ */
 
 async function selfHeal<TUser extends GlueUserMinimum, TAnchor extends GlueAnchorMinimum>(args: {
   ctx: GlueCtx;
@@ -565,23 +578,13 @@ async function selfHeal<TUser extends GlueUserMinimum, TAnchor extends GlueAncho
   });
   if (bootstrapped === null) return null;
 
-  // Persist the active-org hint so future requests skip the heal path.
-  // Best-effort: if the consumer's adapter throws (e.g. a QueryCtx that
-  // can't write — the most common case where bootstrap succeeded via the
-  // read-only "user already has membership" branch), swallow it. The
-  // viewer for THIS request is already correct from `bootstrapped`; the
-  // hint will be persisted on the next mutation that triggers self-heal.
-  // This avoids forcing every consumer adapter to implement the same
-  // ctx.db.patch defensive check.
   try {
     await config.adapters.setActiveOrganization(
       ctx,
       args.user,
       toConsumerId(bootstrapped.convexAuthOrganizationId),
     );
-  } catch {
-    // Intentional no-op — see comment above.
-  }
+  } catch {}
   const refreshed = await config.adapters.findUserByConvexAuthUserId(
     ctx,
     toConsumerId(convexAuthUserId),
@@ -773,17 +776,19 @@ async function ensureAnchor<TUser extends GlueUserMinimum, TAnchor extends GlueA
     toConsumerId(convexAuthOrganizationId),
   );
   if (existing !== null) return;
-  // QueryCtx guard: the consumer's `insertAnchor` adapter would throw a
-  // raw `TypeError: db.insert is not a function` when called from a
-  // read-only context. Short-circuit with the canonical ANCHOR_MISSING
-  // error instead — the next mutation will re-fire self-heal and create
-  // the anchor then. This keeps the consumer's adapter free of the
-  // QueryCtx defensive check and gives callers a stable error contract.
-  //
-  // The bootstrap path triggered this risk on cold starts when the first
-  // request after sign-in was a query (reactive list, dashboard, etc.).
-  // Some consumers both hit it once before this guard landed. See
-  // `docs/migration/truth-migration-playbook.md` § Anchor-must-exist.
+  /*
+   * QueryCtx guard: the consumer's `insertAnchor` adapter would throw a
+   * raw `TypeError: db.insert is not a function` when called from a
+   * read-only context. Short-circuit with the canonical ANCHOR_MISSING
+   * error instead — the next mutation will re-fire self-heal and create
+   * the anchor then. This keeps the consumer's adapter free of the
+   * QueryCtx defensive check and gives callers a stable error contract.
+   *
+   * The bootstrap path triggered this risk on cold starts when the first
+   * request after sign-in was a query (reactive list, dashboard, etc.).
+   * Some consumers both hit it once before this guard landed. See
+   * `docs/migration/truth-migration-playbook.md` § Anchor-must-exist.
+   */
   const dbMaybe = Reflect.get(ctx, "db");
   if (
     typeof dbMaybe !== "object" ||

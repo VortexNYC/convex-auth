@@ -85,7 +85,7 @@ describe("buildTokenUrl", () => {
       templateUrl: "https://app.test/r?t={token}",
       path: "/reset",
     });
-    // encodeURIComponent: space → %20
+    /* encodeURIComponent: space → %20 */
     assert.equal(url, "https://app.test/r?t=abc%20123");
   });
 

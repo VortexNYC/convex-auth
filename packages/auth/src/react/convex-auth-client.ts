@@ -56,9 +56,9 @@ export function useConvexAuthClient() {
   const currentToken = () => actions.token;
 
   const resolveTwoFactorToken = () => actions.twoFactorChallengeToken ?? actions.token;
-  // Cookie mode holds no challenge token — the pending value lives in an
-  // HttpOnly cookie and the proxy substitutes it. `token` is optional on the
-  // verify args precisely so this path can call through without one.
+  /* Cookie mode holds no challenge token — the pending value lives in an
+   * HttpOnly cookie and the proxy substitutes it. `token` is optional on the
+   * verify args precisely so this path can call through without one. */
   const challengeTokenOptional = actions.storageMode === "cookies";
   const twoFactorVerifyArgs = <T extends Record<string, unknown>>(
     args: T,
@@ -293,7 +293,8 @@ export function useConvexAuthClient() {
           if (typeof result.error === "string") {
             return { data: null, error: toError(result.error) };
           }
-          // The enable action returns the session token so verification can proceed.
+          /* The enable action returns the session token so verification
+           * can proceed. */
           actions.setTwoFactorChallengeToken(result.token ?? token);
           return {
             data: {
