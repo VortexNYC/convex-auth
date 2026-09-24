@@ -12,5 +12,6 @@ export default defineMeta({
     "tanstack-start",
     "migrating-from-better-auth",
     "migrating-from-full-component",
+    "v3-migration",
   ],
 });
