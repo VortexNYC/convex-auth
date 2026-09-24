@@ -18,6 +18,7 @@ export const webhook_endpoints = defineTable({
   createdAt: v.number(),
   updatedAt: v.number(),
 })
+  /* eslint-disable-next-line @convex-dev/no-duplicate-indexes -- by_organization serves creation-ordered first-N endpoint lists; by_org_status sorts by status */
   .index("by_organization", ["organizationId"])
   .index("by_status", ["status"])
   .index("by_org_status", ["organizationId", "status"])
@@ -40,6 +41,7 @@ export const webhook_deliveries = defineTable({
   createdAt: v.number(),
   updatedAt: v.number(),
 })
+  /* eslint-disable-next-line @convex-dev/no-duplicate-indexes -- by_endpoint serves creation-ordered first-N delivery lists; by_endpoint_status sorts by status */
   .index("by_endpoint", ["endpointId"])
   .index("by_event", ["eventId"])
   .index("by_endpoint_status", ["endpointId", "status"])

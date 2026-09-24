@@ -16,6 +16,7 @@ export const service_principals = defineTable({
 })
   .index("by_key", ["key"])
   .index("by_status", ["status"])
+  /* eslint-disable-next-line @convex-dev/no-duplicate-indexes -- by_organization serves creation-ordered first-N principal lists; by_organization_status sorts by status */
   .index("by_organization", ["organizationId"])
   .index("by_organization_status", ["organizationId", "status"])
   .index("by_createdBy", ["createdBy"]);

@@ -31,6 +31,7 @@ export const organization_roles = defineTable({
   createdAt: v.number(),
   updatedAt: v.number(),
 })
+  /* eslint-disable-next-line @convex-dev/no-duplicate-indexes -- by_organization serves creation-ordered first-N role lists; by_organization_key sorts by key */
   .index("by_organization", ["organizationId"])
   .index("by_organization_key", ["organizationId", "key"]);
 
@@ -47,8 +48,10 @@ export const organization_members = defineTable({
   createdAt: v.number(),
   updatedAt: v.number(),
 })
+  /* eslint-disable-next-line @convex-dev/no-duplicate-indexes -- by_user serves creation-ordered first-N membership lists; by_user_status sorts by status */
   .index("by_user", ["userId"])
   .index("by_user_status", ["userId", "status"])
+  /* eslint-disable-next-line @convex-dev/no-duplicate-indexes -- by_organization serves creation-ordered first-N member lists; by_org_status sorts by status */
   .index("by_organization", ["organizationId"])
   .index("by_user_organization", ["userId", "organizationId"])
   .index("by_role", ["roleId"])
@@ -79,6 +82,7 @@ export const organization_invitations = defineTable({
   .index("by_token_hash", ["tokenHash"])
   .index("by_email_id", ["emailId"])
   .index("by_email", ["email"])
+  /* eslint-disable-next-line @convex-dev/no-duplicate-indexes -- by_organization serves creation-ordered first-N invitation lists; by_org_status sorts by status */
   .index("by_organization", ["organizationId"])
   .index("by_org_status", ["organizationId", "status"])
   .index("by_role", ["roleId"]);

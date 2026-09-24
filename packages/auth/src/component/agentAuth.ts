@@ -1402,7 +1402,7 @@ async function revokeAgentGrants(
 ): Promise<void> {
   const { page: grants } = await getPage(ctx, {
     table: "agent_capability_grants",
-    index: "by_agent",
+    index: "by_agent_status",
     startIndexKey: [agentId],
     endIndexKey: [agentId],
     absoluteMaxRows: MAX_AGENT_GRANTS + 1,

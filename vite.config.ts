@@ -40,6 +40,19 @@ export default defineConfig({
           "@convex-dev/no-collect-in-query": "error",
           "@convex-dev/no-top-of-hour-crons": "warn",
           "@convex-dev/no-schema-import-cycle": "error",
+          "@convex-dev/no-duplicate-indexes": "error",
+          /*
+           * no-process-env wants the typed `env` object from _generated/server,
+           * which only exists in consumer codegen — this package ships runtime
+           * source that must read deployment env vars via process.env.
+           */
+          "@convex-dev/no-process-env": "off",
+          /*
+           * require-access-control regex-matches calls like requireUser/checkAccess
+           * in public functions; upstream ships it off and this repo enforces
+           * auth inside handlers rather than by wrapper convention.
+           */
+          "@convex-dev/require-access-control": "off",
         },
       },
       {
