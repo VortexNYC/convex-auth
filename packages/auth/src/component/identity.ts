@@ -303,7 +303,9 @@ export const provisionFromIdentity = mutation({
       await Promise.all(
         existingCodes
           .filter((code) => code.consumedAt === undefined)
-          .map((code) => ctx.db.patch(code._id, { consumedAt: now, updatedAt: now })),
+          .map((code) =>
+            ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now, updatedAt: now }),
+          ),
       );
       await ctx.db.insert("authVerificationCodes", {
         userId,
@@ -395,11 +397,11 @@ export const verifyEmail = mutation({
     });
 
     if (identity) {
-      await ctx.db.patch(identity._id, { emailVerified: true, updatedAt: now });
+      await ctx.db.patch("auth_identities", identity._id, { emailVerified: true, updatedAt: now });
     }
 
     await ctx.db.patch("users", code.userId, { emailVerified: true, updatedAt: now });
-    await ctx.db.patch(code._id, { consumedAt: now, updatedAt: now });
+    await ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now, updatedAt: now });
 
     const userRecord = await ctx.db.get("users", code.userId);
     return { success: true, user: userRecord ? toUserReturn(userRecord) : undefined };
@@ -446,8 +448,11 @@ export const resetPassword = mutation({
     }
 
     const writes: Promise<unknown>[] = [
-      ctx.db.patch(code._id, { consumedAt: now, updatedAt: now }),
-      ctx.db.patch(account._id, { credentialHash: args.credentialHash, updatedAt: now }),
+      ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now, updatedAt: now }),
+      ctx.db.patch("authAccounts", account._id, {
+        credentialHash: args.credentialHash,
+        updatedAt: now,
+      }),
     ];
 
     if (args.revokeSessions) {
@@ -461,7 +466,9 @@ export const resetPassword = mutation({
 
       for (const session of sessions) {
         if (session.revokedAt === undefined && session.expiresAt > now) {
-          writes.push(ctx.db.patch(session._id, { revokedAt: now, updatedAt: now }));
+          writes.push(
+            ctx.db.patch("authSessions", session._id, { revokedAt: now, updatedAt: now }),
+          );
         }
       }
     }
@@ -538,7 +545,7 @@ export const changeEmail = mutation({
     });
 
     const writes: Promise<unknown>[] = [
-      ctx.db.patch(code._id, { consumedAt: now, updatedAt: now }),
+      ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now, updatedAt: now }),
       ctx.db.patch("users", user._id, {
         email: normalizedEmail,
         emailVerified: true,
@@ -548,7 +555,7 @@ export const changeEmail = mutation({
 
     if (emailOtpIdentity) {
       writes.push(
-        ctx.db.patch(emailOtpIdentity._id, {
+        ctx.db.patch("auth_identities", emailOtpIdentity._id, {
           subject: normalizedEmail,
           tokenIdentifier: normalizedEmail,
           email: normalizedEmail,
@@ -560,7 +567,7 @@ export const changeEmail = mutation({
 
     if (passwordIdentity) {
       writes.push(
-        ctx.db.patch(passwordIdentity._id, {
+        ctx.db.patch("auth_identities", passwordIdentity._id, {
           email: normalizedEmail,
           emailVerified: true,
           updatedAt: now,

@@ -106,7 +106,7 @@ export const consumeRefreshToken = mutation({
     if (!token || token.revokedAt || token.expiresAt <= now) {
       return null;
     }
-    await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
+    await ctx.db.patch("authRefreshTokens", token._id, { revokedAt: now, updatedAt: now });
     return { ...token, revokedAt: now, updatedAt: now };
   },
 });
@@ -120,7 +120,7 @@ export const revokeRefreshTokensForSession = mutation({
     let revoked = 0;
     for (const token of tokens) {
       if (!token.revokedAt && token.expiresAt > now) {
-        await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
+        await ctx.db.patch("authRefreshTokens", token._id, { revokedAt: now, updatedAt: now });
         revoked++;
       }
     }
@@ -137,7 +137,7 @@ export const revokeRefreshTokensForUser = mutation({
     let revoked = 0;
     for (const token of tokens) {
       if (!token.revokedAt && token.expiresAt > now) {
-        await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
+        await ctx.db.patch("authRefreshTokens", token._id, { revokedAt: now, updatedAt: now });
         revoked++;
       }
     }
@@ -157,7 +157,7 @@ export const cleanupExpiredRefreshTokens = mutation({
       .query("authRefreshTokens")
       .withIndex("by_expires_at", (q) => q.lt("expiresAt", now))
       .take(batchSize);
-    await Promise.all(expired.map((token) => ctx.db.delete(token._id)));
+    await Promise.all(expired.map((token) => ctx.db.delete("authRefreshTokens", token._id)));
     return expired.length;
   },
 });

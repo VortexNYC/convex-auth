@@ -508,7 +508,7 @@ describe("native sessions", () => {
         .query("authRefreshTokens")
         .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
         .unique();
-      await ctx.db.patch(spent!._id, { rotatedAt: now - 60_000 });
+      await ctx.db.patch("authRefreshTokens", spent!._id, { rotatedAt: now - 60_000 });
     });
 
     const replay = await t.mutation(api.native.sessions.rotateSession, {
@@ -767,7 +767,7 @@ describe("native sessions", () => {
         .query("authRefreshTokens")
         .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
         .unique();
-      await ctx.db.patch(spent!._id, { rotatedAt: now - 60_000 });
+      await ctx.db.patch("authRefreshTokens", spent!._id, { rotatedAt: now - 60_000 });
     });
     await t.mutation(api.native.sessions.rotateSession, {
       oldRefreshTokenHash: "hash-1",
@@ -947,7 +947,7 @@ describe("native sessions", () => {
         .query("authRefreshTokens")
         .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
         .unique();
-      await ctx.db.patch(spent!._id, { graceRedemptions: 8 });
+      await ctx.db.patch("authRefreshTokens", spent!._id, { graceRedemptions: 8 });
     });
 
     const overCap = await t.mutation(api.native.sessions.convergeSession, {
@@ -1000,7 +1000,7 @@ describe("native sessions", () => {
         .query("authSessions")
         .withIndex("by_session_id", (q) => q.eq("sessionId", "session-2"))
         .unique();
-      await ctx.db.patch(winner!._id, { revokedAt: now });
+      await ctx.db.patch("authSessions", winner!._id, { revokedAt: now });
     });
 
     const result = await t.mutation(api.native.sessions.convergeSession, {
@@ -1103,7 +1103,7 @@ describe("native sessions", () => {
         .query("authRefreshTokens")
         .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
         .unique();
-      await ctx.db.patch(spent!._id, { graceRedemptions: 8 });
+      await ctx.db.patch("authRefreshTokens", spent!._id, { graceRedemptions: 8 });
     });
 
     const hint = await t.mutation(api.native.sessions.rotateSession, {
@@ -1149,7 +1149,7 @@ describe("native sessions", () => {
         .query("authRefreshTokens")
         .withIndex("by_token_hash", (q) => q.eq("tokenHash", "hash-1"))
         .unique();
-      await ctx.db.patch(token!._id, { revokedAt: now });
+      await ctx.db.patch("authRefreshTokens", token!._id, { revokedAt: now });
     });
 
     const result = await t.mutation(api.native.sessions.convergeSession, {

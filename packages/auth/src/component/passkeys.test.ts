@@ -437,7 +437,7 @@ describe("passkeys", () => {
         .query("auth_passkeys")
         .withIndex("by_credentialId", (q) => q.eq("credentialId", "existing-credential"))
         .first();
-      await ctx.db.patch(pk!._id, { revokedAt: 1 });
+      await ctx.db.patch("auth_passkeys", pk!._id, { revokedAt: 1 });
     });
 
     const options = await t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {

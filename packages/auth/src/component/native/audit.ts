@@ -115,7 +115,7 @@ export const cleanupAuthAuditEvents = mutation({
       .query("auth_audit_events")
       .withIndex("by_created_at", (q) => q.lt("createdAt", before))
       .take(batchSize);
-    await Promise.all(stale.map((event) => ctx.db.delete(event._id)));
+    await Promise.all(stale.map((event) => ctx.db.delete("auth_audit_events", event._id)));
     return stale.length;
   },
 });

@@ -34,6 +34,8 @@ export default defineConfig({
         rules: {
           "@convex-dev/no-old-registered-function-syntax": "error",
           "@convex-dev/require-args-validator": "error",
+          "@convex-dev/explicit-table-ids": "error",
+          "@convex-dev/import-wrong-runtime": "error",
           "@convex-dev/no-filter-in-query": "error",
           "@convex-dev/no-collect-in-query": "error",
           "@convex-dev/no-top-of-hour-crons": "warn",

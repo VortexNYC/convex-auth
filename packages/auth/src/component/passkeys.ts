@@ -24,7 +24,7 @@ async function deleteExpiredChallenges(ctx: { db: MutationCtx["db"] }, now: numb
     .query("auth_passkey_challenges")
     .withIndex("by_expiresAt", (q) => q.lt("expiresAt", now))
     .take(EXPIRED_CHALLENGE_BATCH);
-  await Promise.all(expired.map((row) => ctx.db.delete(row._id)));
+  await Promise.all(expired.map((row) => ctx.db.delete("auth_passkey_challenges", row._id)));
 }
 
 async function getUserPasskeys(ctx: { db: QueryCtx["db"] }, userId: string) {
@@ -94,12 +94,12 @@ async function revokePasskeySessions(
   }
   for (const session of sessionsToRevoke.values()) {
     if (!session.revokedAt) {
-      await ctx.db.patch(session._id, { revokedAt: now, updatedAt: now });
+      await ctx.db.patch("authSessions", session._id, { revokedAt: now, updatedAt: now });
     }
   }
   for (const token of tokensToRevoke.values()) {
     if (!token.revokedAt) {
-      await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
+      await ctx.db.patch("authRefreshTokens", token._id, { revokedAt: now, updatedAt: now });
     }
   }
 
@@ -112,7 +112,7 @@ async function revokePasskeySessions(
   });
   for (const code of pendingCodes) {
     if (code.consumedAt === undefined && code.credentialId === passkey.credentialId) {
-      await ctx.db.patch(code._id, { consumedAt: now, updatedAt: now });
+      await ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now, updatedAt: now });
     }
   }
   return sessionsToRevoke.size + tokensToRevoke.size;
@@ -253,7 +253,7 @@ export const verifyPasskeyRegistration = mutation({
       throw new Error("Challenge does not belong to this user");
     }
     if (challengeRecord.expiresAt < now) {
-      await ctx.db.delete(challengeRecord._id);
+      await ctx.db.delete("auth_passkey_challenges", challengeRecord._id);
       throw new Error("Registration challenge has expired");
     }
 
@@ -291,7 +291,7 @@ export const verifyPasskeyRegistration = mutation({
       throw new Error("Passkey registration could not be verified");
     }
 
-    await ctx.db.delete(challengeRecord._id);
+    await ctx.db.delete("auth_passkey_challenges", challengeRecord._id);
 
     const { registrationInfo } = verification;
     const { credential } = registrationInfo;
@@ -391,7 +391,7 @@ export const revokePasskey = mutation({
     }
 
     const now = Date.now();
-    await ctx.db.patch(passkey._id, { revokedAt: now });
+    await ctx.db.patch("auth_passkeys", passkey._id, { revokedAt: now });
     await revokePasskeySessions(ctx, passkey, now);
     await ctx.db.insert("auth_audit_events", {
       actorUserId: passkey.userId,
@@ -431,7 +431,7 @@ export const renamePasskey = mutation({
     if (!name) {
       throw new Error("Passkey name cannot be empty");
     }
-    await ctx.db.patch(passkey._id, { name });
+    await ctx.db.patch("auth_passkeys", passkey._id, { name });
     await ctx.db.insert("auth_audit_events", {
       actorUserId: args.userId,
       actorType: "user",
@@ -579,7 +579,7 @@ export const verifyPasskeyAuthentication = mutation({
       throw new Error("Invalid or unknown authentication challenge");
     }
     if (challengeRecord.expiresAt < now) {
-      await ctx.db.delete(challengeRecord._id);
+      await ctx.db.delete("auth_passkey_challenges", challengeRecord._id);
       throw new Error("Authentication challenge has expired");
     }
 
@@ -619,7 +619,7 @@ export const verifyPasskeyAuthentication = mutation({
       });
     } catch (err) {
       if (isCounterRegressionError(err)) {
-        await ctx.db.patch(passkey._id, { revokedAt: now });
+        await ctx.db.patch("auth_passkeys", passkey._id, { revokedAt: now });
         await revokePasskeySessions(ctx, passkey, now);
         await ctx.db.insert("auth_audit_events", {
           actorUserId: passkey.userId,
@@ -640,11 +640,11 @@ export const verifyPasskeyAuthentication = mutation({
       throw new Error("Passkey authentication could not be verified");
     }
 
-    await ctx.db.delete(challengeRecord._id);
+    await ctx.db.delete("auth_passkey_challenges", challengeRecord._id);
 
     const { authenticationInfo } = verification;
 
-    await ctx.db.patch(passkey._id, {
+    await ctx.db.patch("auth_passkeys", passkey._id, {
       counter: authenticationInfo.newCounter,
       lastUsedAt: now,
       deviceType: authenticationInfo.credentialDeviceType,
@@ -669,7 +669,7 @@ export const verifyPasskeyAuthentication = mutation({
       await Promise.all(
         pendingCodes.map((code) =>
           code.consumedAt === undefined
-            ? ctx.db.patch(code._id, { consumedAt: now })
+            ? ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now })
             : Promise.resolve(),
         ),
       );

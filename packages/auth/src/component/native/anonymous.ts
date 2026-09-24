@@ -66,14 +66,14 @@ export const linkAnonymousUser = mutation({
     };
     if (args.name !== undefined) patch.name = args.name;
     if (args.image !== undefined) patch.image = args.image;
-    await ctx.db.patch(args.userId, patch);
+    await ctx.db.patch("users", args.userId, patch);
 
     for await (const identity of ctx.db
       .query("auth_identities")
       .withIndex("by_user_provider_issuer", (q) =>
         q.eq("userId", args.userId).eq("provider", "anonymous").eq("issuer", "native"),
       )) {
-      await ctx.db.delete(identity._id);
+      await ctx.db.delete("auth_identities", identity._id);
     }
 
     return { success: true };

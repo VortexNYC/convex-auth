@@ -190,7 +190,7 @@ export const revokeAllSessionsForUser = mutation({
       .query("authSessions")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))) {
       if (session.revokedAt === undefined) {
-        await ctx.db.patch(session._id, { revokedAt: now, updatedAt: now });
+        await ctx.db.patch("authSessions", session._id, { revokedAt: now, updatedAt: now });
         count++;
       }
     }
@@ -199,7 +199,7 @@ export const revokeAllSessionsForUser = mutation({
       .query("authRefreshTokens")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))) {
       if (token.revokedAt === undefined) {
-        await ctx.db.patch(token._id, { revokedAt: now, updatedAt: now });
+        await ctx.db.patch("authRefreshTokens", token._id, { revokedAt: now, updatedAt: now });
       }
     }
 
