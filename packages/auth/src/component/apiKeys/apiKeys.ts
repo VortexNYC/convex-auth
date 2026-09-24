@@ -747,6 +747,9 @@ export const verifyApiKey = mutation({
  * Both are evaluated BEFORE the key is accepted, and the resulting counters are written
  * in the same patch that records the use -- so a rejected request never counts as a
  * successful one, and a successful one can never be double counted.
+ *
+ * The quota refills before it is checked, so a key whose interval elapsed is
+ * usable on this very request rather than only on the next one.
  */
 function evaluateApiKeyLimits(
   key: Doc<"api_keys">,
@@ -820,6 +823,7 @@ export const issueApiKey = mutation({
     /** Brand segment, e.g. "vb" produces vb_test_… / vb_live_… */
     keyBrand: v.optional(v.string()),
     scopes: v.optional(v.array(v.string())),
+    allowedIpRanges: v.optional(v.union(v.array(v.string()), v.null())),
     expiresAt: v.optional(v.number()),
     rateLimitEnabled: v.optional(v.boolean()),
     rateLimitTimeWindowMs: v.optional(v.number()),
@@ -862,6 +866,7 @@ export const issueApiKey = mutation({
       fixedOrganizationId: args.organizationId,
       scopes: normalizeStringArray(args.scopes ?? []),
       status: "active" as const,
+      allowedIpRanges: normalizeAllowedIpRanges(args.allowedIpRanges),
       expiresAt: args.expiresAt,
       rateLimitEnabled: args.rateLimitEnabled,
       rateLimitTimeWindowMs: args.rateLimitTimeWindowMs,
@@ -885,6 +890,10 @@ export const issueApiKey = mutation({
  * layout is the auth contract: the first 12 characters are the indexed lookup prefix,
  * so issuance and `verifyApiKey` must derive it identically or an issued key can never
  * be found again.
+ *
+ * A prefix collision means two live keys would share a lookup prefix and one
+ * could never be verified. 24 random bytes make it vanishingly unlikely, which
+ * is exactly why it must fail loudly rather than be assumed away.
  */
 async function generateIssuedApiKeyMaterial(
   ctx: DbCtx,
@@ -922,6 +931,7 @@ export const issueServiceOwnedApiKey = mutation({
     /** Brand segment, e.g. "vb" produces vb_test_… / vb_live_… */
     keyBrand: v.optional(v.string()),
     scopes: v.optional(v.array(v.string())),
+    allowedIpRanges: v.optional(v.union(v.array(v.string()), v.null())),
     permissions: v.optional(v.union(v.array(v.string()), v.null())),
     expiresAt: v.optional(v.number()),
     rateLimitEnabled: v.optional(v.boolean()),
@@ -979,6 +989,7 @@ export const issueServiceOwnedApiKey = mutation({
       permissions,
       scopes: normalizeStringArray(args.scopes ?? []),
       status: "active" as const,
+      allowedIpRanges: normalizeAllowedIpRanges(args.allowedIpRanges),
       expiresAt: args.expiresAt,
       rateLimitEnabled: args.rateLimitEnabled,
       rateLimitTimeWindowMs: args.rateLimitTimeWindowMs,
