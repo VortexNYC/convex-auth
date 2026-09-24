@@ -44,23 +44,26 @@ export const {
 
 These are always present when `emailAndPassword` is enabled:
 
-| Action                         | Args (summary)                                   | Returns                                              |
-| ------------------------------ | ------------------------------------------------ | ---------------------------------------------------- |
-| `signUp`                       | `{ email, password, name?, rememberMe? }`        | `{ token, refreshToken, user, userId, identityId? }` |
-| `signIn`                       | `{ email, password, rememberMe?, callbackURL? }` | Session or two-factor challenge.                     |
-| `signOut`                      | `{ callbackURL? }`                               | `{ success, redirect?, url? }`                       |
-| `updateSession`                | `{ refreshToken }`                               | Rotates the session and returns the new pair.        |
-| `sendEmailVerification`        | `{ email, callbackURL? }`                        | `EmailSendResult`.                                   |
-| `verifyEmail`                  | `{ token }`                                      | `NativeAuthVerifyResult`.                            |
-| `sendPasswordReset`            | `{ email, redirectTo? }`                         | `EmailSendResult`.                                   |
-| `resetPassword`                | `{ token, newPassword }`                         | `{ status, reason? }`.                               |
-| `verifyPassword`               | `{ token, password }`                            | `{ success }`.                                       |
-| `changeEmail`                  | `{ newEmail, callbackURL? }`                     | `EmailSendResult`.                                   |
-| `twoFactorEnable`              | `{ token, password, issuer? }`                   | `{ totpURI, backupCodes }` or `{ error }`.           |
-| `twoFactorVerifyTOTP`          | `{ token, code }`                                | `{ token: string \| null }`.                         |
-| `twoFactorVerifyBackupCode`    | `{ token, code }`                                | `{ token: string \| null }`.                         |
-| `twoFactorDisable`             | `{ token, password }`                            | `{ success }`.                                       |
-| `twoFactorGenerateBackupCodes` | `{ token }`                                      | `{ backupCodes }`.                                   |
+| Action                         | Args (summary)                                                                | Returns                                                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `signUp`                       | `{ email, password, name, image?, callbackURL?, rememberMe?, captchaToken? }` | Session (`nativeAuthSessionValidator`).                                                                   |
+| `signIn`                       | `{ email, password, callbackURL?, rememberMe?, trustedDeviceToken? }`         | Session or two-factor challenge.                                                                          |
+| `signOut`                      | `{ token, callbackURL? }`                                                     | `{ success, redirect?, url? }`                                                                            |
+| `updateSession`                | `{ refreshToken }`                                                            | Rotates the session and returns the new pair.                                                             |
+| `sendEmailVerification`        | `{ email, callbackURL? }`                                                     | `EmailSendResult` (`{ status, reason?, emailId? }`).                                                      |
+| `verifyEmail`                  | `{ token }`                                                                   | `{ success, reason? }`.                                                                                   |
+| `sendPasswordReset`            | `{ email, redirectTo?, captchaToken? }`                                       | `EmailSendResult`.                                                                                        |
+| `resetPassword`                | `{ token, newPassword }`                                                      | `{ status, reason? }`.                                                                                    |
+| `verifyPassword`               | `{ token, password }`                                                         | `{ success }`.                                                                                            |
+| `updateUser`                   | `{ token, name?, image?, metadataJson? }`                                     | `{ success, error? }`.                                                                                    |
+| `listSessions`                 | `{ token }`                                                                   | Active sessions (`{ id, isCurrent, userId, expiresAt, ipAddress?, userAgent?, createdAt, updatedAt }[]`). |
+| `revokeSession`                | `{ token, sessionId }`                                                        | `{ success }` — revokes the session's rotation family.                                                    |
+| `revokeOtherSessions`          | `{ token }`                                                                   | `{ success }` — revokes all sessions except the current family.                                           |
+| `twoFactorEnable`              | `{ token, password, issuer? }`                                                | `{ token?, totpURI?, backupCodes?, error? }`.                                                             |
+| `twoFactorVerifyTOTP`          | `{ token, code, trustDevice? }`                                               | Session (`nativeAuthSessionValidator`).                                                                   |
+| `twoFactorVerifyBackupCode`    | `{ token, code, trustDevice? }`                                               | Session (`nativeAuthSessionValidator`).                                                                   |
+| `twoFactorDisable`             | `{ token, password }`                                                         | `{ success }`.                                                                                            |
+| `twoFactorGenerateBackupCodes` | `{ token, password }`                                                         | `{ backupCodes, error? }`.                                                                                |
 
 `signIn` returns a session by default. If the user has 2FA enabled, it returns a `twoFactorChallengeToken` instead.
 
@@ -68,12 +71,14 @@ These are always present when `emailAndPassword` is enabled:
 
 Present when `oauth` is configured:
 
-| Action               | Args                                                 | Returns                            |
-| -------------------- | ---------------------------------------------------- | ---------------------------------- |
-| `signInWithRedirect` | `{ provider, callbackURL?, errorURL?, newUserURL? }` | `{ url }` to redirect the browser. |
-| `oauthCallback`      | `{ provider, code, state? }`                         | Session for server-side use.       |
+| Action               | Args                                                                                          | Returns                                                  |
+| -------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `signInWithRedirect` | `{ provider, callbackURL?, errorURL?, newUserURL?, requestSignUp?, link?, landingVerifier? }` | `{ url }` to redirect the browser.                       |
+| `callback`           | `{ provider, code, state, linkingUserId?, landingVerifier? }`                                 | Session, or `{ error, errorDescription?, redirectUrl }`. |
 
-The `oauthCallback` action is also exposed as an HTTP route by `auth.addHttpRoutes(http)`. The browser usually completes OAuth through the HTTP callback rather than calling `oauthCallback` from the client.
+The `callback` action is also exposed as an HTTP route by `auth.addHttpRoutes(http)`. The browser usually completes OAuth through the HTTP callback rather than calling `callback` from the client.
+
+Email change is not a separate action — send a change OTP with `sendVerificationOtp({ email, type: "change-email" })` when `emailOtp` is configured.
 
 ## Magic link actions
 

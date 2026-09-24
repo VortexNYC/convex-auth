@@ -184,3 +184,28 @@ green (includes site/changelog). CI pending on `8bab3b9`.
 - Issue board: 15 open, all real work or explicit gates. Labels added:
   security/bug/upstream/debt/next-major/adapter/follow-up; #371 pinned
   roadmap with build order.
+
+## Docs drift audit (2026-09-24) — PR #377 `blume/docs-refresh-2026-09-24`
+
+- **#376 merged** into main as `d4829d8` (squash). Local `git checkout main`
+  still blocked by stale CI worktree `/private/tmp/ci-main-node20` — work
+  from `origin/main` / new branches instead.
+- Audit found: no user-facing setup docs for either shipped SSR adapter,
+  and `server-api.mdx` was missing 4 actions + had drifted signatures.
+- Added `nextjs.mdx` + `tanstack-start.mdx` under clients-and-migration
+  (wiring mirrored verbatim from examples), added both to meta.ts.
+- `server-api.mdx`: added `updateUser`, `listSessions`, `revokeSession`,
+  `revokeOtherSessions`; corrected `signUp` (name required), `signOut`
+  (token required), OAuth `callback` (not `oauthCallback`, state
+  required), 2FA verify returns (full session), `twoFactorGenerateBackupCodes`
+  (password required); removed `changeEmail` row — no such action exists
+  (email change = `sendVerificationOtp({ type: "change-email" })`).
+- Fixed pre-existing broken links: oauth.md ssr-contract ref (angle-bracket
+  form never resolved), quickstart `./examples/server` → `./examples#server-with-hono`.
+- Fixed wrong claims: oauth.md localhost callback fallback (actually
+  `AUTH_REDIRECT_URL ?? CONVEX_SITE_URL`, throws if unset);
+  requireLandingVerifier in cookie mode lives on middleware, not provider;
+  quickstart provider-wrapping wording.
+- `excludeFamilyId` deliberately not documented — internal component arg.
+- Verified: `blume build` clean, `blume validate` 0 broken links (was 6),
+  `pnpm run check` clean, `docs:smoke` passed. Cursor review pass applied.
