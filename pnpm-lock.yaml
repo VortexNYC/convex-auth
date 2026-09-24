@@ -490,8 +490,8 @@ importers:
         specifier: ^9.5.1
         version: 9.5.1
       path-to-regexp:
-        specifier: ^6.3.0
-        version: 6.3.0
+        specifier: ^8.4.2
+        version: 8.4.2
       react-native:
         specifier: ^0.86.0
         version: 0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.8)
