@@ -23,6 +23,18 @@ async function requireSuperAdmin(ctx: QueryCtx | MutationCtx) {
   }
 }
 
+async function checkUserIdentity(ctx: QueryCtx | MutationCtx) {
+  return await ctx.auth.getUserIdentity();
+}
+
+async function requireUser(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Not authenticated");
+  }
+  return identity;
+}
+
 const adminUserValidator = v.object({
   _id: v.string(),
   email: v.optional(v.string()),
@@ -338,10 +350,7 @@ export const claimSuperAdmin = mutation({
   args: {},
   returns: v.object({ userId: v.string() }),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    const identity = await requireUser(ctx);
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, {
       userId: identity.subject as Id<"users">,
     });
@@ -370,6 +379,8 @@ export const getImpersonationState = query({
     userId: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
+    const identity = await checkUserIdentity(ctx);
+    if (!identity) return { impersonatedBy: undefined, userId: undefined };
     const result = await ctx.runQuery(components.convexAuth.admin.sessions.getImpersonationState, {
       sessionId: args.sessionId,
     });
@@ -384,6 +395,7 @@ export const stopImpersonation = mutation({
   args: { sessionId: v.string() },
   returns: v.object({ revoked: v.boolean() }),
   handler: async (ctx, args) => {
+    await requireUser(ctx);
     const result = await ctx.runMutation(components.convexAuth.admin.sessions.stopImpersonation, {
       sessionId: args.sessionId,
     });

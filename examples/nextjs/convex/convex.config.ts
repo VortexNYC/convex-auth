@@ -6,6 +6,15 @@ const app = defineApp({
   env: {
     JWT_PRIVATE_KEY: v.string(),
     JWKS: v.string(),
+    ALLOW_EMAIL_TOKEN_FALLBACK: v.optional(v.string()),
+    DISCORD_CLIENT_ID: v.optional(v.string()),
+    DISCORD_CLIENT_SECRET: v.optional(v.string()),
+    EMAIL_FROM_ADDRESS: v.optional(v.string()),
+    GITHUB_CLIENT_ID: v.optional(v.string()),
+    GITHUB_CLIENT_SECRET: v.optional(v.string()),
+    GOOGLE_CLIENT_ID: v.optional(v.string()),
+    GOOGLE_CLIENT_SECRET: v.optional(v.string()),
+    SITE_URL: v.optional(v.string()),
   },
 });
 

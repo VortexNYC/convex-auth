@@ -1,7 +1,7 @@
-import { action, mutation, query, type QueryCtx } from "./_generated/server";
+import { internalAction, mutation, query, type QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { processConvexWebhookDelivery } from "@vortex-api/convex-auth/convex";
-import { api, components } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 
 const webhookStatusValidator = v.union(
   v.literal("active"),
@@ -86,7 +86,7 @@ const webhookDeliveryPageValidator = v.object({
   hasMore: v.boolean(),
 });
 
-async function getActiveOrganizationId(
+async function checkActiveOrganizationId(
   ctx: Pick<QueryCtx, "auth" | "runQuery">,
 ): Promise<string | null> {
   const identity = await ctx.auth.getUserIdentity();
@@ -97,10 +97,16 @@ async function getActiveOrganizationId(
   return user?.activeOrganizationId ?? null;
 }
 
+async function requireUser(ctx: Pick<QueryCtx, "auth">) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("UNAUTHORIZED");
+  return identity;
+}
+
 async function requireActiveOrganizationId(
   ctx: Pick<QueryCtx, "auth" | "runQuery">,
 ): Promise<string> {
-  const organizationId = await getActiveOrganizationId(ctx);
+  const organizationId = await checkActiveOrganizationId(ctx);
   if (!organizationId) throw new Error("No active workspace");
   return organizationId;
 }
@@ -167,7 +173,7 @@ export const listEndpoints = query({
   args: {},
   returns: v.array(webhookEndpointListItemValidator),
   handler: async (ctx) => {
-    const organizationId = await getActiveOrganizationId(ctx);
+    const organizationId = await checkActiveOrganizationId(ctx);
     if (!organizationId) return [];
     const endpoints = await ctx.runQuery(
       components.convexAuth.webhooks.listWebhookEndpointsByOrganization,
@@ -195,8 +201,7 @@ export const createEndpoint = mutation({
   },
   returns: v.object({ secret: v.string() }),
   handler: async (ctx, { url, description, events }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    const identity = await requireUser(ctx);
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
     const organizationId = user?.activeOrganizationId;
@@ -310,8 +315,7 @@ export const sendTest = mutation({
   args: { endpointId: v.string(), requestId: v.optional(v.string()) },
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, { endpointId, requestId }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    await requireUser(ctx);
     await ctx.runMutation(components.convexAuth.webhooks.createWebhookDelivery, {
       endpointId,
       eventId: requestId ?? `test-${Date.now()}`,
@@ -332,7 +336,7 @@ export const listRecentDeliveries = query({
   },
   returns: webhookDeliveryPageValidator,
   handler: async (ctx, { endpointId, eventType, status, limit, offset }) => {
-    const organizationId = await getActiveOrganizationId(ctx);
+    const organizationId = await checkActiveOrganizationId(ctx);
     if (!organizationId) return emptyDeliveryPage(limit ?? 10, offset ?? 0);
 
     const resolvedLimit = limit ?? 10;
@@ -376,7 +380,7 @@ export const listExhaustedDeliveries = query({
   args: { limit: v.optional(v.number()) },
   returns: v.array(webhookDeliveryItemValidator),
   handler: async (ctx, { limit }) => {
-    const organizationId = await getActiveOrganizationId(ctx);
+    const organizationId = await checkActiveOrganizationId(ctx);
     if (!organizationId) return [];
 
     const resolvedLimit = limit ?? 10;
@@ -412,7 +416,7 @@ export const retryDelivery = mutation({
     const endpoint = await ctx.runQuery(components.convexAuth.webhooks.getWebhookEndpoint, {
       endpointId: delivery.endpointId,
     });
-    if (!endpoint || String(endpoint.organizationId) !== (await getActiveOrganizationId(ctx))) {
+    if (!endpoint || String(endpoint.organizationId) !== (await checkActiveOrganizationId(ctx))) {
       throw new Error("Webhook endpoint not found");
     }
     const now = Date.now();
@@ -436,14 +440,15 @@ export const triggerProcessing = mutation({
   args: { limit: v.optional(v.number()) },
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, { limit }) => {
-    await ctx.scheduler.runAfter(0, api.webhooks.processWebhookQueue, {
+    await requireUser(ctx);
+    await ctx.scheduler.runAfter(0, internal.webhooks.processWebhookQueue, {
       limit: limit ?? 10,
     });
     return { ok: true as const };
   },
 });
 
-export const processWebhookQueue = action({
+export const processWebhookQueue = internalAction({
   args: { limit: v.number() },
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, { limit }) => {

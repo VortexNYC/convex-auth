@@ -1,9 +1,10 @@
 import { components } from "./_generated/api";
 import { convexAuth, type EmailDraft } from "@vortex-api/convex-auth/convex";
+import { env } from "./_generated/server";
 
 const siteUrl =
-  process.env.CONVEX_SITE_URL?.replace(/\/$/, "") ??
-  process.env.SITE_URL?.replace(/\/$/, "") ??
+  env.CONVEX_SITE_URL?.replace(/\/$/, "") ??
+  env.SITE_URL?.replace(/\/$/, "") ??
   "http://localhost:3000";
 
 // In a real app, sendEmail should call Resend/Postmark/SES/etc.
@@ -28,7 +29,7 @@ export const auth = convexAuth({
     // is passed as the OAuth callbackURL).
     trustedOrigins: [siteUrl, "http://localhost:5173", "http://localhost:5174"],
     email: {
-      from: process.env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
+      from: env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
       appOrigin: siteUrl,
       sendEmail: async (draft) => {
         const token = extractTokenFromEmailDraft(draft);
@@ -44,16 +45,16 @@ export const auth = convexAuth({
   },
   oauth: {
     github: {
-      clientId: process.env.GITHUB_CLIENT_ID ?? "",
-      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
+      clientId: env.GITHUB_CLIENT_ID ?? "",
+      clientSecret: env.GITHUB_CLIENT_SECRET ?? "",
     },
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      clientId: env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: env.GOOGLE_CLIENT_SECRET ?? "",
     },
     discord: {
-      clientId: process.env.DISCORD_CLIENT_ID ?? "",
-      clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
+      clientId: env.DISCORD_CLIENT_ID ?? "",
+      clientSecret: env.DISCORD_CLIENT_SECRET ?? "",
     },
   },
 });

@@ -1,8 +1,8 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { internalQuery } from "./_generated/server";
 import { components } from "./_generated/api";
 
-export const migratedUser = query({
+export const migratedUser = internalQuery({
   args: { email: v.string(), accountIdField: v.optional(v.string()) },
   returns: v.any(),
   handler: async (ctx, { email, accountIdField }) => {

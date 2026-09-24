@@ -1,8 +1,20 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, type QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { components } from "./_generated/api";
 
 const dayInMs = 24 * 60 * 60 * 1000;
+
+type AuthCtx = Pick<QueryCtx, "auth">;
+
+async function checkUserIdentity(ctx: AuthCtx) {
+  return await ctx.auth.getUserIdentity();
+}
+
+async function requireUser(ctx: AuthCtx) {
+  const identity = await checkUserIdentity(ctx);
+  if (!identity) throw new Error("UNAUTHORIZED");
+  return identity;
+}
 
 function parseAllowedIpRanges(value: string): string[] {
   return value
@@ -57,7 +69,7 @@ export const listMyApiKeys = query({
   args: {},
   returns: v.array(apiKeyListItemValidator),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await checkUserIdentity(ctx);
     if (!identity) return [];
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
@@ -107,8 +119,7 @@ export const createApiKey = mutation({
   },
   returns: createdApiKeyValidator,
   handler: async (ctx, { name, scopes, ipAllowlist, expiresInDays }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    const identity = await requireUser(ctx);
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
     const organizationId = user?.activeOrganizationId;
@@ -137,8 +148,7 @@ export const revokeApiKey = mutation({
   },
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, { apiKeyId }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    const identity = await requireUser(ctx);
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
     const organizationId = user?.activeOrganizationId;
@@ -157,8 +167,7 @@ export const rotateApiKey = mutation({
   },
   returns: createdApiKeyValidator,
   handler: async (ctx, { apiKeyId }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    const identity = await requireUser(ctx);
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
     const organizationId = user?.activeOrganizationId;

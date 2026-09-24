@@ -1,4 +1,5 @@
 import { components } from "./_generated/api";
+import { env } from "./_generated/server";
 import {
   convexAuth,
   createResendEmailOtpSender,
@@ -7,12 +8,12 @@ import {
 } from "@vortex-api/convex-auth/convex";
 
 const siteUrl =
-  process.env.CONVEX_SITE_URL?.replace(/\/$/, "") ??
-  process.env.SITE_URL?.replace(/\/$/, "") ??
+  env.CONVEX_SITE_URL?.replace(/\/$/, "") ??
+  env.SITE_URL?.replace(/\/$/, "") ??
   "http://localhost:3000";
 
-const resendApiKey = process.env.RESEND_API_KEY;
-const fromAddress = process.env.EMAIL_FROM_ADDRESS ?? "auth@example.com";
+const resendApiKey = env.RESEND_API_KEY;
+const fromAddress = env.EMAIL_FROM_ADDRESS ?? "auth@example.com";
 const useResend = resendApiKey != null && resendApiKey !== "";
 const resendEmailSender = useResend
   ? createResendEmailSender({ apiKey: resendApiKey, from: fromAddress })
@@ -37,7 +38,7 @@ function extractTokenFromEmailDraft(draft: EmailDraft): string | null {
 }
 
 function fallbackTokenOrThrow(token: string | null, label: string): string {
-  if (process.env.ALLOW_EMAIL_TOKEN_FALLBACK === "true" && token != null) {
+  if (env.ALLOW_EMAIL_TOKEN_FALLBACK === "true" && token != null) {
     return token;
   }
   throw new Error(
@@ -67,16 +68,16 @@ export const auth = convexAuth({
   },
   oauth: {
     github: {
-      clientId: process.env.GITHUB_CLIENT_ID ?? "",
-      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
+      clientId: env.GITHUB_CLIENT_ID ?? "",
+      clientSecret: env.GITHUB_CLIENT_SECRET ?? "",
     },
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      clientId: env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: env.GOOGLE_CLIENT_SECRET ?? "",
     },
     discord: {
-      clientId: process.env.DISCORD_CLIENT_ID ?? "",
-      clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
+      clientId: env.DISCORD_CLIENT_ID ?? "",
+      clientSecret: env.DISCORD_CLIENT_SECRET ?? "",
     },
   },
   magicLink: {

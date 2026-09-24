@@ -1,9 +1,10 @@
 import { components } from "./_generated/api";
 import { convexAuth, type EmailDraft } from "@vortex-api/convex-auth/convex";
+import { env } from "./_generated/server";
 
 const siteUrl =
-  process.env.CONVEX_SITE_URL?.replace(/\/$/, "") ??
-  process.env.SITE_URL?.replace(/\/$/, "") ??
+  env.CONVEX_SITE_URL?.replace(/\/$/, "") ??
+  env.SITE_URL?.replace(/\/$/, "") ??
   "http://localhost:3200";
 
 export const auth = convexAuth({
@@ -12,7 +13,7 @@ export const auth = convexAuth({
     enabled: true,
     checkBreach: true,
     email: {
-      from: process.env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
+      from: env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
       appOrigin: siteUrl,
       // Local demo: log verification emails instead of sending them.
       sendEmail: async (draft: EmailDraft) => {

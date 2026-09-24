@@ -1,7 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { components } from "./_generated/api";
 import { v } from "convex/values";
-import { requireMatchingUserId } from "./authz";
+import { requireCaller, requireMatchingUserId } from "./authz";
 
 export const list = query({
   args: { userId: v.string() },
@@ -16,10 +16,7 @@ export const list = query({
 export const revoke = mutation({
   args: { sessionId: v.string() },
   handler: async (ctx, args) => {
-    const callerId = (await ctx.auth.getUserIdentity())?.subject;
-    if (callerId === undefined) {
-      throw new Error("Authentication required");
-    }
+    const callerId = await requireCaller(ctx);
 
     const session = await ctx.runQuery(
       components.convexAuth.native.sessions.getSessionBySessionId,

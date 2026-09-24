@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, type QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { components } from "./_generated/api";
 
@@ -23,6 +23,18 @@ const servicePrincipalListItemValidator = v.object({
   ),
 });
 
+type AuthCtx = Pick<QueryCtx, "auth">;
+
+async function checkUserIdentity(ctx: AuthCtx) {
+  return await ctx.auth.getUserIdentity();
+}
+
+async function requireUser(ctx: AuthCtx) {
+  const identity = await checkUserIdentity(ctx);
+  if (!identity) throw new Error("UNAUTHORIZED");
+  return identity;
+}
+
 const createdServicePrincipalValidator = v.object({
   servicePrincipalId: v.string(),
   created: v.boolean(),
@@ -32,7 +44,7 @@ export const listMyServicePrincipals = query({
   args: {},
   returns: v.array(servicePrincipalListItemValidator),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await checkUserIdentity(ctx);
     if (!identity) return [];
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
@@ -80,8 +92,7 @@ export const createServicePrincipal = mutation({
   },
   returns: createdServicePrincipalValidator,
   handler: async (ctx, { key, name, description, permissions }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    const identity = await requireUser(ctx);
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
     const organizationId = user?.activeOrganizationId;
@@ -110,8 +121,7 @@ export const updateServicePrincipal = mutation({
   },
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, { servicePrincipalId, name, description, permissions }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    const identity = await requireUser(ctx);
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
     const organizationId = user?.activeOrganizationId;
@@ -134,8 +144,7 @@ export const setServicePrincipalStatus = mutation({
   },
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, { servicePrincipalId, status }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("UNAUTHORIZED");
+    const identity = await requireUser(ctx);
     const userId = identity.subject;
     const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, { userId });
     const organizationId = user?.activeOrganizationId;

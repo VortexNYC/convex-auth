@@ -1,9 +1,10 @@
 import { components } from "./_generated/api";
 import { convexAuth, type EmailDraft } from "@vortex-api/convex-auth/convex";
+import { env } from "./_generated/server";
 
 const siteUrl =
-  process.env.CONVEX_SITE_URL?.replace(/\/$/, "") ??
-  process.env.SITE_URL?.replace(/\/$/, "") ??
+  env.CONVEX_SITE_URL?.replace(/\/$/, "") ??
+  env.SITE_URL?.replace(/\/$/, "") ??
   "http://localhost:3000";
 
 // In a real app, sendEmail should call Resend/Postmark/SES/etc.
@@ -27,7 +28,7 @@ export const auth = convexAuth({
     enabled: true,
     checkBreach: true,
     email: {
-      from: process.env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
+      from: env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
       appOrigin: siteUrl,
       sendEmail: async (draft) => {
         const token = extractTokenFromEmailDraft(draft);
@@ -45,10 +46,10 @@ export const auth = convexAuth({
     // Defaults to the .convex.site host — the well-known routes in http.ts
     // serve the AASA/assetlinks files on that domain, so native passkeys work
     // with no external website. Set PASSKEY_RP_ID for a custom domain.
-    rpID: process.env.PASSKEY_RP_ID ?? new URL(siteUrl).hostname,
+    rpID: env.PASSKEY_RP_ID ?? new URL(siteUrl).hostname,
     // Comma-separated list covering every origin platforms may emit: the site
     // origin plus "android:apk-key-hash:<base64url-sha256-of-signing-cert>".
-    origin: (process.env.PASSKEY_ORIGINS ?? new URL(siteUrl).origin)
+    origin: (env.PASSKEY_ORIGINS ?? new URL(siteUrl).origin)
       .split(",")
       .map((o: string) => o.trim())
       .filter(Boolean),
@@ -61,16 +62,16 @@ export const auth = convexAuth({
     // explicit scheme patterns (same set `buildExpoTrustedOrigins` emits).
     trustedOrigins: ["convex-auth-rn://", "exp://", "exp://**", "exp://192.168.*.*:*/**"],
     github: {
-      clientId: process.env.GITHUB_CLIENT_ID ?? "",
-      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
+      clientId: env.GITHUB_CLIENT_ID ?? "",
+      clientSecret: env.GITHUB_CLIENT_SECRET ?? "",
     },
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      clientId: env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: env.GOOGLE_CLIENT_SECRET ?? "",
     },
     discord: {
-      clientId: process.env.DISCORD_CLIENT_ID ?? "",
-      clientSecret: process.env.DISCORD_CLIENT_SECRET ?? "",
+      clientId: env.DISCORD_CLIENT_ID ?? "",
+      clientSecret: env.DISCORD_CLIENT_SECRET ?? "",
     },
   },
 });

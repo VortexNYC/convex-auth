@@ -104,6 +104,12 @@ export const issueApiKey = mutation({
   },
 });
 
+function requireApiKeyCredential(key: string): void {
+  if (typeof key !== "string" || key.trim().length === 0) {
+    throw new Error("API key credential required");
+  }
+}
+
 export const verifyApiKey = mutation({
   args: {
     key: v.string(),
@@ -129,6 +135,7 @@ export const verifyApiKey = mutation({
     }),
   ),
   handler: async (ctx, args) => {
+    requireApiKeyCredential(args.key);
     return await ctx.runMutation(components.convexAuth.apiKeys.verifyApiKey, {
       presentedKey: args.key,
     });
