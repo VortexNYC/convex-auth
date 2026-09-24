@@ -95,6 +95,11 @@
       "import": "./dist/testing.js",
       "default": "./dist/testing.js"
     },
+    "./test": {
+      "types": "./src/test.ts",
+      "import": "./src/test.ts",
+      "default": "./src/test.ts"
+    },
     "./component": {
       "types": "./dist/component.d.ts",
       "import": "./dist/component.js",

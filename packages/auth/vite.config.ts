@@ -25,6 +25,7 @@ const serverActionPattern =
 
 export default defineConfig({
   test: {
+    include: ["**/*.{test,spec}.?(c|m)[jt]s?(x)", "src/**/*.vitest.ts"],
     server: {
       deps: {
         inline: ["argon2id-wasm"],
