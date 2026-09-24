@@ -7,6 +7,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Newest-wins: pushing to a ref supersedes the in-flight run on that ref
+# instead of letting two full matrices burn in parallel.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -24,6 +30,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
 
       - name: Install pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
@@ -34,30 +42,57 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
 
+      # Docs-only diffs skip the heavy wall below. This job is a required
+      # status check, so it must still run and report — a job-level `if`
+      # skip would leave the required check pending forever. Install +
+      # lint + docs smoke still run so the job verifies what it can.
+      - name: Compute change scope
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            files=$(git diff --name-only "${{ github.event.pull_request.base.sha }}"...HEAD)
+          else
+            files=$(git diff --name-only "${{ github.event.before }}"..HEAD)
+          fi
+          echo "changed files:"
+          echo "$files"
+          if [ -n "$files" ] && ! echo "$files" | grep -qvE '^(docs/|site/|\.changeset/|[^/]*\.mdx?$)'; then
+            echo "docsonly=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docsonly=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Lint and format check
         run: pnpm run check
 
-      - name: OpenAPI contract guard
-        run: node scripts/openapi-guard.mjs
-
-      - name: Build packages
-        run: pnpm run build
-
-      - name: Typecheck
-        run: pnpm run typecheck
-
-      - name: Run tests
-        run: pnpm run test
-
-      - name: Run test coverage
-        run: pnpm run test:coverage
-
       - name: Docs smoke check
         run: pnpm run docs:smoke
 
-      # Note: the bridge-consumer bundle-size test was removed when the
-      # better-auth bridge packages were deleted. Add a new conformance or
-      # bundle-size check here if you want one for the public package.
+      - name: OpenAPI contract guard
+        if: steps.scope.outputs.docsonly != 'true'
+        run: node scripts/openapi-guard.mjs
+
+      # The built artifact is identical across Node versions — building
+      # once on 22.x is enough. Runtime compat on 20.x is proven by
+      # typecheck + the test suite below.
+      - name: Build packages
+        if: steps.scope.outputs.docsonly != 'true' && matrix.node-version == '22.x'
+        run: pnpm run build
+
+      - name: Typecheck
+        if: steps.scope.outputs.docsonly != 'true'
+        run: pnpm run typecheck
+
+      # Coverage runs the same suite instrumented — on 22.x it subsumes
+      # the plain test run, so the suite executes once per matrix leg
+      # instead of twice.
+      - name: Run tests
+        if: steps.scope.outputs.docsonly != 'true' && matrix.node-version != '22.x'
+        run: pnpm run test
+
+      - name: Run test coverage
+        if: steps.scope.outputs.docsonly != 'true' && matrix.node-version == '22.x'
+        run: pnpm run test:coverage
