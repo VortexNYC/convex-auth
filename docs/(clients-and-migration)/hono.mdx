@@ -1,0 +1,81 @@
+---
+title: Hono
+description: SSR auth for Hono with HttpOnly cookie sessions — one middleware is the whole server surface.
+sidebar:
+  order: 20
+---
+
+`@vortex-api/convex-auth/hono` is the Hono server adapter. Sessions live in app-origin HttpOnly cookies; a middleware lands OAuth/magic-link redirects, refreshes sessions near expiry, and serves the intent-based `/api/auth` proxy. It implements the [SSR auth contract](./ssr-contract).
+
+Because Hono is fetch-shaped, the same adapter works on `@hono/node-server`, Bun, Deno, and Workers-style runtimes.
+
+A working example lives in `examples/hono`.
+
+## Middleware
+
+Register `convexAuthMiddleware` once at the app level:
+
+```ts
+// src/index.ts
+import { Hono } from "hono";
+import { convexAuthMiddleware } from "@vortex-api/convex-auth/hono";
+import { api } from "../convex/_generated/api";
+
+const app = new Hono();
+app.use("*", convexAuthMiddleware({ actions: api.auth }));
+```
+
+The middleware intercepts `POST /api/auth` itself and the boundary pass covers every other request — no separate route wiring is needed.
+
+### Options
+
+| Option                   | Default                                                     | Description                                                                                                                                                             |
+| ------------------------ | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `actions`                | required                                                    | The `api.auth` object re-exporting `convexAuth` actions.                                                                                                                |
+| `convexUrl`              | `CONVEX_URL` → `VITE_CONVEX_URL` → `NEXT_PUBLIC_CONVEX_URL` | Convex deployment URL.                                                                                                                                                  |
+| `apiRoute`               | `/api/auth`                                                 | Path that proxies auth actions.                                                                                                                                         |
+| `cookieConfig.maxAge`    | `null` (session cookie)                                     | Cookie lifetime in seconds. Must be `null` or a positive number.                                                                                                        |
+| `requireLandingVerifier` | `true`                                                      | Require OAuth/magic-link landings to carry a verifier param matching the cookie minted at flow start. Set `false` only for deployments that predate verifier threading. |
+| `verbose`                | `false`                                                     | Debug logging.                                                                                                                                                          |
+
+## Session helpers
+
+All helpers take the Hono context and are revocation-aware:
+
+```ts
+import {
+  getConvexAuthSession,
+  getConvexAuthToken,
+  convexAuthCookieState,
+  getAuthServerState,
+} from "@vortex-api/convex-auth/hono";
+
+app.get("/me", async (c) => {
+  const session = await getConvexAuthSession(c, { actions: api.auth });
+  if (session === null) return c.json({ error: "Unauthorized" }, 401);
+  return c.json(session.user);
+});
+```
+
+| Helper                  | Verifies with Convex? | Use for                                                    |
+| ----------------------- | --------------------- | ---------------------------------------------------------- |
+| `getConvexAuthSession`  | yes (`verifySession`) | Route guards — revoked sessions resolve `null`.            |
+| `getConvexAuthToken`    | no                    | The raw JWT for `ConvexHttpClient.setAuth` / `fetchQuery`. |
+| `convexAuthCookieState` | no                    | Cheap UX guards — expiry from JWT claims only.             |
+| `getAuthServerState`    | yes                   | The seed shape `ConvexAuthProvider`'s `serverState` wants. |
+
+Helpers see the post-boundary session: when the middleware rotated tokens mid-request, they resolve the fresh tokens, not the stale cookie.
+
+## Standalone proxy route
+
+Prefer owning the route file instead of the middleware intercept:
+
+```ts
+import { convexAuthProxyHandler } from "@vortex-api/convex-auth/hono";
+
+app.post("/api/auth", convexAuthProxyHandler({ actions: api.auth }));
+```
+
+## Convex wiring
+
+The backend is the standard consumer setup — component mount in `convex/convex.config.ts`, `convexAuth({...})` in `convex/auth.ts`, `auth.addHttpRoutes(http)` in `convex/http.ts`. See [Installation](./installation).

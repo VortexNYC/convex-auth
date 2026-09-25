@@ -10,6 +10,7 @@ export default defineMeta({
     "react-native",
     "nextjs",
     "tanstack-start",
+    "hono",
     "migrating-from-better-auth",
     "migrating-from-full-component",
     "v3-migration",
