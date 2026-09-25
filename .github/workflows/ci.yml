@@ -50,13 +50,17 @@ jobs:
       # lint + docs smoke still run so the job verifies what it can.
       - name: Compute change scope
         id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
           files=""
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "$EVENT_NAME" = "pull_request" ]; then
             # --no-renames: a rename lists only the destination otherwise, so
             # moving library source into docs/ would misclassify as docs-only.
-            files=$(git diff --name-only --no-renames "${{ github.event.pull_request.base.sha }}"...HEAD)
-          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            files=$(git diff --name-only --no-renames "$BASE_SHA"...HEAD)
+          elif [ "$GITHUB_REF" = "refs/heads/main" ]; then
             # Pushes to main always run the full wall — a queued run can be
             # replaced by a newer pending one, so no diff here may skip checks.
             :
@@ -64,9 +68,8 @@ jobs:
             # push / dispatch: `before` is empty on dispatch and a zero SHA on
             # new-branch pushes — either way, fall back to running the full
             # wall rather than failing the diff.
-            before="${{ github.event.before }}"
-            if [ -n "$before" ] && git cat-file -e "$before" 2>/dev/null; then
-              files=$(git diff --name-only --no-renames "$before"..HEAD)
+            if [ -n "$BEFORE_SHA" ] && git cat-file -e "$BEFORE_SHA" 2>/dev/null; then
+              files=$(git diff --name-only --no-renames "$BEFORE_SHA"..HEAD)
             fi
           fi
           echo "changed files:"
