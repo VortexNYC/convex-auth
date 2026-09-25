@@ -74,7 +74,12 @@ const precomputePathRegex = (patterns: Array<string | RegExp>) => {
 // pass through untouched; bare `*` still throws, as it did in v6.
 function translateLegacyWildcardSyntax(path: string) {
   let i = 0;
-  return path.replace(/(\/?)\(\.\*\)/g, (_m, slash) => `${slash}{*splat${i++}}`);
+  // `:name(.*)` (v6 custom-regex param) must become `{*name}` — a named
+  // param directly followed by `{*splat}` is rejected by v8 ("Missing
+  // text before wildcard"), and `*name` preserves the param name anyway.
+  return path
+    .replace(/:([A-Za-z_][A-Za-z0-9_]*)\(\.\*\)/g, "{*$1}")
+    .replace(/(\/?)\(\.\*\)/g, (_m, slash) => `${slash}{*splat${i++}}`);
 }
 
 function pathStringToRegExp(path: string) {

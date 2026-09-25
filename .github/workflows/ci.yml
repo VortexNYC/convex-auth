@@ -8,10 +8,12 @@ on:
   workflow_dispatch:
 
 # Newest-wins: pushing to a ref supersedes the in-flight run on that ref
-# instead of letting two full matrices burn in parallel.
+# instead of letting two full matrices burn in parallel. Exception: pushes
+# to main queue rather than cancel — a docs-only push would otherwise
+# supersede a run still validating code in the shared HEAD.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
 
 permissions:
   contents: read
@@ -51,14 +53,16 @@ jobs:
         run: |
           files=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            files=$(git diff --name-only "${{ github.event.pull_request.base.sha }}"...HEAD)
+            # --no-renames: a rename lists only the destination otherwise, so
+            # moving library source into docs/ would misclassify as docs-only.
+            files=$(git diff --name-only --no-renames "${{ github.event.pull_request.base.sha }}"...HEAD)
           else
             # push / dispatch: `before` is empty on dispatch and a zero SHA on
             # new-branch pushes — either way, fall back to running the full
             # wall rather than failing the diff.
             before="${{ github.event.before }}"
             if [ -n "$before" ] && git cat-file -e "$before" 2>/dev/null; then
-              files=$(git diff --name-only "$before"..HEAD)
+              files=$(git diff --name-only --no-renames "$before"..HEAD)
             fi
           fi
           echo "changed files:"

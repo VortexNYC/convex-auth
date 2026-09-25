@@ -42,13 +42,15 @@ jobs:
 
       - name: Create release PR or publish
         id: changesets
-        uses: changesets/action@3841a0683d3cfa6dae0f9bb335290003010fe3f0
+        # v2.1.2 — v1.x parsed `changeset publish` stdout for `New tag:` lines,
+        # which CLI v3 no longer prints; v2 reads the CHANGESETS_OUTPUT file.
+        uses: changesets/action@66d7d1ddafddf1ef45f98ee51a7496f9cdadb2f4
         with:
-          version: pnpm version-packages
-          publish: pnpm ci:publish
-          title: "chore: version packages"
-          commit: "chore: version packages"
-          createGithubReleases: true
+          version-script: pnpm version-packages
+          publish-script: pnpm ci:publish
+          pr-title: "chore: version packages"
+          commit-message: "chore: version packages"
+          create-github-releases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -58,7 +60,7 @@ jobs:
           NPM_CONFIG_PROVENANCE: "true"
 
       - name: Trigger CI on release PR
-        if: steps.changesets.outputs.hasChangesets == 'true'
+        if: steps.changesets.outputs['has-changesets'] == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
