@@ -15,6 +15,7 @@ import { mintToken, verifyToken } from "./jwt.js";
 import { checkPasswordBreach } from "./breach.js";
 import {
   hashPassword,
+  padBcryptCompare,
   shouldRehashAfterVerify,
   verifyPassword as verifyPasswordHash,
 } from "./password.js";
@@ -499,12 +500,14 @@ export function nativeEmailAndPassword(
       });
       if (!auth) {
         await hashPassword(args.password);
+        await padBcryptCompare(args.password);
         throw new Error("Invalid email or password");
       }
       const { user, identity, account } = auth;
 
       if (!account || !(await verifyPasswordHash(args.password, account.credentialHash))) {
         await hashPassword(args.password);
+        await padBcryptCompare(args.password);
         throw new Error("Invalid email or password");
       }
 

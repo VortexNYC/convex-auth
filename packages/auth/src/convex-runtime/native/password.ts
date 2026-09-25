@@ -108,6 +108,23 @@ export function shouldRehashAfterVerify(hash: string): boolean {
   );
 }
 
+/** A fixed, never-real bcrypt digest for timing padding. */
+const DUMMY_BCRYPT_HASH = "$2a$10$DprdJOxGXADLAHm6zgiHee6l4Wey3XBYfEtgTPXhDbScWLr6to2xy";
+
+/**
+ * Equalizes the failed-sign-in path for imported bcrypt credentials — without
+ * this, a bcrypt-bearing account fails measurably slower than a missing user or
+ * an argon2id credential, which enumerates migrated emails. Companion to the
+ * argon2id `hashPassword` pad at the call sites.
+ */
+export async function padBcryptCompare(password: string): Promise<void> {
+  try {
+    await bcryptVerify({ password, hash: DUMMY_BCRYPT_HASH });
+  } catch {
+    /* padding only */
+  }
+}
+
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   if (hash.startsWith(ARGON2ID_PREFIX)) {
     return verifyArgon2id(password, hash);
