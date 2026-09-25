@@ -43,7 +43,7 @@ this page is the operator runbook.
 A major additionally requires:
 
 1. A `Migration note:` line in the changeset (gate-enforced).
-2. A migration page under `docs/(clients-and-migration)/` linked from the
+2. A migration page under `docs/(migrations)/` linked from the
    release notes.
 3. After release, freeze the previous major's docs:
    `blume version v<N>` in `site/` — the old line stays reachable while

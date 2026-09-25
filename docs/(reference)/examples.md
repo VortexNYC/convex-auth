@@ -100,9 +100,30 @@ pnpm dlx convex dev   # local backend on :3212
 pnpm run dev          # app on :3200
 ```
 
+## Next.js (SSR)
+
+`examples/nextjs` exercises `@vortex-api/convex-auth/nextjs` end-to-end: HttpOnly cookie sessions, middleware refresh, the `/api/auth` proxy, and server-rendered session state — no token ever touches browser JavaScript.
+
+```ts
+// middleware.ts
+import { convexAuthNextjsMiddleware } from "@vortex-api/convex-auth/nextjs/server";
+import { api } from "./convex/_generated/api";
+
+export default convexAuthNextjsMiddleware({ actions: api.auth });
+```
+
+```bash
+cd examples/nextjs
+pnpm install
+pnpm dlx convex dev --dev-deployment local   # local backend on :3210
+pnpm run dev
+```
+
+See the [Next.js guide](./nextjs) for the full middleware, server provider, and session helper setup.
+
 ## Server with Hono
 
-`examples/server` shows email/password sign-in and OAuth redirect from a server using `hono` and `ConvexHttpClient`.
+`examples/server` shows email/password sign-in and OAuth redirect from a server using `hono` and `ConvexHttpClient` — the token-mode reference for servers that do not need cookie sessions.
 
 ```bash
 cd examples/server
@@ -124,6 +145,27 @@ app.post("/auth/sign-in", async (c) => {
   return c.json(session);
 });
 ```
+
+## Hono (adapter)
+
+`examples/hono` is the same Hono server shape but on the packaged `@vortex-api/convex-auth/hono` adapter — same-origin HttpOnly cookie sessions, the `/api/auth` proxy, and the verified session oracle via `convexAuthMiddleware`.
+
+```ts
+import { Hono } from "hono";
+import { convexAuthMiddleware } from "@vortex-api/convex-auth/hono";
+import { api } from "../convex/_generated/api";
+
+const app = new Hono();
+app.use("*", convexAuthMiddleware({ actions: api.auth }));
+```
+
+```bash
+cd examples/hono
+pnpm install
+pnpm run dev
+```
+
+See the [Hono guide](./hono) for session helpers and proxy options.
 
 ## React Native / Expo
 

@@ -2,7 +2,7 @@
 title: Hono
 description: SSR auth for Hono with HttpOnly cookie sessions — one middleware is the whole server surface.
 sidebar:
-  order: 20
+  order: 5
 ---
 
 `@vortex-api/convex-auth/hono` is the Hono server adapter. Sessions live in app-origin HttpOnly cookies; a middleware lands OAuth/magic-link redirects, refreshes sessions near expiry, and serves the intent-based `/api/auth` proxy. It implements the [SSR auth contract](./ssr-contract).

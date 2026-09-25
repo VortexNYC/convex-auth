@@ -39,6 +39,28 @@ If you are new here, follow this order:
   </Card>
 </CardGroup>
 
+## Select your framework
+
+Setup varies by framework — pick yours for the end-to-end guide.
+
+<CardGroup cols={2}>
+  <Card title="React (Vite SPA)" href="./client" icon="atom">
+    Client-side auth with `ConvexAuthClientProvider` and hooks.
+  </Card>
+  <Card title="React Native / Expo" href="./react-native" icon="smartphone">
+    Native apps with secure token storage.
+  </Card>
+  <Card title="Next.js" href="./nextjs" icon="triangle">
+    SSR auth with HttpOnly cookie sessions and middleware.
+  </Card>
+  <Card title="TanStack Start" href="./tanstack-start" icon="rocket">
+    SSR auth with request middleware and server functions.
+  </Card>
+  <Card title="Hono" href="./hono" icon="flame">
+    Server adapter for Hono apps — Bun, Node, and Workers-style runtimes.
+  </Card>
+</CardGroup>
+
 ## Core auth
 
 <CardGroup cols={2}>
@@ -105,9 +127,6 @@ If you are new here, follow this order:
   <Card title="Server API" href="./server-api" icon="terminal">
     Actions, queries, and HTTP routes.
   </Card>
-  <Card title="React client" href="./client" icon="monitor">
-    Hooks and the drop-in client.
-  </Card>
   <Card title="UI components" href="./ui-components" icon="layout">
     Complete React component reference.
   </Card>
@@ -119,9 +138,10 @@ If you are new here, follow this order:
   </Card>
 </CardGroup>
 
-## Migration
+## Migrations
 
 If you already have an auth integration:
 
 - [Migrating from Better Auth](./migrating-from-better-auth)
 - [Migrating from the full `convexAuth` component](./migrating-from-full-component)
+- [Migrating to v3](./v3-migration)

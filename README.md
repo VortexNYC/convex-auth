@@ -44,7 +44,7 @@ Convex Auth 2.0 announced the architecture this codebase was waiting for: auth a
 
 `convex-auth` is now a fully native Convex auth runtime. It implements email/password, OAuth, 2FA, sessions, organizations, API keys, webhooks, MCP, and agent auth inside the Convex isolate. No Better Auth runtime is used. The `convex-better-auth-adapter` and `convex-better-auth` packages remain only as a one-time migration bridge for existing Better Auth users.
 
-Read the full rationale in [`docs/(get-started)/how-we-got-here.md`](<docs/(get-started)/how-we-got-here.md>) and the migration guide in [`docs/(clients-and-migration)/migrating-from-better-auth.md`](<docs/(clients-and-migration)/migrating-from-better-auth.md>).
+Read the full rationale in [`docs/(get-started)/how-we-got-here.md`](<docs/(get-started)/how-we-got-here.md>) and the migration guide in [`docs/(migrations)/migrating-from-better-auth.md`](<docs/(migrations)/migrating-from-better-auth.md>).
 
 ## Packages
 
@@ -299,7 +299,7 @@ If you are already using Better Auth and want to migrate to Convex tables and th
 
 ### Convex component
 
-During the migration, mount the legacy `betterAuth` adapter component and the native `convexAuth` component together. The exact `convex/convex.config.ts` wiring is in [`docs/(clients-and-migration)/migrating-from-better-auth.md`](<docs/(clients-and-migration)/migrating-from-better-auth.md>). After the cutover, you remove the legacy adapter and keep only the `convex-auth` component shown in the native section above.
+During the migration, mount the legacy `betterAuth` adapter component and the native `convexAuth` component together. The exact `convex/convex.config.ts` wiring is in [`docs/(migrations)/migrating-from-better-auth.md`](<docs/(migrations)/migrating-from-better-auth.md>). After the cutover, you remove the legacy adapter and keep only the `convex-auth` component shown in the native section above.
 
 ### React client
 
@@ -336,7 +336,7 @@ After the cutover to the native runtime, remove the provider and use the `@vorte
 ## Compatibility and migration
 
 - See [`docs/(get-started)/installation.mdx`](<docs/(get-started)/installation.mdx>) for supported versions of Convex, React, React Native / Expo, Node, and pnpm.
-- See [`docs/(clients-and-migration)/migrating-from-better-auth.md`](<docs/(clients-and-migration)/migrating-from-better-auth.md>) for the one-time migration from a Better Auth setup to the native `convex-auth` runtime.
+- See [`docs/(migrations)/migrating-from-better-auth.md`](<docs/(migrations)/migrating-from-better-auth.md>) for the one-time migration from a Better Auth setup to the native `convex-auth` runtime.
 
 ## Development
 
