@@ -284,3 +284,23 @@ validate` + `blume build` on 22.x for site/docs diffs; GITHUB_TOKEN
   branch — a stale vp 0.2.4 produced wrong formatter output that
   rc.0 CI rejected. After switching branches, run `pnpm install`
   before trusting `vp check`.
+
+## Hono adapter (PR #405, 2026-09-25)
+
+- `src/ssr/state.ts` moved up from `tanstack-start/server` — it was
+  already framework-agnostic (WeakMap keyed on Request). Old path
+  re-exports; zero consumer API change. All adapters now share the
+  request-scoped session oracle.
+- Hono trap (Cursor catch): `c.res = x` is a SETTER that merges the
+  old response's headers over the assigned one — Set-Cookie appended
+  pre-assignment gets deleted, Cache-Control reverts. Correct order:
+  assign the rebuilt Response FIRST, then `headers.append` on
+  `c.res.headers`. Regression test uses method-shadowed Headers
+  (`headers.append = () => { throw }`) to simulate immutable
+  redirect/fetch responses — `new Response` headers are mutable, so
+  shadowing is the only way to force the rebuild path.
+- Rotation/CORS bookkeeping keys on the Request OBJECT identity —
+  middleware that swaps `c.req.raw` downstream detaches the helpers.
+- Adapter test pattern: real `new Hono()` + `app.request()`, no
+  mocked framework seams. 22 tests cover proxy intercept vs competing
+  route, immutable-response rebuild, streaming body, HEAD rotation.

@@ -85,6 +85,11 @@
       "import": "./dist/tanstack-start-server.js",
       "default": "./dist/tanstack-start-server.js"
     },
+    "./hono": {
+      "types": "./dist/hono.d.ts",
+      "import": "./dist/hono.js",
+      "default": "./dist/hono.js"
+    },
     "./preflight": {
       "types": "./dist/preflight.d.ts",
       "import": "./dist/preflight.js",
@@ -262,6 +267,7 @@
     "convex": "^1.46.0",
     "convex-test": "0.0.60",
     "happy-dom": "^20.14.3",
+    "hono": "^4.13.9",
     "next": "^15.5.25",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -280,6 +286,7 @@
     "expo-network": ">=8.0.7",
     "expo-secure-store": ">=14.0.0",
     "expo-web-browser": ">=14.0.0",
+    "hono": ">=4.0.0",
     "next": ">=14.2.0",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0",
@@ -310,6 +317,9 @@
       "optional": true
     },
     "expo-web-browser": {
+      "optional": true
+    },
+    "hono": {
       "optional": true
     },
     "react-native": {
