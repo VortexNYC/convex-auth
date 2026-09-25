@@ -48,7 +48,16 @@ export default defineConfig({
     current: { label: "v3" },
   },
   navigation: {
-    tabs: [{ label: "API Reference", path: "/api" }],
+    tabs: [
+      { label: "API Reference", path: "/api" },
+      { label: "Changelog", path: "/changelog" },
+    ],
+  },
+  agents: {
+    llmsTxt: {
+      details:
+        "Convex Auth is a Convex-native authentication library (sessions, OAuth, passkeys, organizations, API keys, webhooks, MCP OAuth) published as @vortex-api/convex-auth. Use these docs when integrating it into a Convex app; the v2 archive documents the previous major for migrations.",
+    },
   },
   theme: {
     accent: {
