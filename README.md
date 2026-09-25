@@ -44,13 +44,13 @@ This design was validated by the community `@convex-dev/better-auth` adapter and
 
 ## Framework guides
 
-| Framework                                                                                                 | Entry point                                  | Guide                                                                |
-| --------------------------------------------------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------- |
-| <img src="https://cdn.simpleicons.org/react/61DAFB" width="16" valign="middle" /> React (Vite SPA)        | `@vortex-api/convex-auth/react`              | [`client.mdx`](<docs/(framework-guides)/client.mdx>)                 |
-| <img src="https://cdn.simpleicons.org/expo/000020" width="16" valign="middle" /> React Native / Expo      | `@vortex-api/convex-auth/react-native`       | [`react-native.mdx`](<docs/(framework-guides)/react-native.mdx>)     |
-| <img src="https://cdn.simpleicons.org/nextdotjs/000000" width="16" valign="middle" /> Next.js (SSR)       | `@vortex-api/convex-auth/nextjs` + `/server` | [`nextjs.mdx`](<docs/(framework-guides)/nextjs.mdx>)                 |
-| <img src="https://cdn.simpleicons.org/tanstack/FF4154" width="16" valign="middle" /> TanStack Start (SSR) | `@vortex-api/convex-auth/tanstack-start`     | [`tanstack-start.mdx`](<docs/(framework-guides)/tanstack-start.mdx>) |
-| <img src="https://cdn.simpleicons.org/hono/E36002" width="16" valign="middle" /> Hono (SSR)               | `@vortex-api/convex-auth/hono`               | [`hono.mdx`](<docs/(framework-guides)/hono.mdx>)                     |
+| Framework                                                                                                                                                      | Entry point                                  | Guide                                                                |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------- |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/react.svg" width="18" valign="middle" /> React (Vite SPA)        | `@vortex-api/convex-auth/react`              | [`client.mdx`](<docs/(framework-guides)/client.mdx>)                 |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/expo.svg" width="18" valign="middle" /> React Native / Expo      | `@vortex-api/convex-auth/react-native`       | [`react-native.mdx`](<docs/(framework-guides)/react-native.mdx>)     |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/nextjs.svg" width="18" valign="middle" /> Next.js (SSR)          | `@vortex-api/convex-auth/nextjs` + `/server` | [`nextjs.mdx`](<docs/(framework-guides)/nextjs.mdx>)                 |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/tanstack.svg" width="18" valign="middle" /> TanStack Start (SSR) | `@vortex-api/convex-auth/tanstack-start`     | [`tanstack-start.mdx`](<docs/(framework-guides)/tanstack-start.mdx>) |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/hono.svg" width="18" valign="middle" /> Hono (SSR)               | `@vortex-api/convex-auth/hono`               | [`hono.mdx`](<docs/(framework-guides)/hono.mdx>)                     |
 
 Every SSR adapter implements the same contract: same-origin HttpOnly cookie sessions, an intent-based `/api/auth` proxy, OAuth/magic-link landing, near-expiry rotation, and revocation-aware session helpers — see the [SSR auth contract](<docs/(reference)/ssr-contract.md>).
 
@@ -262,7 +262,7 @@ pnpm dlx @vortex-api/convex-auth preflight # live install + deployment checks
 
 ## Migrating from Better Auth
 
-Already on Better Auth? The [`convex-better-auth-adapter`](https://github.com/VortexNYC/convex-auth) bridge copies users, sessions, and identities into `convex-auth` tables once — then you cut over the client and uninstall the bridge packages. The full runbook is in [`docs/(migrations)/migrating-from-better-auth.md`](<docs/(migrations)/migrating-from-better-auth.md>).
+Already on Better Auth? Mount the legacy `betterAuth` adapter component alongside `convexAuth`, run `pnpm dlx @vortex-api/convex-auth migrate better-auth` to copy users, sessions, and identities into the native tables once, then cut over and uninstall the bridge packages. Migrated session rows are inert — old JWTs don't carry over, so users sign in once more after the switch. The full runbook is in [`docs/(migrations)/migrating-from-better-auth.md`](<docs/(migrations)/migrating-from-better-auth.md>).
 
 ## Compatibility
 

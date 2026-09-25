@@ -143,7 +143,7 @@ Client components use the React client — sign-in calls mint the session throug
 ```tsx
 // src/routes/sign-in.tsx
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 import { useConvexAuthClient } from "@vortex-api/convex-auth/react";
 
 export const Route = createFileRoute("/sign-in")({ component: SignInPage });
@@ -152,6 +152,8 @@ function SignInPage() {
   const authClient = useConvexAuthClient();
   const router = useRouter();
 
+  const [error, setError] = useState<string | null>(null);
+
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
@@ -159,11 +161,21 @@ function SignInPage() {
       email: String(data.get("email")),
       password: String(data.get("password")),
     });
-    if (!result.error) {
-      // Re-run beforeLoad/loaders so route context picks up the fresh session.
-      await router.invalidate();
-      await router.navigate({ to: "/dashboard" });
+    if (result.error) {
+      setError(result.error.message ?? "Sign in failed");
+      return;
     }
+    // 2FA-enrolled accounts resolve without a session — show the TOTP step.
+    if (result.data?.twoFactorRedirect) return;
+    // Re-run beforeLoad/loaders so route context picks up the fresh session.
+    await router.invalidate();
+    await router.navigate({ to: "/dashboard" });
+  };
+
+  const onGithub = async () => {
+    const result = await authClient.signIn.social({ provider: "github" });
+    // social() returns the authorization URL — it does not navigate for you.
+    if (result.data?.url) window.location.href = result.data.url;
   };
 
   return (
@@ -171,9 +183,10 @@ function SignInPage() {
       <input name="email" type="email" required />
       <input name="password" type="password" required />
       <button type="submit">Sign in</button>
-      <button type="button" onClick={() => authClient.signIn.social({ provider: "github" })}>
+      <button type="button" onClick={onGithub}>
         Continue with GitHub
       </button>
+      {error ? <p role="alert">{error}</p> : null}
     </form>
   );
 }
