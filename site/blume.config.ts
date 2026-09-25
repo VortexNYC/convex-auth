@@ -1,4 +1,6 @@
 import { defineConfig } from "blume";
+import { openapi } from "blume/reference";
+import { filesystem, githubReleases } from "blume/sources";
 
 // Astro/blume prerender runs in Node. Some components (e.g. @pierre/diffs)
 // read navigator.userAgent, which only exists in Node 21+. Provide a minimal
@@ -16,38 +18,46 @@ export default defineConfig({
   description: "Vortex-native, full-stack authentication for Convex.",
   logo: "/logo.svg",
   content: {
-    // content.root points at the live docs tree so `blume version` snapshots
-    // into docs/<id>/ rather than the default site/docs/ convention.
-    root: "../docs",
+    // The filesystem source's root doubles as the `blume version` snapshot
+    // target — snapshots land in docs/<id>/ next to the live tree.
     sources: [
-      { type: "filesystem", root: "../docs" },
-      {
-        type: "github-releases",
+      filesystem({ root: "../docs" }),
+      githubReleases({
         prefix: "changelog",
         owner: "VortexNYC",
         repo: "convex-auth",
-      },
+      }),
     ],
   },
   deployment: {
-    site: "https://resilient-blackbird-58.convex.site",
+    site: "https://resilient-mule-559.convex.site",
   },
-  openapi: {
-    enabled: true,
-    sources: [
-      {
-        spec: "../openapi/auth.yaml",
-        route: "api",
-        label: "HTTP API",
-      },
-    ],
-  },
+  reference: [
+    openapi({
+      sources: [
+        {
+          spec: "../openapi/auth.yaml",
+          route: "api",
+          label: "HTTP API",
+        },
+      ],
+    }),
+  ],
   versions: {
     archived: [{ id: "v2", label: "v2.x" }],
     current: { label: "v3" },
   },
   navigation: {
-    tabs: [{ label: "API Reference", path: "/api" }],
+    tabs: [
+      { label: "API Reference", path: "/api" },
+      { label: "Changelog", path: "/changelog" },
+    ],
+  },
+  agents: {
+    llmsTxt: {
+      details:
+        "Convex Auth is a Convex-native authentication library (sessions, OAuth, passkeys, organizations, API keys, webhooks, MCP OAuth) published as @vortex-api/convex-auth. Use these docs when integrating it into a Convex app; the v2 archive documents the previous major for migrations.",
+    },
   },
   theme: {
     accent: {
