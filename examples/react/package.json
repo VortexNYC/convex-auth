@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "dev": "vp dev",
+    "build": "tsc && vp build",
     "typecheck": "tsc --noEmit",
-    "serve": "vite preview",
+    "serve": "vp preview",
     "deploy:static": "pnpm run build && pnpm dlx @convex-dev/static-hosting upload",
     "deploy:static:prod": "pnpm dlx @convex-dev/static-hosting deploy"
   },

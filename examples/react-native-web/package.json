@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "vp dev",
+    "build": "vp build",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vp preview"
   },
   "dependencies": {
     "@vortex-api/convex-auth": "workspace:*",

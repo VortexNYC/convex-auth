@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "dev": "vp dev",
+    "build": "tsc && vp build",
     "typecheck": "tsc --noEmit",
-    "serve": "vite preview"
+    "serve": "vp preview"
   },
   "dependencies": {
     "@convex-dev/static-hosting": "^0.2.1",
