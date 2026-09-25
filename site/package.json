@@ -11,6 +11,8 @@
   "dependencies": {
     "@convex-dev/static-hosting": "^0.2.0",
     "blume": "^2.0.2",
-    "convex": "^1.46.0"
+    "convex": "^1.46.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   }
 }

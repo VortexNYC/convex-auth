@@ -1,19 +1,9 @@
 import { defineMeta } from "blume";
 
 export default defineMeta({
-  title: "Components",
+  title: "UI components",
   order: 5,
   display: "group",
   icon: "puzzle",
-  pages: [
-    "index",
-    "sign-in",
-    "organization",
-    "account",
-    "api-keys",
-    "webhooks",
-    "security",
-    "providers",
-    "react-native",
-  ],
+  pages: ["index", "react", "react-native"],
 });

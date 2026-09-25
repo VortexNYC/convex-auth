@@ -18,7 +18,7 @@ Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 [![Node][node-badge]][node]
 [![pnpm][pnpm-badge]][pnpm]
 
-**[npm](https://www.npmjs.com/package/@vortex-api/convex-auth)** · **[Docs](https://labs.vortex.nyc/convex-auth)** · **[Quickstart](#quickstart)** · **[Framework guides](#framework-guides)** · **[Architecture](<docs/(reference)/architecture.md>)**
+**[npm](https://www.npmjs.com/package/@vortex-api/convex-auth)** · **[Docs](https://labs.vortex.nyc/convex-auth)** · **[Quickstart](#quickstart)** · **[Framework guides](#framework-guides)** · **[Architecture](<docs/(get-started)/architecture.md>)**
 
 </div>
 
@@ -44,13 +44,14 @@ This design was validated by the community `@convex-dev/better-auth` adapter and
 
 ## Framework guides
 
-| Framework                                                                                                                                                      | Entry point                                  | Guide                                                                |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------- |
-| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/react.svg" width="18" valign="middle" /> React (Vite SPA)        | `@vortex-api/convex-auth/react`              | [`client.mdx`](<docs/(framework-guides)/client.mdx>)                 |
-| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/expo.svg" width="18" valign="middle" /> React Native / Expo      | `@vortex-api/convex-auth/react-native`       | [`react-native.mdx`](<docs/(framework-guides)/react-native.mdx>)     |
-| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/nextjs.svg" width="18" valign="middle" /> Next.js (SSR)          | `@vortex-api/convex-auth/nextjs` + `/server` | [`nextjs.mdx`](<docs/(framework-guides)/nextjs.mdx>)                 |
-| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/tanstack.svg" width="18" valign="middle" /> TanStack Start (SSR) | `@vortex-api/convex-auth/tanstack-start`     | [`tanstack-start.mdx`](<docs/(framework-guides)/tanstack-start.mdx>) |
-| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/hono.svg" width="18" valign="middle" /> Hono (SSR)               | `@vortex-api/convex-auth/hono`               | [`hono.mdx`](<docs/(framework-guides)/hono.mdx>)                     |
+| Framework                                                                                                                                                      | Entry point                                  | Guide                                                                  |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------- |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/react.svg" width="18" valign="middle" /> React (Vite SPA)        | `@vortex-api/convex-auth/react`              | [`react.mdx`](<docs/(framework-guides)/react.mdx>)                     |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/tanstack.svg" width="18" valign="middle" /> TanStack Router      | `@vortex-api/convex-auth/react`              | [`tanstack-router.mdx`](<docs/(framework-guides)/tanstack-router.mdx>) |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/expo.svg" width="18" valign="middle" /> React Native / Expo      | `@vortex-api/convex-auth/react-native`       | [`react-native.mdx`](<docs/(framework-guides)/react-native.mdx>)       |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/nextjs.svg" width="18" valign="middle" /> Next.js (SSR)          | `@vortex-api/convex-auth/nextjs` + `/server` | [`nextjs.mdx`](<docs/(framework-guides)/nextjs.mdx>)                   |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/tanstack.svg" width="18" valign="middle" /> TanStack Start (SSR) | `@vortex-api/convex-auth/tanstack-start`     | [`tanstack-start.mdx`](<docs/(framework-guides)/tanstack-start.mdx>)   |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/hono.svg" width="18" valign="middle" /> Hono (SSR)               | `@vortex-api/convex-auth/hono`               | [`hono.mdx`](<docs/(framework-guides)/hono.mdx>)                       |
 
 Every SSR adapter implements the same contract: same-origin HttpOnly cookie sessions, an intent-based `/api/auth` proxy, OAuth/magic-link landing, near-expiry rotation, and revocation-aware session helpers — see the [SSR auth contract](<docs/(reference)/ssr-contract.md>).
 

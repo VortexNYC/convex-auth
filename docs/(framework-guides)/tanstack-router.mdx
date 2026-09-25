@@ -1,0 +1,155 @@
+---
+title: TanStack Router
+description: Client-side route guards with convex-auth in a TanStack Router app.
+sidebar:
+  icon: waypoints
+  order: 2
+---
+
+TanStack Router is a client-side router, so `convex-auth` protects routes the way it does in any React SPA: the session lives in React state, the router mirrors it into route `context`, and a pathless `_authed` layout guards protected routes in `beforeLoad`. This guide covers that pattern end to end — for SSR with server functions and cookie sessions, use [TanStack Start](./tanstack-start) instead.
+
+:::tip[New here?]
+The [React guide](./react) covers `ConvexAuthClientProvider` and the hooks this page uses. Read it first if you haven't wired the client yet.
+:::
+
+## Mirror the session into router context
+
+`useSession()` can't be called inside `beforeLoad` — guards run outside React. Instead, read the session once at the app root and pass it to `RouterProvider` as context:
+
+```tsx
+// src/main.tsx
+import { useEffect } from "react";
+import { RouterProvider } from "@tanstack/react-router";
+import { ConvexReactClient, ConvexProvider } from "convex/react";
+import { ConvexAuthClientProvider, useSession } from "@vortex-api/convex-auth/react";
+import { api } from "../convex/_generated/api";
+import { router } from "./router";
+
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
+
+function InnerApp() {
+  const { isLoading, isAuthenticated } = useSession();
+
+  useEffect(() => {
+    void router.invalidate();
+  }, [isLoading, isAuthenticated]);
+
+  return <RouterProvider router={router} context={{ auth: { isLoading, isAuthenticated } }} />;
+}
+
+// InnerApp must render inside the providers — useSession() throws otherwise:
+createRoot(document.getElementById("root")!).render(
+  <ConvexProvider client={convex}>
+    <ConvexAuthClientProvider actions={api.auth}>
+      <InnerApp />
+    </ConvexAuthClientProvider>
+  </ConvexProvider>,
+);
+```
+
+`router.invalidate()` re-runs `beforeLoad` whenever the session flips, so guards react to sign-in and sign-out without a page reload.
+
+```ts
+// src/router.ts
+export const router = createRouter({
+  routeTree,
+  context: {
+    auth: { isLoading: true, isAuthenticated: false },
+  },
+});
+```
+
+## Guard protected routes with a pathless layout
+
+Wrap every protected page in an `_authed` layout route. Its `beforeLoad` reads the mirrored context and throws a redirect carrying the attempted URL:
+
+```tsx
+// src/routes/_authed.tsx
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/_authed")({
+  beforeLoad: ({ context, location }) => {
+    if (context.auth.isLoading) {
+      return;
+    }
+    if (!context.auth.isAuthenticated) {
+      throw redirect({
+        to: "/sign-in",
+        search: { redirect: location.href },
+      });
+    }
+  },
+  component: AuthedLayout,
+});
+
+function AuthedLayout() {
+  const { auth } = Route.useRouteContext();
+
+  if (auth.isLoading) {
+    return <p>Checking session…</p>;
+  }
+
+  return <Outlet />;
+}
+```
+
+Any file under `routes/_authed/` is now protected. While `isLoading` is true the guard waits — never redirect an unresolved session, or every refresh bounces signed-in users through `/sign-in`.
+
+## Send signed-in users back where they came from
+
+The sign-in route validates the `redirect` search param and forwards it after auth:
+
+```tsx
+// src/routes/sign-in.tsx
+export const Route = createFileRoute("/sign-in")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
+  component: SignInPage,
+});
+
+function SignInPage() {
+  const { isLoading, isAuthenticated } = useSession();
+  const { redirect } = Route.useSearch();
+
+  if (isAuthenticated) {
+    return <Navigate to={redirect ?? "/dashboard"} />;
+  }
+
+  return (
+    <ConvexAuthSignInPage
+      auth={{ isLoaded: !isLoading, isSignedIn: isAuthenticated }}
+      signUpUrl="/sign-in"
+      forceRedirectUrl={redirect ?? "/dashboard"}
+    />
+  );
+}
+```
+
+## Example app
+
+`examples/tanstack-router` is a runnable Vite + React app using exactly this pattern — context mirroring, the `_authed` guard, and redirect-on-sign-in:
+
+```bash
+cd examples/tanstack-router
+pnpm install
+pnpm dlx convex dev   # anonymous local backend
+pnpm run dev
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="React client" href="./react" icon="atom">
+    `useSession`, `useAuthActions`, and the provider this pattern builds on.
+  </Card>
+  <Card title="TanStack Start" href="./tanstack-start" icon="zap">
+    SSR auth with HttpOnly cookie sessions — the server-side version of this.
+  </Card>
+  <Card title="UI components" href="./components" icon="layout-grid">
+    `ConvexAuthSignInPage` and the rest of the drop-in library.
+  </Card>
+  <Card title="Theming" href="./theming" icon="palette">
+    Style the components to match your app.
+  </Card>
+</CardGroup>

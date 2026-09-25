@@ -1,4 +1,7 @@
-# SSR auth contract
+---
+title: SSR auth contract
+description: The framework-neutral spec every SSR adapter (Next.js, TanStack Start) satisfies.
+---
 
 Design contract for server-side-rendering integrations (Next.js, TanStack
 Start, and any future framework adapter). This document is the spec an adapter

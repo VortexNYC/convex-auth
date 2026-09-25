@@ -55,10 +55,6 @@ export default defineConfig({
       ],
     }),
   ],
-  versions: {
-    archived: [{ id: "v2", label: "v2.x" }],
-    current: { label: "v3" },
-  },
   navigation: {
     tabs: [
       { label: "API Reference", path: "/api" },
@@ -77,7 +73,26 @@ export default defineConfig({
   },
   redirects: [
     { from: "/examples", to: "/" },
+    { from: "/client", to: "/react" },
     { from: "/migrating-from-full-component", to: "/migrating-to-feature-gated-components" },
+    { from: "/components/sign-in", to: "/components/react/sign-in" },
+    { from: "/components/organization", to: "/components/react/organization" },
+    { from: "/components/account", to: "/components/react/account" },
+    { from: "/components/api-keys", to: "/components/react/api-keys" },
+    { from: "/components/webhooks", to: "/components/react/webhooks" },
+    { from: "/components/security", to: "/components/react/security" },
+    { from: "/components/providers", to: "/components/react/providers" },
+    // The v2 archive was removed; land its deep links on the closest v3 page.
+    { from: "/v2", to: "/" },
+    { from: "/v2/index", to: "/" },
+    { from: "/v2/client", to: "/react" },
+    { from: "/v2/ui-components", to: "/components" },
+    { from: "/v2/examples", to: "/react" },
+    {
+      from: "/v2/migrating-from-full-component",
+      to: "/migrating-to-feature-gated-components",
+    },
+    { from: "/v2/migrating-from-better-auth", to: "/migrating-from-better-auth" },
   ],
   seo: {
     organization: {
@@ -98,7 +113,7 @@ export default defineConfig({
   agents: {
     llmsTxt: {
       details:
-        "Convex Auth is a Convex-native authentication library (sessions, OAuth, passkeys, organizations, API keys, webhooks, MCP OAuth) published as @vortex-api/convex-auth. Use these docs when integrating it into a Convex app; the v2 archive documents the previous major for migrations.",
+        "Convex Auth is a Convex-native authentication library (sessions, OAuth, passkeys, organizations, API keys, webhooks, MCP OAuth) published as @vortex-api/convex-auth. Use these docs when integrating it into a Convex app.",
     },
   },
   theme: {

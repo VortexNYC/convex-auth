@@ -5,5 +5,5 @@ export default defineMeta({
   order: 2,
   display: "group",
   icon: "blocks",
-  pages: ["client", "react-native", "nextjs", "tanstack-start", "hono"],
+  pages: ["react", "tanstack-router", "react-native", "nextjs", "tanstack-start", "hono"],
 });

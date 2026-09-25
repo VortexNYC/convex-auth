@@ -5,5 +5,12 @@ export default defineMeta({
   order: 4,
   display: "group",
   icon: "layers",
-  pages: ["organizations", "api-keys", "service-principals", "webhooks", "theming"],
+  pages: [
+    "organizations",
+    "api-keys",
+    "service-principals",
+    "oidc-provider",
+    "webhooks",
+    "theming",
+  ],
 });

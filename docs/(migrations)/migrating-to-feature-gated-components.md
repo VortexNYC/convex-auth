@@ -1,4 +1,7 @@
-# Migrating to feature-gated components
+---
+title: Migrating to per-feature components
+description: Move from the all-in-one component to installing only the auth features you use.
+---
 
 The full `@vortex-api/convex-auth/convex.config` component still works and is the safest starting point for existing consumers. Migration to feature-gated components is optional and driven by which auth features you actually use — see [Feature-gated components](./feature-gated-components) for the mount table and what each component includes.
 

@@ -1,0 +1,409 @@
+---
+title: Webhooks
+description: Endpoint and delivery management UI for signed webhooks.
+---
+
+Management surfaces for the [webhooks](/webhooks) feature — endpoint list, create form, delivery list with filters and pagination, and the settings surface.
+
+### `ConvexExhaustedWebhookDeliveryList`
+
+**Generics:** `<EventType, EndpointId, DeliveryId, OrganizationId>`
+
+**Props**
+
+### `ConvexWebhookCreateForm`
+
+**Generics:** `<EventType>`
+
+**Props**
+
+| Name                  | Type                                      | Optional |
+| --------------------- | ----------------------------------------- | -------- |
+| `classNames`          | `ConvexWebhookClassNames`                 | Yes      |
+| `copy`                | `ConvexWebhookCreateFormCopy`             | Yes      |
+| `creating`            | `boolean`                                 | No       |
+| `enabled`             | `boolean`                                 | No       |
+| `eventOptions`        | `readonly EventType[]`                    | No       |
+| `onDescriptionChange` | `(value: string) => void`                 | No       |
+| `onEventsChange`      | `(value: EventType[]) => void`            | No       |
+| `onSubmit`            | `() => void`                              | No       |
+| `onUrlChange`         | `(value: string) => void`                 | No       |
+| `state`               | `ConvexWebhookCreateFormState<EventType>` | No       |
+
+**classNames keys**
+
+| Key                     | Type     |
+| ----------------------- | -------- |
+| `card`                  | `string` |
+| `cardContent`           | `string` |
+| `codeBlock`             | `string` |
+| `deliveryCard`          | `string` |
+| `deliveryDetails`       | `string` |
+| `deliveryFilterGrid`    | `string` |
+| `deliveryHeader`        | `string` |
+| `deliveryPanel`         | `string` |
+| `destructiveButton`     | `string` |
+| `endpointActions`       | `string` |
+| `endpointCard`          | `string` |
+| `endpointFormGrid`      | `string` |
+| `endpointHeader`        | `string` |
+| `endpointList`          | `string` |
+| `endpointMeta`          | `string` |
+| `exhaustedPanel`        | `string` |
+| `input`                 | `string` |
+| `label`                 | `string` |
+| `labelText`             | `string` |
+| `pill`                  | `string` |
+| `pillDisabled`          | `string` |
+| `pillList`              | `string` |
+| `pillSelected`          | `string` |
+| `primaryButton`         | `string` |
+| `primaryButtonDisabled` | `string` |
+| `secondaryButton`       | `string` |
+| `select`                | `string` |
+| `stateText`             | `string` |
+| `tag`                   | `string` |
+| `warningButton`         | `string` |
+
+**copy keys**
+
+| Key                      | Type     |
+| ------------------------ | -------- |
+| `createLabel`            | `string` |
+| `creatingLabel`          | `string` |
+| `descriptionLabel`       | `string` |
+| `descriptionPlaceholder` | `string` |
+| `urlLabel`               | `string` |
+| `urlPlaceholder`         | `string` |
+
+### `ConvexWebhookDeliveryFilters`
+
+**Generics:** `<EventType, EndpointId>`
+
+**Props**
+
+| Name                 | Type                                                                           | Optional | Description |
+| -------------------- | ------------------------------------------------------------------------------ | -------- | ----------- |
+| `classNames`         | `ConvexWebhookClassNames`                                                      | Yes      |             |
+| `copy`               | `Partial<ConvexWebhookDeliveryCopy>`                                           | Yes      |             |
+| `endpointId`         | `EndpointId \| all`                                                            | No       |             |
+| `endpoints`          | `readonly ConvexWebhookEndpointListItem<EventType, EndpointId>[] \| undefined` | No       |             |
+| `eventOptions`       | `readonly EventType[]`                                                         | No       |             |
+| `eventType`          | `EventType \| all`                                                             | No       |             |
+| `onEndpointIdChange` | `(value: EndpointId \| all) => void`                                           | No       |             |
+| `onEventTypeChange`  | `(value: EventType \| all) => void`                                            | No       |             |
+| `onStatusChange`     | `(value: ConvexWebhookDeliveryStatus \| all) => void`                          | No       |             |
+| `status`             | `ConvexWebhookDeliveryStatus \| all`                                           | No       |             |
+
+**classNames keys**
+
+| Key                     | Type     |
+| ----------------------- | -------- |
+| `card`                  | `string` |
+| `cardContent`           | `string` |
+| `codeBlock`             | `string` |
+| `deliveryCard`          | `string` |
+| `deliveryDetails`       | `string` |
+| `deliveryFilterGrid`    | `string` |
+| `deliveryHeader`        | `string` |
+| `deliveryPanel`         | `string` |
+| `destructiveButton`     | `string` |
+| `endpointActions`       | `string` |
+| `endpointCard`          | `string` |
+| `endpointFormGrid`      | `string` |
+| `endpointHeader`        | `string` |
+| `endpointList`          | `string` |
+| `endpointMeta`          | `string` |
+| `exhaustedPanel`        | `string` |
+| `input`                 | `string` |
+| `label`                 | `string` |
+| `labelText`             | `string` |
+| `pill`                  | `string` |
+| `pillDisabled`          | `string` |
+| `pillList`              | `string` |
+| `pillSelected`          | `string` |
+| `primaryButton`         | `string` |
+| `primaryButtonDisabled` | `string` |
+| `secondaryButton`       | `string` |
+| `select`                | `string` |
+| `stateText`             | `string` |
+| `tag`                   | `string` |
+| `warningButton`         | `string` |
+
+### `ConvexWebhookDeliveryList`
+
+**Generics:** `<EventType, EndpointId, DeliveryId, OrganizationId>`
+
+**Props**
+
+| Name                 | Type                                                                                                       | Optional | Description |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- | -------- | ----------- |
+| `classNames`         | `ConvexWebhookClassNames`                                                                                  | Yes      |             |
+| `copy`               | `ConvexWebhookDeliveryCopy`                                                                                | No       |             |
+| `deliveries`         | `readonly ConvexWebhookDeliveryListItem<EventType, EndpointId, DeliveryId, OrganizationId>[] \| undefined` | No       |             |
+| `formatTimestamp`    | `(timestamp: number) => string`                                                                            | Yes      |             |
+| `renderFailureBadge` | `(failureKind: ConvexWebhookDeliveryFailureKind) => ReactNode`                                             | Yes      |             |
+| `renderTag`          | `(label: string) => ReactNode`                                                                             | Yes      |             |
+
+**classNames keys**
+
+| Key                     | Type     |
+| ----------------------- | -------- |
+| `card`                  | `string` |
+| `cardContent`           | `string` |
+| `codeBlock`             | `string` |
+| `deliveryCard`          | `string` |
+| `deliveryDetails`       | `string` |
+| `deliveryFilterGrid`    | `string` |
+| `deliveryHeader`        | `string` |
+| `deliveryPanel`         | `string` |
+| `destructiveButton`     | `string` |
+| `endpointActions`       | `string` |
+| `endpointCard`          | `string` |
+| `endpointFormGrid`      | `string` |
+| `endpointHeader`        | `string` |
+| `endpointList`          | `string` |
+| `endpointMeta`          | `string` |
+| `exhaustedPanel`        | `string` |
+| `input`                 | `string` |
+| `label`                 | `string` |
+| `labelText`             | `string` |
+| `pill`                  | `string` |
+| `pillDisabled`          | `string` |
+| `pillList`              | `string` |
+| `pillSelected`          | `string` |
+| `primaryButton`         | `string` |
+| `primaryButtonDisabled` | `string` |
+| `secondaryButton`       | `string` |
+| `select`                | `string` |
+| `stateText`             | `string` |
+| `tag`                   | `string` |
+| `warningButton`         | `string` |
+
+**copy keys**
+
+| Key                       | Type     |
+| ------------------------- | -------- |
+| `allEndpointsLabel`       | `string` |
+| `allEventTypesLabel`      | `string` |
+| `allStatusesLabel`        | `string` |
+| `createdLabel`            | `string` |
+| `emptyMessage`            | `string` |
+| `endpointFilterLabel`     | `string` |
+| `eventFilterLabel`        | `string` |
+| `eventIdLabel`            | `string` |
+| `exhaustedDescription`    | `string` |
+| `exhaustedLabel`          | `string` |
+| `exhaustedLoadingMessage` | `string` |
+| `exhaustedTitle`          | `string` |
+| `failureKindLabel`        | `string` |
+| `historyDescription`      | `string` |
+| `historyTitle`            | `string` |
+| `loadingMessage`          | `string` |
+| `nextLabel`               | `string` |
+| `ofLabel`                 | `string` |
+| `previousLabel`           | `string` |
+| `recoveredLabel`          | `string` |
+| `responseLabel`           | `string` |
+| `retryDueLabel`           | `string` |
+| `retryingLabel`           | `string` |
+| `retryLabel`              | `string` |
+| `showingLabel`            | `string` |
+| `statusFilterLabel`       | `string` |
+
+### `ConvexWebhookDeliveryPagination`
+
+**Generics:** `<EventType, EndpointId, DeliveryId, OrganizationId>`
+
+**Props**
+
+| Name         | Type                                                                                        | Optional | Description |
+| ------------ | ------------------------------------------------------------------------------------------- | -------- | ----------- |
+| `classNames` | `ConvexWebhookClassNames`                                                                   | Yes      |             |
+| `copy`       | `Partial<ConvexWebhookDeliveryCopy>`                                                        | Yes      |             |
+| `onNext`     | `() => void`                                                                                | No       |             |
+| `onPrevious` | `() => void`                                                                                | No       |             |
+| `page`       | `ConvexWebhookDeliveryPage<EventType, EndpointId, DeliveryId, OrganizationId> \| undefined` | No       |             |
+
+**classNames keys**
+
+| Key                     | Type     |
+| ----------------------- | -------- |
+| `card`                  | `string` |
+| `cardContent`           | `string` |
+| `codeBlock`             | `string` |
+| `deliveryCard`          | `string` |
+| `deliveryDetails`       | `string` |
+| `deliveryFilterGrid`    | `string` |
+| `deliveryHeader`        | `string` |
+| `deliveryPanel`         | `string` |
+| `destructiveButton`     | `string` |
+| `endpointActions`       | `string` |
+| `endpointCard`          | `string` |
+| `endpointFormGrid`      | `string` |
+| `endpointHeader`        | `string` |
+| `endpointList`          | `string` |
+| `endpointMeta`          | `string` |
+| `exhaustedPanel`        | `string` |
+| `input`                 | `string` |
+| `label`                 | `string` |
+| `labelText`             | `string` |
+| `pill`                  | `string` |
+| `pillDisabled`          | `string` |
+| `pillList`              | `string` |
+| `pillSelected`          | `string` |
+| `primaryButton`         | `string` |
+| `primaryButtonDisabled` | `string` |
+| `secondaryButton`       | `string` |
+| `select`                | `string` |
+| `stateText`             | `string` |
+| `tag`                   | `string` |
+| `warningButton`         | `string` |
+
+### `ConvexWebhookEndpointList`
+
+**Generics:** `<EventType, EndpointId>`
+
+**Props**
+
+| Name                    | Type                                                                           | Optional | Description |
+| ----------------------- | ------------------------------------------------------------------------------ | -------- | ----------- |
+| `classNames`            | `ConvexWebhookClassNames`                                                      | Yes      |             |
+| `copy`                  | `ConvexWebhookEndpointListCopy`                                                | No       |             |
+| `endpoints`             | `readonly ConvexWebhookEndpointListItem<EventType, EndpointId>[] \| undefined` | No       |             |
+| `eventOptions`          | `readonly EventType[]`                                                         | No       |             |
+| `onArchive`             | `(endpointId: EndpointId) => void`                                             | No       |             |
+| `onDelete`              | `(endpointId: EndpointId) => void`                                             | No       |             |
+| `onDisable`             | `(endpointId: EndpointId) => void`                                             | No       |             |
+| `onRotateSecret`        | `(endpointId: EndpointId) => void`                                             | No       |             |
+| `onSave`                | `(endpointId: EndpointId, values: __type) => void`                             | No       |             |
+| `onSendTest`            | `(endpointId: EndpointId) => void`                                             | No       |             |
+| `renderTag`             | `(label: string) => ReactNode`                                                 | Yes      |             |
+| `sendingTestEndpointId` | `EndpointId \| None`                                                           | No       |             |
+
+**classNames keys**
+
+| Key                     | Type     |
+| ----------------------- | -------- |
+| `card`                  | `string` |
+| `cardContent`           | `string` |
+| `codeBlock`             | `string` |
+| `deliveryCard`          | `string` |
+| `deliveryDetails`       | `string` |
+| `deliveryFilterGrid`    | `string` |
+| `deliveryHeader`        | `string` |
+| `deliveryPanel`         | `string` |
+| `destructiveButton`     | `string` |
+| `endpointActions`       | `string` |
+| `endpointCard`          | `string` |
+| `endpointFormGrid`      | `string` |
+| `endpointHeader`        | `string` |
+| `endpointList`          | `string` |
+| `endpointMeta`          | `string` |
+| `exhaustedPanel`        | `string` |
+| `input`                 | `string` |
+| `label`                 | `string` |
+| `labelText`             | `string` |
+| `pill`                  | `string` |
+| `pillDisabled`          | `string` |
+| `pillList`              | `string` |
+| `pillSelected`          | `string` |
+| `primaryButton`         | `string` |
+| `primaryButtonDisabled` | `string` |
+| `secondaryButton`       | `string` |
+| `select`                | `string` |
+| `stateText`             | `string` |
+| `tag`                   | `string` |
+| `warningButton`         | `string` |
+
+**copy keys**
+
+| Key                 | Type     |
+| ------------------- | -------- |
+| `allEventsLabel`    | `string` |
+| `archiveLabel`      | `string` |
+| `deleteLabel`       | `string` |
+| `descriptionLabel`  | `string` |
+| `disableLabel`      | `string` |
+| `emptyMessage`      | `string` |
+| `endpointUrlLabel`  | `string` |
+| `loadingMessage`    | `string` |
+| `rotateSecretLabel` | `string` |
+| `saveLabel`         | `string` |
+| `secretLabel`       | `string` |
+| `sendingTestLabel`  | `string` |
+| `sendTestLabel`     | `string` |
+
+### `ConvexWebhookSettingsSurface`
+
+**Generics:** `<EventType, EndpointId, DeliveryId, OrganizationId>`
+
+**Props**
+
+| Name                       | Type                                                                                         | Optional | Description |
+| -------------------------- | -------------------------------------------------------------------------------------------- | -------- | ----------- |
+| `captureEvent`             | `(name: string, properties: Record<string, unknown>) => void`                                | Yes      |             |
+| `classNames`               | `ConvexWebhookClassNames`                                                                    | Yes      |             |
+| `confirmDeleteEndpoint`    | `(args: __type) => boolean \| Promise<boolean>`                                              | Yes      |             |
+| `copy`                     | `ConvexWebhookSettingsSurfaceCopy`                                                           | Yes      |             |
+| `createRequestId`          | `(prefix: string) => string`                                                                 | No       |             |
+| `deliveryLimit`            | `number`                                                                                     | Yes      |             |
+| `enabled`                  | `boolean`                                                                                    | No       |             |
+| `eventOptions`             | `readonly EventType[]`                                                                       | No       |             |
+| `exhaustedDeliveryLimit`   | `number`                                                                                     | Yes      |             |
+| `formatTimestamp`          | `(timestamp: number) => string`                                                              | Yes      |             |
+| `getErrorMessage`          | `(error: unknown, fallback: string) => string`                                               | Yes      |             |
+| `organizationId`           | `string`                                                                                     | Yes      |             |
+| `refs`                     | `ConvexWebhookSettingsFunctionReferences<EventType, EndpointId, DeliveryId, OrganizationId>` | No       |             |
+| `renderActionError`        | `(message: string) => ReactNode`                                                             | Yes      |             |
+| `renderFailureBadge`       | `(failureKind: ConvexWebhookDeliveryFailureKind) => ReactNode`                               | Yes      |             |
+| `renderProcessQueueButton` | `(args: __type) => ReactNode`                                                                | Yes      |             |
+| `renderSecret`             | `(args: __type) => ReactNode`                                                                | Yes      |             |
+| `renderTag`                | `(label: string) => ReactNode`                                                               | Yes      |             |
+
+**classNames keys**
+
+| Key                     | Type     |
+| ----------------------- | -------- |
+| `card`                  | `string` |
+| `cardContent`           | `string` |
+| `codeBlock`             | `string` |
+| `deliveryCard`          | `string` |
+| `deliveryDetails`       | `string` |
+| `deliveryFilterGrid`    | `string` |
+| `deliveryHeader`        | `string` |
+| `deliveryPanel`         | `string` |
+| `destructiveButton`     | `string` |
+| `endpointActions`       | `string` |
+| `endpointCard`          | `string` |
+| `endpointFormGrid`      | `string` |
+| `endpointHeader`        | `string` |
+| `endpointList`          | `string` |
+| `endpointMeta`          | `string` |
+| `exhaustedPanel`        | `string` |
+| `input`                 | `string` |
+| `label`                 | `string` |
+| `labelText`             | `string` |
+| `pill`                  | `string` |
+| `pillDisabled`          | `string` |
+| `pillList`              | `string` |
+| `pillSelected`          | `string` |
+| `primaryButton`         | `string` |
+| `primaryButtonDisabled` | `string` |
+| `secondaryButton`       | `string` |
+| `select`                | `string` |
+| `stateText`             | `string` |
+| `tag`                   | `string` |
+| `warningButton`         | `string` |
+
+**copy keys**
+
+| Key                   | Type                                     |
+| --------------------- | ---------------------------------------- |
+| `actionErrorTitle`    | `string`                                 |
+| `create`              | `ConvexWebhookCreateFormCopy`            |
+| `deliveries`          | `Partial<ConvexWebhookDeliveryCopy>`     |
+| `endpoints`           | `Partial<ConvexWebhookEndpointListCopy>` |
+| `exhaustedDeliveries` | `Partial<ConvexWebhookDeliveryCopy>`     |
+| `processQueueLabel`   | `string`                                 |
+| `secretTitle`         | `string`                                 |

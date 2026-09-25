@@ -1,4 +1,7 @@
-# Testing
+---
+title: Testing
+description: Helpers for driving the native auth flow in Convex unit tests.
+---
 
 `@vortex-api/convex-auth/testing` provides helpers for driving the native auth flow in Convex unit tests.
 

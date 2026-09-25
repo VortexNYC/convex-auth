@@ -24,7 +24,7 @@ Point the server at your Convex deployment and wire the backend (component mount
 echo 'CONVEX_URL=https://<your-deployment>.convex.cloud' >> .env.local
 ```
 
-Hono serves the server surface — middleware, the `/api/auth` proxy, and session helpers. Your sign-in UI lives wherever your frontend does (a SPA hitting the proxy, Hono-rendered pages, or a mobile app); it calls the same [React client](./client) or plain `fetch` against `/api/auth`.
+Hono serves the server surface — middleware, the `/api/auth` proxy, and session helpers. Your sign-in UI lives wherever your frontend does (a SPA hitting the proxy, Hono-rendered pages, or a mobile app); it calls the same [React client](./react) or plain `fetch` against `/api/auth`.
 
 ## Middleware
 
@@ -119,7 +119,7 @@ The backend is the standard consumer setup — component mount in `convex/convex
   <Card title="SSR auth contract" href="./ssr-contract" icon="file-text">
     The boundary semantics every SSR adapter implements.
   </Card>
-  <Card title="React hooks" href="./client" icon="atom">
+  <Card title="React hooks" href="./react" icon="atom">
     The client your SPA uses against the Hono proxy.
   </Card>
   <Card title="Production" href="./production" icon="rocket">

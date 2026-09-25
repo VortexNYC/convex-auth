@@ -1,4 +1,7 @@
-# Migrating to v3
+---
+title: Migrating to v3
+description: What changed in v3 and whether you need to act.
+---
 
 `@vortex-api/convex-auth` v3 removes deprecated API surfaces, drops
 legacy session-compatibility fallbacks, and tightens the SSR landing
