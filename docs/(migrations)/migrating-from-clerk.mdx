@@ -7,24 +7,24 @@ Moving from Clerk to convex-auth means your users, sessions, organizations, and 
 
 ## Concept mapping
 
-| Clerk                             | convex-auth                                                                     |
-| --------------------------------- | ------------------------------------------------------------------------------- |
-| `<ClerkProvider>`                 | `ConvexAuthClientProvider` — see the [React guide](./react)                     |
-| `<SignIn />` / `<SignUp />`       | `ConvexAuthSignInPage` / `ConvexAuthSignUpPage` — [UI components](./components) |
-| `useAuth()` / `useUser()`         | `useSession()` / `useConvexAuthUser()` — [React guide](./react)                 |
-| `auth()` in `middleware.ts`       | Next.js adapter middleware — [Next.js guide](./nextjs)                          |
-| Organizations, memberships, roles | [Organizations](./organizations) — first-class tables, roles, invitations       |
-| `<OrganizationSwitcher />`        | `ConvexOrganizationSwitcher` — [UI components](./components)                    |
-| Sessions list / "Devices"         | `ConvexSessionList` — [UI components](./components)                             |
-| Webhooks (user.created, …)        | [Webhooks](./webhooks) — signed lifecycle events                                |
-| Backend API keys                  | [API keys](./api-keys) with scoped IP ranges                                    |
-| JWT templates                     | Native Convex JWTs — see [Architecture](./architecture)                         |
+| Clerk                             | convex-auth                                                                                                                                 |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<ClerkProvider>`                 | `ConvexAuthClientProvider` — see the [React guide](./react)                                                                                 |
+| `<SignIn />` / `<SignUp />`       | `ConvexAuthSignInPage` / `ConvexAuthSignUpPage` — [UI components](./components)                                                             |
+| `useAuth()` / `useUser()`         | `useSession()` / `useConvexAuthUser(authClient)` — [React guide](./react)                                                                   |
+| `auth()` in `middleware.ts`       | Next.js adapter middleware — [Next.js guide](./nextjs)                                                                                      |
+| Organizations, memberships, roles | [Organizations](./organizations) — first-class tables, roles, invitations                                                                   |
+| `<OrganizationSwitcher />`        | `ConvexOrganizationSwitcher` — [UI components](./components)                                                                                |
+| Sessions list / "Devices"         | `ConvexSessionList` — [UI components](./components)                                                                                         |
+| Webhooks (user.created, …)        | [Webhooks](./webhooks) — signed lifecycle events                                                                                            |
+| Backend API keys                  | None — Clerk secret keys are Clerk's own API credentials. The convex-auth [API keys](./api-keys) feature issues keys _for your_ API instead |
+| JWT templates                     | Native Convex JWTs — see [Architecture](./architecture)                                                                                     |
 
 ## The cutover path
 
 1. **Stand up convex-auth** alongside Clerk: mount the component, wire `convex/auth.ts`, and point a staging app at it. Follow the [Quickstart](./quickstart).
 2. **Export users from Clerk** (Dashboard → Users → export, or the Backend API). You get emails, names, and optionally bcrypt password hashes.
-3. **Import users** with a Convex migration script that writes the `convexAuth` users/identities tables directly — the schema is documented under [Per-feature components](./feature-gated-components). Mark `emailVerified` from Clerk's export.
+3. **Import users.** Component tables are isolated — your app's functions can't `ctx.db.insert` into them, so there is no direct-write path. Today the only shipped importer is the Better Auth path (`pnpm dlx @vortex-api/convex-auth migrate better-auth`); a `migrate clerk` command does not exist yet — [open an issue](https://github.com/VortexNYC/convex-auth/issues) if you need it. In the meantime, the pragmatic path is just-in-time: users sign up fresh with the same email on first visit (OAuth and magic links make this painless), and you reconcile org membership out-of-band.
 4. **Passwords need a reset.** Clerk stores bcrypt hashes and convex-auth verifies argon2id, scrypt (Better Auth-compatible), and pbkdf2 formats — bcrypt is not one of them. Imported users sign in via [forgot password](./email-password), OAuth, or a [magic link](./magic-links). Communicate this in the cutover email.
 5. **Recreate organizations.** Map Clerk orgs and memberships onto the `convexAuthOrganizations` tables, preserving role names where possible.
 6. **Cut the client over** route by route — Clerk middleware off, the adapter's middleware on. Old Clerk session tokens die with the provider, so plan a single sign-out event.

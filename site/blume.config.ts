@@ -82,6 +82,17 @@ export default defineConfig({
     { from: "/components/webhooks", to: "/components/react/webhooks" },
     { from: "/components/security", to: "/components/react/security" },
     { from: "/components/providers", to: "/components/react/providers" },
+    // The v2 archive was removed; land its deep links on the closest v3 page.
+    { from: "/v2", to: "/" },
+    { from: "/v2/index", to: "/" },
+    { from: "/v2/client", to: "/react" },
+    { from: "/v2/ui-components", to: "/components" },
+    { from: "/v2/examples", to: "/react" },
+    {
+      from: "/v2/migrating-from-full-component",
+      to: "/migrating-to-feature-gated-components",
+    },
+    { from: "/v2/migrating-from-better-auth", to: "/migrating-from-better-auth" },
   ],
   seo: {
     organization: {

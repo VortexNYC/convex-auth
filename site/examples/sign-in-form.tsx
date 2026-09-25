@@ -4,9 +4,9 @@ export default function SignInFormPreview() {
   return (
     <AuthSignInForm
       providers={[
-        { id: "google", label: "Continue with Google" },
-        { id: "github", label: "Continue with GitHub" },
-        { id: "discord", label: "Continue with Discord" },
+        { id: "google", label: "Google" },
+        { id: "github", label: "GitHub" },
+        { id: "discord", label: "Discord" },
       ]}
       onProviderSelect={() => {}}
       onSubmit={() => {}}
