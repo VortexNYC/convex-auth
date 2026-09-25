@@ -4,26 +4,26 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "convex dev --start 'vite'",
-    "build": "tsc && vite build",
+    "dev": "convex dev --start 'vp dev'",
+    "build": "tsc && vp build",
     "typecheck": "tsc --noEmit",
-    "serve": "vite preview"
+    "serve": "vp preview"
   },
   "dependencies": {
     "@vortex-api/convex-auth": "workspace:*",
-    "better-auth": "^1.7.1",
+    "better-auth": "^1.7.6",
     "convex": "^1.46.0",
     "convex-better-auth-adapter": "^0.13.5",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react-swc": "^4.3.3",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.7.0",
-    "vite": "^6.0.0"
+    "vite": "^8.2.2"
   }
 }

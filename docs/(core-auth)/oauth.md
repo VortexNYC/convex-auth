@@ -140,9 +140,7 @@ export const auth = convexAuth({
   component: components.convexAuth,
   oauth: {
     trustedOrigins: ["https://app.example.com"],
-    github: {
-      /* ... */
-    },
+    github: {/* ... */},
   },
 });
 ```
