@@ -27,7 +27,7 @@ describe("normalizeClerkExport", () => {
     const cred = out.accounts.find(
       (a) => a.userExternalId === "user_2a1password" && a.provider === "password",
     );
-    expect(cred?.passwordHash).toBe("$2b$10$AnPv4/qb1oLaM7t/RGRXJuPFAO3j5YjhpIeWIlu7yZ5dDEoEtH6CO");
+    expect(cred?.passwordHash).toBe("$2b$10$AnPv4/qb1oLaM7t/RGRXJuPFAO3j5YjhpIeWIlu7yZ5dDEoEtH6CO"); // nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash
     expect(cred?.issuer).toBe("native");
   });
 

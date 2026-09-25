@@ -109,7 +109,7 @@ export function shouldRehashAfterVerify(hash: string): boolean {
 }
 
 /** A fixed, never-real bcrypt digest for timing padding. */
-const DUMMY_BCRYPT_HASH = "$2a$10$DprdJOxGXADLAHm6zgiHee6l4Wey3XBYfEtgTPXhDbScWLr6to2xy";
+const DUMMY_BCRYPT_HASH = "$2a$10$DprdJOxGXADLAHm6zgiHee6l4Wey3XBYfEtgTPXhDbScWLr6to2xy"; // nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash
 
 /**
  * Equalizes the failed-sign-in path for imported bcrypt credentials — without

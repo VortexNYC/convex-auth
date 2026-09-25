@@ -1,0 +1,2 @@
+# Vendor export fixtures carry real-shaped bcrypt digests as test data.
+packages/auth/src/migrations/fixtures/

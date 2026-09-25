@@ -613,7 +613,7 @@ describe("nativeEmailAndPassword", () => {
     const user = makeUser({ emailVerified: true });
     const identity = makeIdentity({ emailVerified: true });
     const account = makeAccount({
-      credentialHash: "$2a$10$DprdJOxGXADLAHm6zgiHeeYJIMX.UqFj0gRoy7VHEhAfnX8nwxbJe",
+      credentialHash: "$2a$10$DprdJOxGXADLAHm6zgiHeeYJIMX.UqFj0gRoy7VHEhAfnX8nwxbJe", // nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash
     });
     component.identity.getUserAndAccount.mockResolvedValue({ user, identity, account });
     component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_1");

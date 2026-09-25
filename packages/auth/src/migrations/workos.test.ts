@@ -31,7 +31,7 @@ describe("normalizeWorkosExport", () => {
     expect(cred).toMatchObject({
       provider: "password",
       issuer: "native",
-      passwordHash: "$2b$10$AnPv4/qb1oLaM7t/RGRXJuPFAO3j5YjhpIeWIlu7yZ5dDEoEtH6CO",
+      passwordHash: "$2b$10$AnPv4/qb1oLaM7t/RGRXJuPFAO3j5YjhpIeWIlu7yZ5dDEoEtH6CO", // nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash
     });
   });
 
