@@ -54,6 +54,9 @@ export type NormalizedMembership = {
   /** Role key in the destination org ("admin", "member", custom keys). */
   roleKey: string;
   roleName?: string;
+  /** "invited" stays invited even when the user exists in the export
+   * (source membership was pending/unaccepted). Defaults to "active". */
+  status?: "active" | "invited";
   createdAt: number;
   updatedAt: number;
 };

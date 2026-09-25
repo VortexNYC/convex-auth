@@ -104,4 +104,18 @@ describe("normalizeClerkExport", () => {
     const invited = out.memberships.find((m) => m.userEmail === "newbie@example.com");
     expect(invited).toMatchObject({ organizationSlug: "acme", roleKey: "member" });
   });
+
+  it("does not emit memberships for skipped users or non-email identifiers", () => {
+    /* mem_6 joins on user_2d4banned, which was skipped as banned — its seat
+     * must not be emitted (or worse, attached to a same-email user). */
+    expect(out.memberships.some((m) => m.userExternalId === "user_2d4banned")).toBe(false);
+    expect(
+      out.skipped.find((s) => s.kind === "membership" && s.externalId === "mem_6")?.reason,
+    ).toContain("skipped during normalization");
+    /* mem_7's identifier is a username, not an email — skipped rather than
+     * letting a free-form field impersonate a live address. */
+    expect(
+      out.skipped.find((s) => s.kind === "membership" && s.externalId === "mem_7")?.reason,
+    ).toContain("no resolvable email");
+  });
 });

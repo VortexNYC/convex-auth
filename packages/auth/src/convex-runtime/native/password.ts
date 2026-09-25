@@ -14,11 +14,21 @@ const PBKDF2_PREFIX = "$pbkdf2$";
 const SCRYPT_PREFIX = "$scrypt$";
 const ARGON2ID_PREFIX = "$argon2id$";
 /**
- * bcrypt modular crypt format: `$2a$|2b$|2x$|2y$` + two-digit cost + 53-char
- * salt/digest body. This is the shape Clerk's dashboard CSV export emits in
- * its `password_digest` column (and what WorkOS imports hand off).
+ * Imported bcrypt digests are only honored at sane parameters: variants 2a/2b/2y
+ * ($2x$ was a buggy PHP prefix nobody exports) and cost 4–14 — real vendor
+ * exports are 10–12, while cost 31 would DoS every sign-in attempt. This is the
+ * shape Clerk's dashboard CSV export emits in its `password_digest` column (and
+ * what WorkOS imports hand off).
  */
-const BCRYPT_REGEX = /^\$2[abxy]\$\d{2}\$[./A-Za-z0-9]{53}$/;
+const BCRYPT_REGEX = /^\$2[aby]\$(?:0[4-9]|1[0-4])\$[./A-Za-z0-9]{53}$/;
+
+/**
+ * Imported argon2id PHC strings below this floor are treated as non-native and
+ * upgraded on first successful verification. Bounds sit under both standard
+ * OWASP profiles (m≥12MiB, t≥2, p≥1) so a WorkOS-style export carrying
+ * m=19456,t=2 or m=16384,t=3 stays put while m=1,t=1 garbage gets rehashed.
+ */
+const ARGON2ID_PARAM_FLOOR = { m: 12288, t: 2, p: 1 } as const;
 const DEFAULT_DKLEN = 32;
 const DEFAULT_SALT_BYTES = 16;
 const DEFAULT_PBKDF2_ITERATIONS = 100_000;
@@ -62,6 +72,40 @@ export async function hashPassword(password: string): Promise<string> {
 
 export function isBcryptHash(hash: string): boolean {
   return BCRYPT_REGEX.test(hash);
+}
+
+function parsePhcParams(segment: string): { m: number; t: number; p: number } | null {
+  const opts: Record<string, number> = {};
+  for (const pair of segment.split(",")) {
+    const [key, value] = pair.split("=");
+    const num = Number(value);
+    if (!key || !Number.isFinite(num) || num < 0) return null;
+    opts[key] = num;
+  }
+  const { m, t, p } = opts;
+  return typeof m === "number" && typeof t === "number" && typeof p === "number"
+    ? { m, t, p }
+    : null;
+}
+
+/**
+ * Whether a credential that just verified should be rewritten to native
+ * argon2id. True for every non-native format (bcrypt, legacy argon2id, scrypt,
+ * pbkdf2, Better Auth digests) and for argon2id PHC strings below the native
+ * parameter floor — e.g. a WorkOS export carrying `m=1,t=1` must not survive
+ * past first sign-in. Stronger-than-floor PHC params are left alone.
+ */
+export function shouldRehashAfterVerify(hash: string): boolean {
+  if (!hash.startsWith(ARGON2ID_PREFIX)) return true;
+  const segments = hash.split("$");
+  if (segments.length !== 6) return true;
+  const params = parsePhcParams(segments[3] ?? "");
+  if (!params) return true;
+  return (
+    params.m < ARGON2ID_PARAM_FLOOR.m ||
+    params.t < ARGON2ID_PARAM_FLOOR.t ||
+    params.p < ARGON2ID_PARAM_FLOOR.p
+  );
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {

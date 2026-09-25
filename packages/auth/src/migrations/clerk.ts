@@ -92,6 +92,8 @@ export type ClerkExportInput = {
 };
 
 /** Well-known OIDC issuers for Clerk's `oauth_*` provider ids. */
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+$/;
+
 const OAUTH_ISSUERS: Record<string, string> = {
   google: "https://accounts.google.com",
   github: "https://github.com/login/oauth",
@@ -267,12 +269,24 @@ export function normalizeClerkOrganization(org: ClerkOrganization, out: Normaliz
 export function normalizeClerkMembership(
   member: ClerkMembership,
   orgById: ReadonlyMap<string, ClerkOrganization>,
-  userById: ReadonlyMap<string, ClerkApiUser>,
+  userById: ReadonlyMap<string, NormalizedUser>,
+  skippedUserIds: ReadonlySet<string>,
   out: NormalizedExport,
 ): void {
   const orgId = member.organization?.id ?? member.organization_id;
   const org = orgId ? orgById.get(orgId) : undefined;
   const userId = member.public_user_data?.user_id;
+  /* A user that was present but skipped (banned/locked/no email) must not emit
+   * a seat — distinct from a user simply absent from the export, whose seat
+   * lands as an invite. */
+  if (userId && skippedUserIds.has(userId)) {
+    out.skipped.push({
+      kind: "membership",
+      externalId: member.id,
+      reason: `member user ${userId} was skipped during normalization`,
+    });
+    return;
+  }
   const user = userId ? userById.get(userId) : undefined;
   if (!org) {
     out.skipped.push({
@@ -282,8 +296,11 @@ export function normalizeClerkMembership(
     });
     return;
   }
-  const userEmail = user ? primaryEmail(user)?.email : undefined;
-  const email = userEmail ?? member.public_user_data?.identifier?.toLowerCase().trim();
+  /* The identifier fallback is a free-form Clerk field — it can be a username,
+   * so it only counts when it actually looks like an email. */
+  const identifier = member.public_user_data?.identifier?.toLowerCase().trim();
+  const email =
+    user?.email ?? (identifier && EMAIL_SHAPE.test(identifier) ? identifier : undefined);
   if (!email) {
     out.skipped.push({
       kind: "membership",
@@ -312,21 +329,48 @@ export function normalizeClerkExport(input: ClerkExportInput): NormalizedExport 
   const out = emptyExport();
   const csvById = new Map((input.csvRows ?? []).map((row) => [row.id, row]));
 
+  /* Memberships join on normalized users only — banned/locked/invalid users
+   * were skipped above and must not emit memberships either. */
+  const userById = new Map<string, NormalizedUser>();
   for (const user of input.users) {
     const normalized = normalizeClerkUser(user, out);
     if (!normalized) continue;
+    userById.set(user.id, normalized);
     normalizeClerkCredential(user, csvById.get(user.id), out);
     normalizeClerkExternalAccounts(user, out);
   }
 
+  const orgById = new Map<string, ClerkOrganization>();
+  const seenSlugs = new Map<string, string>();
   for (const org of input.organizations ?? []) {
+    const slug = org.slug?.trim();
+    if (!slug) {
+      out.skipped.push({
+        kind: "organization",
+        externalId: org.id,
+        reason: "organization has no slug",
+      });
+      continue;
+    }
+    const takenBy = seenSlugs.get(slug);
+    if (takenBy && takenBy !== org.id) {
+      out.skipped.push({
+        kind: "organization",
+        externalId: org.id,
+        reason: `slug '${slug}' collides with organization ${takenBy} — rename before import`,
+      });
+      continue;
+    }
+    seenSlugs.set(slug, org.id);
+    orgById.set(org.id, org);
     normalizeClerkOrganization(org, out);
   }
 
-  const orgById = new Map((input.organizations ?? []).map((o) => [o.id, o]));
-  const userById = new Map(input.users.map((u) => [u.id, u]));
+  const skippedUserIds = new Set(
+    out.skipped.filter((s) => s.kind === "user").map((s) => s.externalId),
+  );
   for (const member of input.memberships ?? []) {
-    normalizeClerkMembership(member, orgById, userById, out);
+    normalizeClerkMembership(member, orgById, userById, skippedUserIds, out);
   }
 
   return out;

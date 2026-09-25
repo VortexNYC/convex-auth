@@ -1771,8 +1771,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         updateCredentialHash: FunctionReference<
           "mutation",
           "internal",
-          { accountId: string; credentialHash: string },
-          any,
+          {
+            accountId: string;
+            credentialHash: string;
+            expectedCredentialHash?: string;
+          },
+          { updated: boolean },
           Name
         >;
       };

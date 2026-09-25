@@ -54,11 +54,22 @@ describe("normalizeWorkosExport", () => {
   });
 
   it("resolves memberships through external ids and both role shapes", () => {
-    expect(out.memberships).toHaveLength(2);
+    expect(out.memberships).toHaveLength(3);
     const admin = out.memberships.find((m) => m.userEmail === "margaret@example.com");
     expect(admin).toMatchObject({ organizationSlug: "wayne-enterprises", roleKey: "admin" });
-    const member = out.memberships.find((m) => m.userEmail === "dorothy@example.com");
+    const member = out.memberships.find(
+      (m) => m.userEmail === "dorothy@example.com" && m.status === "active",
+    );
     expect(member?.roleKey).toBe("member");
+  });
+
+  it("keeps pending memberships invited and skips non-importable states", () => {
+    const pending = out.memberships.find((m) => m.userEmail === "katherine@example.com");
+    expect(pending).toBeDefined();
+    expect(
+      out.skipped.find((s) => s.kind === "membership" && s.externalId === "om_01EHZNVPKN3REMOVED")
+        ?.reason,
+    ).toContain("not importable");
   });
 
   it("skips memberships that reference rows outside the export", () => {

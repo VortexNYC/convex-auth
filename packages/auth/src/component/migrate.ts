@@ -221,9 +221,12 @@ export const migrateOrganization = internalMutation({
       slug: args.organization.slug,
       imageUrl: args.organization.imageUrl ?? undefined,
       status: "active",
-      metadataJson: args.organization.externalId
-        ? JSON.stringify({ migration: { externalId: args.organization.externalId } })
-        : undefined,
+      /* The `migration` marker distinguishes imported orgs from pre-existing
+       * tenants — `migrateMembership` refuses to attach members to an org that
+       * lacks it unless the caller explicitly opts in. */
+      metadataJson: JSON.stringify({
+        migration: { externalId: args.organization.externalId ?? null },
+      }),
       createdAt: args.organization.createdAt,
       updatedAt: args.organization.updatedAt,
     });
@@ -245,13 +248,34 @@ export const migrateOrganization = internalMutation({
   },
 });
 
+function hasMigrationMarker(doc: { metadataJson?: string }): boolean {
+  if (!doc.metadataJson) return false;
+  try {
+    const parsed: unknown = JSON.parse(doc.metadataJson);
+    return (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "migration" in (parsed as Record<string, unknown>)
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Migrate a single org membership. Idempotent on (user, organization) for
  * known users and on (organization, invitedEmail) for users not yet
  * migrated — those land as `invited` so the seat exists when they sign up.
- * Missing roles are created with `rolePermissions` (default: `["*"]` for
- * owner/admin, the read-only member set for member, empty for custom keys —
- * report `roleCreated` so the caller can flag it for review).
+ * An invited row for the same email is promoted to active rather than
+ * duplicated when the user appears. Missing roles are created with
+ * `rolePermissions` (default: `["*"]` only for `owner`, the read-only member
+ * set for `member`, empty for everything else — an export must never mint
+ * privileged roles silently; `roleCreated` is reported for review).
+ *
+ * Memberships refuse to attach to organizations that were not created by
+ * `migrateOrganization` (no `migration` marker in metadataJson) unless the
+ * caller passes `allowExistingOrg` — otherwise a hostile or colliding export
+ * could pour members into a pre-existing tenant.
  */
 export const migrateMembership = internalMutation({
   args: {
@@ -260,16 +284,33 @@ export const migrateMembership = internalMutation({
     roleKey: v.optional(v.string()),
     roleName: v.optional(v.string()),
     rolePermissions: v.optional(v.array(v.string())),
+    allowExistingOrg: v.optional(v.boolean()),
+    /* "invited" forces the invited-email row even when the user already
+     * exists — e.g. a WorkOS membership that was never accepted. */
+    status: v.optional(v.union(v.literal("active"), v.literal("invited"))),
     createdAt: v.number(),
     updatedAt: v.number(),
   },
   returns: v.object({
-    memberId: v.id("organization_members"),
-    roleId: v.id("organization_roles"),
+    memberId: v.optional(v.id("organization_members")),
+    roleId: v.optional(v.id("organization_roles")),
     roleCreated: v.boolean(),
     userFound: v.boolean(),
+    skipped: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
+    const organization = await ctx.db.get("organizations", args.organizationId);
+    if (!organization) {
+      return { roleCreated: false, userFound: false, skipped: "organization not found" };
+    }
+    if (!hasMigrationMarker(organization) && args.allowExistingOrg !== true) {
+      return {
+        roleCreated: false,
+        userFound: false,
+        skipped: "organization lacks migration marker — pass allowExistingOrg to attach",
+      };
+    }
+
     const email = normalizeEmail(args.email);
     const roleKey = args.roleKey ?? "member";
 
@@ -287,7 +328,7 @@ export const migrateMembership = internalMutation({
         name: args.roleName ?? roleKey,
         permissions:
           args.rolePermissions ??
-          (roleKey === "owner" || roleKey === "admin"
+          (roleKey === "owner"
             ? ["*"]
             : roleKey === "member"
               ? ["organization:read", "organization:members:read"]
@@ -305,7 +346,7 @@ export const migrateMembership = internalMutation({
       .withIndex("by_email", (q) => q.eq("email", email))
       .unique();
 
-    if (user) {
+    if (user && args.status !== "invited") {
       const existing = await ctx.db
         .query("organization_members")
         .withIndex("by_user_organization", (q) =>
@@ -319,6 +360,24 @@ export const migrateMembership = internalMutation({
           roleCreated,
           userFound: true,
         };
+      }
+      /* Promote an earlier invited row instead of inserting a sibling. */
+      const invited = await ctx.db
+        .query("organization_members")
+        .withIndex("by_organization_invited_email", (q) =>
+          q.eq("organizationId", args.organizationId).eq("invitedEmail", email),
+        )
+        .unique();
+      if (invited) {
+        await ctx.db.patch("organization_members", invited._id, {
+          userId: user._id,
+          roleId: role._id,
+          status: "active",
+          invitedEmail: undefined,
+          acceptedAt: args.createdAt,
+          updatedAt: args.updatedAt,
+        });
+        return { memberId: invited._id, roleId: role._id, roleCreated, userFound: true };
       }
       const memberId = await ctx.db.insert("organization_members", {
         organizationId: args.organizationId,

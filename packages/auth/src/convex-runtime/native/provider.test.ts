@@ -628,6 +628,9 @@ describe("nativeEmailAndPassword", () => {
     const rehashCall = component.native.accounts.updateCredentialHash.mock.calls[0]?.[0];
     expect(rehashCall.accountId).toBe("account_1");
     expect(rehashCall.credentialHash).toMatch(/^\$argon2id\$/);
+    /* CAS guard: the write only lands if the stored hash is still the bcrypt
+     * digest we verified — a concurrent reset is never clobbered. */
+    expect(rehashCall.expectedCredentialHash).toBe(account.credentialHash);
     expect(await verifyPassword(DEFAULT_PASSWORD, rehashCall.credentialHash)).toBe(true);
   });
 
@@ -647,6 +650,32 @@ describe("nativeEmailAndPassword", () => {
     });
 
     expect(component.native.accounts.updateCredentialHash).not.toHaveBeenCalled();
+  });
+
+  it("rehashes below-floor imported argon2id credentials on sign-in", async () => {
+    const component = createMockComponent();
+    const user = makeUser({ emailVerified: true });
+    const identity = makeIdentity({ emailVerified: true });
+    /* WorkOS-style export carrying weak PHC params (m=8,t=1) — verifies, then
+     * upgrades to native params rather than surviving. */
+    const account = makeAccount({
+      credentialHash:
+        "$argon2id$v=19$m=8,t=1,p=1$FrtfLQzIZCFNCJo81ikJgg$2twUvcTeU+jeWTUVnNNU3dmu+brK0L0rKdBU0d01DUY",
+    });
+    component.identity.getUserAndAccount.mockResolvedValue({ user, identity, account });
+    component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_1");
+
+    const { signIn } = createActions(component);
+    const { handler } = exec(signIn);
+    await handler(createContext(), {
+      email: "shlomo@example.com",
+      password: DEFAULT_PASSWORD,
+    });
+
+    const rehashCall = component.native.accounts.updateCredentialHash.mock.calls[0]?.[0];
+    expect(rehashCall?.accountId).toBe("account_1");
+    expect(rehashCall?.expectedCredentialHash).toBe(account.credentialHash);
+    expect(rehashCall?.credentialHash).toMatch(/^\$argon2id\$v=19\$m=16384,t=3,p=1\$/);
   });
 
   it("signs in with rememberMe false uses a 1-day session and token TTL", async () => {

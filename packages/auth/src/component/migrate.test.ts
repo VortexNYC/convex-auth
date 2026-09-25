@@ -112,7 +112,8 @@ describe("cross-vendor migration writers", () => {
     expect(admin?.status).toBe("active");
     const adminRole = await t.run(async (ctx) => ctx.db.get("organization_roles", admin!.roleId));
     expect(adminRole?.key).toBe("admin");
-    expect(adminRole?.permissions).toEqual(["*"]);
+    /* Migration-created roles start empty — an export must never mint `*`. */
+    expect(adminRole?.permissions).toEqual([]);
 
     const secondRun = await t.mutation(internal.migrate.migrateMembership, {
       organizationId: orgIdBySlug.get("acme")!,
@@ -122,5 +123,109 @@ describe("cross-vendor migration writers", () => {
       updatedAt: 1700003100000,
     });
     expect(secondRun.memberId).toBe(admin!._id);
+  });
+
+  it("refuses memberships into orgs without the migration marker unless opted in", async () => {
+    const t = convexTest(schema, modules);
+    const out = normalizeClerkExport(data);
+    const ada = out.users.find((u) => u.email === "ada@example.com")!;
+    await t.mutation(internal.migrate.migrateUser, {
+      legacyUser: {
+        name: ada.name,
+        email: ada.email,
+        emailVerified: ada.emailVerified,
+        image: null,
+        createdAt: ada.createdAt,
+        updatedAt: ada.updatedAt,
+      },
+    });
+
+    const preExisting = await t.run(async (ctx) =>
+      ctx.db.insert("organizations", {
+        name: "Tenant Inc",
+        slug: "tenant",
+        status: "active",
+        createdAt: 1700000000000,
+        updatedAt: 1700000000000,
+      }),
+    );
+
+    const refused = await t.mutation(internal.migrate.migrateMembership, {
+      organizationId: preExisting,
+      email: "ada@example.com",
+      roleKey: "owner",
+      createdAt: 1700000100000,
+      updatedAt: 1700000100000,
+    });
+    expect(refused.memberId).toBeUndefined();
+    expect(refused.skipped).toContain("migration marker");
+
+    const optedIn = await t.mutation(internal.migrate.migrateMembership, {
+      organizationId: preExisting,
+      email: "ada@example.com",
+      roleKey: "owner",
+      allowExistingOrg: true,
+      createdAt: 1700000100000,
+      updatedAt: 1700000100000,
+    });
+    expect(optedIn.memberId).toBeDefined();
+    const optedInRole = await t.run(async (ctx) =>
+      ctx.db.get("organization_roles", optedIn.roleId!),
+    );
+    expect(optedInRole?.key).toBe("owner");
+    expect(optedInRole?.permissions).toEqual(["*"]);
+  });
+
+  it("promotes an invited membership to active when the user migrates later", async () => {
+    const t = convexTest(schema, modules);
+    const out = normalizeClerkExport(data);
+    const org = out.organizations[0]!;
+
+    const { organizationId } = await t.mutation(internal.migrate.migrateOrganization, {
+      organization: org,
+    });
+    const invited = await t.mutation(internal.migrate.migrateMembership, {
+      organizationId,
+      email: "late@example.com",
+      roleKey: "member",
+      createdAt: 1700000000000,
+      updatedAt: 1700000000000,
+    });
+    expect(invited.userFound).toBe(false);
+
+    const { userId } = await t.mutation(internal.migrate.migrateUser, {
+      legacyUser: {
+        name: "Late Joiner",
+        email: "late@example.com",
+        emailVerified: false,
+        image: null,
+        createdAt: 1700000100000,
+        updatedAt: 1700000100000,
+      },
+    });
+    expect(userId).toBeDefined();
+
+    const promoted = await t.mutation(internal.migrate.migrateMembership, {
+      organizationId,
+      email: "late@example.com",
+      roleKey: "member",
+      createdAt: 1700000200000,
+      updatedAt: 1700000200000,
+    });
+    expect(promoted.memberId).toBe(invited.memberId);
+    expect(promoted.userFound).toBe(true);
+
+    const row = await t.run(async (ctx) => ctx.db.get("organization_members", promoted.memberId!));
+    expect(row?.status).toBe("active");
+    expect(row?.userId).toBe(userId);
+    expect(row?.invitedEmail).toBeUndefined();
+
+    const all = await t.run(async (ctx) =>
+      ctx.db
+        .query("organization_members")
+        .withIndex("by_organization", (q) => q.eq("organizationId", organizationId))
+        .take(50),
+    );
+    expect(all).toHaveLength(1);
   });
 });

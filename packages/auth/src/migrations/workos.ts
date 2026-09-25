@@ -138,6 +138,17 @@ function normalizeWorkosMembership(
     });
     return;
   }
+  /* WorkOS membership states: "active" seats import as active, "pending" seats
+   * stay invited — anything else (inactive/removed) is dropped. */
+  const status = (member.status ?? "active").toLowerCase();
+  if (status !== "active" && status !== "pending" && status !== "invited") {
+    out.skipped.push({
+      kind: "membership",
+      externalId: member.id,
+      reason: `membership status '${member.status}' is not importable`,
+    });
+    return;
+  }
   const roleSlug = typeof member.role === "string" ? member.role : (member.role?.slug ?? "member");
   const normalized: NormalizedMembership = {
     organizationExternalId: org.externalId,
@@ -145,6 +156,7 @@ function normalizeWorkosMembership(
     userExternalId: user.externalId,
     userEmail: user.email,
     roleKey: roleSlug,
+    status: status === "active" ? "active" : "invited",
     createdAt: isoToMs(member.created_at),
     updatedAt: isoToMs(member.updated_at),
   };

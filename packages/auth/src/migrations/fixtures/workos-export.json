@@ -45,7 +45,11 @@
     {
       "id": "org_01EHZNVPK2QXHMVQEDHBJYYNV6",
       "name": "Wayne Enterprises",
-      "domains": [{ "domain": "wayne.example.com" }],
+      "domains": [
+        {
+          "domain": "wayne.example.com"
+        }
+      ],
       "created_at": "2024-01-10T00:00:00.000Z",
       "updated_at": "2024-01-10T00:00:00.000Z"
     },
@@ -58,7 +62,11 @@
     {
       "id": "org_01EHZNVPK4STAR",
       "name": "Stark Industries",
-      "domains": [{ "domain": "stark.example.com" }],
+      "domains": [
+        {
+          "domain": "stark.example.com"
+        }
+      ],
       "created_at": "2024-01-12T00:00:00.000Z",
       "updated_at": "2024-01-12T00:00:00.000Z"
     }
@@ -68,7 +76,9 @@
       "id": "om_01EHZNVPKM8VWZ8P0Q8R9S0T1U",
       "user_id": "user_01E4ZCR3C56J083X43JQXF3JK5",
       "organization_id": "org_01EHZNVPK2QXHMVQEDHBJYYNV6",
-      "role": { "slug": "admin" },
+      "role": {
+        "slug": "admin"
+      },
       "status": "active",
       "created_at": "2024-01-15T10:35:00.000Z",
       "updated_at": "2024-01-15T10:35:00.000Z"
@@ -89,6 +99,28 @@
       "status": "active",
       "created_at": "2024-04-01T00:00:00.000Z",
       "updated_at": "2024-04-01T00:00:00.000Z"
+    },
+    {
+      "id": "om_01EHZNVPKN2PENDING",
+      "user_id": "user_01E4ZCR3C6TF9V9P8XJJ2ZZZZZ",
+      "organization_id": "org_01EHZNVPK2QXHMVQEDHBJYYNV6",
+      "role": {
+        "slug": "member"
+      },
+      "status": "pending",
+      "created_at": "2024-02-01T10:00:00.000Z",
+      "updated_at": "2024-02-01T10:00:00.000Z"
+    },
+    {
+      "id": "om_01EHZNVPKN3REMOVED",
+      "user_id": "user_01E4ZCR3C56J083X43JQXF3JK5",
+      "organization_id": "org_01EHZNVPK2QXHMVQEDHBJYYNV6",
+      "role": {
+        "slug": "member"
+      },
+      "status": "inactive",
+      "created_at": "2024-02-02T10:00:00.000Z",
+      "updated_at": "2024-02-02T10:00:00.000Z"
     }
   ]
 }

@@ -13,7 +13,11 @@ import {
 } from "../account/passwordResetEmail.js";
 import { mintToken, verifyToken } from "./jwt.js";
 import { checkPasswordBreach } from "./breach.js";
-import { hashPassword, isBcryptHash, verifyPassword as verifyPasswordHash } from "./password.js";
+import {
+  hashPassword,
+  shouldRehashAfterVerify,
+  verifyPassword as verifyPasswordHash,
+} from "./password.js";
 import { generateVerificationToken, hashToken } from "./tokens.js";
 import { handleUpdateSession } from "./updateSession.js";
 import { decryptAccountToken, encryptAccountToken } from "./oauthCrypto.js";
@@ -933,11 +937,13 @@ export function nativeEmailAndPassword(
     account: { _id: string; credentialHash: string },
     password: string,
   ) {
-    if (!isBcryptHash(account.credentialHash)) return;
+    if (!shouldRehashAfterVerify(account.credentialHash)) return;
     const credentialHash = await hashPassword(password);
+    /* CAS: if a reset landed between read and write, keep the newer hash. */
     await ctx.runMutation(component.native.accounts.updateCredentialHash, {
       accountId: account._id as Id<"authAccounts">,
       credentialHash,
+      expectedCredentialHash: account.credentialHash,
     });
   }
 
