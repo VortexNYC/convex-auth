@@ -336,3 +336,24 @@ validate` + `blume build` on 22.x for site/docs diffs; GITHUB_TOKEN
   `error: null` is NOT "signed in" — 2FA-enrolled accounts get
   `{ data: { twoFactorRedirect: true } }` without a session. Samples
   must match `examples/nextjs/app/sign-in/page.tsx`.
+
+## labs.vortex.nyc/convex-auth — domain model (2026-09-25)
+
+- Docs canonical URL is now `https://labs.vortex.nyc/convex-auth`.
+  `labs.vortex.nyc` is Vortex-owned — this repo may serve content ONLY
+  under the `/convex-auth` path prefix; other labs repos get their own
+  `labs.vortex.nyc/<repo>` prefixes. Do not touch anything outside the
+  prefix.
+- Implementation: `deployment: { site: "https://labs.vortex.nyc",
+base: "/convex-auth" }` in site/blume.config.ts prefixes every
+  internal link/asset/canonical; `site/convex/http.ts` strips the
+  prefix before resolving stored assets (files upload to dist root;
+  asset storage paths stay root-relative). Requests outside the
+  prefix 302 into it — old resilient-mule-559.convex.site deep links
+  keep working.
+- Routing requirement for Vortex infra: `labs.vortex.nyc/convex-auth/*`
+  must reach `resilient-mule-559.convex.site/convex-auth/*` with the
+  path PRESERVED (no rewrite needed). Any proxy that forwards the path
+  as-is works. A Convex custom-domain map of labs.vortex.nyc → this
+  deployment would also work but locks the whole domain to one
+  deployment — incompatible with the multi-repo labs model.

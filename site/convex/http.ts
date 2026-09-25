@@ -72,6 +72,8 @@ type Asset = {
   storageUrl?: string;
 };
 
+const SITE_PREFIX = "/convex-auth";
+
 const serveStaticFile = httpAction(async (ctx, request) => {
   const url = new URL(request.url);
   const decodedPath = decodeRequestPath(url.pathname);
@@ -82,7 +84,17 @@ const serveStaticFile = httpAction(async (ctx, request) => {
     });
   }
 
-  let path = decodedPath;
+  // The docs live at labs.vortex.nyc/convex-auth, so the deployment serves
+  // them under that same prefix — any front for the domain can forward the
+  // path unchanged. Requests outside the prefix (old root-relative URLs on
+  // the convex.site origin) redirect into it. If `--cdn` is ever enabled,
+  // the component's /fs/blobs blob URLs would need to bypass this redirect.
+  if (!decodedPath.startsWith(SITE_PREFIX + "/") && decodedPath !== SITE_PREFIX) {
+    const target = `${SITE_PREFIX}${decodedPath === "/" ? "/" : decodedPath}${url.search}`;
+    return Response.redirect(new URL(target, url.origin), 302);
+  }
+
+  let path = decodedPath.slice(SITE_PREFIX.length) || "/";
   if (path === "" || path === "/") {
     path = "/index.html";
   }

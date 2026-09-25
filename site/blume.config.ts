@@ -35,7 +35,8 @@ export default defineConfig({
     ],
   },
   deployment: {
-    site: "https://resilient-mule-559.convex.site",
+    site: "https://labs.vortex.nyc",
+    base: "/convex-auth",
   },
   reference: [
     openapi({
