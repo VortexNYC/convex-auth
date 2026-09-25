@@ -26,8 +26,12 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
+      # Edges, not breadth: 22.x is the declared floor (runs the full wall,
+      # proving the minimum supported version handles the whole toolchain),
+      # 24.x is the newest LTS (probe leg — catches forward-compat breakage
+      # on the platform consumers are migrating to). Node 20 is EOL.
       matrix:
-        node-version: [20.x, 22.x]
+        node-version: [22.x, 24.x]
 
     steps:
       - name: Checkout
@@ -122,11 +126,18 @@ jobs:
         if: steps.scope.outputs.docsonly != 'true'
         run: node scripts/openapi-guard.mjs
 
+      # Deployed source runs in the Convex V8 isolate — a "use node"
+      # directive, node: import, Buffer, atob/btoa, or react-dom/server in
+      # component/consumer convex/ source crashes consumer-side, not ours.
+      - name: Runtime portability guard
+        if: steps.scope.outputs.docsonly != 'true'
+        run: node scripts/runtime-guard.mjs
+
       # The built artifact is identical across Node versions — building
       # once on 22.x is enough. Typecheck resolves the package's own
       # dist/ output, so it must run after build — and tsc results don't
-      # vary by Node version, so it lives on the 22.x leg too. The 20.x
-      # leg's unique value is proving runtime compat via the test suite.
+      # vary by Node version, so it lives on the 22.x leg too. The 24.x
+      # leg's unique value is probing forward-compat via the test suite.
       - name: Build packages
         if: steps.scope.outputs.docsonly != 'true' && matrix.node-version == '22.x'
         run: pnpm run build
@@ -141,7 +152,7 @@ jobs:
       # `test:coverage` targets @vortex-api/convex-auth only — if another
       # package gains a test script, widen coverage to match.
       - name: Run tests
-        if: steps.scope.outputs.docsonly != 'true' && matrix.node-version != '22.x'
+        if: steps.scope.outputs.docsonly != 'true' && matrix.node-version == '24.x'
         run: pnpm run test
 
       - name: Run test coverage

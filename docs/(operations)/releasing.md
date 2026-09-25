@@ -58,5 +58,5 @@ A major additionally requires:
 | ------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | `changeset-gate`         | `packages/` source changed without a changeset or `no-release` label; major changeset missing `Migration note:` |
 | `OpenAPI contract guard` | A code route is missing from `openapi/auth.yaml`, or the spec documents a route that no longer exists           |
-| `checks`                 | Lint/format/typecheck/tests/docs-smoke fail on Node 20 and 22                                                   |
+| `checks`                 | Lint/format/typecheck/tests/docs-smoke fail on Node 22 and 24                                                   |
 | `prc`                    | Release-blocking production-readiness checks fail                                                               |

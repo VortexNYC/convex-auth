@@ -10,7 +10,7 @@ This guide installs the packages and sets the minimum environment variables. For
 ## What you need
 
 - A Convex project. If you do not have one, run `pnpm dlx convex@latest`.
-- pnpm and Node `>=20.12.0`.
+- pnpm and Node `>=22.0.0`.
 - An email service for production (Resend, Postmark, SES, etc.). For local development you can log email drafts.
 
 ## Steps
@@ -62,15 +62,15 @@ This guide installs the packages and sets the minimum environment variables. For
 
 `convex-auth` is tested against the following ranges:
 
-| Package / subpath                      | Version | Convex     | React      | React Native / Expo | Node        | pnpm      |
-| -------------------------------------- | ------- | ---------- | ---------- | ------------------- | ----------- | --------- |
-| `@vortex-api/convex-auth`              | `2.2.0` | `>=1.45.0` | `>=19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
-| `@vortex-api/convex-auth/react`        | `2.2.0` | `>=1.45.0` | `>=19.0.0` | —                   | `>=20.12.0` | `10.25.0` |
-| `@vortex-api/convex-auth/react-native` | `2.2.0` | `>=1.45.0` | `>=19.0.0` | `expo-*` (optional) | `>=20.12.0` | `10.25.0` |
+| Package / subpath                      | Version | Convex     | React      | React Native / Expo | Node       | pnpm      |
+| -------------------------------------- | ------- | ---------- | ---------- | ------------------- | ---------- | --------- |
+| `@vortex-api/convex-auth`              | `3.x`   | `>=1.45.0` | `>=19.0.0` | —                   | `>=22.0.0` | `10.25.0` |
+| `@vortex-api/convex-auth/react`        | `3.x`   | `>=1.45.0` | `>=19.0.0` | —                   | `>=22.0.0` | `10.25.0` |
+| `@vortex-api/convex-auth/react-native` | `3.x`   | `>=1.45.0` | `>=19.0.0` | `expo-*` (optional) | `>=22.0.0` | `10.25.0` |
 
 - **Convex** — `>=1.45.0` covers the modern backend system and generated component API.
 - **React** — React 19 is the primary target; the client side does not depend on a specific React 18 release.
-- **Node** — CI runs on Node 20.12+ and Node 22. Older Node versions are not tested.
+- **Node** — CI runs on Node 22 (floor) and Node 24 (newest LTS). Node 20 is EOL; older versions are unsupported.
 - **pnpm** — the workspace uses pnpm only.
 
 ## Updating Convex
