@@ -233,3 +233,24 @@ green (includes site/changelog). CI pending on `8bab3b9`.
   #379 needs triage), v3 gate (#334, staged as #375), draft
   (#372 ~Oct 18), or features/adapters deferred by user (#203-206,
   #213-214, #216, #254, #367-370, #371).
+
+## Release pipeline repair + 3.0.1 (2026-09-25)
+
+- **@vortex-api/convex-auth@3.0.1 published** — routeMatcher `:name(.*)`
+  wildcard fix; first release through the repaired pipeline.
+- **Root causes found + fixed**:
+  - `changesets/action` v1.9.0 parsed stdout for `New tag:` lines that CLI
+    v3 never emits → tags/releases skipped. Upgraded to v2.1.2 (pinned to
+    commit `ae32849d`, NOT the tag-object SHA — `uses:` needs the commit).
+  - v2 `createRelease` reads `<pkg>/CHANGELOG.md` for the release body and
+    silently skips on ENOENT — `.gitignore` excluded it. Un-ignored +
+    seeded (PR #397). Changelog is now committed and load-bearing.
+- **Verified live**: action pushed tag `@vortex-api/convex-auth@3.0.1`
+  itself; release created manually this once; next publish should be
+  fully automatic (watch the next version PR for a CHANGELOG.md diff).
+- **Docs deployed** to resilient-mule-559.convex.site: v2 frozen tree at
+  /v2/\*, changelog pages incl. 3.0.1 generated from GitHub Releases.
+- `blume version` quirk: needs `content.root: "../docs"` in
+  site/blume.config.ts to snapshot into the real docs dir.
+- npm registry propagation lag is real (~12min); don't trust a 404 on a
+  versioned endpoint immediately after publish.
