@@ -1,4 +1,6 @@
 import { defineConfig } from "blume";
+import { openapi } from "blume/reference";
+import { filesystem, githubReleases } from "blume/sources";
 
 // Astro/blume prerender runs in Node. Some components (e.g. @pierre/diffs)
 // read navigator.userAgent, which only exists in Node 21+. Provide a minimal
@@ -16,32 +18,31 @@ export default defineConfig({
   description: "Vortex-native, full-stack authentication for Convex.",
   logo: "/logo.svg",
   content: {
-    // content.root points at the live docs tree so `blume version` snapshots
-    // into docs/<id>/ rather than the default site/docs/ convention.
-    root: "../docs",
+    // The filesystem source's root doubles as the `blume version` snapshot
+    // target — snapshots land in docs/<id>/ next to the live tree.
     sources: [
-      { type: "filesystem", root: "../docs" },
-      {
-        type: "github-releases",
+      filesystem({ root: "../docs" }),
+      githubReleases({
         prefix: "changelog",
         owner: "VortexNYC",
         repo: "convex-auth",
-      },
+      }),
     ],
   },
   deployment: {
-    site: "https://resilient-blackbird-58.convex.site",
+    site: "https://resilient-mule-559.convex.site",
   },
-  openapi: {
-    enabled: true,
-    sources: [
-      {
-        spec: "../openapi/auth.yaml",
-        route: "api",
-        label: "HTTP API",
-      },
-    ],
-  },
+  reference: [
+    openapi({
+      sources: [
+        {
+          spec: "../openapi/auth.yaml",
+          route: "api",
+          label: "HTTP API",
+        },
+      ],
+    }),
+  ],
   versions: {
     archived: [{ id: "v2", label: "v2.x" }],
     current: { label: "v3" },
