@@ -254,3 +254,33 @@ green (includes site/changelog). CI pending on `8bab3b9`.
   site/blume.config.ts to snapshot into the real docs dir.
 - npm registry propagation lag is real (~12min); don't trust a 404 on a
   versioned endpoint immediately after publish.
+
+## Debt cleanup + toolchain wave (2026-09-25)
+
+- **PR #399** — dead `expo-linking` dep removed from react-native-web
+  (#388 closed). Keep `optimizeDeps.exclude` + the optional peer in the
+  package; the example-local `.npmrc` (auto-install-peers=false) can
+  stamp the workspace lockfile if pnpm runs inside that dir — always
+  regen the lockfile from repo root.
+- **PR #400** — toolchain wave landed (#387): vite-plus 1.0.0-rc.0 at
+  root; `vite` resolves via `npm:@voidzero-dev/vite-plus-core` (has NO
+  bin — example scripts migrated `vite`→`vp dev|build|preview`);
+  vitest pinned 5.0.1 matching the bundled runner; coverage aligned.
+  Rolldown is stricter than rollup — expo-* externalized in the RN-web
+  example. Root engines now `^22.18 || ^24.11 || >=26` (vite-plus
+  floor); the 20.x CI leg stays for published-runtime proof (vitest 5
+  verified green under node 20.20).
+- **PR #401** — blume 2.0.2: adapter-model config (sources/reference
+  factories), `content.root` removed — `blume version` snapshots at the
+  first filesystem() source root, so docs/v2 freeze is preserved.
+  deployment.site fixed to resilient-mule-559. 2.0 validator surfaced
+  30 pre-existing dead /docs/* hrefs — fixed (live `/X`, frozen
+  `/v2/X`). Adopted: changelog nav tab + agents.llmsTxt.details.
+- **PR #402** — CI gap closed: `sitechanged` scope runs `blume
+validate` + `blume build` on 22.x for site/docs diffs; GITHUB_TOKEN
+  set so the github-releases source can't fail-open to an empty
+  changelog under rate-limit.
+- Branch-hopping hazard: node_modules follows the last install's
+  branch — a stale vp 0.2.4 produced wrong formatter output that
+  rc.0 CI rejected. After switching branches, run `pnpm install`
+  before trusting `vp check`.
