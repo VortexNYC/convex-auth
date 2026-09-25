@@ -11,12 +11,6 @@ import {
 
 type Screen = "signIn" | "signUp" | "signedIn";
 
-const socialProviders = [
-  { provider: "google", label: "Google" },
-  { provider: "github", label: "GitHub" },
-  { provider: "discord", label: "Discord" },
-] as const;
-
 export default function App() {
   const [screen, setScreen] = useState<Screen>("signIn");
   const authClient = useConvexAuthClientContext();
@@ -51,9 +45,8 @@ export default function App() {
             signInUrl=""
             forceRedirectUrl={redirectUrl}
             title="Create account"
-            description="Sign up with Google, GitHub, Discord, or email."
+            description="Sign up with email. Social sign-in requires the expo-web-browser/expo-linking native deps, which this web example doesn't install."
             styles={authScreenStyles}
-            socialProviders={socialProviders}
           />
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
@@ -68,9 +61,8 @@ export default function App() {
             signUpUrl=""
             forceRedirectUrl={redirectUrl}
             title="Sign in"
-            description="Sign in with Google, GitHub, Discord, or email."
+            description="Sign in with email. Social sign-in requires the expo-web-browser/expo-linking native deps, which this web example doesn't install."
             styles={authScreenStyles}
-            socialProviders={socialProviders}
           />
           <Pressable
             style={styles.guestButton}
