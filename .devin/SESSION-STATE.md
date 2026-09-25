@@ -304,3 +304,35 @@ validate` + `blume build` on 22.x for site/docs diffs; GITHUB_TOKEN
 - Adapter test pattern: real `new Hono()` + `app.request()`, no
   mocked framework seams. 22 tests cover proxy intercept vs competing
   route, immutable-response rebuild, streaming body, HEAD rotation.
+
+## Docs site: header links, favicon, stale-view gotcha (2026-09-25)
+
+- **Docs deploy path**: `pnpm -F site run deploy` wraps `convex deploy`
+  and prompts interactively — fails in non-interactive shells. For
+  docs-only pushes use `pnpm dlx @convex-dev/static-hosting deploy
+--skip-convex --skip-build` from `site/` (build first with
+  `pnpm -F site run build`). Backend functions unchanged → static
+  upload only.
+- **Blume auto-detects favicons** in `site/public/`: `favicon.svg`,
+  `favicon.png`, `favicon.ico`, `icon.svg`, `icon-dark.png`,
+  `apple-touch-icon.png`. With none present it serves a bundled
+  default (the "random logo" users saw). Ours: `favicon.svg` +
+  `favicon.png` + `apple-touch-icon.png`, white tile + black mark so
+  it reads in light and dark browser chrome.
+- **Header links**: `github: { owner, repo, dir: "docs" }` in
+  blume.config.ts gives the repo icon button AND "Edit this page";
+  `navigation.actions` = plain header links; `navigation.featured` =
+  pinned links above sidebar groups.
+- **Duplicate brand row**: a page titled the same as `title` in
+  blume.config renders a second "Convex Auth" row at the top of the
+  sidebar. Index page is titled "Introduction" to avoid it.
+- **Stale-view gotcha**: static-hosting serves HTML with
+  `max-age=0, must-revalidate` but Safari still shows the old page
+  from an open tab — verify deploys by curling the HTML, not just
+  eyeballing a tab that was already open.
+- **Client contract gotcha** (Cursor, PR #407): `signIn.social()`
+  returns `{ data: { url } }` and does NOT navigate — callers must
+  assign `window.location.href`. `signIn.email()` resolving with
+  `error: null` is NOT "signed in" — 2FA-enrolled accounts get
+  `{ data: { twoFactorRedirect: true } }` without a session. Samples
+  must match `examples/nextjs/app/sign-in/page.tsx`.

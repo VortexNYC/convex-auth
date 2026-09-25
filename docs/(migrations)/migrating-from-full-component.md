@@ -1,4 +1,4 @@
-# Migrating from the full `convexAuth` component
+# Migrating to feature-gated components
 
 The full `@vortex-api/convex-auth/convex.config` component still works and is the safest starting point for existing consumers. Migration to feature-gated components is optional and driven by which auth features you actually use.
 

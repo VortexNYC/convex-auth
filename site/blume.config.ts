@@ -17,6 +17,11 @@ export default defineConfig({
   title: "Convex Auth",
   description: "Vortex-native, full-stack authentication for Convex.",
   logo: "/logo.svg",
+  github: {
+    owner: "VortexNYC",
+    repo: "convex-auth",
+    dir: "docs",
+  },
   content: {
     // The filesystem source's root doubles as the `blume version` snapshot
     // target — snapshots land in docs/<id>/ next to the live tree.
@@ -51,6 +56,24 @@ export default defineConfig({
     tabs: [
       { label: "API Reference", path: "/api" },
       { label: "Changelog", path: "/changelog" },
+    ],
+    actions: [
+      {
+        label: "npm",
+        href: "https://www.npmjs.com/package/@vortex-api/convex-auth",
+      },
+    ],
+    featured: [
+      {
+        label: "GitHub",
+        href: "https://github.com/VortexNYC/convex-auth",
+        icon: "github",
+      },
+      {
+        label: "npm · @vortex-api/convex-auth",
+        href: "https://www.npmjs.com/package/@vortex-api/convex-auth",
+        icon: "package",
+      },
     ],
   },
   agents: {
