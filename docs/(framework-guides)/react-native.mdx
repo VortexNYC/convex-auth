@@ -255,15 +255,22 @@ Use the design tokens from `@vortex-api/convex-auth/ui/styles.css` in your own c
 - `ConvexOrganizationProfile`
 - `ConvexOrganizationSwitcher`
 
-See the [React Native component reference](./components/react-native) for the full catalog.
+See the [React Native component reference](./components/react-native) for the component list.
 
 ## Example apps
 
 - **`examples/react-native`** — minimal Expo app wired with `ExpoConvexAuthClientProvider`, SecureStore storage, and the drop-in screens.
+
+  ```bash
+  cd examples/react-native
+  pnpm install
+  pnpm start   # expo start
+  ```
+
 - **`examples/react-native-web`** — the same RN components running in the browser via `react-native-web`.
 
-```bash
-cd examples/react-native
-pnpm install
-pnpm run dev   # expo start
-```
+  ```bash
+  cd examples/react-native-web
+  pnpm install
+  pnpm run dev
+  ```

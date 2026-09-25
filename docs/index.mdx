@@ -8,17 +8,17 @@ Convex-native auth for production apps. Users, sessions, identities, organizatio
 If you are new here, follow this order:
 
 <Steps>
-  <Step title="Read the story" href="./how-we-got-here">
-    Why `convex-auth` exists and how we got here.
-  </Step>
-  <Step title="Understand the concepts" href="./concepts">
-    The five building blocks: component, config, actions, HTTP routes, and React client.
-  </Step>
   <Step title="Install" href="./installation">
     Add the packages, generate signing keys, and set environment variables.
   </Step>
   <Step title="Quickstart" href="./quickstart">
     Wire `convex/auth.ts`, mount the component, set up the React client, and sign up a user.
+  </Step>
+  <Step title="Understand the concepts" href="./concepts">
+    The five building blocks: component, config, actions, HTTP routes, and React client.
+  </Step>
+  <Step title="See the architecture" href="./architecture">
+    How `convex-auth` is designed around Convex's runtime.
   </Step>
 </Steps>
 
@@ -34,8 +34,8 @@ If you are new here, follow this order:
   <Card title="Concepts" href="./concepts" icon="book-open">
     Component, config, actions, HTTP routes, and React client.
   </Card>
-  <Card title="How we got here" href="./how-we-got-here" icon="history">
-    The story behind the project.
+  <Card title="Architecture" href="./architecture" icon="compass">
+    How `convex-auth` is designed around Convex's runtime.
   </Card>
 </CardGroup>
 
@@ -162,9 +162,6 @@ Drop-in UI for every feature above — forms, pages, surfaces, and primitives, f
   </Card>
   <Card title="Server API" href="./server-api" icon="terminal">
     Actions, queries, and HTTP routes.
-  </Card>
-  <Card title="Architecture" href="./architecture" icon="compass">
-    How `convex-auth` is designed around Convex's runtime.
   </Card>
   <Card title="Feature-gated components" href="./feature-gated-components" icon="layers">
     How to mount and compose the `convexAuth` component.
