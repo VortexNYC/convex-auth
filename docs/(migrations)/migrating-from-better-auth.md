@@ -424,7 +424,7 @@ Use this table to find the `convex-auth` equivalent for each Better Auth doc pag
 | [Installation](https://www.better-auth.com/docs/installation)                  | [Setup](https://labs.convex.dev/auth/setup)                               | [`Quickstart`](./quickstart)                |
 | [Basic usage / email & password](https://www.better-auth.com/docs/basic-usage) | [Passwords](https://labs.convex.dev/auth/config/passwords)                | [`Email and password`](./email-password)    |
 | [Basic usage / social sign-on](https://www.better-auth.com/docs/basic-usage)   | [OAuth](https://labs.convex.dev/auth/config/oauth)                        | [`OAuth`](./oauth)                          |
-| [Basic usage / session](https://www.better-auth.com/docs/basic-usage)          | [React client](https://labs.convex.dev/auth/api_reference/react)          | [`React client`](./client)                  |
+| [Basic usage / session](https://www.better-auth.com/docs/basic-usage)          | [React client](https://labs.convex.dev/auth/api_reference/react)          | [`React client`](./react)                   |
 | [Two-factor](https://www.better-auth.com/docs/plugins/two-factor)              | —                                                                         | [`Two-factor authentication`](./two-factor) |
 | [Organizations](https://www.better-auth.com/docs/plugins/organization)         | —                                                                         | [`Organizations`](./organizations)          |
 | [API keys](https://www.better-auth.com/docs/plugins/api-key)                   | —                                                                         | [`API keys`](./api-keys)                    |

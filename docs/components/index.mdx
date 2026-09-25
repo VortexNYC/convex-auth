@@ -1,9 +1,11 @@
 ---
-title: Component library
+title: UI components
 description: A complete drop-in UI library for auth — sign-in, organizations, profile, API keys, webhooks — for React and React Native.
+sidebar:
+  label: Overview
 ---
 
-`@vortex-api/convex-auth` ships a full component library, not just hooks. Every surface below is a working React component — drop it in, theme it with `classNames` and `copy` overrides, and it talks to your Convex backend through the client.
+`@vortex-api/convex-auth` ships a full component library, not just hooks. Every surface is a working component — drop it in, theme it with `classNames` and `copy` overrides, and it talks to your Convex backend through the client.
 
 Type names in these pages are shortened for readability — see `packages/auth/dist/react.d.ts` for exact types.
 
@@ -11,32 +13,39 @@ Type names in these pages are shortened for readability — see `packages/auth/d
 import { ConvexAuthProvider, ConvexAuthSignInPage } from "@vortex-api/convex-auth/react";
 ```
 
-## Component catalog
+## React
 
 <CardGroup cols={2}>
-  <Card title="Sign-in & onboarding" href="./sign-in" icon="log-in">
+  <Card title="Sign-in & onboarding" href="./react/sign-in" icon="log-in">
     Full sign-in/sign-up pages, forms, social buttons, trigger buttons, and client screens.
   </Card>
-  <Card title="Organizations" href="./organization" icon="building">
+  <Card title="Organizations" href="./react/organization" icon="building">
     Org switcher, creation, member lists, invitations, and the role manager surface.
   </Card>
-  <Card title="Account & profile" href="./account" icon="user-round">
+  <Card title="Account & profile" href="./react/account" icon="user-round">
     User profile, image upload, email change, password reset, 2FA, and session management.
   </Card>
-  <Card title="API keys" href="./api-keys" icon="key">
+  <Card title="API keys" href="./react/api-keys" icon="key">
     Issue, rotate, and revoke keys without building the UI yourself.
   </Card>
-  <Card title="Webhooks" href="./webhooks" icon="webhook">
+  <Card title="Webhooks" href="./react/webhooks" icon="webhook">
     Endpoint and delivery management with filters, pagination, and settings.
   </Card>
-  <Card title="Security audit" href="./security" icon="shield-check">
+  <Card title="Security audit" href="./react/security" icon="shield-check">
     Audit log list and row components for the security event trail.
   </Card>
-  <Card title="Providers & primitives" href="./providers" icon="blocks">
+  <Card title="Providers & primitives" href="./react/providers" icon="blocks">
     Runtime providers, auth-state boundaries, and the shared primitives everything is built from.
   </Card>
-  <Card title="React Native" href="./react-native" icon="smartphone">
-    The Expo component set — auth screens, org components, session list, profile forms.
+</CardGroup>
+
+## React Native
+
+The Expo component set — auth screens, org switcher and members, session list, profile and 2FA forms — built on secure token storage and deep links.
+
+<CardGroup cols={2}>
+  <Card title="React Native components" href="./react-native" icon="smartphone">
+    The full Expo component catalog.
   </Card>
 </CardGroup>
 
@@ -69,4 +78,4 @@ Every component accepts `classNames` and `copy` props for per-component styling 
 | `ConvexOrganizationMembersSurface` / `ConvexOrganizationMemberList` | `OrganizationProfile` members view                | Admin Portal users table          |
 | `ConvexOrganizationInviteForm`                                      | `OrganizationProfile` invite tab                  | —                                 |
 
-No Clerk or WorkOS equivalents exist for `ConvexApiKeyCreateForm` / `ConvexApiKeyList`, the `ConvexWebhook*` delivery surfaces, `ConvexSecurityAuditList`, `ConvexOrganizationRoleManagerSurface` (custom-role RBAC editor), or the standalone `ConvexEnableTwoFactorForm` / `ConvexVerifyTwoFactorForm` / `ConvexChangeEmailForm` — those are convex-auth capabilities with no drop-in counterpart to migrate.
+No Clerk or WorkOS equivalents exist for `ConvexApiKeyCreateForm` / `ConvexApiKeyList`, the `ConvexWebhook*` delivery surfaces, `ConvexSecurityAuditList`, `ConvexOrganizationRoleManagerSurface` (custom-role RBAC editor), or the standalone `ConvexEnableTwoFactorForm` / `ConvexVerifyTwoFactorForm` / `ConvexChangeEmailForm` — those are convex-auth capabilities with no drop-in counterpart to migrate. Full cutover paths: [from Clerk](/migrating-from-clerk), [from WorkOS](/migrating-from-workos).

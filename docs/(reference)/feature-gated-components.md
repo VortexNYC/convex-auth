@@ -1,4 +1,7 @@
-# Feature-gated `convexAuth` components
+---
+title: Per-feature components
+description: Install only the auth features you use — the component mount table.
+---
 
 The `convex-auth` package ships the auth tables as independently mountable Convex components. A consumer can install only the features they need, instead of the monolithic full component that includes organizations, API keys, agent auth, auth metadata, webhooks, and MCP OAuth tables.
 

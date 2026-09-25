@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@convex-dev/static-hosting": "^0.2.0",
+    "@vortex-api/convex-auth": "workspace:*",
     "blume": "^2.0.2",
-    "convex": "^1.46.0"
+    "convex": "^1.46.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   }
 }

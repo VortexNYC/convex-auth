@@ -1,0 +1,38 @@
+---
+title: Migrating from WorkOS
+description: Concept mapping and the manual cutover path from WorkOS AuthKit to convex-auth.
+---
+
+WorkOS sells you the authentication protocol surface — SSO, directory sync, the AuthKit hosted flow — while keeping user state in their cloud. convex-auth moves the same capability set into your Convex deployment. There is no turnkey importer today; this page maps the concepts and the cutover path. If you want a scripted importer, [open an issue](https://github.com/VortexNYC/convex-auth/issues).
+
+## Concept mapping
+
+| WorkOS                                        | convex-auth                                                                               |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| AuthKit hosted sign-in                        | Drop-in auth pages — [UI components](./components)                                        |
+| `getAuthorizationUrl()` + callback            | `signIn.social` / OAuth flow — [OAuth](./oauth)                                           |
+| Enterprise SSO (Okta, Entra, SAML via WorkOS) | [Generic OAuth](./generic-oauth) per provider                                             |
+| Users + identities                            | Users, identities, sessions in the `convexAuth` tables                                    |
+| Organizations + memberships                   | [Organizations](./organizations) with roles and invitations                               |
+| API keys (machine auth)                       | [API keys](./api-keys) and [service principals](./service-principals)                     |
+| WorkOS Events / webhooks                      | [Webhooks](./webhooks) — signed, with replay protection                                   |
+| Session cookies via `@workos-inc/authkit-*`   | Framework adapters — [Next.js](./nextjs), [TanStack Start](./tanstack-start)              |
+| Directory Sync (SCIM)                         | Not built today — [OIDC provider](./oidc-provider) covers the "your app as IdP" direction |
+
+## The cutover path
+
+1. **Stand up convex-auth** in staging — [Quickstart](./quickstart). If you used WorkOS for SSO, configure each enterprise IdP under [Generic OAuth](./generic-oauth) and verify the provider accepts your new callback URLs (`https://<your-deployment>.convex.site/api/auth/callback/<provider>`).
+2. **Export users** from the WorkOS dashboard or API — you get identities, emails, and org memberships. WorkOS does not export passwords (most AuthKit users authenticate via SSO or magic links anyway), so this is rarely a blocker.
+3. **Import users and orgs** by writing the `convexAuth` / `convexAuthOrganizations` tables directly — see [Per-feature components](./feature-gated-components) for the table inventory.
+4. **Re-register SSO connections.** Each enterprise connection is a new OAuth/OIDC client registration — plan lead time with your customers' IT teams before cutover.
+5. **Cut over the client.** Replace the AuthKit SDK calls with `useSession()` / `useAuthActions()` — the [React guide](./react) maps the hooks.
+
+## What does not migrate
+
+- Active sessions and WorkOS session cookies.
+- SCIM / Directory Sync — there is no equivalent today; HR-driven provisioning stays manual or moves to your own sync via the API.
+- Audit Trails (WorkOS's hosted audit UI) — auth events land in your Convex tables instead, and [webhooks](./webhooks) can feed your own audit sink.
+
+## Get help
+
+SSO cutovers have real customer-facing lead time — the [troubleshooting](./troubleshooting) page covers callback and session issues, and GitHub issues get answered.

@@ -11,6 +11,7 @@ export default defineMeta({
     "concepts",
     "architecture",
     "configuration",
+    "server-api",
     "how-we-got-here",
   ],
 });

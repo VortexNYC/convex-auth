@@ -1,4 +1,7 @@
-# OAuth
+---
+title: OAuth
+description: Google, GitHub, and Discord sign-in with server-side state and PKCE.
+---
 
 `convex-auth` supports Google, GitHub, and Discord OAuth out of the box. These are the initial built-in providers; more will be added over time. The flow uses server-side state and PKCE.
 
