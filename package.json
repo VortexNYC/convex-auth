@@ -38,6 +38,7 @@
     "scan:secrets": "secretlint . --no-gitignore --secretlintignore .secretlintignore",
     "scan:security": "pnpm run scan:deps && pnpm run scan:secrets && pnpm run scan:sast && pnpm run scan:leaks",
     "docs:smoke": "node scripts/docs-smoke.mjs",
+    "guard:runtime": "node scripts/runtime-guard.mjs",
     "test:coverage": "pnpm -F @vortex-api/convex-auth test:coverage",
     "knip": "knip",
     "entire:review": "entire review",

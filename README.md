@@ -355,7 +355,7 @@ pnpm run fix         # Auto-fix lint and formatting
 
 ## CI and security scanning
 
-A GitHub Actions workflow is defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). It runs the full proof (`typecheck`, `check`, `build`, `test`) on Node 20.12+ and Node 22.
+A GitHub Actions workflow is defined in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). It runs the full proof (`typecheck`, `check`, `build`, `test`) on Node 22, plus a forward-compat test pass on Node 24. Node 20 is EOL and unsupported.
 
 The repo also includes repeatable security scanning:
 
@@ -399,7 +399,7 @@ Apache-2.0 — see `LICENSE`.
 [license]: LICENSE
 [status-badge]: https://img.shields.io/badge/status-public-blueviolet.svg?style=for-the-badge
 [status]: #status
-[node-badge]: https://img.shields.io/badge/node->=20.12.0-brightgreen.svg?style=for-the-badge
+[node-badge]: https://img.shields.io/badge/node->=22.0.0-brightgreen.svg?style=for-the-badge
 [node]: package.json
 [pnpm-badge]: https://img.shields.io/badge/pnpm-10.25.0-f69220.svg?style=for-the-badge
 [pnpm]: package.json
