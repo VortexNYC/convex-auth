@@ -18,7 +18,7 @@ Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 [![Node][node-badge]][node]
 [![pnpm][pnpm-badge]][pnpm]
 
-**[npm](https://www.npmjs.com/package/@vortex-api/convex-auth)** · **[Docs](https://your-deployment.convex.site)** · **[Quickstart](#quickstart)** · **[Framework guides](#framework-guides)** · **[Architecture](<docs/(reference)/architecture.md>)**
+**[npm](https://www.npmjs.com/package/@vortex-api/convex-auth)** · **[Docs](https://resilient-mule-559.convex.site)** · **[Quickstart](#quickstart)** · **[Framework guides](#framework-guides)** · **[Architecture](<docs/(reference)/architecture.md>)**
 
 </div>
 
@@ -345,7 +345,7 @@ Apache-2.0 — see `LICENSE`.
 [npm-badge]: https://img.shields.io/npm/v/@vortex-api/convex-auth?style=for-the-badge&label=npm
 [npm]: https://www.npmjs.com/package/@vortex-api/convex-auth
 [docs-badge]: https://img.shields.io/badge/docs-online-292a44?style=for-the-badge
-[docs]: https://your-deployment.convex.site
+[docs]: https://resilient-mule-559.convex.site
 [license-badge]: https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=for-the-badge
 [license]: LICENSE
 [status-badge]: https://img.shields.io/badge/status-public-blueviolet.svg?style=for-the-badge
