@@ -41,8 +41,8 @@ overrides:
   # A second react minor splits convex into per-peer-context instances; the
   # Registered* types then fail cross-instance inference and action returns
   # degrade to `unknown`. One react version keeps one convex type identity.
-  react: 19.2.8
-  react-dom: 19.2.8
+  react: 19.3.0
+  react-dom: 19.3.0
   react-native: ^0.86.0
   test-exclude: ^8.0.0
   uuid: ^14.0.0
