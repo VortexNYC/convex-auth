@@ -177,6 +177,17 @@ export default function SignInPage() {
 
 The full form (sign-up, OAuth buttons, guest, passkey, 2FA step-up) is in `examples/nextjs/app/sign-in/page.tsx`. See the [React guide](./client) for the complete hooks API.
 
+## Example app
+
+`examples/nextjs` exercises the adapter end-to-end — HttpOnly cookie sessions, middleware refresh, the `/api/auth` proxy, and server-rendered session state. No token ever touches browser JavaScript.
+
+```bash
+cd examples/nextjs
+pnpm install
+pnpm dlx convex dev --dev-deployment local   # local backend on :3210
+pnpm run dev
+```
+
 ## Next steps
 
 <CardGroup cols={2}>
@@ -189,7 +200,11 @@ The full form (sign-up, OAuth buttons, guest, passkey, 2FA step-up) is in `examp
   <Card title="Production" href="./production" icon="rocket">
     Deploy, monitor, and rotate.
   </Card>
-  <Card title="Examples" href="./examples" icon="folder">
-    `examples/nextjs` — a runnable end-to-end app.
+  <Card
+    title="Example source"
+    href="https://github.com/VortexNYC/convex-auth/tree/main/examples/nextjs"
+    icon="folder"
+  >
+    `examples/nextjs` on GitHub.
   </Card>
 </CardGroup>

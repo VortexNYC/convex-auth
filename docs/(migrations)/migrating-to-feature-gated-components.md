@@ -1,13 +1,6 @@
 # Migrating to feature-gated components
 
-The full `@vortex-api/convex-auth/convex.config` component still works and is the safest starting point for existing consumers. Migration to feature-gated components is optional and driven by which auth features you actually use.
-
-## When to migrate
-
-- **Core only:** If your app only needs email/password, magic links, email OTP, OAuth, sessions, and user/identity tables, use `@vortex-api/convex-auth/convex.config/core`.
-- **Core + organizations:** If you need organizations, members, roles, and invitations, add `@vortex-api/convex-auth/convex.config/organizations`.
-- **Core + organizations + API keys:** If you also need machine API keys and audit events, add `@vortex-api/convex-auth/convex.config/apiKeys`.
-- **Other add-ons:** Mount `servicePrincipals`, `agentAuth`, `authMd`, `webhooks`, or `mcpOauth` only when you use those features.
+The full `@vortex-api/convex-auth/convex.config` component still works and is the safest starting point for existing consumers. Migration to feature-gated components is optional and driven by which auth features you actually use — see [Feature-gated components](./feature-gated-components) for the mount table and what each component includes.
 
 ## Migration steps
 

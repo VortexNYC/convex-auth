@@ -17,6 +17,12 @@ export default defineConfig({
   title: "Convex Auth",
   description: "Vortex-native, full-stack authentication for Convex.",
   logo: "/logo.svg",
+  banner: {
+    content: "v3.0.1 — MCP OAuth, organizations, passkeys, SSR adapters",
+    link: { href: "/changelog", text: "Changelog" },
+    dismissible: true,
+    id: "v3.0.1",
+  },
   github: {
     owner: "VortexNYC",
     repo: "convex-auth",
@@ -63,19 +69,32 @@ export default defineConfig({
         label: "npm",
         href: "https://www.npmjs.com/package/@vortex-api/convex-auth",
       },
-    ],
-    featured: [
       {
-        label: "GitHub",
-        href: "https://github.com/VortexNYC/convex-auth",
-        icon: "github",
-      },
-      {
-        label: "npm · @vortex-api/convex-auth",
-        href: "https://www.npmjs.com/package/@vortex-api/convex-auth",
-        icon: "package",
+        label: "Component",
+        href: "https://www.convex.dev/components/convex-better-auth-2",
       },
     ],
+  },
+  redirects: [
+    { from: "/ui-components", to: "/components" },
+    { from: "/examples", to: "/" },
+    { from: "/migrating-from-full-component", to: "/migrating-to-feature-gated-components" },
+  ],
+  seo: {
+    organization: {
+      name: "Vortex",
+      logo: "/logo.svg",
+      sameAs: [
+        "https://github.com/VortexNYC",
+        "https://www.npmjs.com/package/@vortex-api/convex-auth",
+        "https://www.convex.dev/components/convex-better-auth-2",
+      ],
+    },
+    software: {
+      license: "Apache-2.0",
+      price: 0,
+      operatingSystem: "Node.js 22+",
+    },
   },
   agents: {
     llmsTxt: {

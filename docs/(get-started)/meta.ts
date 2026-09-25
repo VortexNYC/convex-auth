@@ -5,5 +5,12 @@ export default defineMeta({
   order: 1,
   display: "group",
   icon: "rocket",
-  pages: ["how-we-got-here", "concepts", "installation", "quickstart", "configuration"],
+  pages: [
+    "installation",
+    "quickstart",
+    "concepts",
+    "architecture",
+    "configuration",
+    "how-we-got-here",
+  ],
 });

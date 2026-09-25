@@ -6,7 +6,7 @@ sidebar:
   order: 1
 ---
 
-`@vortex-api/convex-auth/react` exposes a provider and hooks that wrap the Convex actions configured in `convex/auth.ts`. This is the client-side contract for every React app — Vite SPAs, the Next.js and TanStack Start adapters, and React Native all build on it.
+`@vortex-api/convex-auth/react` exposes a provider and hooks that wrap the Convex actions configured in `convex/auth.ts`. This is the client-side contract for every React app — Vite SPAs, TanStack Router apps, the Next.js and TanStack Start adapters, and React Native all build on it.
 
 :::tip[New here?]
 The [Quickstart](./quickstart) walks a new Vite + React app end to end in about ten minutes. This page is the API reference for what that walkthrough wires up.
@@ -158,10 +158,20 @@ export function SignInPage() {
 
 Most of these take the auth client returned by `useConvexAuthClient()`.
 
+## Example apps
+
+Three runnable React examples live under `examples/` — copy each `.env.example` to `.env.local`, point it at a Convex deployment, and run `pnpm run dev`. Give each example its own deployment — pointed at one, they overwrite each other's functions.
+
+- **`examples/react`** — Vite + React sign-up/sign-in form on `ConvexAuthClientProvider` + `useAuthActions`.
+- **`examples/tanstack-router`** — Vite + React with `@tanstack/react-router`: `useSession()` is mirrored into router `context`, a pathless `_authed` layout guards protected routes in `beforeLoad` (redirecting to `/sign-in?redirect=…`), and `router.invalidate()` re-runs the guards on sign-in/sign-out. This is the pattern for any client-side router.
+- **`examples/oauth`** — Google, GitHub, and Discord buttons on the same client.
+
+Anonymous local backends bind `127.0.0.1:3210`/`3211`; to run several at once give each `.env.local` its own port pair.
+
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="UI components" href="./ui-components" icon="layout">
+  <Card title="UI components" href="./components" icon="layout">
     Drop-in sign-in, sign-up, and account screens.
   </Card>
   <Card title="Theming" href="./theming" icon="palette">
@@ -170,7 +180,7 @@ Most of these take the auth client returned by `useConvexAuthClient()`.
   <Card title="Quickstart" href="./quickstart" icon="rocket">
     The end-to-end Vite + React walkthrough.
   </Card>
-  <Card title="Examples" href="./examples" icon="folder">
-    `examples/react` and `examples/tanstack-router` — runnable apps.
+  <Card title="React Native" href="./react-native" icon="smartphone">
+    The same client on Expo — secure token storage and deep links.
   </Card>
 </CardGroup>

@@ -8,6 +8,7 @@ export default defineMeta({
   pages: [
     "email-password",
     "oauth",
+    "generic-oauth",
     "oidc-provider",
     "two-factor",
     "magic-links",

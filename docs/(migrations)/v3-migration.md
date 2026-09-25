@@ -7,15 +7,15 @@ find the entries that apply to you.
 
 ## Do I need to do anything?
 
-| Change                                   | You are affected if…                                                                       | Effort                                                                             |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| Landing verifier binding                 | Users open magic-link/OAuth emails in a different browser or in-app webview                | Set `requireLandingVerifier: false`, or surface `?error=landing_verifier_mismatch` |
-| `getSessionByToken` requires `expiresAt` | You wrote a custom `OidcProviderStorageAdapter`                                            | Return `expiresAt` (ms) — required field                                           |
-| Session fallback removals                | You are upgrading from **< 2.5.x** with live sessions                                      | Deploy latest 2.x first so sessions backfill                                       |
-| Provider args removed                    | You pass `sendVerificationEmailOnSignUp`/`OnSignIn` at top level                           | Move them under `email`                                                            |
-| `resolvePermissionOverride` removed      | You implemented the B2B override adapter                                                   | Model the variance as roles                                                        |
-| Stricter redirect validation             | You pass `callbackURL`/`errorURL`/`newUserURL` to `signIn` pointing at non-trusted origins | Add them to `trustedOrigins`                                                       |
-| `path-to-regexp` v8                      | Your `createRouteMatcher` patterns use unnamed groups like `/(a\|b)/`                      | Rewrite as `/:key` or `RegExp`                                                     |
+| Change                                   | You are affected if…                                                 | Effort                                                                            |
+| ---------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Landing verifier binding                 | Users open magic-link/OAuth emails in a different browser or webview | Set `requireLandingVerifier: false`, or handle `?error=landing_verifier_mismatch` |
+| `getSessionByToken` requires `expiresAt` | You wrote a custom `OidcProviderStorageAdapter`                      | Return `expiresAt` (ms) — now required                                            |
+| Session fallback removals                | Upgrading from **< 2.5.x** with live sessions                        | Deploy latest 2.x first so sessions backfill                                      |
+| Provider args removed                    | Passing `sendVerificationEmailOnSignUp`/`OnSignIn` at top level      | Move them under `email`                                                           |
+| `resolvePermissionOverride` removed      | You implemented the B2B override adapter                             | Model the variance as roles                                                       |
+| Stricter redirect validation             | Passing `callbackURL`/`errorURL`/`newUserURL` to untrusted origins   | Add them to `trustedOrigins`                                                      |
+| `path-to-regexp` v8                      | `createRouteMatcher` patterns use unnamed groups like `/(a\|b)/`     | Rewrite as `/:key` or `RegExp`                                                    |
 
 If none of the "you are affected" rows apply, v3 is a drop-in upgrade.
 

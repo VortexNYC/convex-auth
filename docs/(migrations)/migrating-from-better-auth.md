@@ -5,6 +5,8 @@ description: One-time cutover from Better Auth to the native convex-auth runtime
 
 This is a one-time cutover, not a long-term bridge. The `convex-better-auth-adapter` and `convex-better-auth` packages are only used during the migration. Once the data is moved and the client/runtime is cut over, you remove them.
 
+A runnable cutover lives in `examples/better-auth-migration`.
+
 ## What the cutover looks like
 
 1. Mount the legacy `convex-better-auth-adapter` (`betterAuth`) component and the native `convex-auth` (`convexAuth`) component in the same Convex app.
