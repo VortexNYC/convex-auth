@@ -61,7 +61,7 @@
     "@types/node": "^26.4.0",
     "knip": "^6.35.1",
     "secretlint": "^13.0.5",
-    "vite-plus": "0.2.4"
+    "vite-plus": "1.0.0-rc.0"
   },
   "engines": {
     "node": ">=20.12.0"

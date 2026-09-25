@@ -25,4 +25,12 @@ export default defineConfig({
       "expo-web-browser",
     ],
   },
+  build: {
+    rolldownOptions: {
+      // Optional expo-* peers (social sign-in fallbacks in the auth package)
+      // are native-only and resolve to nothing usable on web; externalize so
+      // rolldown doesn't bundle them.
+      external: /^expo($|-)/,
+    },
+  },
 });
