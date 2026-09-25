@@ -56,6 +56,10 @@ jobs:
             # --no-renames: a rename lists only the destination otherwise, so
             # moving library source into docs/ would misclassify as docs-only.
             files=$(git diff --name-only --no-renames "${{ github.event.pull_request.base.sha }}"...HEAD)
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            # Pushes to main always run the full wall — a queued run can be
+            # replaced by a newer pending one, so no diff here may skip checks.
+            :
           else
             # push / dispatch: `before` is empty on dispatch and a zero SHA on
             # new-branch pushes — either way, fall back to running the full

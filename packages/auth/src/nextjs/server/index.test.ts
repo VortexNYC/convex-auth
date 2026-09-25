@@ -449,8 +449,6 @@ describe("createRouteMatcher", () => {
   });
 
   it("translates named-param wildcards without throwing", () => {
-    // v6 treated `/:locale(.*)` as one param matching everything,
-    // including `/`; the naive `:name{*splat}` rewrite throws in v8.
     const isProtected = createRouteMatcher("/:locale(.*)");
     expect(isProtected(at("/en"))).toBe(true);
     expect(isProtected(at("/en/dashboard"))).toBe(true);

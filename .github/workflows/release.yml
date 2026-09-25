@@ -44,7 +44,7 @@ jobs:
         id: changesets
         # v2.1.2 — v1.x parsed `changeset publish` stdout for `New tag:` lines,
         # which CLI v3 no longer prints; v2 reads the CHANGESETS_OUTPUT file.
-        uses: changesets/action@66d7d1ddafddf1ef45f98ee51a7496f9cdadb2f4
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51
         with:
           version-script: pnpm version-packages
           publish-script: pnpm ci:publish
