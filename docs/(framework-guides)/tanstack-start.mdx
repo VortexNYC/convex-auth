@@ -2,12 +2,25 @@
 title: TanStack Start
 description: SSR auth for TanStack Start with HttpOnly cookie sessions.
 sidebar:
+  icon: zap
   order: 4
 ---
 
 `@vortex-api/convex-auth/tanstack-start` and `@vortex-api/convex-auth/tanstack-start/server` are the TanStack Start SSR adapter. Sessions live in app-origin HttpOnly cookies; a request middleware lands OAuth/magic-link redirects, refreshes sessions near expiry, and serves the intent-based `/api/auth` proxy. It implements the [SSR auth contract](./ssr-contract).
 
 A working example lives in `examples/tanstack-start`.
+
+## Install
+
+```bash
+pnpm add @vortex-api/convex-auth convex
+```
+
+Point the app at your Convex deployment and wire the backend (component mount, `convex/auth.ts`, `convex/http.ts`) per [Installation](./installation):
+
+```bash
+echo 'VITE_CONVEX_URL=https://<your-deployment>.convex.cloud' >> .env.local
+```
 
 ## Request middleware
 
@@ -122,3 +135,65 @@ From `@vortex-api/convex-auth/tanstack-start/server`:
 ## Error params
 
 Rejected landings redirect to `/?error=landing_verifier_mismatch` (verifier cookie absent or mismatched) or `/?error=cross_origin` (credentialed cross-origin request). Surface these in your UI — see the [SSR auth contract](./ssr-contract) for the full semantics.
+
+## Sign-in UI
+
+Client components use the React client — sign-in calls mint the session through the `/api/auth` proxy into HttpOnly cookies:
+
+```tsx
+// src/routes/sign-in.tsx
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { FormEvent } from "react";
+import { useConvexAuthClient } from "@vortex-api/convex-auth/react";
+
+export const Route = createFileRoute("/sign-in")({ component: SignInPage });
+
+function SignInPage() {
+  const authClient = useConvexAuthClient();
+  const router = useRouter();
+
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    const result = await authClient.signIn.email({
+      email: String(data.get("email")),
+      password: String(data.get("password")),
+    });
+    if (!result.error) {
+      // Re-run beforeLoad/loaders so route context picks up the fresh session.
+      await router.invalidate();
+      await router.navigate({ to: "/dashboard" });
+    }
+  };
+
+  return (
+    <form onSubmit={onSubmit}>
+      <input name="email" type="email" required />
+      <input name="password" type="password" required />
+      <button type="submit">Sign in</button>
+      <button type="button" onClick={() => authClient.signIn.social({ provider: "github" })}>
+        Continue with GitHub
+      </button>
+    </form>
+  );
+}
+```
+
+The full form (sign-up, redirect search param, guest) is in `examples/tanstack-start/src/routes/sign-in.tsx`. See the [React guide](./client) for the complete hooks API.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="React hooks" href="./client" icon="atom">
+    `useSession`, `useConvexAuthClient`, and the drop-in client.
+  </Card>
+  <Card title="SSR auth contract" href="./ssr-contract" icon="file-text">
+    The boundary semantics every SSR adapter implements.
+  </Card>
+  <Card title="Production" href="./production" icon="rocket">
+    Deploy, monitor, and rotate.
+  </Card>
+  <Card title="Examples" href="./examples" icon="folder">
+    `examples/tanstack-start` — a runnable end-to-end app.
+  </Card>
+</CardGroup>
