@@ -10,6 +10,7 @@ import type {
 } from "./types.js";
 import type { Id } from "convex/values";
 import { hashToken } from "./tokens.js";
+
 import { hashPassword, verifyPassword } from "./password.js";
 import { mintToken, verifyToken } from "./jwt.js";
 import { encryptAccountToken } from "./oauthCrypto.js";
@@ -605,6 +606,47 @@ describe("nativeEmailAndPassword", () => {
     expect(payload.sub).toBe("user_1");
     expect(payload.sessionId).toBe(result.sessionId);
     expect(payload.identityId).toBe("identity_1");
+  });
+
+  it("rehashes imported bcrypt credentials to argon2id on sign-in", async () => {
+    const component = createMockComponent();
+    const user = makeUser({ emailVerified: true });
+    const identity = makeIdentity({ emailVerified: true });
+    const account = makeAccount({
+      credentialHash: "$2a$10$DprdJOxGXADLAHm6zgiHeeYJIMX.UqFj0gRoy7VHEhAfnX8nwxbJe",
+    });
+    component.identity.getUserAndAccount.mockResolvedValue({ user, identity, account });
+    component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_1");
+
+    const { signIn } = createActions(component);
+    const { handler } = exec(signIn);
+    await handler(createContext(), {
+      email: "shlomo@example.com",
+      password: DEFAULT_PASSWORD,
+    });
+
+    const rehashCall = component.native.accounts.updateCredentialHash.mock.calls[0]?.[0];
+    expect(rehashCall.accountId).toBe("account_1");
+    expect(rehashCall.credentialHash).toMatch(/^\$argon2id\$/);
+    expect(await verifyPassword(DEFAULT_PASSWORD, rehashCall.credentialHash)).toBe(true);
+  });
+
+  it("does not rehash native argon2id credentials on sign-in", async () => {
+    const component = createMockComponent();
+    const user = makeUser({ emailVerified: true });
+    const identity = makeIdentity({ emailVerified: true });
+    const account = makeAccount();
+    component.identity.getUserAndAccount.mockResolvedValue({ user, identity, account });
+    component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_1");
+
+    const { signIn } = createActions(component);
+    const { handler } = exec(signIn);
+    await handler(createContext(), {
+      email: "shlomo@example.com",
+      password: DEFAULT_PASSWORD,
+    });
+
+    expect(component.native.accounts.updateCredentialHash).not.toHaveBeenCalled();
   });
 
   it("signs in with rememberMe false uses a 1-day session and token TTL", async () => {

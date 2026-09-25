@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest";
 import { argon2id } from "@noble/hashes/argon2.js";
 import { scryptAsync } from "@noble/hashes/scrypt.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
-import { bytesToBase64url, hashPassword, legacyPbkdf2Hash, verifyPassword } from "./password.js";
+
+import {
+  bytesToBase64url,
+  hashPassword,
+  isBcryptHash,
+  legacyPbkdf2Hash,
+  verifyPassword,
+} from "./password.js";
 
 describe("password", () => {
   it("hashes and verifies a password with argon2id", async () => {
@@ -61,6 +68,28 @@ describe("password", () => {
     expect(legacyHash.startsWith("$pbkdf2$")).toBe(true);
     expect(await verifyPassword("hunter2", legacyHash)).toBe(true);
     expect(await verifyPassword("wrong", legacyHash)).toBe(false);
+  });
+
+  it("verifies imported bcrypt hashes (Clerk/WorkOS migration bridge)", async () => {
+    /* Matches the `$2a$10$...` digests in Clerk's dashboard CSV export. */
+    const imported = "$2a$10$DprdJOxGXADLAHm6zgiHee6l4Wey3XBYfEtgTPXhDbScWLr6to2xy";
+    expect(isBcryptHash(imported)).toBe(true);
+    expect(await verifyPassword("hunter2", imported)).toBe(true);
+    expect(await verifyPassword("wrong", imported)).toBe(false);
+  });
+
+  it("accepts all bcrypt crypt variants and rejects near-miss strings", async () => {
+    const imported = "$2a$04$DprdJOxGXADLAHm6zgiHeepPaaQJ9oXVKp07GahazNJ.jIeyQjtpm";
+    for (const variant of ["2a", "2b", "2y"]) {
+      const hash = imported.replace("$2a$", `$${variant}$`);
+      expect(isBcryptHash(hash)).toBe(true);
+      expect(await verifyPassword("hunter2", hash)).toBe(true);
+    }
+    expect(isBcryptHash("$2z$10$AnPv4/qb1oLaM7t/RGRXJuPFAO3j5YjhpIeWIlu7yZ5dDEoEtH6CO")).toBe(
+      false,
+    );
+    expect(isBcryptHash("$argon2id$v=19$m=19456,t=2,p=1$salt$hash")).toBe(false);
+    expect(await verifyPassword("hunter2", "$2b$10$malformed")).toBe(false);
   });
 
   it("verifies Better Auth legacy scrypt hashes", async () => {

@@ -3,6 +3,7 @@ import {
   hashPassword as wasmHashPassword,
   verifyPassword as wasmVerifyPassword,
 } from "argon2id-wasm";
+import { bcryptVerify } from "hash-wasm";
 import { argon2id } from "@noble/hashes/argon2.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { scrypt } from "@noble/hashes/scrypt.js";
@@ -12,6 +13,12 @@ import { hexToBytes } from "@noble/hashes/utils.js";
 const PBKDF2_PREFIX = "$pbkdf2$";
 const SCRYPT_PREFIX = "$scrypt$";
 const ARGON2ID_PREFIX = "$argon2id$";
+/**
+ * bcrypt modular crypt format: `$2a$|2b$|2x$|2y$` + two-digit cost + 53-char
+ * salt/digest body. This is the shape Clerk's dashboard CSV export emits in
+ * its `password_digest` column (and what WorkOS imports hand off).
+ */
+const BCRYPT_REGEX = /^\$2[abxy]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 const DEFAULT_DKLEN = 32;
 const DEFAULT_SALT_BYTES = 16;
 const DEFAULT_PBKDF2_ITERATIONS = 100_000;
@@ -53,6 +60,10 @@ export async function hashPassword(password: string): Promise<string> {
   return await wasmHashPassword(password);
 }
 
+export function isBcryptHash(hash: string): boolean {
+  return BCRYPT_REGEX.test(hash);
+}
+
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   if (hash.startsWith(ARGON2ID_PREFIX)) {
     return verifyArgon2id(password, hash);
@@ -63,10 +74,30 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   if (hash.startsWith(PBKDF2_PREFIX)) {
     return verifyPbkdf2(password, hash);
   }
+  if (isBcryptHash(hash)) {
+    return verifyBcrypt(password, hash);
+  }
   if (isBetterAuthScryptHash(hash)) {
     return verifyBetterAuthScrypt(password, hash);
   }
   return false;
+}
+
+/**
+ * Verifies imported bcrypt hashes (Clerk CSV exports, WorkOS handoffs) so
+ * migrated users keep their passwords. The sign-in path rehashes to argon2id
+ * on first success — bcrypt verification exists only for the lazy-migration
+ * bridge, never for new credentials. Uses hash-wasm (WebAssembly) rather than
+ * a JS bcrypt port because the isolate does not guarantee setTimeout /
+ * setImmediate / node:crypto, which those packages touch at module load or in
+ * their async paths.
+ */
+async function verifyBcrypt(password: string, hash: string): Promise<boolean> {
+  try {
+    return await bcryptVerify({ password, hash });
+  } catch {
+    return false;
+  }
 }
 
 function parseArgon2idHash(hash: string): {
