@@ -15,10 +15,10 @@
  *   - `anonymous:*` deployments are local backends bound to the example's own
  *     directory — pushing from the scratch copy would spawn a fresh backend with
  *     no env vars (and fail env validation by design). For anonymous targets the
- *     script proves the tarball installs and runs the functional smoke against
- *     the live backend a `convex dev` watcher keeps synced to source — that
- *     exercises the running environment, not the packed artifact. The full
- *     pack->push->flow proof comes from the cloud dev deployments.
+ *     script proves the tarball installs, typechecks the example's convex/
+ *     against the installed package, and runs the functional smoke against
+ *     the live backend a `convex dev` watcher keeps synced to source. The
+ *     full pack->push->flow proof comes from the cloud dev deployments.
  *
  * Usage:
  *   node scripts/smoke-release.mjs                 # all examples
@@ -40,9 +40,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 
-const ROOT = new URL("..", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const EXAMPLES_DIR = join(ROOT, "examples");
 const PKG_DIR = join(ROOT, "packages", "auth");
 
@@ -180,6 +181,22 @@ async function smokeExample(name, tgz, scratch) {
       result.push = "no-live-backend";
       result.notes.push("no SITE_URL var — functional skipped");
       return result;
+    }
+    // The scratch copy never reaches the watcher backend, so prove the
+    // tarball another way: typecheck the example's convex/ dir against the
+    // installed package — broken `exports`/`.d.ts`/`files` entries fail here.
+    const convexTsconfig = join(dir, "convex", "tsconfig.json");
+    if (existsSync(convexTsconfig)) {
+      try {
+        run("npx", ["tsc", "--noEmit", "-p", "convex/tsconfig.json"], { cwd: dir });
+      } catch (e) {
+        const out = String(e.stdout ?? "") + String(e.stderr ?? "");
+        result.push = "FAILED";
+        result.notes.push(
+          "tarball typecheck failed | " + out.split("\n").filter(Boolean).slice(-3).join(" | "),
+        );
+        return result;
+      }
     }
     // Local backends are path-bound: pushing the scratch copy would spawn a
     // fresh backend with no env vars. The watcher-owned backend already serves

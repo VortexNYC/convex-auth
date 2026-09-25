@@ -1,0 +1,98 @@
+---
+title: Production
+description: "Ship convex-auth to production: env vars, check/preflight, deployment, and monitoring."
+sidebar:
+  order: 15
+---
+
+This is the checklist for shipping `convex-auth` beyond local development.
+
+## Pre-deploy checklist
+
+<Steps>
+  <Step title="Generate production keys">
+    Use a fresh RS256 keypair for each Convex project. Do not reuse local keys.
+
+    ```bash
+    pnpm dlx convex env set JWT_PRIVATE_KEY '<private-key-json>'
+    pnpm dlx convex env set JWKS '<jwks-json>'
+    ```
+
+  </Step>
+
+  <Step title="Set required environment variables">
+    ```bash
+    pnpm dlx convex env set CONVEX_SITE_URL 'https://your-site.convex.site'
+    pnpm dlx convex env set EMAIL_FROM_ADDRESS 'auth@yourdomain.com'
+    ```
+
+    If you use OAuth, set the provider credentials and register the callback URLs.
+
+  </Step>
+
+<Step title="Use a real email provider">
+  `sendEmail`, `sendMagicLink`, and `sendVerificationOTP` should call Resend, Postmark, SES, or
+  another provider in production. Returning a console log is fine for local development only.
+</Step>
+
+  <Step title="Run check and preflight">
+    ```bash
+    pnpm dlx @vortex-api/convex-auth check
+    pnpm dlx @vortex-api/convex-auth preflight
+    ```
+
+    `check` validates imports and exports. `preflight` verifies environment variables and component mounting.
+
+  </Step>
+
+  <Step title="Deploy">
+    ```bash
+    pnpm dlx convex deploy
+    ```
+  </Step>
+</Steps>
+
+## OAuth callback URLs
+
+Register exact production callback URLs in each provider:
+
+- GitHub: `https://your-site.convex.site/api/auth/callback/github`
+- Google: `https://your-site.convex.site/api/auth/callback/google`
+- Discord: `https://your-site.convex.site/api/auth/callback/discord`
+
+The `oauth.trustedOrigins` in `convex/auth.ts` must include the origin you use for `callbackURL`, `errorURL`, and `newUserURL`.
+
+## Monitoring
+
+`convex-auth` exposes runtime observability events you can capture with `useAuthRuntimeStatus` on the client:
+
+```tsx
+import { useAuthRuntimeStatus } from "@vortex-api/convex-auth/react";
+
+export function AuthStatus() {
+  const status = useAuthRuntimeStatus();
+  return <pre>{JSON.stringify(status, null, 2)}</pre>;
+}
+```
+
+Watch for:
+
+- high sign-in failure rates
+- expired magic links / OTPs
+- OAuth callback errors
+- API key rate-limit hits
+
+## Key rotation
+
+If you suspect a key leak, rotate immediately:
+
+1. Generate a new RS256 pair.
+2. Set the new `JWKS` first so Convex can verify tokens signed with both old and new keys.
+3. Set the new `JWT_PRIVATE_KEY`.
+4. Invalidate existing sessions if needed by clearing `auth_sessions` and `auth_refresh_tokens` for affected users.
+
+## What next
+
+- Read the [`Security`](./security) guide for CAPTCHA, breach detection, rate limits, and 2FA.
+- Read the [`Configuration`](./configuration) reference for every option.
+- Run the [`Testing`](./testing) guide for the conformance consumer and preflight tooling.

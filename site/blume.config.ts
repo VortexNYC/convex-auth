@@ -16,6 +16,9 @@ export default defineConfig({
   description: "Vortex-native, full-stack authentication for Convex.",
   logo: "/logo.svg",
   content: {
+    // content.root points at the live docs tree so `blume version` snapshots
+    // into docs/<id>/ rather than the default site/docs/ convention.
+    root: "../docs",
     sources: [
       { type: "filesystem", root: "../docs" },
       {
@@ -38,6 +41,10 @@ export default defineConfig({
         label: "HTTP API",
       },
     ],
+  },
+  versions: {
+    archived: [{ id: "v2", label: "v2.x" }],
+    current: { label: "v3" },
   },
   navigation: {
     tabs: [{ label: "API Reference", path: "/api" }],

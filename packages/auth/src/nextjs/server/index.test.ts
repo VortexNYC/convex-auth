@@ -448,6 +448,13 @@ describe("createRouteMatcher", () => {
     expect(isProtected(at("/dashboard"))).toBe(true);
   });
 
+  it("translates named-param wildcards without throwing", () => {
+    const isProtected = createRouteMatcher("/:locale(.*)");
+    expect(isProtected(at("/en"))).toBe(true);
+    expect(isProtected(at("/en/dashboard"))).toBe(true);
+    expect(isProtected(at("/"))).toBe(true);
+  });
+
   it("rejects bare-star and unnamed-group patterns like v6 did", () => {
     expect(() => createRouteMatcher("/api/*")).toThrow();
     expect(() => createRouteMatcher("/(a|b)/x")).toThrow();

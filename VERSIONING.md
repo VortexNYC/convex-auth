@@ -85,10 +85,12 @@ The following **are** breaking:
   gets), pushes to each example's own dev deployment, and exercises a real
   sign-up/sign-in flow over HTTP. Cloud dev deployments get the full
   pack → install → push → flow chain; `anonymous:*` deployments get install +
+  a typecheck of the example's `convex/` against the packed package +
   functional checks against their running local backends. The gate must report
   all examples passing before `workflow_dispatch` on the release workflow.
-  Examples must never target `prod:*` deployments — the script refuses unless
-  `--allow-prod` is passed explicitly.
+  The script refuses `prod:*` deployment targets by default. `--allow-prod`
+  exists for exceptional operator debugging only — the release gate must be
+  run without it, and examples must never be pointed at `prod:*` targets.
 
 ## Supported versions
 
