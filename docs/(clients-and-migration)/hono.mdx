@@ -40,7 +40,7 @@ The middleware intercepts `POST /api/auth` itself and the boundary pass covers e
 
 ## Session helpers
 
-All helpers take the Hono context and are revocation-aware:
+All helpers take the Hono context; only `getConvexAuthSession` and `getAuthServerState` call Convex — the cookie helpers are local reads:
 
 ```ts
 import {

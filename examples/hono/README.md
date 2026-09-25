@@ -8,11 +8,9 @@ cookie sessions, `/api/auth` proxy, and the verified session oracle.
 ```bash
 pnpm install
 # point the app at your Convex deployment
-cp .env.example .env.local   # or set CONVEX_URL
+echo 'CONVEX_URL=https://<your-deployment>.convex.cloud' > .env.local
 pnpm run dev
 ```
-
-`CONVEX_URL` must be set (e.g. `https://<your-deployment>.convex.cloud`).
 
 ## What it shows
 

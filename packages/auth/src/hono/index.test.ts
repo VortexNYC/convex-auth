@@ -233,6 +233,120 @@ describe("convexAuthMiddleware", () => {
     const setCookies = res.headers.getSetCookie();
     expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=t2"))).toBeDefined();
   });
+
+  it("keeps auth cookies when the rebuilt response already carries Set-Cookie/Cache-Control", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const oldToken = jwt(now + 30, now - 3600);
+    actionMock.mockResolvedValue({ token: "t2", refreshToken: "r2" });
+    const app = new Hono();
+    app.use("*", convexAuthMiddleware(options));
+    app.get("/dash", () => {
+      const res = new Response("page", {
+        headers: {
+          "set-cookie": "pref=dark; Path=/",
+          "cache-control": "public, max-age=60",
+        },
+      });
+      // Simulate the immutable-guard shape (fetch/redirect responses): the
+      // middleware cannot mutate these headers and must rebuild. Shadowing
+      // the instance methods is the only way to force that — `new Response`
+      // headers start mutable.
+      res.headers.append = () => {
+        throw new TypeError("immutable");
+      };
+      res.headers.set = () => {
+        throw new TypeError("immutable");
+      };
+      return res;
+    });
+    const res = await app.request("https://app.example.com/dash", {
+      headers: {
+        host: "app.example.com",
+        accept: "text/html",
+        cookie: `__Host-__convexAuthToken=${oldToken}; __Host-__convexAuthRefreshToken=old`,
+      },
+    });
+    const setCookies = res.headers.getSetCookie();
+    // The auth write must survive — Hono's c.res setter re-merges the old
+    // response's headers and would drop cookies applied before assignment.
+    expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=t2"))).toBeDefined();
+    expect(setCookies.find((h) => h.startsWith("pref=dark"))).toBeDefined();
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  it("wins the proxy intercept over a competing route handler", async () => {
+    actionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    const app = new Hono();
+    app.use("*", convexAuthMiddleware(options));
+    // A real downstream route on the same path — must never run.
+    app.post("/api/auth", (c) => c.text("leaked"));
+    const res = await app.request("https://app.example.com/api/auth", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        host: "app.example.com",
+        origin: "https://app.example.com",
+      },
+      body: JSON.stringify({ intent: "signIn", args: {} }),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).not.toBe("leaked");
+    expect(actionMock).toHaveBeenCalled();
+  });
+
+  it("keeps a streaming body intact through the rebuild", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const oldToken = jwt(now + 30, now - 3600);
+    actionMock.mockResolvedValue({ token: "t2", refreshToken: "r2" });
+    const app = new Hono();
+    app.use("*", convexAuthMiddleware(options));
+    app.get("/dash", () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode("chunk-1 "));
+          controller.enqueue(new TextEncoder().encode("chunk-2"));
+          controller.close();
+        },
+      });
+      const res = new Response(stream, { headers: { "content-type": "text/plain" } });
+      res.headers.append = () => {
+        throw new TypeError("immutable");
+      };
+      res.headers.set = () => {
+        throw new TypeError("immutable");
+      };
+      return res;
+    });
+    const res = await app.request("https://app.example.com/dash", {
+      headers: {
+        host: "app.example.com",
+        accept: "text/html",
+        cookie: `__Host-__convexAuthToken=${oldToken}; __Host-__convexAuthRefreshToken=old`,
+      },
+    });
+    expect(await res.text()).toBe("chunk-1 chunk-2");
+    expect(
+      res.headers.getSetCookie().find((h) => h.startsWith("__Host-__convexAuthToken=t2")),
+    ).toBeDefined();
+  });
+
+  it("still rotates cookies on HEAD requests", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const oldToken = jwt(now + 30, now - 3600);
+    actionMock.mockResolvedValue({ token: "t2", refreshToken: "r2" });
+    const res = await createApp().request("https://app.example.com/dash", {
+      method: "HEAD",
+      headers: {
+        host: "app.example.com",
+        cookie: `__Host-__convexAuthToken=${oldToken}; __Host-__convexAuthRefreshToken=old`,
+      },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("");
+    expect(
+      res.headers.getSetCookie().find((h) => h.startsWith("__Host-__convexAuthToken=t2")),
+    ).toBeDefined();
+  });
 });
 
 describe("standalone proxy handler", () => {

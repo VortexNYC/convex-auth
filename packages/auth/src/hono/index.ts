@@ -90,6 +90,9 @@ export function convexAuthMiddleware(options: ConvexAuthHonoOptions): Middleware
   const verbose = options.verbose ?? false;
 
   return async (c: Context, next: Next) => {
+    // Rotation/CORS bookkeeping is keyed on this Request object — middleware
+    // that replaces `c.req.raw` downstream (e.g. body-limit) detaches the
+    // helpers from the recorded outcome.
     const request = c.req.raw;
 
     if (shouldProxyAuthAction(request, apiRoute)) {
@@ -150,9 +153,12 @@ export function convexAuthMiddleware(options: ConvexAuthHonoOptions): Middleware
       try {
         applyCookies(c.res.headers);
       } catch {
-        const rebuilt = new Response(c.res.body, c.res);
-        applyCookies(rebuilt.headers);
-        c.res = rebuilt;
+        // Assign FIRST, then mutate — Hono's `c.res` setter merges the old
+        // response's headers over the assigned one (old Set-Cookie values
+        // would replace the auth cookies just written, and an old
+        // Cache-Control would win over `private, no-store`).
+        c.res = new Response(c.res.body, c.res);
+        applyCookies(c.res.headers);
       }
     }
   };
