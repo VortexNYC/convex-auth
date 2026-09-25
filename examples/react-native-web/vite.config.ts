@@ -29,7 +29,9 @@ export default defineConfig({
     rolldownOptions: {
       // Optional expo-* peers (social sign-in fallbacks in the auth package)
       // are native-only and resolve to nothing usable on web; externalize so
-      // rolldown doesn't bundle them.
+      // rolldown doesn't bundle them. The whole expo family is covered because
+      // any expo specifier transitively imports expo-modules-core, whose type
+      // re-exports hard-fail rolldown builds.
       external: /^expo($|-)/,
     },
   },
