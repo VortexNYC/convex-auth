@@ -79,6 +79,16 @@ jobs:
           else
             echo "docsonly=false" >> "$GITHUB_OUTPUT"
           fi
+          # Site-scope flag: any diff touching the docs tree or site config
+          # must prove the docs build still validates — docs-only PRs skip
+          # the heavy wall, so without this a broken blume config or dead
+          # link ships unverified. Empty files (main pushes, dispatch, new
+          # branches) means unknown scope — default to running it.
+          if [ -z "$files" ] || echo "$files" | grep -qE '^(docs/|site/)'; then
+            echo "sitechanged=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "sitechanged=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -88,6 +98,25 @@ jobs:
 
       - name: Docs smoke check
         run: pnpm run docs:smoke
+
+      # blume validate catches dead links/config drift that docs:smoke's
+      # regex can't see; the build proves the site still compiles. 22.x
+      # only — output is node-version-invariant. GITHUB_TOKEN feeds the
+      # github-releases changelog source (public repo, but rate-limited
+      # unauthenticated fetches fail open to an empty changelog).
+      - name: Docs site validate
+        if: steps.scope.outputs.sitechanged == 'true' && matrix.node-version == '22.x'
+        working-directory: site
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm exec blume validate
+
+      - name: Docs site build
+        if: steps.scope.outputs.sitechanged == 'true' && matrix.node-version == '22.x'
+        working-directory: site
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm exec blume build
 
       - name: OpenAPI contract guard
         if: steps.scope.outputs.docsonly != 'true'
