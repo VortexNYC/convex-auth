@@ -1,0 +1,126 @@
+{
+  "users": [
+    {
+      "id": "user_01E4ZCR3C56J083X43JQXF3JK5",
+      "email": "margaret@example.com",
+      "first_name": "Margaret",
+      "last_name": "Hamilton",
+      "email_verified": true,
+      "profile_picture_url": "https://cdn.workos.com/margaret.png",
+      "password_hash": "$2b$10$AnPv4/qb1oLaM7t/RGRXJuPFAO3j5YjhpIeWIlu7yZ5dDEoEtH6CO",
+      "password_hash_type": "bcrypt",
+      "created_at": "2024-01-15T10:30:00.000Z",
+      "updated_at": "2024-01-16T11:00:00.000Z"
+    },
+    {
+      "id": "user_01E4ZCR3C6TF9V9P8XJJ2ZZZZZ",
+      "email": "katherine@example.com",
+      "first_name": "Katherine",
+      "last_name": "Johnson",
+      "email_verified": false,
+      "password_hash": "SSHA256.base64hash==",
+      "password_hash_type": "ssha256",
+      "created_at": "2024-02-01T08:00:00.000Z",
+      "updated_at": "2024-02-02T09:00:00.000Z"
+    },
+    {
+      "id": "user_01E4ZCR3D3KK5Z8PQQRR11XXYY",
+      "email": "dorothy@example.com",
+      "first_name": "Dorothy",
+      "last_name": "Vaughan",
+      "email_verified": true,
+      "external_id": "legacy_42",
+      "created_at": "2024-03-10T12:00:00.000Z",
+      "updated_at": "2024-03-11T13:00:00.000Z"
+    },
+    {
+      "id": "user_01E4ZCR3E9ZZZNOTINORG",
+      "email": "orphan@example.com",
+      "email_verified": true,
+      "created_at": "2024-04-01T00:00:00.000Z",
+      "updated_at": "2024-04-01T00:00:00.000Z"
+    }
+  ],
+  "organizations": [
+    {
+      "id": "org_01EHZNVPK2QXHMVQEDHBJYYNV6",
+      "name": "Wayne Enterprises",
+      "domains": [
+        {
+          "domain": "wayne.example.com"
+        }
+      ],
+      "created_at": "2024-01-10T00:00:00.000Z",
+      "updated_at": "2024-01-10T00:00:00.000Z"
+    },
+    {
+      "id": "org_01EHZNVPK3DUPLICATE-SLUG",
+      "name": "Wayne Enterprises",
+      "created_at": "2024-01-11T00:00:00.000Z",
+      "updated_at": "2024-01-11T00:00:00.000Z"
+    },
+    {
+      "id": "org_01EHZNVPK4STAR",
+      "name": "Stark Industries",
+      "domains": [
+        {
+          "domain": "stark.example.com"
+        }
+      ],
+      "created_at": "2024-01-12T00:00:00.000Z",
+      "updated_at": "2024-01-12T00:00:00.000Z"
+    }
+  ],
+  "memberships": [
+    {
+      "id": "om_01EHZNVPKM8VWZ8P0Q8R9S0T1U",
+      "user_id": "user_01E4ZCR3C56J083X43JQXF3JK5",
+      "organization_id": "org_01EHZNVPK2QXHMVQEDHBJYYNV6",
+      "role": {
+        "slug": "admin"
+      },
+      "status": "active",
+      "created_at": "2024-01-15T10:35:00.000Z",
+      "updated_at": "2024-01-15T10:35:00.000Z"
+    },
+    {
+      "id": "om_01EHZNVPKM9ZZZ8P0Q8R9S0T1V",
+      "user_id": "user_01E4ZCR3D3KK5Z8PQQRR11XXYY",
+      "organization_id": "org_01EHZNVPK2QXHMVQEDHBJYYNV6",
+      "role": "member",
+      "status": "active",
+      "created_at": "2024-03-10T12:05:00.000Z",
+      "updated_at": "2024-03-10T12:05:00.000Z"
+    },
+    {
+      "id": "om_01EHZNVPKN1DANGLING",
+      "user_id": "user_01E4ZCR3E9ZZZNOTINORG",
+      "organization_id": "org_99NOTEXPORTED",
+      "status": "active",
+      "created_at": "2024-04-01T00:00:00.000Z",
+      "updated_at": "2024-04-01T00:00:00.000Z"
+    },
+    {
+      "id": "om_01EHZNVPKN2PENDING",
+      "user_id": "user_01E4ZCR3C6TF9V9P8XJJ2ZZZZZ",
+      "organization_id": "org_01EHZNVPK2QXHMVQEDHBJYYNV6",
+      "role": {
+        "slug": "member"
+      },
+      "status": "pending",
+      "created_at": "2024-02-01T10:00:00.000Z",
+      "updated_at": "2024-02-01T10:00:00.000Z"
+    },
+    {
+      "id": "om_01EHZNVPKN3REMOVED",
+      "user_id": "user_01E4ZCR3C56J083X43JQXF3JK5",
+      "organization_id": "org_01EHZNVPK2QXHMVQEDHBJYYNV6",
+      "role": {
+        "slug": "member"
+      },
+      "status": "inactive",
+      "created_at": "2024-02-02T10:00:00.000Z",
+      "updated_at": "2024-02-02T10:00:00.000Z"
+    }
+  ]
+}

@@ -1,0 +1,264 @@
+{
+  "users": [
+    {
+      "id": "user_2a1password",
+      "first_name": "Ada",
+      "last_name": "Lovelace",
+      "username": "ada",
+      "image_url": "https://img.clerk.com/ada.png",
+      "has_image": true,
+      "primary_email_address_id": "idn_ada",
+      "password_enabled": true,
+      "two_factor_enabled": false,
+      "banned": false,
+      "locked": false,
+      "email_addresses": [
+        {
+          "id": "idn_ada",
+          "email_address": "Ada@Example.com",
+          "verification": {
+            "status": "verified",
+            "strategy": "email_code"
+          }
+        }
+      ],
+      "phone_numbers": [],
+      "external_accounts": [],
+      "created_at": 1700000000000,
+      "updated_at": 1700000100000
+    },
+    {
+      "id": "user_2b2oauth",
+      "first_name": "Grace",
+      "last_name": "Hopper",
+      "username": null,
+      "image_url": "",
+      "has_image": false,
+      "primary_email_address_id": "idn_grace",
+      "password_enabled": false,
+      "two_factor_enabled": false,
+      "banned": false,
+      "locked": false,
+      "email_addresses": [
+        {
+          "id": "idn_grace",
+          "email_address": "grace@example.com",
+          "verification": {
+            "status": "verified"
+          }
+        }
+      ],
+      "external_accounts": [
+        {
+          "id": "eac_1",
+          "provider": "oauth_google",
+          "provider_user_id": "10769150350006150715113082367",
+          "email_address": "grace@example.com",
+          "verification": {
+            "status": "verified"
+          }
+        }
+      ],
+      "created_at": 1700000200000,
+      "updated_at": 1700000300000
+    },
+    {
+      "id": "user_2c3both",
+      "first_name": "Alan",
+      "last_name": "Turing",
+      "password_enabled": true,
+      "totp_enabled": true,
+      "banned": false,
+      "locked": false,
+      "primary_email_address_id": "idn_alan",
+      "email_addresses": [
+        {
+          "id": "idn_alan",
+          "email_address": "alan@example.com",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ],
+      "external_accounts": [
+        {
+          "id": "eac_2",
+          "provider": "oauth_github",
+          "provider_user_id": "583231",
+          "email_address": "alan@example.com"
+        }
+      ],
+      "created_at": 1700000400000,
+      "updated_at": 1700000500000
+    },
+    {
+      "id": "user_2d4banned",
+      "first_name": "Banned",
+      "last_name": "User",
+      "password_enabled": true,
+      "banned": true,
+      "email_addresses": [
+        {
+          "id": "idn_ban",
+          "email_address": "banned@example.com",
+          "verification": {
+            "status": "verified"
+          }
+        }
+      ],
+      "created_at": 1700000600000,
+      "updated_at": 1700000700000
+    },
+    {
+      "id": "user_2e5noemail",
+      "first_name": "No",
+      "last_name": "Email",
+      "password_enabled": false,
+      "banned": false,
+      "email_addresses": [],
+      "external_accounts": [],
+      "created_at": 1700000800000,
+      "updated_at": 1700000900000
+    },
+    {
+      "id": "user_2f6invite",
+      "first_name": "Pending",
+      "last_name": "Member",
+      "password_enabled": true,
+      "banned": false,
+      "email_addresses": [
+        {
+          "id": "idn_pend",
+          "email_address": "pending@example.com",
+          "verification": {
+            "status": "verified"
+          }
+        }
+      ],
+      "created_at": 1700001000000,
+      "updated_at": 1700001100000
+    }
+  ],
+  "csvRows": [
+    {
+      "id": "user_2a1password",
+      "primary_email_address": "ada@example.com",
+      "password_digest": "$2b$10$AnPv4/qb1oLaM7t/RGRXJuPFAO3j5YjhpIeWIlu7yZ5dDEoEtH6CO",
+      "password_hasher": "bcrypt"
+    },
+    {
+      "id": "user_2c3both",
+      "primary_email_address": "alan@example.com",
+      "password_digest": "scrypt:16384:8:1:saltvalue:hashvalue",
+      "password_hasher": "scrypt"
+    },
+    {
+      "id": "user_2f6invite",
+      "primary_email_address": "pending@example.com",
+      "password_digest": "$2b$10$AnPv4/qb1oLaM7t/RGRXJuPFAO3j5YjhpIeWIlu7yZ5dDEoEtH6CO",
+      "password_hasher": "bcrypt"
+    }
+  ],
+  "organizations": [
+    {
+      "id": "org_1acme",
+      "name": "Acme Corp",
+      "slug": "acme",
+      "image_url": "https://img.clerk.com/acme.png",
+      "created_at": 1700002000000,
+      "updated_at": 1700002100000
+    },
+    {
+      "id": "org_2globex",
+      "name": "Globex",
+      "slug": "globex",
+      "created_at": 1700002200000,
+      "updated_at": 1700002300000
+    }
+  ],
+  "memberships": [
+    {
+      "id": "mem_1",
+      "role": "org:admin",
+      "organization": {
+        "id": "org_1acme",
+        "slug": "acme"
+      },
+      "public_user_data": {
+        "user_id": "user_2a1password",
+        "identifier": "ada@example.com"
+      },
+      "created_at": 1700003000000,
+      "updated_at": 1700003100000
+    },
+    {
+      "id": "mem_2",
+      "role": "org:member",
+      "organization": {
+        "id": "org_1acme",
+        "slug": "acme"
+      },
+      "public_user_data": {
+        "user_id": "user_2b2oauth",
+        "identifier": "grace@example.com"
+      },
+      "created_at": 1700003200000,
+      "updated_at": 1700003300000
+    },
+    {
+      "id": "mem_3",
+      "role": "org:billing_manager",
+      "organization_id": "org_2globex",
+      "public_user_data": {
+        "user_id": "user_2a1password",
+        "identifier": "ada@example.com"
+      },
+      "created_at": 1700003400000,
+      "updated_at": 1700003500000
+    },
+    {
+      "id": "mem_4",
+      "role": "org:member",
+      "organization_id": "org_9missing",
+      "public_user_data": {
+        "user_id": "user_2a1password",
+        "identifier": "ada@example.com"
+      },
+      "created_at": 1700003600000,
+      "updated_at": 1700003700000
+    },
+    {
+      "id": "mem_5",
+      "role": "org:member",
+      "organization_id": "org_1acme",
+      "public_user_data": {
+        "user_id": "user_99absent",
+        "identifier": "newbie@example.com"
+      },
+      "created_at": 1700003800000,
+      "updated_at": 1700003900000
+    },
+    {
+      "id": "mem_6",
+      "role": "org:member",
+      "organization_id": "org_1acme",
+      "public_user_data": {
+        "user_id": "user_2d4banned",
+        "identifier": "banned@example.com"
+      },
+      "created_at": 1700004000000,
+      "updated_at": 1700004000000
+    },
+    {
+      "id": "mem_7",
+      "role": "org:member",
+      "organization_id": "org_1acme",
+      "public_user_data": {
+        "user_id": null,
+        "identifier": "grace-handle"
+      },
+      "created_at": 1700004200000,
+      "updated_at": 1700004200000
+    }
+  ]
+}

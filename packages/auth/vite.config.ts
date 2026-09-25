@@ -146,6 +146,7 @@ export default defineConfig({
           "@convex-dev/rate-limiter",
           "@noble/hashes",
           "argon2id-wasm",
+          "hash-wasm",
           "jose",
           "oauth4webapi",
           "otpauth",
