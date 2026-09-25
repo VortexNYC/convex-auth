@@ -11,10 +11,13 @@ import { dirname, join, relative } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-// Deployed source surface — same paths `pnpm run lint:convex` targets.
+// Deployed source surface: the `lint:convex` roots plus src/core and
+// src/compat — the isolate import graph reaches into both (convex-runtime
+// principal resolution imports ../../core via ../../compat), so a Node-only
+// API there ships past a narrower scan and crashes consumer-side.
 const scanRoots = [];
 for (const pkg of readdirSync(join(root, "packages"))) {
-  for (const sub of ["src/convex-runtime", "src/component"]) {
+  for (const sub of ["src/convex-runtime", "src/component", "src/core", "src/compat"]) {
     const dir = join(root, "packages", pkg, sub);
     if (existsSync(dir)) scanRoots.push(dir);
   }
