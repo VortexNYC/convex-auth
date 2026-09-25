@@ -4,7 +4,7 @@
 
 # @vortex-api/convex-auth
 
-A public, Convex-native auth platform for [Convex](https://convex.dev). New projects use the native runtime; a one-time [Better Auth](https://www.better-auth.com) migration bridge is available for existing users.
+**Auth that lives in your Convex database.** Sessions, users, organizations, API keys, webhooks, and MCP OAuth — implemented natively inside the Convex isolate, not adapted from a Node server.
 
 Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 
@@ -18,57 +18,43 @@ Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
 [![Node][node-badge]][node]
 [![pnpm][pnpm-badge]][pnpm]
 
-**[npm](https://www.npmjs.com/package/@vortex-api/convex-auth)** · **[Docs](https://your-deployment.convex.site)** · **[How we got here](#how-we-got-here)** · **[Packages](#packages)** · **[Convex-native auth](#convex-native-auth)** · **[Architecture](<docs/(reference)/architecture.md>)**
+**[npm](https://www.npmjs.com/package/@vortex-api/convex-auth)** · **[Docs](https://your-deployment.convex.site)** · **[Quickstart](#quickstart)** · **[Framework guides](#framework-guides)** · **[Architecture](<docs/(reference)/architecture.md>)**
 
 </div>
 
 ---
 
-## Status
+## Why a native runtime
 
-Public — [`@vortex-api/convex-auth`](https://www.npmjs.com/package/@vortex-api/convex-auth) is at `2.3.0` on npm. The Convex-native runtime (email/password, Google/GitHub/Discord OAuth, TOTP 2FA, backup codes, trusted devices, sessions, refresh tokens, organizations, API keys, webhooks, MCP auth, and agent auth) is passing full conformance. A one-time Better Auth data migration helper is in `packages/auth/scripts/migrate-better-auth.ts` for existing users.
+Auth libraries are built for long-lived Node.js or edge processes. Convex functions are none of that — stateless V8 isolates with a 32 MiB source limit, a 64 MB heap, deterministic queries, and no Node APIs. Bolting a general-purpose auth server onto that shape means fighting the runtime at every layer: plugin-owned request lifecycles, ORM assumptions, and bundle pressure that can't be patched away.
 
-## How we got here
+`convex-auth` takes the other path — **auth as Convex tables and functions**. Users, sessions, and identities are rows in your database; sign-in, verification, and token refresh are actions; the whole thing runs in the default isolate on Web Crypto. Auth ends up behaving like the rest of your Convex app: typed, transactional, realtime, and deployed with `convex dev`.
 
-### 1. Better Auth was the pragmatic first rail
+This design was validated by the community `@convex-dev/better-auth` adapter and by the auth-as-tables architecture Convex Auth 2.0 announced — this repo carries it to a complete platform. The full story is in [How we got here](<docs/(get-started)/how-we-got-here.md>).
 
-Convex did not yet ship a first-party auth product with the full Clerk/WorkOS surface. Better Auth did, so we started by wiring it into Convex. The community `@convex-dev/better-auth` adapter proved the runtime could live inside the Convex isolate.
+## Features
 
-The problem: Better Auth is built for a long-lived Node.js/Edge process. Convex functions are stateless V8 isolates with a 32 MiB source-code limit, 64 MB heap, and strict determinism for queries. The plugin model assumes it owns the request lifecycle and the tables. That mismatch produced bundle-size pressure, memory bloat, and operational issues that could not be patched away.
+**Every sign-in method** — email/password with verification and reset, Google/GitHub/Discord OAuth, magic links, email OTP, WebAuthn passkeys, TOTP two-factor with backup codes and trusted devices, anonymous sessions that link to real accounts.
 
-### 2. Convex Auth 2.0 showed the second rail
+**The platform layer** — organizations with roles and invitations, API keys, service principals, signed webhooks, MCP OAuth, session listing and revocation (including family-aware rotation).
 
-Convex Auth 2.0 announced the architecture this codebase was waiting for: auth as Convex tables, non-deterministic work in actions, Web Crypto, providers as metadata, and a single `convexAuth({ providers })` seam. It validated that a native Convex auth runtime was possible and gave us the design vocabulary to finish the job.
+**Real SSR, real clients** — HttpOnly cookie sessions through framework adapters for Next.js, TanStack Start, and Hono; React hooks and a drop-in client for SPAs; a secure-storage Expo/React Native client.
 
-### 3. The end state is `convex-auth`
+**Built to operate** — `check` and `preflight` CLIs that validate consumer wiring, a conformance suite, a typed consumer contract, and a one-time migration bridge from Better Auth.
 
-`convex-auth` is now a fully native Convex auth runtime. It implements email/password, OAuth, 2FA, sessions, organizations, API keys, webhooks, MCP, and agent auth inside the Convex isolate. No Better Auth runtime is used. The `convex-better-auth-adapter` and `convex-better-auth` packages remain only as a one-time migration bridge for existing Better Auth users.
+## Framework guides
 
-Read the full rationale in [`docs/(get-started)/how-we-got-here.md`](<docs/(get-started)/how-we-got-here.md>) and the migration guide in [`docs/(migrations)/migrating-from-better-auth.md`](<docs/(migrations)/migrating-from-better-auth.md>).
+| Framework                                                                                                                                                      | Entry point                                  | Guide                                                                |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------- |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/react.svg" width="18" valign="middle" /> React (Vite SPA)        | `@vortex-api/convex-auth/react`              | [`client.mdx`](<docs/(framework-guides)/client.mdx>)                 |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/expo.svg" width="18" valign="middle" /> React Native / Expo      | `@vortex-api/convex-auth/react-native`       | [`react-native.mdx`](<docs/(framework-guides)/react-native.mdx>)     |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/nextjs.svg" width="18" valign="middle" /> Next.js (SSR)          | `@vortex-api/convex-auth/nextjs` + `/server` | [`nextjs.mdx`](<docs/(framework-guides)/nextjs.mdx>)                 |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/tanstack.svg" width="18" valign="middle" /> TanStack Start (SSR) | `@vortex-api/convex-auth/tanstack-start`     | [`tanstack-start.mdx`](<docs/(framework-guides)/tanstack-start.mdx>) |
+| <img src="https://raw.githubusercontent.com/VortexNYC/convex-auth/main/site/public/frameworks/hono.svg" width="18" valign="middle" /> Hono (SSR)               | `@vortex-api/convex-auth/hono`               | [`hono.mdx`](<docs/(framework-guides)/hono.mdx>)                     |
 
-## Packages
+Every SSR adapter implements the same contract: same-origin HttpOnly cookie sessions, an intent-based `/api/auth` proxy, OAuth/magic-link landing, near-expiry rotation, and revocation-aware session helpers — see the [SSR auth contract](<docs/(reference)/ssr-contract.md>).
 
-| Package                   | npm                       | Path            | Description                                                                                                                  |
-| ------------------------- | ------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `@vortex-api/convex-auth` | `@vortex-api/convex-auth` | `packages/auth` | The only public package. Convex-native auth component, control plane, native server integration, React/React Native clients. |
-
-Subpaths:
-
-- `@vortex-api/convex-auth` — server-side auth API and configuration
-- `@vortex-api/convex-auth/convex` — Convex native runtime entrypoints
-- `@vortex-api/convex-auth/react` — React hooks and providers
-- `@vortex-api/convex-auth/react-native` — Expo / React Native client
-- `@vortex-api/convex-auth/mcp` — MCP OAuth helpers
-- `@vortex-api/convex-auth/preflight` — deployment readiness checks
-- `@vortex-api/convex-auth/testing` — test helpers
-
-Published under the Apache-2.0 license.
-
-## Convex-native auth
-
-`@vortex-api/convex-auth` ships a Convex-native auth runtime that stores users, sessions, and identities in your Convex database and runs in the default Convex isolate. It supports email/password, Google/GitHub/Discord OAuth, 2FA, email verification, password reset, sessions, and refresh tokens. No Better Auth server is required.
-
-This is the intended way to use the package. The Better Auth bridge below is a one-time migration tool for existing Better Auth users.
+## Quickstart
 
 ### 1. Install
 
@@ -76,7 +62,7 @@ This is the intended way to use the package. The Better Auth bridge below is a o
 pnpm add @vortex-api/convex-auth convex
 ```
 
-### 2. Set environment variables
+### 2. Signing keys
 
 Generate an RS256 keypair and set it on your Convex deployment:
 
@@ -100,20 +86,9 @@ convex env set JWT_PRIVATE_KEY '<private-key-json>'
 convex env set JWKS '<jwks-json>'
 ```
 
-For email and OAuth, also set:
+For email and OAuth, also set `CONVEX_SITE_URL`, `EMAIL_FROM_ADDRESS`, and your OAuth provider credentials (`GITHUB_CLIENT_ID`/`SECRET`, `GOOGLE_CLIENT_ID`/`SECRET`, `DISCORD_CLIENT_ID`/`SECRET`).
 
-```bash
-convex env set CONVEX_SITE_URL 'https://your-site.convex.site'
-convex env set EMAIL_FROM_ADDRESS 'auth@yourdomain.com'
-convex env set GITHUB_CLIENT_ID '...'
-convex env set GITHUB_CLIENT_SECRET '...'
-convex env set GOOGLE_CLIENT_ID '...'
-convex env set GOOGLE_CLIENT_SECRET '...'
-convex env set DISCORD_CLIENT_ID '...'
-convex env set DISCORD_CLIENT_SECRET '...'
-```
-
-### 3. Create `convex/auth.config.ts`
+### 3. Register the auth provider
 
 ```ts
 // convex/auth.config.ts
@@ -149,7 +124,7 @@ app.use(auth, {
 export default app;
 ```
 
-### 5. Configure auth in `convex/auth.ts`
+### 5. Configure auth
 
 ```ts
 // convex/auth.ts
@@ -166,9 +141,7 @@ export const auth = convexAuth({
       from: process.env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
       appOrigin: siteUrl,
       sendEmail: async (draft: EmailDraft) => {
-        // Send via Resend/Postmark/SES in production.
-        // For local dev without a provider, set ALLOW_EMAIL_TOKEN_FALLBACK=true
-        // so the demo can display the token; otherwise throw here.
+        // Resend/Postmark/SES in production.
         throw new Error("Email provider not configured");
       },
       sendOnSignUp: true,
@@ -209,7 +182,7 @@ export const {
 } = auth;
 ```
 
-### 6. Wire HTTP routes in `convex/http.ts`
+### 6. Wire HTTP routes
 
 ```ts
 // convex/http.ts
@@ -222,7 +195,7 @@ auth.addHttpRoutes(http);
 export default http;
 ```
 
-### 7. Wrap the React app
+### 7. Wrap the app
 
 ```tsx
 // src/main.tsx
@@ -244,7 +217,7 @@ function Root() {
 }
 ```
 
-### 8. Use the actions in components
+### 8. Sign in
 
 ```tsx
 // src/SignIn.tsx
@@ -278,65 +251,43 @@ export function SignIn() {
 }
 ```
 
-### 9. Validate your setup
-
-The `@vortex-api/convex-auth` CLI ships with `check` (consumer contract) and `preflight` (live install verification):
+### 9. Validate
 
 ```bash
-pnpm dlx @vortex-api/convex-auth check
-pnpm dlx @vortex-api/convex-auth preflight
+pnpm dlx @vortex-api/convex-auth check     # consumer contract (static)
+pnpm dlx @vortex-api/convex-auth preflight # live install + deployment checks
 ```
 
-`check` validates that your `convex/` files do not accidentally import internal exports. `preflight` verifies that `VITE_CONVEX_URL` / `CONVEX_URL`, `CONVEX_SITE_URL`, and the component mount are set up correctly.
+`check` validates that your `convex/` files don't import internal exports; `preflight` verifies env vars and the component mount. See [`examples/`](examples/) for runnable consumers.
 
-Email verification and password reset are one-click via the `/api/auth/verify-email` and `/api/auth/reset-password/:token` HTTP routes. The user clicks the link, the route validates the token, and the browser is redirected to `callbackURL` with the token (reset only) or success state (verification). In production `sendEmail` should call Resend/Postmark/SES/etc.
+## Migrating from Better Auth
 
-See [`examples/`](examples/) for working consumers and the [`Architecture`](<docs/(reference)/architecture.md>) page for the long-term design.
+Already on Better Auth? Mount the legacy `betterAuth` adapter component alongside `convexAuth`, run `pnpm dlx @vortex-api/convex-auth migrate better-auth` to copy users, sessions, and identities into the native tables once, then cut over and uninstall the bridge packages. Migrated session rows are inert — old JWTs don't carry over, so users sign in once more after the switch. The full runbook is in [`docs/(migrations)/migrating-from-better-auth.md`](<docs/(migrations)/migrating-from-better-auth.md>).
 
-## Better Auth bridge (for migration)
+## Compatibility
 
-If you are already using Better Auth and want to migrate to Convex tables and the native runtime in a single step, the Better Auth compatibility bridge is available. Run the migration, cut over the runtime, then remove `convex-better-auth` and `convex-better-auth-adapter` from your dependencies.
+See [`docs/(get-started)/installation.mdx`](<docs/(get-started)/installation.mdx>) for supported versions of Convex, React, React Native / Expo, Node, and pnpm.
 
-### Convex component
+## Packages
 
-During the migration, mount the legacy `betterAuth` adapter component and the native `convexAuth` component together. The exact `convex/convex.config.ts` wiring is in [`docs/(migrations)/migrating-from-better-auth.md`](<docs/(migrations)/migrating-from-better-auth.md>). After the cutover, you remove the legacy adapter and keep only the `convex-auth` component shown in the native section above.
+| Package                   | Path            | Description                                                                                                                  |
+| ------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `@vortex-api/convex-auth` | `packages/auth` | The only public package. Convex-native auth component, control plane, native server integration, React/React Native clients. |
 
-### React client
+Subpaths:
 
-While you are running both Better Auth and `convex-auth` side by side, use the adapter React client and provider:
+- `@vortex-api/convex-auth` — server-side auth API and configuration
+- `@vortex-api/convex-auth/convex` — Convex native runtime entrypoints
+- `@vortex-api/convex-auth/react` — React hooks and providers
+- `@vortex-api/convex-auth/react-native` — Expo / React Native client
+- `@vortex-api/convex-auth/nextjs`, `/nextjs/server` — Next.js SSR adapter
+- `@vortex-api/convex-auth/tanstack-start`, `/tanstack-start/server` — TanStack Start adapter
+- `@vortex-api/convex-auth/hono` — Hono server adapter
+- `@vortex-api/convex-auth/mcp` — MCP OAuth helpers
+- `@vortex-api/convex-auth/preflight` — deployment readiness checks
+- `@vortex-api/convex-auth/testing` — test helpers
 
-```ts
-import { createAuthClient } from "better-auth/react";
-import { convexClient } from "convex-better-auth-adapter/client/plugins";
-
-export const authClient = createAuthClient({
-  plugins: [convexClient()],
-});
-```
-
-```tsx
-import { ConvexProvider, ConvexReactClient } from "convex/react";
-import { ConvexBetterAuthProvider } from "convex-better-auth-adapter/react";
-
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
-
-export function App() {
-  return (
-    <ConvexProvider client={convex}>
-      <ConvexBetterAuthProvider client={convex} authClient={authClient}>
-        {/** your app */}
-      </ConvexBetterAuthProvider>
-    </ConvexProvider>
-  );
-}
-```
-
-After the cutover to the native runtime, remove the provider and use the `@vortex-api/convex-auth/react` client and `ConvexAuthClientProvider` shown in the [Convex-native auth section](#convex-native-auth).
-
-## Compatibility and migration
-
-- See [`docs/(get-started)/installation.mdx`](<docs/(get-started)/installation.mdx>) for supported versions of Convex, React, React Native / Expo, Node, and pnpm.
-- See [`docs/(migrations)/migrating-from-better-auth.md`](<docs/(migrations)/migrating-from-better-auth.md>) for the one-time migration from a Better Auth setup to the native `convex-auth` runtime.
+Published under the Apache-2.0 license.
 
 ## Development
 
@@ -398,7 +349,7 @@ Apache-2.0 — see `LICENSE`.
 [license-badge]: https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=for-the-badge
 [license]: LICENSE
 [status-badge]: https://img.shields.io/badge/status-public-blueviolet.svg?style=for-the-badge
-[status]: #status
+[status]: #readme
 [node-badge]: https://img.shields.io/badge/node->=22.0.0-brightgreen.svg?style=for-the-badge
 [node]: package.json
 [pnpm-badge]: https://img.shields.io/badge/pnpm-10.25.0-f69220.svg?style=for-the-badge

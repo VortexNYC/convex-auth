@@ -2,10 +2,27 @@
 title: React
 description: React hooks and the client for convex-auth.
 sidebar:
+  icon: atom
   order: 1
 ---
 
-`@vortex-api/convex-auth/react` exposes a provider and hooks that wrap the Convex actions configured in `convex/auth.ts`.
+`@vortex-api/convex-auth/react` exposes a provider and hooks that wrap the Convex actions configured in `convex/auth.ts`. This is the client-side contract for every React app — Vite SPAs, the Next.js and TanStack Start adapters, and React Native all build on it.
+
+:::tip[New here?]
+The [Quickstart](./quickstart) walks a new Vite + React app end to end in about ten minutes. This page is the API reference for what that walkthrough wires up.
+:::
+
+## Install
+
+```bash
+pnpm add @vortex-api/convex-auth convex
+```
+
+```bash
+echo 'VITE_CONVEX_URL=https://<your-deployment>.convex.cloud' >> .env.local
+```
+
+The Convex backend wiring (component mount, `convex/auth.ts`, `convex/http.ts`) is covered in [Installation](./installation).
 
 ## Provider
 
@@ -140,3 +157,20 @@ export function SignInPage() {
 - `useConvexAuthVerifyTotp(authClient)` — confirm a TOTP code.
 
 Most of these take the auth client returned by `useConvexAuthClient()`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="UI components" href="./ui-components" icon="layout">
+    Drop-in sign-in, sign-up, and account screens.
+  </Card>
+  <Card title="Theming" href="./theming" icon="palette">
+    Style the components to match your app.
+  </Card>
+  <Card title="Quickstart" href="./quickstart" icon="rocket">
+    The end-to-end Vite + React walkthrough.
+  </Card>
+  <Card title="Examples" href="./examples" icon="folder">
+    `examples/react` and `examples/tanstack-router` — runnable apps.
+  </Card>
+</CardGroup>

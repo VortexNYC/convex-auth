@@ -2,6 +2,7 @@
 title: Hono
 description: SSR auth for Hono with HttpOnly cookie sessions — one middleware is the whole server surface.
 sidebar:
+  icon: flame
   order: 5
 ---
 
@@ -10,6 +11,20 @@ sidebar:
 Because Hono is fetch-shaped, the same adapter works on `@hono/node-server`, Bun, Deno, and Workers-style runtimes.
 
 A working example lives in `examples/hono`.
+
+## Install
+
+```bash
+pnpm add @vortex-api/convex-auth hono
+```
+
+Point the server at your Convex deployment and wire the backend (component mount, `convex/auth.ts`, `convex/http.ts`) per [Installation](./installation):
+
+```bash
+echo 'CONVEX_URL=https://<your-deployment>.convex.cloud' >> .env.local
+```
+
+Hono serves the server surface — middleware, the `/api/auth` proxy, and session helpers. Your sign-in UI lives wherever your frontend does (a SPA hitting the proxy, Hono-rendered pages, or a mobile app); it calls the same [React client](./client) or plain `fetch` against `/api/auth`.
 
 ## Middleware
 
@@ -79,3 +94,20 @@ app.post("/api/auth", convexAuthProxyHandler({ actions: api.auth }));
 ## Convex wiring
 
 The backend is the standard consumer setup — component mount in `convex/convex.config.ts`, `convexAuth({...})` in `convex/auth.ts`, `auth.addHttpRoutes(http)` in `convex/http.ts`. See [Installation](./installation).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="SSR auth contract" href="./ssr-contract" icon="file-text">
+    The boundary semantics every SSR adapter implements.
+  </Card>
+  <Card title="React hooks" href="./client" icon="atom">
+    The client your SPA uses against the Hono proxy.
+  </Card>
+  <Card title="Production" href="./production" icon="rocket">
+    Deploy, monitor, and rotate.
+  </Card>
+  <Card title="Examples" href="./examples" icon="folder">
+    `examples/hono` — a runnable adapter demo.
+  </Card>
+</CardGroup>
