@@ -1,4 +1,6 @@
-import { AuthSignInForm } from "@vortex-api/convex-auth/react";
+// Docs builds run before package builds, so previews import the component
+// source rather than the @vortex-api/convex-auth dist exports.
+import { AuthSignInForm } from "../../packages/auth/src/react/auth-forms";
 
 export default function SignInFormPreview() {
   return (
