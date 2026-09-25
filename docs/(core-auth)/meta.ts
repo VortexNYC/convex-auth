@@ -2,7 +2,7 @@ import { defineMeta } from "blume";
 
 export default defineMeta({
   title: "Core auth",
-  order: 2,
+  order: 3,
   display: "group",
   icon: "shield",
   pages: [

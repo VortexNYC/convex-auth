@@ -5,9 +5,10 @@ export default defineMeta({
   pages: [
     "index",
     "get-started",
+    "framework-guides",
     "core-auth",
     "application-features",
-    "clients-and-migration",
+    "migrations",
     "operations",
     "reference",
   ],
