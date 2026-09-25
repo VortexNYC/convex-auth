@@ -76,7 +76,6 @@ export default defineConfig({
     ],
   },
   redirects: [
-    { from: "/ui-components", to: "/components" },
     { from: "/examples", to: "/" },
     { from: "/migrating-from-full-component", to: "/migrating-to-feature-gated-components" },
   ],
