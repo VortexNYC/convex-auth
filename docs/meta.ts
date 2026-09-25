@@ -8,6 +8,7 @@ export default defineMeta({
     "framework-guides",
     "core-auth",
     "application-features",
+    "components",
     "migrations",
     "operations",
     "reference",

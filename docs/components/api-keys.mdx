@@ -1,0 +1,133 @@
+---
+title: API keys
+description: Drop-in forms and lists for issuing and managing API keys.
+---
+
+Forms and lists for the [API keys](/api-keys) feature — issue, rotate, and revoke keys without building the UI yourself.
+
+### `ConvexApiKeyCreateForm`
+
+**Generics:** `<Scope>`
+
+**Props**
+
+| Name                    | Type                                      | Optional | Description |
+| ----------------------- | ----------------------------------------- | -------- | ----------- |
+| `apiEnabled`            | `boolean`                                 | No       |             |
+| `classNames`            | `ConvexApiKeyClassNames`                  | Yes      |             |
+| `copy`                  | `ConvexApiKeyCreateFormCopy`              | Yes      |             |
+| `creating`              | `boolean`                                 | No       |             |
+| `expirationOptions`     | `readonly ConvexApiKeyExpirationOption[]` | Yes      |             |
+| `onExpiresInDaysChange` | `(value: string) => void`                 | No       |             |
+| `onIpAllowlistChange`   | `(value: string) => void`                 | No       |             |
+| `onNameChange`          | `(value: string) => void`                 | No       |             |
+| `onScopesChange`        | `(value: Scope[]) => void`                | No       |             |
+| `onSubmit`              | `() => void`                              | No       |             |
+| `scopeOptions`          | `readonly Scope[]`                        | No       |             |
+| `state`                 | `ConvexApiKeyCreateFormState<Scope>`      | No       |             |
+
+**classNames keys**
+
+| Key                     | Type     | Description |
+| ----------------------- | -------- | ----------- |
+| `actions`               | `string` |             |
+| `createCard`            | `string` |             |
+| `createContent`         | `string` |             |
+| `input`                 | `string` |             |
+| `keyDetails`            | `string` |             |
+| `keyName`               | `string` |             |
+| `keyPrefix`             | `string` |             |
+| `keyStatus`             | `string` |             |
+| `label`                 | `string` |             |
+| `labelText`             | `string` |             |
+| `list`                  | `string` |             |
+| `listCard`              | `string` |             |
+| `listContent`           | `string` |             |
+| `listHeader`            | `string` |             |
+| `metadata`              | `string` |             |
+| `primaryButton`         | `string` |             |
+| `primaryButtonDisabled` | `string` |             |
+| `scopeButton`           | `string` |             |
+| `scopeButtonDisabled`   | `string` |             |
+| `scopeButtonSelected`   | `string` |             |
+| `scopeList`             | `string` |             |
+| `secondaryButton`       | `string` |             |
+| `select`                | `string` |             |
+| `stateText`             | `string` |             |
+| `tag`                   | `string` |             |
+| `tags`                  | `string` |             |
+| `textarea`              | `string` |             |
+
+**copy keys**
+
+| Key                      | Type     | Description |
+| ------------------------ | -------- | ----------- |
+| `createLabel`            | `string` |             |
+| `creatingLabel`          | `string` |             |
+| `expirationLabel`        | `string` |             |
+| `ipAllowlistLabel`       | `string` |             |
+| `ipAllowlistPlaceholder` | `string` |             |
+| `nameLabel`              | `string` |             |
+| `namePlaceholder`        | `string` |             |
+
+### `ConvexApiKeyList`
+
+**Generics:** `<Scope, ApiKeyId>`
+
+**Props**
+
+| Name              | Type                                                            | Optional | Description |
+| ----------------- | --------------------------------------------------------------- | -------- | ----------- |
+| `apiKeys`         | `readonly ConvexApiKeyListItem<Scope, ApiKeyId>[] \| undefined` | No       |             |
+| `classNames`      | `ConvexApiKeyClassNames`                                        | Yes      |             |
+| `copy`            | `ConvexApiKeyListCopy`                                          | No       |             |
+| `formatTimestamp` | `(timestamp: number) => string`                                 | Yes      |             |
+| `onRevoke`        | `(apiKeyId: ApiKeyId) => void`                                  | No       |             |
+| `onRotate`        | `(apiKeyId: ApiKeyId) => void`                                  | No       |             |
+| `renderTag`       | `(label: string) => ReactNode`                                  | Yes      |             |
+
+**classNames keys**
+
+| Key                     | Type     | Description |
+| ----------------------- | -------- | ----------- |
+| `actions`               | `string` |             |
+| `createCard`            | `string` |             |
+| `createContent`         | `string` |             |
+| `input`                 | `string` |             |
+| `keyDetails`            | `string` |             |
+| `keyName`               | `string` |             |
+| `keyPrefix`             | `string` |             |
+| `keyStatus`             | `string` |             |
+| `label`                 | `string` |             |
+| `labelText`             | `string` |             |
+| `list`                  | `string` |             |
+| `listCard`              | `string` |             |
+| `listContent`           | `string` |             |
+| `listHeader`            | `string` |             |
+| `metadata`              | `string` |             |
+| `primaryButton`         | `string` |             |
+| `primaryButtonDisabled` | `string` |             |
+| `scopeButton`           | `string` |             |
+| `scopeButtonDisabled`   | `string` |             |
+| `scopeButtonSelected`   | `string` |             |
+| `scopeList`             | `string` |             |
+| `secondaryButton`       | `string` |             |
+| `select`                | `string` |             |
+| `stateText`             | `string` |             |
+| `tag`                   | `string` |             |
+| `tags`                  | `string` |             |
+| `textarea`              | `string` |             |
+
+**copy keys**
+
+| Key                   | Type     | Description |
+| --------------------- | -------- | ----------- |
+| `createdByLabel`      | `string` |             |
+| `emptyMessage`        | `string` |             |
+| `expiresLabel`        | `string` |             |
+| `lastUsedLabel`       | `string` |             |
+| `loadingMessage`      | `string` |             |
+| `neverLabel`          | `string` |             |
+| `revokeLabel`         | `string` |             |
+| `rotateLabel`         | `string` |             |
+| `unknownCreatorLabel` | `string` |             |

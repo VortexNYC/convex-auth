@@ -6,7 +6,7 @@ sidebar:
   order: 1
 ---
 
-`@vortex-api/convex-auth/react` exposes a provider and hooks that wrap the Convex actions configured in `convex/auth.ts`. This is the client-side contract for every React app — Vite SPAs, the Next.js and TanStack Start adapters, and React Native all build on it.
+`@vortex-api/convex-auth/react` exposes a provider and hooks that wrap the Convex actions configured in `convex/auth.ts`. This is the client-side contract for every React app — Vite SPAs, TanStack Router apps, the Next.js and TanStack Start adapters, and React Native all build on it.
 
 :::tip[New here?]
 The [Quickstart](./quickstart) walks a new Vite + React app end to end in about ten minutes. This page is the API reference for what that walkthrough wires up.
@@ -158,10 +158,46 @@ export function SignInPage() {
 
 Most of these take the auth client returned by `useConvexAuthClient()`.
 
+## Example apps
+
+Three runnable React examples live under `examples/`. Copy each `.env.example` to `.env.local` and point it at a Convex deployment — give each example its own deployment, since pointed at one they overwrite each other's functions. For OAuth, also set the provider credentials on the deployment:
+
+```bash
+cp examples/oauth/.env.example examples/oauth/.env.local
+pnpm dlx convex env set GITHUB_CLIENT_ID '...'
+```
+
+- **`examples/react`** — Vite + React sign-up/sign-in form on `ConvexAuthClientProvider` + `useAuthActions`.
+
+  ```bash
+  cd examples/react
+  pnpm install
+  pnpm run dev
+  ```
+
+- **`examples/tanstack-router`** — Vite + React with `@tanstack/react-router`: `useSession()` is mirrored into router `context`, a pathless `_authed` layout guards protected routes in `beforeLoad` (redirecting to `/sign-in?redirect=…`), and `router.invalidate()` re-runs the guards on sign-in/sign-out. This is the pattern for any client-side router.
+
+  ```bash
+  cd examples/tanstack-router
+  pnpm install
+  pnpm dlx convex dev   # anonymous local backend
+  pnpm run dev
+  ```
+
+- **`examples/oauth`** — Google, GitHub, and Discord buttons on the same client.
+
+Anonymous local backends bind `127.0.0.1:3210`/`3211`; to run several at once give each `.env.local` its own port pair (e.g. `3214`/`3215`) before the first `convex dev` — the backend binds the ports in `CONVEX_URL`/`CONVEX_SITE_URL`.
+
+All examples use a committed `_generated` directory. If you point an example at your own deployment, regenerate bindings:
+
+```bash
+CONVEX_DEPLOYMENT=dev:<your-deployment> pnpm dlx convex codegen --typecheck=disable
+```
+
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="UI components" href="./ui-components" icon="layout">
+  <Card title="UI components" href="./components" icon="layout">
     Drop-in sign-in, sign-up, and account screens.
   </Card>
   <Card title="Theming" href="./theming" icon="palette">
@@ -170,7 +206,7 @@ Most of these take the auth client returned by `useConvexAuthClient()`.
   <Card title="Quickstart" href="./quickstart" icon="rocket">
     The end-to-end Vite + React walkthrough.
   </Card>
-  <Card title="Examples" href="./examples" icon="folder">
-    `examples/react` and `examples/tanstack-router` — runnable apps.
+  <Card title="React Native" href="./react-native" icon="smartphone">
+    The same client on Expo — secure token storage and deep links.
   </Card>
 </CardGroup>

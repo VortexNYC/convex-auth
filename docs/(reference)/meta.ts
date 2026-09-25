@@ -2,16 +2,8 @@ import { defineMeta } from "blume";
 
 export default defineMeta({
   title: "Reference",
-  order: 7,
+  order: 8,
   display: "group",
   icon: "book-open",
-  pages: [
-    "server-api",
-    "ui-components",
-    "architecture",
-    "ssr-contract",
-    "feature-gated-components",
-    "consumer-contract",
-    "examples",
-  ],
+  pages: ["server-api", "ssr-contract", "feature-gated-components", "consumer-contract"],
 });

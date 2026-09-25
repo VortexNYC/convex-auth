@@ -194,6 +194,17 @@ function SignInPage() {
 
 The full form (sign-up, redirect search param, guest) is in `examples/tanstack-start/src/routes/sign-in.tsx`. See the [React guide](./client) for the complete hooks API.
 
+## Example app
+
+`examples/tanstack-start` is a full SSR app on the adapter — the root route resolves the verified session in `beforeLoad` and seeds `ConvexAuthTanstackStartProvider`, a pathless `_authed` layout guards navigation, and protected `createServerFn`s declare `convexAuthFunctionMiddleware`.
+
+```bash
+cd examples/tanstack-start
+pnpm install
+pnpm dlx convex dev   # local backend on :3212
+pnpm run dev          # app on :3200
+```
+
 ## Next steps
 
 <CardGroup cols={2}>
@@ -206,7 +217,11 @@ The full form (sign-up, redirect search param, guest) is in `examples/tanstack-s
   <Card title="Production" href="./production" icon="rocket">
     Deploy, monitor, and rotate.
   </Card>
-  <Card title="Examples" href="./examples" icon="folder">
-    `examples/tanstack-start` — a runnable end-to-end app.
+  <Card
+    title="Example source"
+    href="https://github.com/VortexNYC/convex-auth/tree/main/examples/tanstack-start"
+    icon="folder"
+  >
+    `examples/tanstack-start` on GitHub.
   </Card>
 </CardGroup>

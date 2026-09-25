@@ -1,0 +1,153 @@
+---
+title: Providers & primitives
+description: Providers, boundary components, shared primitives, and theming.
+---
+
+The runtime providers, auth-state boundaries, shared form primitives, and the appearance provider these components are built from — use them to compose custom screens.
+
+## Runtime providers
+
+### `AuthRuntimeProvider`
+
+No props.
+
+## Boundaries
+
+### `AuthLoadedBoundaryView`
+
+No props.
+
+### `AuthLoadingBoundaryView`
+
+No props.
+
+### `AuthSignedInBoundary`
+
+No props.
+
+### `AuthSignedOutBoundary`
+
+No props.
+
+## Providers & runtime
+
+### `ConvexAuthClientContextProvider`
+
+No props.
+
+### `ConvexAuthClientProvider`
+
+**Props**
+
+| Name                  | Type                               | Optional | Description |
+| --------------------- | ---------------------------------- | -------- | ----------- |
+| `actions`             | `NativeAuthActions`                | No       |             |
+| `children`            | `ReactNode`                        | No       |             |
+| `initialRefreshToken` | `string \| None`                   | Yes      |             |
+| `initialSessionId`    | `string \| None`                   | Yes      |             |
+| `initialToken`        | `string \| None`                   | Yes      |             |
+| `storage`             | `local \| session \| TokenStorage` | Yes      |             |
+
+### `ConvexAuthConvexIdentityProvisioner`
+
+**Props**
+
+| Name                   | Type                                                      | Optional | Description |
+| ---------------------- | --------------------------------------------------------- | -------- | ----------- |
+| `auth`                 | `ConvexAuthState`                                         | No       |             |
+| `getCurrentUser`       | `FunctionReference<query, public, EmptyArgs, unknown>`    | No       |             |
+| `provisionCurrentUser` | `FunctionReference<mutation, public, EmptyArgs, unknown>` | No       |             |
+
+### `ConvexAuthProvider`
+
+**Props**
+
+| Name                  | Type                               | Optional | Description |
+| --------------------- | ---------------------------------- | -------- | ----------- |
+| `actions`             | `NativeAuthActions`                | No       |             |
+| `children`            | `ReactNode`                        | No       |             |
+| `initialRefreshToken` | `string \| None`                   | Yes      |             |
+| `initialSessionId`    | `string \| None`                   | Yes      |             |
+| `initialToken`        | `string \| None`                   | Yes      |             |
+| `storage`             | `local \| session \| TokenStorage` | Yes      |             |
+
+## Shared UI primitives
+
+### `AuthAlert`
+
+No props.
+
+### `AuthButton`
+
+No props.
+
+### `AuthCard`
+
+No props.
+
+### `AuthCardContent`
+
+No props.
+
+### `AuthCardHeader`
+
+No props.
+
+### `AuthDivider`
+
+No props.
+
+### `AuthField`
+
+No props.
+
+### `AuthInput`
+
+No props.
+
+### `AuthLabel`
+
+No props.
+
+### `AuthProviderButton`
+
+No props.
+
+### `AuthRuntimeStatusBadge`
+
+No props.
+
+### `AuthRuntimeSummary`
+
+No props.
+
+### `AuthScreen`
+
+No props.
+
+## Theming
+
+### `ConvexAuthAppearanceProvider`
+
+**Props**
+
+| Name           | Type              | Optional | Description |
+| -------------- | ----------------- | -------- | ----------- |
+| `children`     | `ReactNode`       | No       |             |
+| `defaultTheme` | `ConvexAuthTheme` | Yes      |             |
+| `enableSystem` | `boolean`         | Yes      |             |
+| `storageKey`   | `string`          | Yes      |             |
+
+## Email templates
+
+### `AuthInvitationEmailTemplate`
+
+**Props**
+
+| Name               | Type     | Optional | Description |
+| ------------------ | -------- | -------- | ----------- |
+| `acceptUrl`        | `string` | No       |             |
+| `expiresAt`        | `Date`   | No       |             |
+| `inviterLabel`     | `string` | No       |             |
+| `organizationName` | `string` | No       |             |
+| `roleName`         | `string` | No       |             |

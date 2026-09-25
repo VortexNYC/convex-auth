@@ -8,17 +8,17 @@ Convex-native auth for production apps. Users, sessions, identities, organizatio
 If you are new here, follow this order:
 
 <Steps>
-  <Step title="Read the story" href="./how-we-got-here">
-    Why `convex-auth` exists and how we got here.
-  </Step>
-  <Step title="Understand the concepts" href="./concepts">
-    The five building blocks: component, config, actions, HTTP routes, and React client.
-  </Step>
   <Step title="Install" href="./installation">
     Add the packages, generate signing keys, and set environment variables.
   </Step>
   <Step title="Quickstart" href="./quickstart">
     Wire `convex/auth.ts`, mount the component, set up the React client, and sign up a user.
+  </Step>
+  <Step title="Understand the concepts" href="./concepts">
+    The five building blocks: component, config, actions, HTTP routes, and React client.
+  </Step>
+  <Step title="See the architecture" href="./architecture">
+    How `convex-auth` is designed around Convex's runtime.
   </Step>
 </Steps>
 
@@ -34,8 +34,8 @@ If you are new here, follow this order:
   <Card title="Concepts" href="./concepts" icon="book-open">
     Component, config, actions, HTTP routes, and React client.
   </Card>
-  <Card title="How we got here" href="./how-we-got-here" icon="history">
-    The story behind the project.
+  <Card title="Architecture" href="./architecture" icon="compass">
+    How `convex-auth` is designed around Convex's runtime.
   </Card>
 </CardGroup>
 
@@ -44,7 +44,12 @@ If you are new here, follow this order:
 Setup varies by framework — pick yours for the end-to-end guide.
 
 <CardGroup cols={2}>
-  <Card title="React (Vite SPA)" href="./client" img="/frameworks/react.svg" horizontal>
+  <Card
+    title="React (Vite / TanStack Router)"
+    href="./client"
+    img="/frameworks/react.svg"
+    horizontal
+  >
     Client-side auth with `ConvexAuthClientProvider` and hooks.
   </Card>
   <Card title="React Native / Expo" href="./react-native" img="/frameworks/expo.svg" horizontal>
@@ -70,8 +75,17 @@ Setup varies by framework — pick yours for the end-to-end guide.
   <Card title="OAuth" href="./oauth" icon="globe">
     Google, GitHub, and Discord sign-in.
   </Card>
+  <Card title="Generic OAuth" href="./generic-oauth" icon="key-round">
+    Any OIDC/OAuth2 provider — Azure, Apple, your own IdP.
+  </Card>
+  <Card title="OIDC provider" href="./oidc-provider" icon="scan">
+    Turn your app into an identity provider for other apps and agents.
+  </Card>
   <Card title="Two-factor" href="./two-factor" icon="shield">
     TOTP and backup codes.
+  </Card>
+  <Card title="Passkeys" href="./passkeys" icon="fingerprint">
+    WebAuthn passkey sign-in.
   </Card>
   <Card title="Magic links" href="./magic-links" icon="wand-2">
     Password-less email sign-in.
@@ -79,22 +93,44 @@ Setup varies by framework — pick yours for the end-to-end guide.
   <Card title="Email OTP" href="./email-otp" icon="shield-check">
     One-time email passcodes.
   </Card>
+  <Card title="Anonymous" href="./anonymous" icon="user-round">
+    Guest sessions that upgrade into real accounts.
+  </Card>
 </CardGroup>
 
 ## Application features
 
 <CardGroup cols={2}>
   <Card title="Organizations" href="./organizations" icon="building">
-    Multi-tenant workspaces, members, and roles.
+    Multi-tenant workspaces, members, roles, and invitations.
   </Card>
   <Card title="API keys" href="./api-keys" icon="key">
-    Create, rotate, and revoke service API keys.
+    Create, rotate, and revoke service API keys with scoped IP ranges.
+  </Card>
+  <Card title="Service principals" href="./service-principals" icon="bot">
+    Non-human identities for CI, automation, and agents.
   </Card>
   <Card title="Webhooks" href="./webhooks" icon="webhook">
-    Signed webhook events.
+    Signed webhook events for lifecycle and org changes.
+  </Card>
+  <Card title="MCP OAuth" href="./feature-gated-components" icon="terminal">
+    OAuth for MCP servers — agents authenticate against your app.
   </Card>
   <Card title="Theming" href="./theming" icon="palette">
     Light, dark, system mode, design tokens, and per-component styling.
+  </Card>
+</CardGroup>
+
+## Components
+
+Drop-in UI for every feature above — forms, pages, surfaces, and primitives, for React and React Native. Theme them once, ship them everywhere.
+
+<CardGroup cols={2}>
+  <Card title="Component catalog" href="./components" icon="layout-grid">
+    Sign-in, organizations, account, API keys, webhooks, security — the full library.
+  </Card>
+  <Card title="React Native" href="./components/react-native" icon="smartphone">
+    Expo screens and org components built on secure storage and deep links.
   </Card>
 </CardGroup>
 
@@ -127,14 +163,11 @@ Setup varies by framework — pick yours for the end-to-end guide.
   <Card title="Server API" href="./server-api" icon="terminal">
     Actions, queries, and HTTP routes.
   </Card>
-  <Card title="UI components" href="./ui-components" icon="layout">
-    Complete React component reference.
-  </Card>
-  <Card title="Architecture" href="./architecture" icon="compass">
-    How `convex-auth` is designed around Convex's runtime.
-  </Card>
   <Card title="Feature-gated components" href="./feature-gated-components" icon="layers">
     How to mount and compose the `convexAuth` component.
+  </Card>
+  <Card title="Consumer contract" href="./consumer-contract" icon="file-text">
+    What your app must provide when consuming the component.
   </Card>
 </CardGroup>
 
@@ -143,5 +176,5 @@ Setup varies by framework — pick yours for the end-to-end guide.
 If you already have an auth integration:
 
 - [Migrating from Better Auth](./migrating-from-better-auth)
-- [Migrating to feature-gated components](./migrating-from-full-component)
+- [Migrating to feature-gated components](./migrating-to-feature-gated-components)
 - [Migrating to v3](./v3-migration)

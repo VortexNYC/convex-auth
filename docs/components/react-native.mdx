@@ -1,0 +1,43 @@
+---
+title: React Native
+description: The Expo component set — auth screens, org components, session and profile management.
+---
+
+`@vortex-api/convex-auth/react-native` ships a parallel component set for Expo apps — same coverage as the React library, built for native.
+
+## Providers and screens
+
+| Component                                                   | Purpose                                                                |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `ExpoConvexAuthProvider`                                    | Root provider — token storage, session restore, runtime wiring.        |
+| `ExpoConvexAuthClientProvider`                              | Drop-in client provider for the `useConvexAuthClient` API.             |
+| `ExpoAuthClientSignInScreen` / `ExpoAuthClientSignUpScreen` | Full client-driven auth screens.                                       |
+| `ExpoAuthPostSignUpPage`                                    | Post-sign-up step (verification, profile completion).                  |
+| `ExpoAuthOrganizationChooserPage`                           | Org picker shown after sign-in when the user belongs to multiple orgs. |
+| `ExpoAuthAcceptInvitePage`                                  | Deep-linked invitation acceptance screen.                              |
+
+## Organization components
+
+| Component                    | Purpose                           |
+| ---------------------------- | --------------------------------- |
+| `ConvexCreateOrganization`   | Org creation form.                |
+| `ConvexOrganizationList`     | List of the user's organizations. |
+| `ConvexOrganizationMembers`  | Member list and management.       |
+| `ConvexOrganizationProfile`  | Org profile/settings surface.     |
+| `ConvexOrganizationSwitcher` | Switch the active organization.   |
+
+## Account components
+
+| Component                                                 | Purpose                               |
+| --------------------------------------------------------- | ------------------------------------- |
+| `ConvexSessionList`                                       | Active sessions with revoke controls. |
+| `ConvexProfileEditForm`                                   | Name/profile editing.                 |
+| `ConvexProfileImageUploader`                              | Avatar upload.                        |
+| `ConvexChangeEmailForm`                                   | Email change with verification.       |
+| `ConvexForgotPasswordForm` / `ConvexResetPasswordForm`    | Password recovery flow.               |
+| `ConvexVerifyEmailScreen`                                 | Email verification screen.            |
+| `ConvexEnableTwoFactorForm` / `ConvexVerifyTwoFactorForm` | TOTP enrollment and challenge.        |
+
+## Helpers
+
+`createExpoConvexAuthRuntime` builds the runtime object the Expo providers expect (SecureStore token storage, deep-link helpers). `resolveExpoAuthConfig`, `deriveExpoConvexSiteUrl`, `resolveExpoScheme`, and `buildExpoTrustedOrigins` derive the auth configuration from your Expo app config — see the [React Native guide](/react-native) for setup.

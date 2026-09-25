@@ -95,6 +95,24 @@ app.post("/api/auth", convexAuthProxyHandler({ actions: api.auth }));
 
 The backend is the standard consumer setup — component mount in `convex/convex.config.ts`, `convexAuth({...})` in `convex/auth.ts`, `auth.addHttpRoutes(http)` in `convex/http.ts`. See [Installation](./installation).
 
+## Example apps
+
+- **`examples/hono`** — the packaged adapter demo: `convexAuthMiddleware`, the `/api/auth` proxy, and `getConvexAuthSession` against a real Hono app.
+
+  ```bash
+  cd examples/hono
+  pnpm install
+  pnpm run dev
+  ```
+
+- **`examples/server`** — the same Hono shape in token mode using `ConvexHttpClient` directly. The reference for servers that do not need cookie sessions (scripting, CLIs, service-to-service).
+
+  ```bash
+  cd examples/server
+  pnpm install
+  pnpm run dev
+  ```
+
 ## Next steps
 
 <CardGroup cols={2}>
@@ -107,7 +125,11 @@ The backend is the standard consumer setup — component mount in `convex/convex
   <Card title="Production" href="./production" icon="rocket">
     Deploy, monitor, and rotate.
   </Card>
-  <Card title="Examples" href="./examples" icon="folder">
-    `examples/hono` — a runnable adapter demo.
+  <Card
+    title="Example source"
+    href="https://github.com/VortexNYC/convex-auth/tree/main/examples/hono"
+    icon="folder"
+  >
+    `examples/hono` and `examples/server` on GitHub.
   </Card>
 </CardGroup>
