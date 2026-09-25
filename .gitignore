@@ -20,7 +20,6 @@ dist/
 !packages/bridge-consumer/src/**/*.test.ts
 *.vitest.ts
 !packages/auth/src/**/*.vitest.ts
-CHANGELOG.md
 coverage/
 .vite/
 *.tsbuildinfo

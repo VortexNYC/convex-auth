@@ -18,9 +18,11 @@ this page is the operator runbook.
    `Migration note:` line.
 2. **Merge to `main`.** Changesets accumulate.
 3. **Run the Release workflow** (`workflow_dispatch`). `changesets/action`
-   opens a `chore: version packages` PR that bumps versions and consumes
-   pending changesets. (`CHANGELOG.md` is gitignored — the GitHub Release
-   body is the changelog; there is no committed changelog file.)
+   opens a `chore: version packages` PR that bumps versions, consumes
+   pending changesets, and prepends their entries to
+   `packages/auth/CHANGELOG.md`. The changelog file is committed and
+   load-bearing — `changesets/action` reads it at publish time to build the
+   GitHub Release body, and silently skips the release if it is missing.
 4. **Merge the version PR, then re-dispatch the workflow.** The publish run
    pushes npm, creates the git tag, and creates the GitHub Release via the
    `GITHUB_TOKEN`. Tags are `@vortex-api/convex-auth@X.Y.Z` (the changesets
