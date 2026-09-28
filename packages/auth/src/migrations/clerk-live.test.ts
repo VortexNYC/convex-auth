@@ -9,7 +9,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { convexTest } from "convex-test";
 import { internal } from "../component/_generated/api.js";
 import schema from "../component/schema.js";
@@ -76,16 +76,30 @@ function parseCsv(text: string): Record<string, string>[] {
 }
 
 describe.skipIf(!hasExport)("clerk live export normalization", () => {
-  const input = {
-    users: readJson<ClerkApiUser[]>("users.json"),
-    organizations: readJson<ClerkOrganization[]>("organizations.json"),
-    memberships: readJson<ClerkMembership[]>("memberships.json"),
-    invitations: readJson<ClerkOrganizationInvitation[]>("invitations.json"),
-    csvRows: hasCsv
-      ? (parseCsv(readFileSync(resolve(EXPORT_DIR, "users.csv"), "utf-8")) as ClerkCsvRow[])
-      : undefined,
+  /* Vitest executes describe bodies during collection even for skipped
+   * suites — file reads must stay lazy so a missing export dir doesn't
+   * fail collection on machines without a live pull. */
+  let input: {
+    users: ClerkApiUser[];
+    organizations: ClerkOrganization[];
+    memberships: ClerkMembership[];
+    invitations: ClerkOrganizationInvitation[];
+    csvRows?: ClerkCsvRow[];
   };
-  const out = normalizeClerkExport(input);
+  let out: ReturnType<typeof normalizeClerkExport>;
+
+  beforeAll(() => {
+    input = {
+      users: readJson<ClerkApiUser[]>("users.json"),
+      organizations: readJson<ClerkOrganization[]>("organizations.json"),
+      memberships: readJson<ClerkMembership[]>("memberships.json"),
+      invitations: readJson<ClerkOrganizationInvitation[]>("invitations.json"),
+      csvRows: hasCsv
+        ? (parseCsv(readFileSync(resolve(EXPORT_DIR, "users.csv"), "utf-8")) as ClerkCsvRow[])
+        : undefined,
+    };
+    out = normalizeClerkExport(input);
+  });
 
   it("normalizes every non-banned user", () => {
     const banned = input.users.filter((u) => u.banned || u.locked);
