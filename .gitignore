@@ -32,3 +32,4 @@ coverage/
 .entire/logs/
 .entire/tmp/
 .vite-hooks/_/
+tmp/

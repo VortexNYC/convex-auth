@@ -83,12 +83,25 @@ export type ClerkMembership = {
   updated_at?: number;
 };
 
+/** `GET /v1/organization_invitations` object — pending seats are a separate
+ * resource from memberships; only `pending` invitations emit invite rows. */
+export type ClerkOrganizationInvitation = {
+  id: string;
+  email_address?: string;
+  role?: string;
+  organization_id?: string;
+  status?: string;
+  created_at?: number;
+  updated_at?: number;
+};
+
 export type ClerkExportInput = {
   users: ClerkApiUser[];
   /** Dashboard CSV rows — required to carry password credentials. */
   csvRows?: ClerkCsvRow[];
   organizations?: ClerkOrganization[];
   memberships?: ClerkMembership[];
+  invitations?: ClerkOrganizationInvitation[];
 };
 
 /** Well-known OIDC issuers for Clerk's `oauth_*` provider ids. */
@@ -371,6 +384,34 @@ export function normalizeClerkExport(input: ClerkExportInput): NormalizedExport 
   );
   for (const member of input.memberships ?? []) {
     normalizeClerkMembership(member, orgById, userById, skippedUserIds, out);
+  }
+
+  /* Pending invitations are a separate Clerk resource — they carry only an
+   * email + role and normalize to invited seats on the organization. */
+  for (const invitation of input.invitations ?? []) {
+    if (invitation.status !== "pending") continue;
+    const org = invitation.organization_id ? orgById.get(invitation.organization_id) : undefined;
+    const email = invitation.email_address?.toLowerCase().trim();
+    if (!org || !email || !EMAIL_SHAPE.test(email)) {
+      out.skipped.push({
+        kind: "membership",
+        externalId: invitation.id,
+        reason: !org
+          ? `organization ${invitation.organization_id ?? "?"} not in export`
+          : "invitation has no valid email",
+      });
+      continue;
+    }
+    out.memberships.push({
+      organizationExternalId: org.id,
+      organizationSlug: org.slug,
+      userExternalId: "",
+      userEmail: email,
+      roleKey: clerkRoleKey(invitation.role ?? "org:member"),
+      status: "invited",
+      createdAt: clerkTimestamp(invitation.created_at),
+      updatedAt: clerkTimestamp(invitation.updated_at),
+    });
   }
 
   return out;
