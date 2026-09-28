@@ -21,6 +21,11 @@ import {
   type ClerkOrganization,
   type ClerkOrganizationInvitation,
 } from "./clerk.js";
+import {
+  hashPassword,
+  shouldRehashAfterVerify,
+  verifyPassword,
+} from "../convex-runtime/native/password.js";
 
 const EXPORT_DIR = resolve(__dirname, "../../../../tmp/clerk-export");
 const hasExport = existsSync(resolve(EXPORT_DIR, "users.json"));
@@ -123,15 +128,46 @@ describe.skipIf(!hasExport)("clerk live export normalization", () => {
   });
 
   it("carries bcrypt credentials only when the CSV export is present", () => {
-    const credentialAccounts = out.accounts.filter((a) => a.credential?.passwordHash);
+    const credentialAccounts = out.accounts.filter((a) => a.passwordHash);
     if (hasCsv) {
-      const digests = (input.csvRows ?? []).filter((r) => r.password_hasher === "bcrypt");
+      /* The CSV carries a digest row for every user — including the banned
+       * one, which is skipped before credential normalization. */
+      const skippedUserIds = new Set(
+        out.skipped.filter((s) => s.kind === "user").map((s) => s.externalId),
+      );
+      const digests = (input.csvRows ?? []).filter(
+        (r) => r.password_hasher === "bcrypt" && !skippedUserIds.has(r.id ?? ""),
+      );
       expect(credentialAccounts.length).toBe(digests.length);
       for (const account of credentialAccounts) {
-        expect(account.credential?.passwordHash).toMatch(/^\$2[aby]\$/);
+        expect(account.passwordHash).toMatch(/^\$2[aby]\$/);
       }
     } else {
       expect(credentialAccounts.length).toBe(0);
+    }
+  });
+
+  it("verifies real Clerk digests against the seeded password", async () => {
+    if (!hasCsv) return;
+    const seed = JSON.parse(readFileSync(resolve(EXPORT_DIR, "seed-state.json"), "utf-8")) as {
+      password: string;
+    };
+    const credentialAccounts = out.accounts.filter((a) => a.passwordHash);
+    expect(credentialAccounts.length).toBeGreaterThan(0);
+    for (const account of credentialAccounts) {
+      expect(
+        await verifyPassword(seed.password, account.passwordHash!),
+        `${account.userEmail} digest should verify`,
+      ).toBe(true);
+      expect(await verifyPassword("wrong-password", account.passwordHash!)).toBe(false);
+      /* The lazy-rehash predicate must fire for a real Clerk digest — the
+       * provider's post-verify hook upgrades it to argon2id. Simulate the
+       * replacement round-trip to prove the new hash is servable. */
+      expect(shouldRehashAfterVerify(account.passwordHash!)).toBe(true);
+      const upgraded = await hashPassword(seed.password);
+      expect(upgraded).toMatch(/^\$argon2id\$/);
+      expect(await verifyPassword(seed.password, upgraded)).toBe(true);
+      expect(shouldRehashAfterVerify(upgraded)).toBe(false);
     }
   });
 
