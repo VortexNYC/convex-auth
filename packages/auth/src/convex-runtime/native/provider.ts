@@ -12,6 +12,11 @@ import {
   createPasswordResetEmailDraft,
 } from "../account/passwordResetEmail.js";
 import { verifyToken } from "./jwt.js";
+import {
+  getNativeCredentialAccount,
+  getNativeCredentialIdentity,
+  type NativeCredentialProvider,
+} from "./credential.js";
 import { checkPasswordBreach } from "./breach.js";
 import {
   hashPassword,
@@ -129,7 +134,6 @@ const DEFAULT_TWO_FACTOR_BACKUP_CODES_COUNT = 10;
 const DEFAULT_TWO_FACTOR_BACKUP_CODE_BYTES = 10;
 const DEFAULT_TWO_FACTOR_SECRET_BYTES = 20;
 const DEFAULT_TRUST_DEVICE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const NATIVE_CREDENTIAL_PROVIDERS = ["password", "username"] as const;
 
 function buildGenericDuplicateResponse(
   email: string,
@@ -675,9 +679,11 @@ export function nativeEmailAndPassword(
         tokenHash,
         type: "email_verification",
       });
-      let credentialProvider: (typeof NATIVE_CREDENTIAL_PROVIDERS)[number] = "password";
+      let credentialProvider: NativeCredentialProvider = "password";
       if (code) {
-        const credential = await getNativeCredentialIdentity(ctx, code.userId);
+        const credential =
+          (await getNativeCredentialAccount(ctx, component, code.userId)) ??
+          (await getNativeCredentialIdentity(ctx, component, code.userId));
         if (credential) {
           credentialProvider = credential.provider;
         }
@@ -778,9 +784,11 @@ export function nativeEmailAndPassword(
         tokenHash,
         type: "password_reset",
       });
-      let credentialProvider: (typeof NATIVE_CREDENTIAL_PROVIDERS)[number] = "password";
+      let credentialProvider: NativeCredentialProvider = "password";
       if (code) {
-        const credential = await getNativeCredentialIdentity(ctx, code.userId);
+        const credential =
+          (await getNativeCredentialAccount(ctx, component, code.userId)) ??
+          (await getNativeCredentialIdentity(ctx, component, code.userId));
         if (credential) {
           credentialProvider = credential.provider;
         }
@@ -832,51 +840,29 @@ export function nativeEmailAndPassword(
         return { success: false };
       }
 
-      const account = await getNativeCredentialAccount(ctx, userId);
-      if (!account) {
+      const credential = await getNativeCredentialAccount(ctx, component, userId);
+      if (!credential) {
         return { success: false };
       }
 
-      const valid = await verifyPasswordHash(args.password, account.credentialHash);
+      const valid = await verifyPasswordHash(args.password, credential.account.credentialHash);
       if (valid) {
-        await rehashMigratedCredential(ctx, account, args.password);
+        await rehashMigratedCredential(ctx, credential.account, args.password);
       }
       return { success: valid };
     },
   });
-
-  async function getNativeCredentialIdentity(ctx: GenericActionCtx<DataModel>, userId: string) {
-    for (const provider of NATIVE_CREDENTIAL_PROVIDERS) {
-      const identity = await ctx.runQuery(component.native.identities.getNativeIdentityByUser, {
-        userId,
-        provider,
-        issuer: "native",
-      });
-      if (identity) return { provider, identity };
-    }
-    return null;
-  }
-
-  async function getNativeCredentialAccount(ctx: GenericActionCtx<DataModel>, userId: string) {
-    const credential = await getNativeCredentialIdentity(ctx, userId);
-    if (!credential) return null;
-    return await ctx.runQuery(component.native.accounts.getAccountBySubject, {
-      provider: credential.provider,
-      issuer: "native",
-      subject: credential.identity.subject,
-    });
-  }
 
   async function verifyUserPassword(
     ctx: GenericActionCtx<DataModel>,
     userId: string,
     password: string,
   ) {
-    const account = await getNativeCredentialAccount(ctx, userId);
-    if (!account) return false;
-    const valid = await verifyPasswordHash(password, account.credentialHash);
+    const credential = await getNativeCredentialAccount(ctx, component, userId);
+    if (!credential) return false;
+    const valid = await verifyPasswordHash(password, credential.account.credentialHash);
     if (valid) {
-      await rehashMigratedCredential(ctx, account, password);
+      await rehashMigratedCredential(ctx, credential.account, password);
     }
     return valid;
   }

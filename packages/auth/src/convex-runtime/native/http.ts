@@ -8,6 +8,7 @@ import { handleUpdateSession } from "./updateSession.js";
 import type { NativeEmailAndPasswordFunctionReferences } from "./provider.js";
 import type { NativeMagicLinkFunctionReferences } from "./magicLink.js";
 import type { NativeUsernameFunctionReferences } from "./username.js";
+import { getNativeCredentialAccount, getNativeCredentialIdentity } from "./credential.js";
 import {
   type NativeAuthSession,
   type NativeEmailAndPasswordComponentHandle,
@@ -1124,20 +1125,11 @@ export function addNativeAuthHttpRoutes(
         tokenHash,
         type: "email_verification",
       });
-      let credentialProvider: "password" | "username" = "password";
-      if (code) {
-        for (const provider of ["password", "username"] as const) {
-          const identity = await ctx.runQuery(component.native.identities.getNativeIdentityByUser, {
-            userId: code.userId,
-            provider,
-            issuer: "native",
-          });
-          if (identity) {
-            credentialProvider = provider;
-            break;
-          }
-        }
-      }
+      const credential = code
+        ? ((await getNativeCredentialAccount(ctx, component, code.userId)) ??
+          (await getNativeCredentialIdentity(ctx, component, code.userId)))
+        : null;
+      const credentialProvider = credential?.provider ?? "password";
 
       const result = await ctx.runMutation(component.identity.verifyEmail, {
         tokenHash,

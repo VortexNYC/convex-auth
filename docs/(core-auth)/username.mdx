@@ -56,6 +56,10 @@ export function SignUp() {
 
 By default the user is signed in immediately (`autoSignIn: true`). An optional `email` can be attached at sign-up; a duplicate email fails with `User already exists`, a duplicate username with `Username is already taken`.
 
+:::note
+`signUpUsername` does not send a verification email itself — the verification pipeline lives in the email providers. To use `requireVerifiedEmail` (or let username users verify the attached `email`), also configure `emailAndPassword` or `emailOtp` so `sendEmailVerification`/`verifyEmail` exist; otherwise the flag only affects users whose email was verified by another flow.
+:::
+
 ## Sign in
 
 ```tsx

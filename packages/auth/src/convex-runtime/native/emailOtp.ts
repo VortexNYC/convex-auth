@@ -5,6 +5,7 @@ import { v } from "convex/values";
 import { generateEmailOtp, hashToken } from "./tokens.js";
 import { hashPassword } from "./password.js";
 import { nativeAuthSessionValidator } from "./provider.js";
+import { getNativeCredentialAccount, getNativeCredentialIdentity } from "./credential.js";
 import {
   toNativeAuthUser,
   type NativeEmailAndPasswordComponentHandle,
@@ -344,21 +345,14 @@ export function nativeEmailOtp(
           tokenHash,
           type: "password_reset",
         });
-        let credentialProvider: "password" | "username" = "password";
-        let credentialIdentity: { provider: string; subject: string } | null = null;
-        if (code) {
-          for (const provider of ["password", "username"] as const) {
-            const identity = await ctx.runQuery(
-              component.native.identities.getNativeIdentityByUser,
-              { userId: code.userId, provider, issuer: "native" },
-            );
-            if (identity) {
-              credentialProvider = provider;
-              credentialIdentity = { provider, subject: identity.subject };
-              break;
-            }
-          }
-        }
+        const credential = code
+          ? ((await getNativeCredentialAccount(ctx, component, code.userId)) ??
+            (await getNativeCredentialIdentity(ctx, component, code.userId)))
+          : null;
+        const credentialProvider = credential?.provider ?? "password";
+        const credentialIdentity = credential
+          ? { provider: credential.provider, subject: credential.identity.subject }
+          : null;
 
         const result = await ctx.runMutation(component.identity.resetPassword, {
           tokenHash,
