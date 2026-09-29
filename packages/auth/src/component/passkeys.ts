@@ -138,7 +138,9 @@ export const generatePasskeyRegistrationOptions = mutation({
     displayName: v.optional(v.string()),
     rpName: v.string(),
     rpID: v.string(),
-    origin: v.optional(v.union(v.string(), v.array(v.string()))),
+    // Required so the challenge always records the expected origin —
+    // without it verification would accept any caller-supplied origin.
+    origin: v.union(v.string(), v.array(v.string())),
     userVerification: v.optional(
       v.union(v.literal("required"), v.literal("preferred"), v.literal("discouraged")),
     ),
@@ -153,7 +155,10 @@ export const generatePasskeyRegistrationOptions = mutation({
     ),
     maxPasskeys: v.optional(v.number()),
   },
-  returns: v.any(),
+  // PublicKeyCredentialCreationOptionsJSON — kept as a record because
+  // simplewebauthn adds fields (e.g. `hints`) across versions and Convex
+  // object validators reject unexpected keys.
+  returns: v.record(v.string(), v.any()),
   handler: async (ctx, args) => {
     const now = Date.now();
     await deleteExpiredChallenges(ctx, now);
@@ -180,6 +185,11 @@ export const generatePasskeyRegistrationOptions = mutation({
       transports: pk.transports ?? [],
     }));
 
+    const origins = [args.origin].flat().filter((o) => o.length > 0);
+    if (origins.length === 0) {
+      throw new Error("origin must contain at least one non-empty origin");
+    }
+
     const userVerification = args.userVerification ?? "required";
 
     const options = await generateRegistrationOptions({
@@ -203,7 +213,7 @@ export const generatePasskeyRegistrationOptions = mutation({
       userId: args.userId,
       identifier,
       rpID: args.rpID,
-      origin: args.origin === undefined ? undefined : [args.origin].flat(),
+      origin: origins,
       userVerification,
       expiresAt: now + CHALLENGE_TTL_MS,
       createdAt: now,
@@ -469,7 +479,7 @@ export const generatePasskeyAuthenticationOptions = mutation({
     userId: v.optional(v.id("users")),
     credentialId: v.optional(v.string()),
     rpID: v.string(),
-    origin: v.optional(v.union(v.string(), v.array(v.string()))),
+    origin: v.union(v.string(), v.array(v.string())),
     userVerification: v.optional(
       v.union(v.literal("required"), v.literal("preferred"), v.literal("discouraged")),
     ),
@@ -500,6 +510,11 @@ export const generatePasskeyAuthenticationOptions = mutation({
 
     const userVerification = args.userVerification ?? "required";
 
+    const origins = [args.origin].flat().filter((o) => o.length > 0);
+    if (origins.length === 0) {
+      throw new Error("origin must contain at least one non-empty origin");
+    }
+
     const options = await generateAuthenticationOptions({
       rpID: args.rpID,
       challenge,
@@ -513,7 +528,7 @@ export const generatePasskeyAuthenticationOptions = mutation({
       userId: args.userId ?? undefined,
       identifier: undefined,
       rpID: args.rpID,
-      origin: args.origin === undefined ? undefined : [args.origin].flat(),
+      origin: origins,
       userVerification,
       expiresAt: now + CHALLENGE_TTL_MS,
       createdAt: now,

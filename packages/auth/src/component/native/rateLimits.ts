@@ -12,7 +12,7 @@ export const recordAttempt = mutation({
     windowMs: v.number(),
     maxAttempts: v.number(),
   },
-  returns: v.object({ allowed: v.boolean(), count: v.number() }),
+  returns: v.object({ allowed: v.boolean(), count: v.optional(v.number()) }),
   handler: async (ctx, args) => {
     const { ok } = await rateLimiter.limit(ctx, "auth", {
       key: args.identifier,
@@ -23,7 +23,7 @@ export const recordAttempt = mutation({
         start: args.windowStart,
       },
     });
-    return { allowed: ok, count: 0 };
+    return { allowed: ok };
   },
 });
 
@@ -34,7 +34,7 @@ export const checkRateLimit = query({
     windowMs: v.number(),
     maxAttempts: v.number(),
   },
-  returns: v.object({ allowed: v.boolean(), count: v.number() }),
+  returns: v.object({ allowed: v.boolean(), count: v.optional(v.number()) }),
   handler: async (ctx, args) => {
     const { ok } = await rateLimiter.check(ctx, "auth", {
       key: args.identifier,
@@ -45,7 +45,7 @@ export const checkRateLimit = query({
         start: args.windowStart,
       },
     });
-    return { allowed: ok, count: 0 };
+    return { allowed: ok };
   },
 });
 
