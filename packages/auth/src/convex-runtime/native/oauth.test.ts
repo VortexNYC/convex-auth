@@ -689,6 +689,7 @@ describe("OAuth handlers", () => {
         image: "https://avatar",
         emailVerified: true,
       }),
+      allowUnverifiedEmailLink: false,
     });
     expect(component.native.sessions.createSessionAndRefreshToken).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -855,6 +856,7 @@ describe("OAuth handlers", () => {
         image: "https://google-avatar",
         emailVerified: true,
       }),
+      allowUnverifiedEmailLink: false,
     });
   });
 
@@ -1021,7 +1023,9 @@ describe("OAuth handlers", () => {
       expect(result.error).toBe("email_not_verified");
       expect(result.redirectUrl).toBe("https://app.example.com/error");
     }
-    expect(component.identity.provisionFromIdentity).toHaveBeenCalled();
+    expect(component.identity.provisionFromIdentity).not.toHaveBeenCalled();
+    expect(component.native.accounts.createAccount).not.toHaveBeenCalled();
+    expect(component.native.accounts.updateAccountTokens).not.toHaveBeenCalled();
     expect(component.native.sessions.createSessionAndRefreshToken).not.toHaveBeenCalled();
   });
 
@@ -1203,6 +1207,57 @@ describe("OAuth handlers", () => {
     }
   });
 
+  it("links an OAuth account with an unverified email on an explicit link", async () => {
+    const config = createOAuthConfig();
+    const component = createMockComponent();
+    const { fetch, responses } = createMockFetch();
+    config.github!.fetchImpl = fetch as unknown as typeof globalThis.fetch;
+    responses.set("https://github.com/login/oauth/access_token", {
+      body: { access_token: "github-access-token", token_type: "bearer" },
+    });
+    responses.set("https://api.github.com/user", {
+      body: {
+        id: 12345,
+        login: "octocat",
+        name: "The Octocat",
+        email: "octocat@example.com",
+        avatar_url: "https://avatar",
+        verified: false,
+      },
+    });
+
+    component.native.users.getUserById.mockResolvedValue({
+      _id: "existing_user_1",
+      _creationTime: Date.now(),
+      email: "existing@example.com",
+      emailVerified: true,
+      isActive: true,
+    });
+    component.identity.provisionFromIdentity.mockResolvedValue({
+      userId: "existing_user_1",
+      identityId: "identity_1",
+      createdUser: false,
+      linkedExistingIdentity: false,
+    });
+    component.native.accounts.getAccountBySubject.mockResolvedValue(null);
+    component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_doc_1");
+
+    const { url } = await handleSignIn(config, { provider: "github", link: true });
+    const state = new URL(url).searchParams.get("state")!;
+
+    const result = await handleCallback(
+      createContext() as unknown as GenericActionCtx<DataModel>,
+      component as unknown as NativeOAuthComponentHandle,
+      config,
+      { provider: "github", code: "code-123", state, linkingUserId: "existing_user_1" },
+    );
+
+    expect("error" in result).toBe(false);
+    expect(component.identity.provisionFromIdentity).toHaveBeenCalledWith(
+      expect.objectContaining({ allowUnverifiedEmailLink: true }),
+    );
+  });
+
   it("blocks link when the OAuth account is already linked to a different user", async () => {
     const config = createOAuthConfig();
     const component = createMockComponent();
@@ -1333,6 +1388,48 @@ describe("OAuth handlers", () => {
     if (!("error" in result)) {
       expect(result.userId).toBe("existing_user_1");
     }
+    expect(component.identity.provisionFromIdentity).toHaveBeenCalledWith(
+      expect.objectContaining({ allowUnverifiedEmailLink: true }),
+    );
+  });
+
+  it("returns account_not_linked when provisioning reports a duplicate", async () => {
+    const config = createOAuthConfig();
+    const component = createMockComponent();
+    const { fetch, responses } = createMockFetch();
+    config.github!.fetchImpl = fetch as unknown as typeof globalThis.fetch;
+    setupGitHubResponses(createGitHubProvider(config.github!), responses);
+
+    component.native.users.getUserByEmail.mockResolvedValue({
+      _id: "existing_user_1",
+      _creationTime: Date.now(),
+      email: "octocat@example.com",
+      emailVerified: true,
+      isActive: true,
+    });
+    component.identity.provisionFromIdentity.mockResolvedValue({
+      userId: "existing_user_1",
+      identityId: undefined,
+      createdUser: false,
+      linkedExistingIdentity: false,
+      duplicate: true,
+    });
+
+    const { url } = await handleSignIn(config, { provider: "github" });
+    const state = new URL(url).searchParams.get("state")!;
+
+    const result = await handleCallback(
+      createContext() as unknown as GenericActionCtx<DataModel>,
+      component as unknown as NativeOAuthComponentHandle,
+      config,
+      { provider: "github", code: "code-123", state },
+    );
+
+    expect("error" in result).toBe(true);
+    if ("error" in result) {
+      expect(result.error).toBe("account_not_linked");
+    }
+    expect(component.native.accounts.createAccount).not.toHaveBeenCalled();
   });
 
   it("updates OAuth token material on an existing linked account", async () => {

@@ -261,4 +261,124 @@ describe("provisionFromIdentity", () => {
     );
     expect(session?.identityId).toBe(result.identityId);
   });
+
+  it("refuses to link into an existing user by email when the identity email is unverified", async () => {
+    const t = convexTest(schema, modules);
+
+    await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "victim@example.com",
+        name: "Victim",
+        emailVerified: true,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    const result = await t.mutation(api.identity.provisionFromIdentity, {
+      identity: {
+        identityId: "evil-issuer:attacker",
+        provider: "evil",
+        issuer: "evil-issuer",
+        subject: "attacker",
+        tokenIdentifier: "evil-issuer:attacker",
+        email: "victim@example.com",
+        emailVerified: false,
+      },
+      user: { email: "victim@example.com", name: "Attacker", emailVerified: false },
+    });
+
+    expect(result.duplicate).toBe(true);
+    expect(result.createdUser).toBe(false);
+
+    const identity = await t.run((ctx) =>
+      ctx.db
+        .query("auth_identities")
+        .withIndex("by_identity_id", (q) => q.eq("identityId", "evil-issuer:attacker"))
+        .unique(),
+    );
+    expect(identity).toBeNull();
+  });
+
+  it("links an unverified-email identity only when allowUnverifiedEmailLink is set", async () => {
+    const t = convexTest(schema, modules);
+
+    const userId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "user@example.com",
+        name: "User",
+        emailVerified: true,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    const result = await t.mutation(api.identity.provisionFromIdentity, {
+      identity: {
+        identityId: "trusted:sub1",
+        provider: "trusted",
+        issuer: "trusted",
+        subject: "sub1",
+        tokenIdentifier: "trusted:sub1",
+        email: "user@example.com",
+        emailVerified: false,
+      },
+      user: { email: "user@example.com", name: "User", emailVerified: false },
+      allowUnverifiedEmailLink: true,
+    });
+
+    expect(result.duplicate).toBeUndefined();
+    expect(result.userId).toBe(userId);
+
+    const user = await t.run((ctx) => ctx.db.get("users", userId));
+    expect(user?.emailVerified).toBe(true);
+  });
+
+  it("does not downgrade a verified user's emailVerified on provision", async () => {
+    const t = convexTest(schema, modules);
+
+    const userId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "user@example.com",
+        name: "User",
+        emailVerified: true,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_identities", {
+        identityId: "github:123",
+        userId,
+        provider: "github",
+        issuer: "github",
+        subject: "123",
+        tokenIdentifier: "github:123",
+        email: "user@example.com",
+        emailVerified: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    await t.mutation(api.identity.provisionFromIdentity, {
+      identity: {
+        identityId: "github:123",
+        provider: "github",
+        issuer: "github",
+        subject: "123",
+        tokenIdentifier: "github:123",
+        email: "user@example.com",
+        emailVerified: false,
+      },
+      user: { email: "user@example.com", name: "User", emailVerified: false },
+    });
+
+    const user = await t.run((ctx) => ctx.db.get("users", userId));
+    expect(user?.emailVerified).toBe(true);
+  });
 });
