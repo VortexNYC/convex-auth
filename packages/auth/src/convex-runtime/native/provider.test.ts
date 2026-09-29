@@ -1329,6 +1329,42 @@ describe("nativeEmailAndPassword", () => {
       );
     });
 
+    it("falls through an orphaned password identity to the username account", async () => {
+      const component = createMockComponent();
+      const sessionToken = await mintToken("user_1", "session_1");
+      const passwordIdentity = makeIdentity({ provider: "password" });
+      const usernameIdentity = makeIdentity({ provider: "username" });
+      const account = makeAccount({ credentialHash: defaultPasswordHash });
+      component.native.sessions.getSessionByToken.mockResolvedValue({
+        _id: "session_doc_1",
+        sessionId: "session_1",
+        userId: "user_1",
+        token: sessionToken,
+        expiresAt: Date.now() + 60_000,
+      });
+      component.native.identities.getNativeIdentityByUser.mockImplementation(
+        async (args: { provider?: string }) =>
+          args.provider === "password"
+            ? passwordIdentity
+            : args.provider === "username"
+              ? usernameIdentity
+              : null,
+      );
+      component.native.accounts.getAccountBySubject.mockImplementation(
+        async (args: { provider?: string }) => (args.provider === "username" ? account : null),
+      );
+
+      const { verifyPassword } = createActions(component);
+      const result = await exec(verifyPassword).handler(createContext(), {
+        token: sessionToken,
+        password: DEFAULT_PASSWORD,
+      });
+      expect(result).toEqual({ success: true });
+      expect(component.native.accounts.getAccountBySubject).toHaveBeenCalledWith(
+        expect.objectContaining({ provider: "username" }),
+      );
+    });
+
     it("rejects a session that has been revoked", async () => {
       const component = createMockComponent();
       const sessionToken = await mintToken("user_1", "session_1");
