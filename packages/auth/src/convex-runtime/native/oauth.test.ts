@@ -1207,6 +1207,57 @@ describe("OAuth handlers", () => {
     }
   });
 
+  it("links an OAuth account with an unverified email on an explicit link", async () => {
+    const config = createOAuthConfig();
+    const component = createMockComponent();
+    const { fetch, responses } = createMockFetch();
+    config.github!.fetchImpl = fetch as unknown as typeof globalThis.fetch;
+    responses.set("https://github.com/login/oauth/access_token", {
+      body: { access_token: "github-access-token", token_type: "bearer" },
+    });
+    responses.set("https://api.github.com/user", {
+      body: {
+        id: 12345,
+        login: "octocat",
+        name: "The Octocat",
+        email: "octocat@example.com",
+        avatar_url: "https://avatar",
+        verified: false,
+      },
+    });
+
+    component.native.users.getUserById.mockResolvedValue({
+      _id: "existing_user_1",
+      _creationTime: Date.now(),
+      email: "existing@example.com",
+      emailVerified: true,
+      isActive: true,
+    });
+    component.identity.provisionFromIdentity.mockResolvedValue({
+      userId: "existing_user_1",
+      identityId: "identity_1",
+      createdUser: false,
+      linkedExistingIdentity: false,
+    });
+    component.native.accounts.getAccountBySubject.mockResolvedValue(null);
+    component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_doc_1");
+
+    const { url } = await handleSignIn(config, { provider: "github", link: true });
+    const state = new URL(url).searchParams.get("state")!;
+
+    const result = await handleCallback(
+      createContext() as unknown as GenericActionCtx<DataModel>,
+      component as unknown as NativeOAuthComponentHandle,
+      config,
+      { provider: "github", code: "code-123", state, linkingUserId: "existing_user_1" },
+    );
+
+    expect("error" in result).toBe(false);
+    expect(component.identity.provisionFromIdentity).toHaveBeenCalledWith(
+      expect.objectContaining({ allowUnverifiedEmailLink: true }),
+    );
+  });
+
   it("blocks link when the OAuth account is already linked to a different user", async () => {
     const config = createOAuthConfig();
     const component = createMockComponent();

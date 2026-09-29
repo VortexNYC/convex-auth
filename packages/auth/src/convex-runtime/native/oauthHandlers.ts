@@ -331,7 +331,9 @@ export async function handleCallback<DataModel extends GenericDataModel>(
       image: user.image,
       emailVerified: linkTargetUser?.emailVerified ?? user.emailVerified,
     },
-    allowUnverifiedEmailLink: isTrustedProvider,
+    // Explicit links are authorized by the authenticated session — the
+    // email match resolves to linkTargetUser, never another account.
+    allowUnverifiedEmailLink: isTrustedProvider || linkTargetUser !== undefined,
   });
 
   if (identityResult.duplicate) {
