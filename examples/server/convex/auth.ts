@@ -22,11 +22,13 @@ function extractTokenFromEmailDraft(draft: EmailDraft): string | null {
 }
 
 /* TEST-ONLY SEAM — never copy into a real application.
- * When CONVEX_AUTH_TEST_JWKS is set on the deployment, requests to Google's
- * certs endpoint are answered with that keyset so the conformance suite can
- * drive signInOneTap with a locally-signed RS256 token. When unset (the
- * normal case, including any real deployment) the real Google JWKS is used. */
-const googleTestJwks = env.CONVEX_AUTH_TEST_JWKS;
+ * Both CONVEX_AUTH_E2E === "true" AND CONVEX_AUTH_TEST_JWKS must be set on
+ * the deployment for this to activate; either one alone does nothing. When
+ * active, requests to Google's certs endpoint are answered with the provided
+ * keyset so the conformance suite can drive signInOneTap with a locally-
+ * signed RS256 token. When inactive (the normal case, including any real
+ * deployment) the real Google JWKS is used. */
+const googleTestJwks = env.CONVEX_AUTH_E2E === "true" ? env.CONVEX_AUTH_TEST_JWKS : undefined;
 const googleTestJwksFetch: typeof fetch | undefined = googleTestJwks
   ? async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -50,7 +52,9 @@ export const auth = convexAuth({
     sendPhoneOtp: async ({ otp }) => otp,
   },
   oneTap: {
-    clientId: env.GOOGLE_CLIENT_ID ?? "",
+    /* The placeholder can never be satisfied: Google cannot mint a token
+     * whose `aud` is this value, so an unset client id fails closed. */
+    clientId: env.GOOGLE_CLIENT_ID ?? "convex-auth-unset-google-client-id",
     ...(googleTestJwksFetch ? { fetchImpl: googleTestJwksFetch } : {}),
   },
   emailAndPassword: {

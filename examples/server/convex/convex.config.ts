@@ -16,7 +16,9 @@ const app = defineApp({
     SITE_URL: v.optional(v.string()),
     /* TEST-ONLY: a JWKS JSON served in place of Google's certs endpoint so
      * signInOneTap can be driven end-to-end without a real Google-issued
-     * token. Leave unset everywhere else — it must never exist in prod. */
+     * token. Requires CONVEX_AUTH_E2E="true" alongside it; leave both unset
+     * everywhere else — they must never exist in prod. */
+    CONVEX_AUTH_E2E: v.optional(v.string()),
     CONVEX_AUTH_TEST_JWKS: v.optional(v.string()),
   },
 });

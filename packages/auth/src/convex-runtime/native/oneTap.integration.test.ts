@@ -7,18 +7,23 @@ import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import rateLimiterTest from "@convex-dev/rate-limiter/test";
 
 import convexAuthTest from "../../test.js";
-import { nativeOneTap, type NativeOneTapConfig } from "./oneTap.js";
-import { nativeAuthQueries } from "./queries.js";
+import { convexAuth } from "./convexAuth.js";
+import { hashToken } from "./tokens.js";
 import type { NativeEmailAndPasswordComponentHandle } from "./types.js";
 
 /* Unlike oneTap.test.ts — which mocks runQuery/runMutation — this file runs
  * signInOneTap's handler through a real convex-test action ctx wired to the
- * registered convexAuth component (and its rateLimiter child). Validators,
- * indexes, and row writes are the real thing; only the Google JWKS endpoint
- * and the test keypair stand in for Google. */
+ * registered convexAuth component (and its rateLimiter/batchWorker children).
+ * Real component-side arg/return validators, real indexes, real row writes,
+ * and the real rate-limiter child component. One caveat vs. a deployed
+ * boundary: t.action's inline path skips the action's own args/returns
+ * validators (the component refs it calls are still fully validated). Only
+ * the Google JWKS endpoint and the test keypair stand in for Google. */
 
 const component = (componentsGeneric() as unknown as { convexAuth: unknown })
   .convexAuth as NativeEmailAndPasswordComponentHandle;
+
+const GOOGLE_CLIENT_ID = "google-client-id";
 
 async function mintGoogleIdToken(payload: Record<string, unknown> = {}) {
   const privateJwk = JSON.parse(process.env.JWT_PRIVATE_KEY!);
@@ -30,7 +35,7 @@ async function mintGoogleIdToken(payload: Record<string, unknown> = {}) {
     email_verified: true,
     picture: "https://google-avatar",
     iss: "https://accounts.google.com",
-    aud: "google-client-id",
+    aud: GOOGLE_CLIENT_ID,
     ...payload,
   })
     .setProtectedHeader({ alg: "RS256" })
@@ -77,13 +82,33 @@ function makeConvex() {
   return t;
 }
 
-function makeAuth(fetchImpl: typeof fetch, overrides: Partial<NativeOneTapConfig> = {}) {
+type OneTapOverrides = {
+  clientId?: string;
+  hd?: string;
+  maxTokenAge?: number;
+  fetchImpl?: typeof fetch;
+  disableSignUp?: boolean;
+  disableImplicitSignUp?: boolean;
+  requireEmailVerification?: boolean;
+  accountLinking?: {
+    enabled?: boolean;
+    requiresEmailVerification?: boolean;
+    disableImplicitLinking?: boolean;
+  };
+  trustedProviders?: string[];
+  rateLimit?: { windowMs?: number; maxAttempts?: number } | false;
+};
+
+/* Goes through the real convexAuth() factory — not nativeOneTap directly —
+ * so oauth.google inheritance and config normalization are covered too. */
+function makeAuth(fetchImpl: typeof fetch, oneTap: OneTapOverrides = {}) {
+  const auth = convexAuth({
+    component,
+    oneTap: { clientId: GOOGLE_CLIENT_ID, fetchImpl, ...oneTap },
+  });
   return {
-    signIn: exec(
-      nativeOneTap(component, { clientId: "google-client-id", fetchImpl, ...overrides })
-        .signInOneTap,
-    ).handler,
-    verifySession: exec(nativeAuthQueries(component).verifySession).handler,
+    signIn: exec(auth.signInOneTap).handler,
+    verifySession: exec(auth.verifySession).handler,
   };
 }
 
@@ -115,9 +140,9 @@ describe("signInOneTap through the real component", () => {
     process.env.CONVEX_SITE_URL = "https://test.convex.site";
   });
 
-  it("persists a real user, google identity, account, session, and refresh token", async () => {
+  it("persists a real user, google identity, account, session, and refresh-token hash", async () => {
     const t = makeConvex();
-    const { fetchImpl } = createJwksFetch();
+    const { fetchImpl, calls } = createJwksFetch();
     const auth = makeAuth(fetchImpl);
     const idToken = await mintGoogleIdToken();
 
@@ -130,6 +155,8 @@ describe("signInOneTap through the real component", () => {
     expect(result.refreshToken).toBeTruthy();
     expect(result.sessionId).toBeTruthy();
     expect(result.createdUser).toBe(true);
+    /* JWKS fetched exactly once for the first verification. */
+    expect(calls()).toBe(1);
 
     const users = await componentTable(t, "users");
     expect(users).toHaveLength(1);
@@ -163,8 +190,9 @@ describe("signInOneTap through the real component", () => {
     const refreshTokens = await componentTable(t, "authRefreshTokens");
     expect(refreshTokens).toHaveLength(1);
     expect(refreshTokens[0].sessionId).toBe(result.sessionId);
-    /* The raw refresh token must never be stored — only its hash. */
-    expect(refreshTokens[0].tokenHash).not.toBe(result.refreshToken);
+    /* Stored value must be exactly the hash of the returned refresh token —
+     * never the token itself. */
+    expect(refreshTokens[0].tokenHash).toBe(await hashToken(result.refreshToken));
   });
 
   it("verifySession accepts the minted token against the persisted session row", async () => {
@@ -173,22 +201,21 @@ describe("signInOneTap through the real component", () => {
     const auth = makeAuth(fetchImpl);
     const idToken = await mintGoogleIdToken();
 
-    const { token } = (await t.action(
+    const result = (await t.action(
       async (ctx) => await auth.signIn(ctx, { idToken }),
     )) as SignInResult;
 
-    const verified = (await t.query(async (ctx) => await auth.verifySession(ctx, { token }))) as {
-      user?: Record<string, unknown>;
-      sessionId?: string;
-    };
+    const verified = (await t.query(
+      async (ctx) => await auth.verifySession(ctx, { token: result.token }),
+    )) as { user?: Record<string, unknown>; sessionId?: string };
 
     expect(verified.user?.email).toBe("google@example.com");
-    expect(verified.sessionId).toBeTruthy();
+    expect(verified.sessionId).toBe(result.sessionId);
   });
 
-  it("repeat sign-in resolves the same user and mints a second real session", async () => {
+  it("repeat sign-in resolves the same user, mints a second session, and hits the JWKS cache", async () => {
     const t = makeConvex();
-    const { fetchImpl } = createJwksFetch();
+    const { fetchImpl, calls } = createJwksFetch();
     const auth = makeAuth(fetchImpl);
     const idToken = await mintGoogleIdToken();
 
@@ -206,6 +233,8 @@ describe("signInOneTap through the real component", () => {
      * existing-identity path must still mint a session. */
     expect(second.token).toBeTruthy();
     expect(second.refreshToken).toBeTruthy();
+    /* Second verification was served from the 5-minute JWKS cache. */
+    expect(calls()).toBe(1);
 
     const sessions = await componentTable(t, "authSessions");
     expect(sessions).toHaveLength(2);
@@ -260,6 +289,24 @@ describe("signInOneTap through the real component", () => {
     });
   });
 
+  it("oneTap: true inherits clientId and fetchImpl from oauth.google", async () => {
+    const t = makeConvex();
+    const { fetchImpl } = createJwksFetch();
+    const auth = convexAuth({
+      component,
+      oauth: { google: { clientId: GOOGLE_CLIENT_ID, clientSecret: "", fetchImpl } },
+      oneTap: true,
+    });
+    const idToken = await mintGoogleIdToken();
+
+    const result = (await t.action(
+      async (ctx) => await exec(auth.signInOneTap).handler(ctx, { idToken }),
+    )) as SignInResult;
+
+    expect(result.userId).toBeTruthy();
+    expect(result.createdUser).toBe(true);
+  });
+
   it("rejects a token minted for a different audience and persists nothing", async () => {
     const t = makeConvex();
     const { fetchImpl } = createJwksFetch();
@@ -272,6 +319,19 @@ describe("signInOneTap through the real component", () => {
 
     expect(await componentTable(t, "users")).toHaveLength(0);
     expect(await componentTable(t, "auth_identities")).toHaveLength(0);
+  });
+
+  it("rejects a nonce mismatch after signature verification", async () => {
+    const t = makeConvex();
+    const { fetchImpl } = createJwksFetch();
+    const auth = makeAuth(fetchImpl);
+    const idToken = await mintGoogleIdToken({ nonce: "server-nonce" });
+
+    await expect(
+      t.action(async (ctx) => await auth.signIn(ctx, { idToken, nonce: "wrong-nonce" })),
+    ).rejects.toThrow("INVALID_ID_TOKEN");
+
+    expect(await componentTable(t, "users")).toHaveLength(0);
   });
 
   it("blocks new-user sign-in when disableSignUp is set", async () => {
