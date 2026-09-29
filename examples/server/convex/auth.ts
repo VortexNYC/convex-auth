@@ -21,8 +21,38 @@ function extractTokenFromEmailDraft(draft: EmailDraft): string | null {
   return pathToken && pathToken !== "verify-email" ? pathToken : null;
 }
 
+/* TEST-ONLY SEAM — never copy into a real application.
+ * When CONVEX_AUTH_TEST_JWKS is set on the deployment, requests to Google's
+ * certs endpoint are answered with that keyset so the conformance suite can
+ * drive signInOneTap with a locally-signed RS256 token. When unset (the
+ * normal case, including any real deployment) the real Google JWKS is used. */
+const googleTestJwks = env.CONVEX_AUTH_TEST_JWKS;
+const googleTestJwksFetch: typeof fetch | undefined = googleTestJwks
+  ? async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (url === "https://www.googleapis.com/oauth2/v3/certs") {
+        return new Response(googleTestJwks, {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return fetch(input, init);
+    }
+  : undefined;
+
 export const auth = convexAuth({
   component: components.convexAuth,
+  username: { enabled: true },
+  phone: {
+    /* Conformance seam: the sender echoes the OTP back as the messageId so
+     * `convex run` output carries the code — no SMS provider needed. A real
+     * app sends the code via Twilio/etc. and returns the provider's ID. */
+    sendPhoneOtp: async ({ otp }) => otp,
+  },
+  oneTap: {
+    clientId: env.GOOGLE_CLIENT_ID ?? "",
+    ...(googleTestJwksFetch ? { fetchImpl: googleTestJwksFetch } : {}),
+  },
   emailAndPassword: {
     enabled: true,
     checkBreach: true,
@@ -81,4 +111,9 @@ export const {
   verifySession,
   signInWithRedirect,
   callback,
+  signUpUsername,
+  signInUsername,
+  sendPhoneOtp,
+  verifyPhoneOtp,
+  signInOneTap,
 } = auth;
