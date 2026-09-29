@@ -9,18 +9,13 @@ import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { scrypt } from "@noble/hashes/scrypt.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { hexToBytes } from "@noble/hashes/utils.js";
+import { isBcryptHash } from "./hashFormat.js";
+
+export { isBcryptHash };
 
 const PBKDF2_PREFIX = "$pbkdf2$";
 const SCRYPT_PREFIX = "$scrypt$";
 const ARGON2ID_PREFIX = "$argon2id$";
-/**
- * Imported bcrypt digests are only honored at sane parameters: variants 2a/2b/2y
- * ($2x$ was a buggy PHP prefix nobody exports) and cost 4–14 — real vendor
- * exports are 10–12, while cost 31 would DoS every sign-in attempt. This is the
- * shape Clerk's dashboard CSV export emits in its `password_digest` column (and
- * what WorkOS imports hand off).
- */
-const BCRYPT_REGEX = /^\$2[aby]\$(?:0[4-9]|1[0-4])\$[./A-Za-z0-9]{53}$/;
 
 /**
  * Imported argon2id PHC strings below this floor are treated as non-native and
@@ -68,10 +63,6 @@ function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
  */
 export async function hashPassword(password: string): Promise<string> {
   return await wasmHashPassword(password);
-}
-
-export function isBcryptHash(hash: string): boolean {
-  return BCRYPT_REGEX.test(hash);
 }
 
 function parsePhcParams(segment: string): { m: number; t: number; p: number } | null {

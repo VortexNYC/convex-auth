@@ -41,6 +41,11 @@
       "import": "./dist/mcp.js",
       "default": "./dist/mcp.js"
     },
+    "./migrations": {
+      "types": "./dist/migrations.d.ts",
+      "import": "./dist/migrations.js",
+      "default": "./dist/migrations.js"
+    },
     "./react": {
       "types": "./dist/react.d.ts",
       "import": "./dist/react.js",

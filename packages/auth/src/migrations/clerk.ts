@@ -1,4 +1,4 @@
-import { isBcryptHash } from "../convex-runtime/native/password.js";
+import { isBcryptHash } from "../convex-runtime/native/hashFormat.js";
 import {
   emptyExport,
   type NormalizedAccount,
