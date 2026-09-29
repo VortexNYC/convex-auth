@@ -430,7 +430,7 @@ describe("nativeUsername", () => {
       const component = createMockComponent();
       const actions = nativeUsername(component);
       const ctx = createContext();
-      const bcryptHash = "$2a$10$DprdJOxGXADLAHm6zgiHeeYJIMX.UqFj0gRoy7VHEhAfnX8nwxbJe"; // "hunter2!"
+      const bcryptHash = "$2a$10$DprdJOxGXADLAHm6zgiHeeYJIMX.UqFj0gRoy7VHEhAfnX8nwxbJe"; // nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash — "hunter2!"
       const account = makeAccount(bcryptHash);
       component.identity.getUserAndAccountByUsername.mockResolvedValue({
         user: makeUser(),
