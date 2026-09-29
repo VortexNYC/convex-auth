@@ -42,16 +42,13 @@ async function revokePasskeySessions(
   passkey: { userId: Id<"users">; credentialId: string },
   now: number,
 ) {
-  const userSessions = await getAllRows(ctx, {
+  const matchedSessions = await getAllRows(ctx, {
     table: "authSessions",
-    index: "by_user",
-    startIndexKey: [passkey.userId],
-    endIndexKey: [passkey.userId],
-    absoluteMaxRows: MAX_USER_PASSKEY_ROWS,
+    index: "by_credential_id",
+    startIndexKey: [passkey.credentialId],
+    endIndexKey: [passkey.credentialId],
+    absoluteMaxRows: MAX_FAMILY_MEMBERS,
   });
-  const belongsToPasskey = (session: (typeof userSessions)[number]) =>
-    session.credentialId === passkey.credentialId;
-  const matchedSessions = userSessions.filter(belongsToPasskey);
   const familyIds = new Set(matchedSessions.map((s) => s.familyId ?? s.sessionId));
 
   const sessionsToRevoke = new Map(matchedSessions.map((s) => [s._id, s]));

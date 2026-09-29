@@ -47,9 +47,7 @@ export const auth_md_assertions = defineTable({
   consumedAt: v.optional(v.number()),
   revokedAt: v.optional(v.number()),
   createdAt: v.number(),
-})
-  .index("by_registration_status", ["registrationId", "status"])
-  .index("by_expiry", ["expiresAt"]);
+}).index("by_expiry", ["expiresAt"]);
 
 export const auth_md_credentials = defineTable({
   registrationId: v.id("auth_md_registrations"),
@@ -65,7 +63,6 @@ export const auth_md_credentials = defineTable({
   createdAt: v.number(),
   updatedAt: v.number(),
 })
-  .index("by_registration_status", ["registrationId", "status"])
   .index("by_user_organization", ["userId", "organizationId"])
   .index("by_expiry", ["expiresAt"]);
 
@@ -80,6 +77,4 @@ export const auth_md_audit_events = defineTable({
   eventType: v.string(),
   reasonCode: v.optional(v.string()),
   createdAt: v.number(),
-})
-  .index("by_registration_created_at", ["registrationId", "createdAt"])
-  .index("by_organization_created_at", ["organizationId", "createdAt"]);
+});

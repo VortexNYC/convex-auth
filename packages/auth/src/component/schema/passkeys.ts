@@ -17,8 +17,7 @@ export const auth_passkeys = defineTable({
   revokedAt: v.optional(v.number()),
 })
   .index("by_userId", ["userId"])
-  .index("by_credentialId", ["credentialId"])
-  .index("by_identityId", ["identityId"]);
+  .index("by_credentialId", ["credentialId"]);
 
 export const auth_passkey_challenges = defineTable({
   challenge: v.string(),

@@ -9,7 +9,4 @@ export const auth_admin_audits = defineTable({
   result: v.string(),
   payloadJson: v.optional(v.string()),
   createdAt: v.number(),
-})
-  .index("by_admin", ["adminId"])
-  .index("by_target", ["targetType", "targetId"])
-  .index("by_createdAt", ["createdAt"]);
+}).index("by_admin", ["adminId"]);
