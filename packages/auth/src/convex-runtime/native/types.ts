@@ -279,6 +279,7 @@ export type NativeEmailAndPasswordComponentHandle = {
           refreshTokenExpiresAt: number;
         };
         allowLink?: boolean;
+        allowUnverifiedEmailLink?: boolean;
       },
       {
         createdUser: boolean;

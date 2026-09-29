@@ -332,6 +332,58 @@ describe("admin users", () => {
     expect(account).toHaveLength(1);
   });
 
+  it("partial-searches users by email and name", async () => {
+    const t = convexTest(schema, modules);
+    const adminId = await insertUser(t, "admin@example.com", "Admin", true);
+    await insertUser(t, "smith@example.com", "Will Smith");
+    await insertUser(t, "jones@example.com", "John Smith");
+    await insertUser(t, "other@example.com", "Unrelated");
+
+    const byEmail = await t
+      .withIdentity({ subject: adminId })
+      .query(makeFunctionReference<"query">("admin/users:listUsers"), {
+        search: "smith@",
+        limit: 10,
+      });
+    expect(byEmail.users.map((u) => u.email)).toEqual(["smith@example.com"]);
+
+    const byName = await t
+      .withIdentity({ subject: adminId })
+      .query(makeFunctionReference<"query">("admin/users:listUsers"), {
+        search: "smith",
+        limit: 10,
+      });
+    const emails = byName.users.map((u) => u.email).sort();
+    expect(emails).toEqual(["jones@example.com", "smith@example.com"]);
+  });
+
+  it("paginates search results with a cursor", async () => {
+    const t = convexTest(schema, modules);
+    const adminId = await insertUser(t, "admin@example.com", "Admin", true);
+    await insertUser(t, "match1@example.com", "Match One");
+    await insertUser(t, "match2@example.com", "Match Two");
+
+    const first = await t
+      .withIdentity({ subject: adminId })
+      .query(makeFunctionReference<"query">("admin/users:listUsers"), {
+        search: "match",
+        limit: 1,
+      });
+    expect(first.users).toHaveLength(1);
+    expect(first.hasNextPage).toBe(true);
+    expect(first.nextCursor).toBeDefined();
+
+    const second = await t
+      .withIdentity({ subject: adminId })
+      .query(makeFunctionReference<"query">("admin/users:listUsers"), {
+        search: "match",
+        limit: 1,
+        cursor: first.nextCursor,
+      });
+    expect(second.users).toHaveLength(1);
+    expect(second.users[0]?._id).not.toBe(first.users[0]?._id);
+  });
+
   it("filters users by role and active state", async () => {
     const t = convexTest(schema, modules);
     const adminId = await insertUser(t, "admin@example.com", "Admin", true);

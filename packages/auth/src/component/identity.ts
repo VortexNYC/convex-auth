@@ -153,6 +153,7 @@ export const provisionFromIdentity = mutation({
     verificationCode: v.optional(verificationCodeInputValidator),
     initialSession: v.optional(initialSessionInputValidator),
     allowLink: v.optional(v.boolean()),
+    allowUnverifiedEmailLink: v.optional(v.boolean()),
   },
   returns: provisionResultValidator,
   handler: async (ctx, args) => {
@@ -175,7 +176,9 @@ export const provisionFromIdentity = mutation({
       : null;
     const user = existingUserByIdentity ?? existingUserByEmail;
 
-    if (!allowLink && existingUserByEmail && !existingIdentity) {
+    const emailLinkAllowed =
+      allowLink && (args.identity.emailVerified === true || args.allowUnverifiedEmailLink === true);
+    if (!emailLinkAllowed && existingUserByEmail && !existingIdentity) {
       const { page: identitiesForUser } = await getPage(ctx, {
         table: "auth_identities",
         index: "by_user",
@@ -198,7 +201,9 @@ export const provisionFromIdentity = mutation({
       email: normalizedEmail ?? undefined,
       name: args.user.name,
       image: args.user.image,
-      emailVerified: args.user.emailVerified,
+      // Monotonic: once a user is verified, later provisions must not
+      // downgrade the flag from a provider-reported `false`.
+      emailVerified: user ? user.emailVerified || args.user.emailVerified : args.user.emailVerified,
       isActive: true,
       updatedAt: now,
     };

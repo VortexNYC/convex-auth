@@ -1384,6 +1384,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         {
           account?: { credentialHash: string };
           allowLink?: boolean;
+          allowUnverifiedEmailLink?: boolean;
           identity: {
             email?: string;
             emailVerified: boolean;

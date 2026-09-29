@@ -109,7 +109,11 @@ export const listUsers = query({
     }
     await requireSuperAdmin(ctx, identity.subject);
 
-    const limit = Math.min(args.limit ?? 20, MAX_PAGE_LIMIT);
+    const requestedLimit = args.limit ?? 20;
+    if (!Number.isInteger(requestedLimit) || requestedLimit < 1) {
+      throw new Error("limit must be a positive integer");
+    }
+    const limit = Math.min(requestedLimit, MAX_PAGE_LIMIT);
     const sortBy = args.sortBy ?? "createdAt";
     const sortDirection = args.sortDirection ?? "desc";
     const rawSearch = args.search?.trim();
@@ -122,60 +126,23 @@ export const listUsers = query({
       search,
     };
 
-    if (rawSearch !== undefined && rawSearch !== "") {
-      const emailUser = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q) => q.eq("email", rawSearch.toLowerCase()))
-        .unique();
-      const nameMatches = await ctx.db
-        .query("users")
-        .withIndex("by_name", (q) => q.eq("name", rawSearch))
-        .take(MAX_PAGE_LIMIT);
-
-      const seen = new Set<string>();
-      const raw: Doc<"users">[] = [];
-      if (emailUser !== null) {
-        seen.add(String(emailUser._id));
-        raw.push(emailUser);
-      }
-      for (const user of nameMatches) {
-        if (!seen.has(String(user._id))) {
-          seen.add(String(user._id));
-          raw.push(user);
-        }
-      }
-
-      const users = raw
-        .filter((user) => matchesUserFilters(user, filters))
-        .sort((a, b) => {
-          const aValue = sortBy === "email" ? a.email : sortBy === "name" ? a.name : a.createdAt;
-          const bValue = sortBy === "email" ? b.email : sortBy === "name" ? b.name : b.createdAt;
-          const aStr = aValue ?? "";
-          const bStr = bValue ?? "";
-          return sortDirection === "asc"
-            ? String(aStr).localeCompare(String(bStr))
-            : String(bStr).localeCompare(String(aStr));
-        })
-        .slice(0, limit)
-        .map(toAdminUserListItem);
-
-      return { users, nextCursor: undefined, hasNextPage: false };
-    }
-
     const base = paginator(ctx.db, schema).query("users");
-    let q =
+    const q =
       sortBy === "email"
         ? base.withIndex("by_email").order(sortDirection)
         : sortBy === "name"
           ? base.withIndex("by_name").order(sortDirection)
           : base.order(sortDirection);
 
-    const { page, continueCursor, isDone } = await q.paginate({
-      cursor: args.cursor ?? null,
-      numItems: limit,
-    });
+    const { page, continueCursor, isDone } = await q
+      .filterWith(async (user) => matchesUserFilters(user, filters))
+      .paginate({
+        cursor: args.cursor ?? null,
+        numItems: limit,
+        maximumRowsRead: Math.max(limit * 20, 1000),
+      });
 
-    const users = page.filter((user) => matchesUserFilters(user, filters)).map(toAdminUserListItem);
+    const users = page.map(toAdminUserListItem);
 
     return {
       users,

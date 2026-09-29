@@ -288,8 +288,8 @@ export async function handleCallback<DataModel extends GenericDataModel>(
     }
   }
 
+  const isTrustedProvider = config.trustedProviders?.includes(provider.id) ?? false;
   if (isImplicitLink) {
-    const isTrustedProvider = config.trustedProviders?.includes(provider.id) ?? false;
     const accountLinking = config.accountLinking;
     const requiresEmailVerification =
       accountLinking?.requiresEmailVerification === true ? true : !isTrustedProvider;
@@ -305,6 +305,13 @@ export async function handleCallback<DataModel extends GenericDataModel>(
   const linkTargetUser = linkingUser ?? undefined;
   if (statePayload.link && !linkTargetUser) {
     return { error: "account_not_linked", redirectUrl: resolveErrorURL(statePayload) };
+  }
+
+  if (provider.options?.requireEmailVerification && !user.emailVerified) {
+    return {
+      error: "email_not_verified",
+      redirectUrl: resolveErrorURL(statePayload),
+    };
   }
 
   const identityResult = await ctx.runMutation(component.identity.provisionFromIdentity, {
@@ -324,7 +331,12 @@ export async function handleCallback<DataModel extends GenericDataModel>(
       image: user.image,
       emailVerified: linkTargetUser?.emailVerified ?? user.emailVerified,
     },
+    allowUnverifiedEmailLink: isTrustedProvider,
   });
+
+  if (identityResult.duplicate) {
+    return { error: "account_not_linked", redirectUrl: resolveErrorURL(statePayload) };
+  }
 
   if (!identityResult.identityId) {
     throw new Error("OAuth identity was not provisioned");
@@ -356,13 +368,6 @@ export async function handleCallback<DataModel extends GenericDataModel>(
       scopes: encryptedTokens.scopes,
       accessTokenExpiresAt: encryptedTokens.expiresAt,
     });
-  }
-
-  if (provider.options?.requireEmailVerification && !user.emailVerified) {
-    return {
-      error: "email_not_verified",
-      redirectUrl: resolveErrorURL(statePayload),
-    };
   }
 
   const sessionId = crypto.randomUUID();
