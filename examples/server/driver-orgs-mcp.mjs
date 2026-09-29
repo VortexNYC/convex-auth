@@ -89,6 +89,10 @@ expect(
 const inviteeRow = members.find((m) => m.userId === sB.user.id);
 expect(!!inviteeRow, "invitee appears in member list");
 
+// member-tier read IS allowed (organization:members:read)
+const bMembers = await userB.query("organizations:listMembers", { organizationId });
+expect(bMembers.length === 2, "member can listMembers (members:read)");
+
 // non-member cannot read
 try {
   await userC.query("organizations:listMembers", { organizationId });
@@ -96,6 +100,42 @@ try {
 } catch {
   expect(true, "non-member rejected from listMembers");
 }
+
+// member-as-attacker negatives (B is still "member" tier here)
+const rejects = async (fn, args, label) => {
+  try {
+    await userB.mutation(fn, args);
+    expect(false, `member was able to ${label}`);
+  } catch (e) {
+    expect(String(e.message).includes("Missing permission"), `member ${label} rejected`);
+  }
+};
+await rejects(
+  "organizations:setMemberRole",
+  {
+    organizationId,
+    memberId: members.find((m) => m.userId === sA.user.id)?._id,
+    roleKey: "viewer",
+  },
+  "demote the owner",
+);
+await rejects(
+  "organizations:inviteMember",
+  {
+    organizationId,
+    email: "sneaky@example.test",
+    roleKey: "owner",
+  },
+  "invite as owner",
+);
+await rejects(
+  "organizations:issueOrgApiKey",
+  {
+    organizationId,
+    name: "rogue-key",
+  },
+  "mint an org api key",
+);
 
 // role change: promote invitee to admin
 await userA.mutation("organizations:setMemberRole", {
@@ -141,6 +181,15 @@ const vGarbage = await userA.mutation("organizations:verifyApiKey", {
   presentedKey: "sk-not-a-real-key",
 });
 expect(vGarbage.valid === false, `garbage key rejected (${vGarbage.reason})`);
+
+// cross-tenant oracle: outsider presenting the real key learns nothing
+const outsiderVerdict = await userC.mutation("organizations:verifyApiKey", {
+  presentedKey: issued.apiKey,
+});
+expect(
+  outsiderVerdict.valid === false && outsiderVerdict.reason === "not_found",
+  `outsider cannot probe a real key (got ${outsiderVerdict.reason})`,
+);
 
 await userA.mutation("organizations:revokeApiKey", {
   organizationId,

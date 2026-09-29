@@ -13,6 +13,15 @@ type ActionCtx = GenericActionCtx<GenericDataModel>;
 
 const SUPPORTED_SCOPES = ["openid", "email", "profile", "mcp"] as const;
 
+/* Scope → org permission binding. Identity scopes need no permission; `mcp`
+ * (API access on behalf of the org) requires at least org:read membership. */
+const SCOPE_PERMISSIONS: Record<string, string | null> = {
+  openid: null,
+  email: null,
+  profile: null,
+  mcp: "organization:read",
+};
+
 function issuerFor(request: Request): string {
   return new URL(request.url).origin;
 }
@@ -54,19 +63,33 @@ function handlersFor(ctx: ActionCtx, issuer: string) {
         });
         return user === null ? null : { userId: user._id };
       },
-      /* Org-scoped authorization: the requested organization (or the caller's
-       * first active membership when none is requested) must be an org the
-       * user actively belongs to — no membership, no code. */
+      /* Org-scoped authorization: organization_id is required when the user
+       * has anything but exactly one active membership (mirrors the reference
+       * runtime's ambiguity rule), and the member's role must carry each
+       * scope's backing permission — granted scopes are the requested set
+       * intersected with what the member is allowed. */
       authorize: async ({ identity, requestedOrganizationId, requestedScopes }) => {
-        const memberships = await ctx.runQuery(
+        const memberships = (await ctx.runQuery(
           components.convexAuth.organizations.listMembershipsByUser,
           { userId: identity.userId, status: "active" },
-        );
-        const organizationId = requestedOrganizationId ?? memberships[0]?.organizationId ?? null;
-        const allowed =
-          organizationId !== null &&
-          memberships.some((m: { organizationId: string }) => m.organizationId === organizationId);
-        if (!allowed || organizationId === null) {
+        )) as { organizationId: string; roleId: string }[];
+
+        let organizationId: string | null = requestedOrganizationId;
+        if (organizationId === null && memberships.length !== 1) {
+          return {
+            ok: false as const,
+            status: 400,
+            body: {
+              error: "invalid_request",
+              error_description:
+                "organization_id is required (user has zero or multiple memberships)",
+            },
+          };
+        }
+        organizationId ??= memberships[0]?.organizationId ?? null;
+
+        const member = memberships.find((m) => m.organizationId === organizationId);
+        if (member === undefined || organizationId === null) {
           return {
             ok: false as const,
             status: 403,
@@ -76,7 +99,22 @@ function handlersFor(ctx: ActionCtx, issuer: string) {
             },
           };
         }
-        return { ok: true as const, organizationId, scopes: requestedScopes };
+
+        const role = await ctx.runQuery(components.convexAuth.organizations.getRole, {
+          organizationId,
+          roleId: member.roleId,
+        });
+        const permissions: string[] = role?.permissions ?? [];
+        const granted = (needed: string | null): boolean =>
+          needed === null ||
+          permissions.includes("*") ||
+          permissions.includes(needed) ||
+          permissions.includes(`${needed.split(":")[0]}:*`);
+
+        const grantedScopes = requestedScopes.filter((scope) =>
+          granted(SCOPE_PERMISSIONS[scope] ?? null),
+        );
+        return { ok: true as const, organizationId, scopes: grantedScopes };
       },
       createAuthorizationCode: async (input) => {
         await ctx.runMutation(components.convexAuth.mcp.createAuthorizationCode, {

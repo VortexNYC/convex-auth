@@ -1,11 +1,21 @@
 import { mutation, query } from "./_generated/server";
 import { components } from "./_generated/api";
 import { v } from "convex/values";
+import { defaultOrganizationRoleCatalog } from "@vortex-api/convex-auth/convex";
 import { requireCaller } from "./authz";
 
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 type Ctx = QueryCtx | MutationCtx;
+
+type OrgMember = {
+  _id: string;
+  organizationId: string;
+  userId?: string;
+  roleId: string;
+  status: "active" | "invited" | "suspended";
+  invitedEmail?: string;
+};
 
 async function sha256Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -18,28 +28,73 @@ function generateToken(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/* Caller must be an active member of the org for every org-scoped write/read —
- * the component enforces data scoping, the fixture enforces tenancy. */
-async function requireOrgMember(ctx: Ctx, organizationId: string, userId: string): Promise<void> {
-  const members = await ctx.runQuery(
-    components.convexAuth.organizations.listMembersByOrganization,
-    { organizationId, status: "active" },
-  );
-  const caller = members.find((m: { userId?: string }) => m.userId === userId);
-  if (caller === undefined) {
-    throw new Error("Not a member of this organization");
-  }
+/* Permission check mirrors the catalog contract: `*` = all, `domain:*` =
+ * everything within a domain, otherwise exact `domain:subdomain:action`. */
+function permissionGranted(permissions: readonly string[], needed: string): boolean {
+  if (permissions.includes("*") || permissions.includes(needed)) return true;
+  const domain = needed.split(":")[0];
+  return domain !== undefined && permissions.includes(`${domain}:*`);
 }
 
-/* resolve a role id by key, creating the catalog entry if it does not exist */
-async function roleIdFor(ctx: MutationCtx, organizationId: string, key: string): Promise<string> {
-  const { roleId } = await ctx.runMutation(components.convexAuth.organizations.ensureRole, {
+async function callerMembership(
+  ctx: Ctx,
+  organizationId: string,
+  userId: string,
+): Promise<OrgMember | null> {
+  const member = await ctx.runQuery(
+    components.convexAuth.organizations.getMemberByUserOrganization,
+    { organizationId, userId },
+  );
+  if (member === null || member.status !== "active") {
+    return null;
+  }
+  return member as OrgMember;
+}
+
+/* Read gate: caller must be an active member of the org. */
+async function requireOrgMember(
+  ctx: Ctx,
+  organizationId: string,
+  userId: string,
+): Promise<OrgMember> {
+  const member = await callerMembership(ctx, organizationId, userId);
+  if (member === null) {
+    throw new Error("Not a member of this organization");
+  }
+  return member;
+}
+
+/* Write gate: caller's role must carry the permission. Membership alone is
+ * not enough — this is what keeps "member" from promoting itself or minting
+ * org credentials. */
+async function requireOrgPermission(
+  ctx: Ctx,
+  organizationId: string,
+  userId: string,
+  permission: string,
+): Promise<OrgMember> {
+  const member = await requireOrgMember(ctx, organizationId, userId);
+  const role = await ctx.runQuery(components.convexAuth.organizations.getRole, {
+    organizationId,
+    roleId: member.roleId,
+  });
+  if (role === null || !permissionGranted(role.permissions, permission)) {
+    throw new Error("Missing permission");
+  }
+  return member;
+}
+
+/* Read-only role resolution — never ensureRole on a lookup path; it would
+ * rewrite the seeded catalog's permissions with guessed values. */
+async function roleIdFor(ctx: Ctx, organizationId: string, key: string): Promise<string> {
+  const role = await ctx.runQuery(components.convexAuth.organizations.getRoleByKey, {
     organizationId,
     key,
-    name: key.charAt(0).toUpperCase() + key.slice(1),
-    permissions: key === "owner" ? ["*"] : ["organization:read"],
   });
-  return roleId;
+  if (role === null) {
+    throw new Error(`Role not found: ${key}`);
+  }
+  return role._id;
 }
 
 export const createOrganization = mutation({
@@ -51,8 +106,18 @@ export const createOrganization = mutation({
       components.convexAuth.organizations.upsertOrganization,
       { name: args.name, slug: args.slug, createdBy: callerId },
     );
+    /* The component's built-in seed is owner+member only — pass the runtime's
+     * full catalog (owner/admin/manager/member/viewer) explicitly so admin
+     * and intermediate roles exist and carry the canonical permissions. */
     await ctx.runMutation(components.convexAuth.organizations.seedDefaultRoles, {
       organizationId,
+      catalog: defaultOrganizationRoleCatalog().map((r) => ({
+        key: r.key,
+        name: r.name,
+        description: r.description,
+        permissions: [...r.permissions],
+        isSystem: r.isSystem,
+      })),
     });
     const ownerRoleId = await roleIdFor(ctx, organizationId, "owner");
     await ctx.runMutation(components.convexAuth.organizations.upsertMember, {
@@ -77,7 +142,12 @@ export const inviteMember = mutation({
   returns: v.object({ invitationId: v.string(), token: v.string() }),
   handler: async (ctx, args) => {
     const callerId = await requireCaller(ctx);
-    await requireOrgMember(ctx, args.organizationId, callerId);
+    await requireOrgPermission(
+      ctx,
+      args.organizationId,
+      callerId,
+      "organization:invitations:manage",
+    );
     const roleId = await roleIdFor(ctx, args.organizationId, args.roleKey ?? "member");
     const token = generateToken();
     const { invitationId } = await ctx.runMutation(
@@ -122,26 +192,18 @@ export const listMembers = query({
   ),
   handler: async (ctx, args) => {
     const callerId = await requireCaller(ctx);
-    await requireOrgMember(ctx, args.organizationId, callerId);
+    await requireOrgPermission(ctx, args.organizationId, callerId, "organization:members:read");
     const members = await ctx.runQuery(
       components.convexAuth.organizations.listMembersByOrganization,
       { organizationId: args.organizationId },
     );
-    return members.map(
-      (m: {
-        _id: string;
-        userId?: string;
-        roleId: string;
-        status: string;
-        invitedEmail?: string;
-      }) => ({
-        _id: m._id,
-        userId: m.userId,
-        roleId: m.roleId,
-        status: m.status,
-        invitedEmail: m.invitedEmail,
-      }),
-    );
+    return members.map((m: OrgMember) => ({
+      _id: m._id,
+      userId: m.userId,
+      roleId: m.roleId,
+      status: m.status,
+      invitedEmail: m.invitedEmail,
+    }));
   },
 });
 
@@ -154,7 +216,7 @@ export const setMemberRole = mutation({
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, args) => {
     const callerId = await requireCaller(ctx);
-    await requireOrgMember(ctx, args.organizationId, callerId);
+    await requireOrgPermission(ctx, args.organizationId, callerId, "organization:members:manage");
     const roleId = await roleIdFor(ctx, args.organizationId, args.roleKey);
     await ctx.runMutation(components.convexAuth.organizations.setMemberRole, {
       organizationId: args.organizationId,
@@ -165,6 +227,10 @@ export const setMemberRole = mutation({
     return { ok: true as const };
   },
 });
+
+/* API keys act with the org's authority — only owners (the seeded catalog's
+ * `*`) may mint or revoke them. Not part of the default admin bundle. */
+const API_KEYS_MANAGE = "organization:api-keys:manage";
 
 export const issueOrgApiKey = mutation({
   args: {
@@ -179,7 +245,7 @@ export const issueOrgApiKey = mutation({
   }),
   handler: async (ctx, args) => {
     const callerId = await requireCaller(ctx);
-    await requireOrgMember(ctx, args.organizationId, callerId);
+    await requireOrgPermission(ctx, args.organizationId, callerId, API_KEYS_MANAGE);
     const result = await ctx.runMutation(components.convexAuth.apiKeys.issueApiKey, {
       organizationId: args.organizationId,
       name: args.name,
@@ -196,8 +262,10 @@ export const issueOrgApiKey = mutation({
 });
 
 /* API-key verification. A real API verifies the presented key instead of a
- * user session; the fixture still requires the caller to be authenticated so
- * the public deployment cannot use it as an anonymous oracle. */
+ * user session; the fixture still requires authentication, and the verdict's
+ * org binding is only revealed to members of that org — outsiders get the
+ * same not_found as a garbage key so the endpoint cannot probe across
+ * tenants. */
 export const verifyApiKey = mutation({
   args: {
     presentedKey: v.string(),
@@ -210,7 +278,7 @@ export const verifyApiKey = mutation({
     scopes: v.optional(v.array(v.string())),
   }),
   handler: async (ctx, args) => {
-    await requireCaller(ctx);
+    const callerId = await requireCaller(ctx);
     const verdict = await ctx.runMutation(components.convexAuth.apiKeys.verifyApiKey, {
       presentedKey: args.presentedKey,
       requiredScopes: args.requiredScopes,
@@ -218,6 +286,13 @@ export const verifyApiKey = mutation({
     });
     if (verdict.valid !== true) {
       return { valid: false, reason: verdict.reason };
+    }
+    if (verdict.organizationId === undefined) {
+      return { valid: false, reason: "not_found" };
+    }
+    const membership = await callerMembership(ctx, verdict.organizationId, callerId);
+    if (membership === null) {
+      return { valid: false, reason: "not_found" };
     }
     return {
       valid: true,
@@ -232,7 +307,7 @@ export const revokeApiKey = mutation({
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, args) => {
     const callerId = await requireCaller(ctx);
-    await requireOrgMember(ctx, args.organizationId, callerId);
+    await requireOrgPermission(ctx, args.organizationId, callerId, API_KEYS_MANAGE);
     await ctx.runMutation(components.convexAuth.apiKeys.revokeApiKey, {
       organizationId: args.organizationId,
       apiKeyId: args.apiKeyId,
@@ -254,7 +329,7 @@ export const listApiKeys = query({
   ),
   handler: async (ctx, args) => {
     const callerId = await requireCaller(ctx);
-    await requireOrgMember(ctx, args.organizationId, callerId);
+    await requireOrgPermission(ctx, args.organizationId, callerId, API_KEYS_MANAGE);
     const keys = await ctx.runQuery(components.convexAuth.apiKeys.listApiKeysByOrganization, {
       organizationId: args.organizationId,
     });
