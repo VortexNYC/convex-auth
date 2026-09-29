@@ -92,17 +92,19 @@ async function workos(
   return payload;
 }
 
-type ListPage = { data: unknown[]; listMetadata?: { after?: string | null } };
+/* Raw WorkOS responses use snake_case `list_metadata.after` as the
+ * next-page cursor (the camelCase shape only exists inside their SDKs). */
+type ListPage = { data: unknown[]; list_metadata?: { after?: string | null } };
 
 async function listAll(path: string): Promise<unknown[]> {
   const out: unknown[] = [];
   let after: string | null = null;
   for (;;) {
     const sep = path.includes("?") ? "&" : "?";
-    const cursor = after ? `&after=${after}` : "";
+    const cursor = after ? `&after=${encodeURIComponent(after)}` : "";
     const page = (await workos(`${path}${sep}limit=100${cursor}`)) as ListPage;
     out.push(...page.data);
-    after = page.listMetadata?.after ?? null;
+    after = page.list_metadata?.after ?? null;
     if (!after || page.data.length < 100) return out;
   }
 }

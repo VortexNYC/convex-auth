@@ -498,6 +498,11 @@ async function verify(): Promise<void> {
     "convexAuth",
   )) as { credentialHash?: string } | null;
   console.log(`credential before sign-in: ${before?.credentialHash?.slice(0, 10)}…`);
+  if (!/^\$2[aby]\$/.test(before?.credentialHash ?? "")) {
+    throw new Error(
+      "expected bcrypt credential before sign-in — re-run apply on a fresh deployment",
+    );
+  }
 
   const session = (await convexCall("auth:signIn", { email, password: PASSWORD })) as {
     userId?: string;

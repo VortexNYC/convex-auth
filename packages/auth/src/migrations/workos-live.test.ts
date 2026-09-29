@@ -20,6 +20,7 @@ import {
   type WorkosOrganization,
   type WorkosUser,
 } from "./workos.js";
+import { isBcryptHash } from "../convex-runtime/native/hashFormat.js";
 
 const EXPORT_DIR = resolve(__dirname, "../../../../tmp/workos-export");
 const hasExport = existsSync(resolve(EXPORT_DIR, "users.json"));
@@ -56,10 +57,17 @@ describe.skipIf(!hasExport)("workos live export normalization", () => {
     }
   });
 
-  it("carries no credential accounts — WorkOS API exports have no digests", () => {
-    const withHash = input.users.filter((u) => u.password_hash);
+  it("carries only natively verifiable credentials — API exports have no digests", () => {
+    const verifiable = input.users.filter((u) => {
+      if (!u.password_hash) return false;
+      const type = (u.password_hash_type ?? "").toLowerCase();
+      return (
+        (type === "bcrypt" && isBcryptHash(u.password_hash)) ||
+        (type === "argon2" && u.password_hash.startsWith("$argon2id$"))
+      );
+    });
     const credentialAccounts = out.accounts.filter((a) => a.passwordHash);
-    expect(credentialAccounts.length).toBe(withHash.length);
+    expect(credentialAccounts.length).toBe(verifiable.length);
   });
 
   it("derives organization slugs from names", () => {
