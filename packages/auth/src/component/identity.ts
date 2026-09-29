@@ -179,17 +179,11 @@ export const provisionFromIdentity = mutation({
     const emailLinkAllowed =
       allowLink && (args.identity.emailVerified === true || args.allowUnverifiedEmailLink === true);
     if (!emailLinkAllowed && existingUserByEmail && !existingIdentity) {
-      const { page: identitiesForUser } = await getPage(ctx, {
-        table: "auth_identities",
-        index: "by_user",
-        startIndexKey: [existingUserByEmail._id],
-        endIndexKey: [existingUserByEmail._id],
-        absoluteMaxRows: 1,
-        schema,
-      });
       return {
         userId: existingUserByEmail._id,
-        identityId: identitiesForUser[0]?._id,
+        // Deliberately unset: the collision identity belongs to another
+        // user's account — callers must not mint sessions against it.
+        identityId: undefined,
         createdUser: false,
         linkedExistingIdentity: false,
         duplicate: true,
@@ -201,9 +195,13 @@ export const provisionFromIdentity = mutation({
       email: normalizedEmail ?? undefined,
       name: args.user.name,
       image: args.user.image,
-      // Monotonic: once a user is verified, later provisions must not
-      // downgrade the flag from a provider-reported `false`.
-      emailVerified: user ? user.emailVerified || args.user.emailVerified : args.user.emailVerified,
+      // Monotonic only while the address is unchanged: once a user is
+      // verified, a provision must not downgrade the flag — but an email
+      // change takes the caller's claim for the new address.
+      emailVerified:
+        user && normalizedEmail === normalizeEmail(user.email)
+          ? user.emailVerified || args.user.emailVerified
+          : args.user.emailVerified,
       isActive: true,
       updatedAt: now,
     };
