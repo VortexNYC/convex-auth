@@ -15,9 +15,10 @@ function extractTokenFromEmailDraft(draft: EmailDraft): string | null {
   const match = source.match(/https?:\/\/[^\s<>"]+/);
   if (!match) return null;
   const url = new URL(match[0]);
+  const queryToken = url.searchParams.get("token");
+  if (queryToken) return queryToken;
   const pathToken = url.pathname.split("/").pop();
-  if (pathToken && pathToken !== "verify-email") return pathToken;
-  return url.searchParams.get("token");
+  return pathToken && pathToken !== "verify-email" ? pathToken : null;
 }
 
 export const auth = convexAuth({

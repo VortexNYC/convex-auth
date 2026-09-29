@@ -1,6 +1,6 @@
 import { action } from "../../component/_generated/server.js";
 import type { FunctionReference, GenericActionCtx } from "convex/server";
-import type { DataModel } from "../../component/_generated/dataModel.js";
+import type { DataModel, Id } from "../../component/_generated/dataModel.js";
 import { v } from "convex/values";
 import {
   buildEmailVerificationUrl,
@@ -13,7 +13,12 @@ import {
 } from "../account/passwordResetEmail.js";
 import { mintToken, verifyToken } from "./jwt.js";
 import { checkPasswordBreach } from "./breach.js";
-import { hashPassword, verifyPassword as verifyPasswordHash } from "./password.js";
+import {
+  hashPassword,
+  padBcryptCompare,
+  shouldRehashAfterVerify,
+  verifyPassword as verifyPasswordHash,
+} from "./password.js";
 import { generateVerificationToken, hashToken } from "./tokens.js";
 import { handleUpdateSession } from "./updateSession.js";
 import { decryptAccountToken, encryptAccountToken } from "./oauthCrypto.js";
@@ -495,14 +500,18 @@ export function nativeEmailAndPassword(
       });
       if (!auth) {
         await hashPassword(args.password);
+        await padBcryptCompare(args.password);
         throw new Error("Invalid email or password");
       }
       const { user, identity, account } = auth;
 
       if (!account || !(await verifyPasswordHash(args.password, account.credentialHash))) {
         await hashPassword(args.password);
+        await padBcryptCompare(args.password);
         throw new Error("Invalid email or password");
       }
+
+      await rehashMigratedCredential(ctx, account, args.password);
 
       if (requireVerifiedEmail && !user.emailVerified) {
         if (shouldSendVerificationEmailOnSignIn) {
@@ -885,6 +894,9 @@ export function nativeEmailAndPassword(
       }
 
       const valid = await verifyPasswordHash(args.password, account.credentialHash);
+      if (valid) {
+        await rehashMigratedCredential(ctx, account, args.password);
+      }
       return { success: valid };
     },
   });
@@ -910,7 +922,32 @@ export function nativeEmailAndPassword(
   ) {
     const account = await getNativePasswordAccount(ctx, userId);
     if (!account) return false;
-    return await verifyPasswordHash(password, account.credentialHash);
+    const valid = await verifyPasswordHash(password, account.credentialHash);
+    if (valid) {
+      await rehashMigratedCredential(ctx, account, password);
+    }
+    return valid;
+  }
+
+  /**
+   * Imported bcrypt credentials (Clerk CSV exports, WorkOS handoffs) are
+   * rehashed to argon2id on first successful verify so bcrypt only ever
+   * serves the one-time migration bridge — every subsequent sign-in hits
+   * the native hasher.
+   */
+  async function rehashMigratedCredential(
+    ctx: GenericActionCtx<DataModel>,
+    account: { _id: string; credentialHash: string },
+    password: string,
+  ) {
+    if (!shouldRehashAfterVerify(account.credentialHash)) return;
+    const credentialHash = await hashPassword(password);
+    /* CAS: if a reset landed between read and write, keep the newer hash. */
+    await ctx.runMutation(component.native.accounts.updateCredentialHash, {
+      accountId: account._id as Id<"authAccounts">,
+      credentialHash,
+      expectedCredentialHash: account.credentialHash,
+    });
   }
 
   async function resolveSessionUser(ctx: GenericActionCtx<DataModel>, token: string) {

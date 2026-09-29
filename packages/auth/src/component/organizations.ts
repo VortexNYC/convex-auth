@@ -577,7 +577,7 @@ export const ensureRole = mutation({
   handler: async (ctx, args) => ensureRoleInner(ctx, args),
 });
 
-const DEFAULT_SEED_ROLE_CATALOG: ReadonlyArray<{
+export const DEFAULT_SEED_ROLE_CATALOG: ReadonlyArray<{
   key: string;
   name: string;
   description: string;

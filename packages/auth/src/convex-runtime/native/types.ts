@@ -355,8 +355,12 @@ export type NativeEmailAndPasswordComponentHandle = {
       updateCredentialHash: FunctionReference<
         "mutation",
         "public" | "internal",
-        { accountId: string; credentialHash: string },
-        void,
+        {
+          accountId: string;
+          credentialHash: string;
+          expectedCredentialHash?: string;
+        },
+        { updated: boolean },
         string
       >;
       updateAccountTokens: FunctionReference<

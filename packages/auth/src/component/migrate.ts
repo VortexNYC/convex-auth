@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { createFunctionHandle, makeFunctionReference } from "convex/server";
 import { internalMutation, internalQuery } from "./_generated/server.js";
+import { DEFAULT_SEED_ROLE_CATALOG } from "./organizations.js";
 
 const legacyUserValidator = v.object({
   _id: v.optional(v.string()),
@@ -188,10 +189,241 @@ export const migrateSession = internalMutation({
   },
 });
 
+const migratedOrganizationValidator = v.object({
+  externalId: v.optional(v.string()),
+  name: v.string(),
+  slug: v.string(),
+  imageUrl: v.optional(v.union(v.null(), v.string())),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
+/**
+ * Migrate a single organization from an external provider (Clerk, WorkOS).
+ * Idempotent on `slug`. Seeds the default owner/member role catalog so
+ * `migrateMembership` has resolvable roles. Lifecycle webhook events are
+ * intentionally not emitted — bulk imports must not flood subscribers.
+ */
+export const migrateOrganization = internalMutation({
+  args: { organization: migratedOrganizationValidator },
+  returns: v.object({ organizationId: v.id("organizations"), created: v.boolean() }),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("organizations")
+      .withIndex("by_slug", (q) => q.eq("slug", args.organization.slug))
+      .unique();
+    if (existing) {
+      return { organizationId: existing._id, created: false };
+    }
+
+    const organizationId = await ctx.db.insert("organizations", {
+      name: args.organization.name,
+      slug: args.organization.slug,
+      imageUrl: args.organization.imageUrl ?? undefined,
+      status: "active",
+      /* The `migration` marker distinguishes imported orgs from pre-existing
+       * tenants — `migrateMembership` refuses to attach members to an org that
+       * lacks it unless the caller explicitly opts in. */
+      metadataJson: JSON.stringify({
+        migration: { externalId: args.organization.externalId ?? null },
+      }),
+      createdAt: args.organization.createdAt,
+      updatedAt: args.organization.updatedAt,
+    });
+
+    for (const role of DEFAULT_SEED_ROLE_CATALOG) {
+      await ctx.db.insert("organization_roles", {
+        organizationId,
+        key: role.key,
+        name: role.name,
+        description: role.description,
+        permissions: role.permissions,
+        isSystem: role.isSystem,
+        createdAt: args.organization.createdAt,
+        updatedAt: args.organization.updatedAt,
+      });
+    }
+
+    return { organizationId, created: true };
+  },
+});
+
+function hasMigrationMarker(doc: { metadataJson?: string }): boolean {
+  if (!doc.metadataJson) return false;
+  try {
+    const parsed: unknown = JSON.parse(doc.metadataJson);
+    return (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "migration" in (parsed as Record<string, unknown>)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Migrate a single org membership. Idempotent on (user, organization) for
+ * known users and on (organization, invitedEmail) for users not yet
+ * migrated — those land as `invited` so the seat exists when they sign up.
+ * An invited row for the same email is promoted to active rather than
+ * duplicated when the user appears. Missing roles are created with
+ * `rolePermissions` (default: `["*"]` only for `owner`, the read-only member
+ * set for `member`, empty for everything else — an export must never mint
+ * privileged roles silently; `roleCreated` is reported for review).
+ *
+ * Memberships refuse to attach to organizations that were not created by
+ * `migrateOrganization` (no `migration` marker in metadataJson) unless the
+ * caller passes `allowExistingOrg` — otherwise a hostile or colliding export
+ * could pour members into a pre-existing tenant.
+ */
+export const migrateMembership = internalMutation({
+  args: {
+    organizationId: v.id("organizations"),
+    email: v.string(),
+    roleKey: v.optional(v.string()),
+    roleName: v.optional(v.string()),
+    rolePermissions: v.optional(v.array(v.string())),
+    allowExistingOrg: v.optional(v.boolean()),
+    /* "invited" forces the invited-email row even when the user already
+     * exists — e.g. a WorkOS membership that was never accepted. */
+    status: v.optional(v.union(v.literal("active"), v.literal("invited"))),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  },
+  returns: v.object({
+    memberId: v.optional(v.id("organization_members")),
+    roleId: v.optional(v.id("organization_roles")),
+    roleCreated: v.boolean(),
+    userFound: v.boolean(),
+    skipped: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const organization = await ctx.db.get("organizations", args.organizationId);
+    if (!organization) {
+      return { roleCreated: false, userFound: false, skipped: "organization not found" };
+    }
+    if (!hasMigrationMarker(organization) && args.allowExistingOrg !== true) {
+      return {
+        roleCreated: false,
+        userFound: false,
+        skipped: "organization lacks migration marker — pass allowExistingOrg to attach",
+      };
+    }
+
+    const email = normalizeEmail(args.email);
+    const roleKey = args.roleKey ?? "member";
+
+    let role = await ctx.db
+      .query("organization_roles")
+      .withIndex("by_organization_key", (q) =>
+        q.eq("organizationId", args.organizationId).eq("key", roleKey),
+      )
+      .unique();
+    let roleCreated = false;
+    if (role === null) {
+      const roleId = await ctx.db.insert("organization_roles", {
+        organizationId: args.organizationId,
+        key: roleKey,
+        name: args.roleName ?? roleKey,
+        permissions:
+          args.rolePermissions ??
+          (roleKey === "owner"
+            ? ["*"]
+            : roleKey === "member"
+              ? ["organization:read", "organization:members:read"]
+              : []),
+        isSystem: false,
+        createdAt: args.createdAt,
+        updatedAt: args.updatedAt,
+      });
+      role = (await ctx.db.get("organization_roles", roleId))!;
+      roleCreated = true;
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .unique();
+
+    if (user && args.status !== "invited") {
+      const existing = await ctx.db
+        .query("organization_members")
+        .withIndex("by_user_organization", (q) =>
+          q.eq("userId", user._id).eq("organizationId", args.organizationId),
+        )
+        .unique();
+      if (existing) {
+        return {
+          memberId: existing._id,
+          roleId: existing.roleId,
+          roleCreated,
+          userFound: true,
+        };
+      }
+      /* Promote an earlier invited row instead of inserting a sibling. */
+      const invited = await ctx.db
+        .query("organization_members")
+        .withIndex("by_organization_invited_email", (q) =>
+          q.eq("organizationId", args.organizationId).eq("invitedEmail", email),
+        )
+        .unique();
+      if (invited) {
+        await ctx.db.patch("organization_members", invited._id, {
+          userId: user._id,
+          roleId: role._id,
+          status: "active",
+          invitedEmail: undefined,
+          acceptedAt: args.createdAt,
+          updatedAt: args.updatedAt,
+        });
+        return { memberId: invited._id, roleId: role._id, roleCreated, userFound: true };
+      }
+      const memberId = await ctx.db.insert("organization_members", {
+        organizationId: args.organizationId,
+        userId: user._id,
+        roleId: role._id,
+        status: "active",
+        acceptedAt: args.createdAt,
+        createdAt: args.createdAt,
+        updatedAt: args.updatedAt,
+      });
+      return { memberId, roleId: role._id, roleCreated, userFound: true };
+    }
+
+    const existingInvite = await ctx.db
+      .query("organization_members")
+      .withIndex("by_organization_invited_email", (q) =>
+        q.eq("organizationId", args.organizationId).eq("invitedEmail", email),
+      )
+      .unique();
+    if (existingInvite) {
+      return {
+        memberId: existingInvite._id,
+        roleId: existingInvite.roleId,
+        roleCreated,
+        userFound: false,
+      };
+    }
+    const memberId = await ctx.db.insert("organization_members", {
+      organizationId: args.organizationId,
+      roleId: role._id,
+      status: "invited",
+      invitedEmail: email,
+      invitedAt: args.createdAt,
+      createdAt: args.createdAt,
+      updatedAt: args.updatedAt,
+    });
+    return { memberId, roleId: role._id, roleCreated, userFound: false };
+  },
+});
+
 const migrationHandlesValidator = v.object({
   migrateUser: v.string(),
   migrateAccount: v.string(),
   migrateSession: v.string(),
+  migrateOrganization: v.string(),
+  migrateMembership: v.string(),
 });
 
 /**
@@ -202,11 +434,20 @@ export const getMigrationFunctionHandles = internalQuery({
   args: {},
   returns: migrationHandlesValidator,
   handler: async () => {
-    const [migrateUser, migrateAccount, migrateSession] = await Promise.all([
-      createFunctionHandle(makeFunctionReference<"mutation">("migrate:migrateUser")),
-      createFunctionHandle(makeFunctionReference<"mutation">("migrate:migrateAccount")),
-      createFunctionHandle(makeFunctionReference<"mutation">("migrate:migrateSession")),
-    ]);
-    return { migrateUser, migrateAccount, migrateSession };
+    const [migrateUser, migrateAccount, migrateSession, migrateOrganization, migrateMembership] =
+      await Promise.all([
+        createFunctionHandle(makeFunctionReference<"mutation">("migrate:migrateUser")),
+        createFunctionHandle(makeFunctionReference<"mutation">("migrate:migrateAccount")),
+        createFunctionHandle(makeFunctionReference<"mutation">("migrate:migrateSession")),
+        createFunctionHandle(makeFunctionReference<"mutation">("migrate:migrateOrganization")),
+        createFunctionHandle(makeFunctionReference<"mutation">("migrate:migrateMembership")),
+      ]);
+    return {
+      migrateUser,
+      migrateAccount,
+      migrateSession,
+      migrateOrganization,
+      migrateMembership,
+    };
   },
 });

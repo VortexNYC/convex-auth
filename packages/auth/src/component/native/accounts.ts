@@ -37,13 +37,25 @@ export const updateCredentialHash = mutation({
   args: {
     accountId: v.id("authAccounts"),
     credentialHash: v.string(),
+    /* CAS guard for lazy migration rehash: no-op when the stored hash moved on
+     * (e.g. a resetPassword landed between read and write). */
+    expectedCredentialHash: v.optional(v.string()),
   },
+  returns: v.object({ updated: v.boolean() }),
   handler: async (ctx, args) => {
-    const now = Date.now();
+    const existing = await ctx.db.get("authAccounts", args.accountId);
+    if (!existing) return { updated: false };
+    if (
+      args.expectedCredentialHash !== undefined &&
+      existing.credentialHash !== args.expectedCredentialHash
+    ) {
+      return { updated: false };
+    }
     await ctx.db.patch("authAccounts", args.accountId, {
       credentialHash: args.credentialHash,
-      updatedAt: now,
+      updatedAt: Date.now(),
     });
+    return { updated: true };
   },
 });
 
