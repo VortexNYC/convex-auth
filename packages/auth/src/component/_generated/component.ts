@@ -1591,7 +1591,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
       verifyPhone: FunctionReference<
         "mutation",
         "internal",
-        { tokenHash: string },
+        { phone: string; tokenHash: string },
         {
           reason?: string;
           success: boolean;

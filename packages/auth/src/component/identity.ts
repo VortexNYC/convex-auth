@@ -260,11 +260,12 @@ export const provisionFromIdentity = mutation({
           ? user.emailVerified || args.user.emailVerified
           : args.user.emailVerified,
       phoneNumber: normalizedPhone ?? user?.phoneNumber,
-      // Same monotonic-while-unchanged rule as emailVerified.
+      // Same monotonic-while-unchanged rule as emailVerified — a changed
+      // number takes the caller's claim only, never inherits the old flag.
       phoneNumberVerified:
         user && normalizedPhone === normalizePhone(user.phoneNumber)
           ? (user.phoneNumberVerified ?? false) || (args.user.phoneNumberVerified ?? false)
-          : (args.user.phoneNumberVerified ?? user?.phoneNumberVerified ?? false),
+          : (args.user.phoneNumberVerified ?? false),
       isActive: true,
       updatedAt: now,
     };
@@ -293,36 +294,11 @@ export const provisionFromIdentity = mutation({
       updatedAt: now,
     };
 
-    if (existingIdentity) {
-      await ctx.db.patch("auth_identities", existingIdentity._id, identityPatch);
-      const userRecord = await ctx.db.get("users", userId);
-      return {
-        userId,
-        identityId: existingIdentity._id,
-        createdUser: false,
-        linkedExistingIdentity: true,
-        user: userRecord ? toUserReturn(userRecord) : undefined,
-      };
-    }
-
-    const identityId = await ctx.db.insert("auth_identities", {
-      ...identityPatch,
-      createdAt: now,
-    });
-
-    if (args.account) {
-      await ctx.db.insert("authAccounts", {
-        userId,
-        provider: args.identity.provider,
-        issuer: args.identity.issuer,
-        subject: args.identity.subject,
-        credentialHash: args.account.credentialHash,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    if (args.initialSession) {
+    /* `initialSession` must be honored on the existing-identity path too —
+     * otherwise a repeat OTP sign-in returns a token that was never minted
+     * and a refresh token that was never persisted. */
+    const mintInitialSession = async (identityId: Doc<"auth_identities">["_id"]) => {
+      if (!args.initialSession) return;
       const sessionExpiresInSeconds = Math.max(
         0,
         Math.floor((args.initialSession.sessionExpiresAt - now) / 1000),
@@ -356,7 +332,41 @@ export const provisionFromIdentity = mutation({
         createdAt: now,
         updatedAt: now,
       });
+    };
+
+    if (existingIdentity) {
+      await ctx.db.patch("auth_identities", existingIdentity._id, identityPatch);
+      await mintInitialSession(existingIdentity._id);
+      const userRecord = await ctx.db.get("users", userId);
+      return {
+        userId,
+        identityId: existingIdentity._id,
+        createdUser: false,
+        linkedExistingIdentity: true,
+        token,
+        sessionId: args.initialSession?.sessionId,
+        user: userRecord ? toUserReturn(userRecord) : undefined,
+      };
     }
+
+    const identityId = await ctx.db.insert("auth_identities", {
+      ...identityPatch,
+      createdAt: now,
+    });
+
+    if (args.account) {
+      await ctx.db.insert("authAccounts", {
+        userId,
+        provider: args.identity.provider,
+        issuer: args.identity.issuer,
+        subject: args.identity.subject,
+        credentialHash: args.account.credentialHash,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    await mintInitialSession(identityId);
 
     if (args.verificationCode) {
       const existingCodes = await getAllRows(ctx, {
@@ -513,6 +523,7 @@ export const verifyEmail = mutation({
 export const verifyPhone = mutation({
   args: {
     tokenHash: v.string(),
+    phone: v.string(),
   },
   returns: emailVerificationResultValidator,
   handler: async (ctx, args) => {
@@ -531,33 +542,42 @@ export const verifyPhone = mutation({
       return { success: false, reason: "expired" };
     }
 
+    const userRecord = await ctx.db.get("users", code.userId);
+    /* The token hash binds otp+phone at send time, but the user's stored
+     * number could have been rewritten since — re-check it here so the code
+     * can never verify a phone other than the one it was issued for. */
+    const phone = normalizePhone(args.phone);
+    if (!userRecord || !phone || normalizePhone(userRecord.phoneNumber) !== phone) {
+      return { success: false, reason: "phone_mismatch" };
+    }
+
+    /* If another user already holds the phoneOtp identity for this number the
+     * claim is contested — fail closed rather than mark this user verified. */
+    const identityId = `phone-otp:native:${phone}`;
+    const existingIdentity = await findIdentityByIdentityId(ctx, identityId);
+    if (existingIdentity && existingIdentity.userId !== code.userId) {
+      return { success: false, reason: "conflict" };
+    }
+
     await ctx.db.patch("users", code.userId, { phoneNumberVerified: true, updatedAt: now });
     await ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now, updatedAt: now });
 
-    const userRecord = await ctx.db.get("users", code.userId);
     /* Session-bound verification proves the user owns this SIM, so attach the
      * phoneOtp identity — without it, OTP sign-in on this number would keep
-     * failing closed on the phoneNumber collision check. Only create when no
-     * identity with this id exists; an identity already bound to another user
-     * is left alone. */
-    const phone = normalizePhone(userRecord?.phoneNumber);
-    if (userRecord && phone) {
-      const identityId = `phone-otp:native:${phone}`;
-      const existing = await findIdentityByIdentityId(ctx, identityId);
-      if (!existing) {
-        await ctx.db.insert("auth_identities", {
-          identityId,
-          userId: code.userId,
-          provider: "phoneOtp",
-          issuer: "native",
-          subject: phone,
-          tokenIdentifier: phone,
-          emailVerified: userRecord.emailVerified,
-          sessionId: null,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
+     * failing closed on the phoneNumber collision check. */
+    if (!existingIdentity) {
+      await ctx.db.insert("auth_identities", {
+        identityId,
+        userId: code.userId,
+        provider: "phoneOtp",
+        issuer: "native",
+        subject: phone,
+        tokenIdentifier: phone,
+        emailVerified: userRecord.emailVerified,
+        sessionId: null,
+        createdAt: now,
+        updatedAt: now,
+      });
     }
 
     return { success: true, user: userRecord ? toUserReturn(userRecord) : undefined };

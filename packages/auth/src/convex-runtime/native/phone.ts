@@ -298,6 +298,7 @@ export function nativePhone(
       if (type === "phone-verification") {
         const result = await ctx.runMutation(component.identity.verifyPhone, {
           tokenHash: otpHash,
+          phone,
         });
         return { success: result.success, reason: result.reason };
       }

@@ -660,7 +660,10 @@ describe("phone number provisioning", () => {
       }),
     );
 
-    const result = await t.mutation(api.identity.verifyPhone, { tokenHash });
+    const result = await t.mutation(api.identity.verifyPhone, {
+      tokenHash,
+      phone: "+1 555-123-4567",
+    });
     expect(result.success).toBe(true);
 
     const user = await t.run((ctx) => ctx.db.get("users", userId));
@@ -677,8 +680,171 @@ describe("phone number provisioning", () => {
     expect(identity?.userId).toBe(userId);
     expect(identity?.provider).toBe("phoneOtp");
 
-    const again = await t.mutation(api.identity.verifyPhone, { tokenHash });
+    const again = await t.mutation(api.identity.verifyPhone, {
+      tokenHash,
+      phone: "+15551234567",
+    });
     expect(again).toMatchObject({ success: false, reason: "expired" });
+  });
+
+  it("verifyPhone rejects when the stored number changed after send (TOCTOU)", async () => {
+    const t = convexTest(schema, modules);
+
+    const userId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        phoneNumber: "+15559999999",
+        phoneNumberVerified: false,
+        emailVerified: false,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    const tokenHash = "phone_token_hash_2";
+    await t.run(async (ctx) =>
+      ctx.db.insert("authVerificationCodes", {
+        userId,
+        type: "phone_verification",
+        tokenHash,
+        expiresAt: Date.now() + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    const result = await t.mutation(api.identity.verifyPhone, {
+      tokenHash,
+      phone: "+15551234567",
+    });
+    expect(result).toMatchObject({ success: false, reason: "phone_mismatch" });
+
+    const user = await t.run((ctx) => ctx.db.get("users", userId));
+    expect(user?.phoneNumberVerified).toBe(false);
+    const code = await t.run((ctx) =>
+      ctx.db
+        .query("authVerificationCodes")
+        .withIndex("by_user_type", (q) => q.eq("userId", userId).eq("type", "phone_verification"))
+        .unique(),
+    );
+    expect(code?.consumedAt).toBeUndefined();
+  });
+
+  it("verifyPhone fails closed when the phoneOtp identity belongs to another user", async () => {
+    const t = convexTest(schema, modules);
+
+    const otherUserId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "other@example.com",
+        emailVerified: true,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_identities", {
+        identityId: "phone-otp:native:+15551234567",
+        userId: otherUserId,
+        provider: "phoneOtp",
+        issuer: "native",
+        subject: "+15551234567",
+        tokenIdentifier: "+15551234567",
+        emailVerified: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    const userId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        phoneNumber: "+15551234567",
+        phoneNumberVerified: false,
+        emailVerified: false,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+    const tokenHash = "phone_token_hash_3";
+    await t.run(async (ctx) =>
+      ctx.db.insert("authVerificationCodes", {
+        userId,
+        type: "phone_verification",
+        tokenHash,
+        expiresAt: Date.now() + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    const result = await t.mutation(api.identity.verifyPhone, {
+      tokenHash,
+      phone: "+15551234567",
+    });
+    expect(result).toMatchObject({ success: false, reason: "conflict" });
+    const user = await t.run((ctx) => ctx.db.get("users", userId));
+    expect(user?.phoneNumberVerified).toBe(false);
+  });
+
+  it("repeat phone OTP sign-in mints a session on the existing-identity path", async () => {
+    const t = convexTest(schema, modules);
+
+    const first = await t.mutation(api.identity.provisionFromIdentity, {
+      identity: {
+        identityId: "phone-otp:native:+15551234567",
+        provider: "phoneOtp",
+        issuer: "native",
+        subject: "+15551234567",
+        tokenIdentifier: "+15551234567",
+        emailVerified: false,
+      },
+      user: { phoneNumber: "+15551234567", phoneNumberVerified: true, emailVerified: false },
+      initialSession: {
+        sessionId: "sess-1",
+        sessionExpiresAt: Date.now() + 60_000,
+        refreshTokenHash: "rh-1",
+        refreshTokenExpiresAt: Date.now() + 600_000,
+      },
+    });
+    expect(first.token).toBeDefined();
+
+    const second = await t.mutation(api.identity.provisionFromIdentity, {
+      identity: {
+        identityId: "phone-otp:native:+15551234567",
+        provider: "phoneOtp",
+        issuer: "native",
+        subject: "+15551234567",
+        tokenIdentifier: "+15551234567",
+        emailVerified: false,
+      },
+      user: { phoneNumber: "+15551234567", phoneNumberVerified: true, emailVerified: false },
+      initialSession: {
+        sessionId: "sess-2",
+        sessionExpiresAt: Date.now() + 60_000,
+        refreshTokenHash: "rh-2",
+        refreshTokenExpiresAt: Date.now() + 600_000,
+      },
+    });
+
+    expect(second.linkedExistingIdentity).toBe(true);
+    expect(second.token).toBeDefined();
+    expect(second.sessionId).toBe("sess-2");
+
+    const session = await t.run((ctx) =>
+      ctx.db
+        .query("authSessions")
+        .withIndex("by_session_id", (q) => q.eq("sessionId", "sess-2"))
+        .unique(),
+    );
+    expect(session?.userId).toBe(first.userId);
+    const refresh = await t.run((ctx) =>
+      ctx.db
+        .query("authRefreshTokens")
+        .withIndex("by_token_hash", (q) => q.eq("tokenHash", "rh-2"))
+        .unique(),
+    );
+    expect(refresh?.sessionId).toBe("sess-2");
   });
 
   it("getUserByPhoneNumber normalizes before lookup", async () => {

@@ -339,7 +339,7 @@ export type NativeEmailAndPasswordComponentHandle = {
     verifyPhone: FunctionReference<
       "mutation",
       "public" | "internal",
-      { tokenHash: string },
+      { tokenHash: string; phone: string },
       { success: boolean; user?: NativeUserDoc; reason?: string },
       string
     >;
