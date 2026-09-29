@@ -188,8 +188,10 @@ export const resetProofState = mutation({
   },
 });
 
-/* Sink stays bounded while the receiver is public: at capacity the oldest
- * rows are evicted FIFO so a proof run always keeps its newest deliveries. */
+/* Sink stays bounded while the receiver is public: before every insert the
+ * oldest rows are evicted until fewer than SINK_ROW_CAP remain, so the table
+ * can never exceed the cap — even if it already holds a backlog from before
+ * the cap existed. FIFO eviction keeps a run's newest deliveries. */
 const SINK_ROW_CAP = 500;
 
 export const insertSinkRow = internalMutation({
@@ -202,12 +204,10 @@ export const insertSinkRow = internalMutation({
   },
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query("webhookSink")
-      .order("asc")
-      .take(SINK_ROW_CAP + 1);
-    if (existing.length > SINK_ROW_CAP) {
-      for (const row of existing.slice(0, existing.length - SINK_ROW_CAP)) {
+    for (;;) {
+      const oldest = await ctx.db.query("webhookSink").order("asc").take(SINK_ROW_CAP);
+      if (oldest.length < SINK_ROW_CAP) break;
+      for (const row of oldest) {
         await ctx.db.delete("webhookSink", row._id);
       }
     }
