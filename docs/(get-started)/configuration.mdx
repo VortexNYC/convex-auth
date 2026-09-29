@@ -154,15 +154,15 @@ Set the corresponding `*_CLIENT_ID` and `*_CLIENT_SECRET` environment variables.
 
 ## `phone`
 
-| Option              | Type                        | Default | Description                                                 |
-| ------------------- | --------------------------- | ------- | ----------------------------------------------------------- |
-| `enabled`           | `boolean`                   | `true`  | Enable phone OTP.                                           |
-| `disableSignUp`     | `boolean`                   | `false` | Prevent OTP sign-in from creating new accounts.             |
-| `expiresInMs`       | `number`                    | 5 min   | OTP lifetime.                                               |
-| `sessionTtlMs`      | `number`                    | 7 days  | Session lifetime after verification.                        |
-| `refreshTokenTtlMs` | `number`                    | 30 days | Refresh-token lifetime.                                     |
-| `rateLimit`         | `{ windowMs, maxAttempts }` | —       | Per-phone rate limiting on sends and verifies. Recommended. |
-| `sendPhoneOtp`      | `(data) => Promise<string>` | Yes     | Send the OTP SMS — e.g. `createTwilioSmsOtpSender`.         |
+| Option              | Type                                   | Default | Description                                                      |
+| ------------------- | -------------------------------------- | ------- | ---------------------------------------------------------------- |
+| `enabled`           | `boolean`                              | `true`  | Enable phone OTP.                                                |
+| `disableSignUp`     | `boolean`                              | `false` | Prevent OTP sign-in from creating new accounts.                  |
+| `expiresInMs`       | `number`                               | 5 min   | OTP lifetime.                                                    |
+| `sessionTtlMs`      | `number`                               | 7 days  | Session lifetime after verification.                             |
+| `refreshTokenTtlMs` | `number`                               | 30 days | Refresh-token lifetime.                                          |
+| `rateLimit`         | `{ windowMs, maxAttempts }` \| `false` | 5/60s   | Per-phone rate limiting on sends and verifies. `false` disables. |
+| `sendPhoneOtp`      | `(data) => Promise<string>`            | Yes     | Send the OTP SMS — e.g. `createTwilioSmsOtpSender`.              |
 
 ## `captcha`
 

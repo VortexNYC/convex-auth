@@ -22,12 +22,11 @@ export const auth = convexAuth({
       authToken: process.env.TWILIO_AUTH_TOKEN!,
       from: process.env.TWILIO_FROM_NUMBER!,
     }),
-    // Strongly recommended — SMS sends cost money and a 6-digit code is
-    // brute-forceable without an attempt bound.
-    rateLimit: { windowMs: 60_000, maxAttempts: 5 },
   },
 });
 ```
+
+Rate limiting is **on by default** — 5 attempts per phone number per 60 seconds on both sends and verifies. SMS sends cost money and a 6-digit code is brute-forceable without an attempt bound. Pass `rateLimit: false` to disable, or `{ windowMs, maxAttempts }` to tune.
 
 `sendPhoneOtp` receives `{ phone, otp, type }` and returns a message id. `type` is `sign-in` or `phone-verification`. Any `async ({ phone, otp, type }) => string` function works — `createTwilioSmsOtpSender` is the first-party Twilio helper, or bring your own SMS provider.
 
@@ -100,12 +99,12 @@ After migrating, have each user run the `type: "phone-verification"` flow once a
 
 ## Options
 
-| Option              | Type                        | Default  | Description                                                 |
-| ------------------- | --------------------------- | -------- | ----------------------------------------------------------- |
-| `enabled`           | `boolean`                   | `true`   | Enable phone OTP.                                           |
-| `sendPhoneOtp`      | `(data) => Promise<string>` | Required | Send the OTP SMS — e.g. `createTwilioSmsOtpSender`.         |
-| `expiresInMs`       | `number`                    | 5 min    | OTP lifetime.                                               |
-| `disableSignUp`     | `boolean`                   | `false`  | Prevent OTP sign-in from creating new accounts.             |
-| `sessionTtlMs`      | `number`                    | 7 days   | Session lifetime after sign-in.                             |
-| `refreshTokenTtlMs` | `number`                    | 30 days  | Refresh-token lifetime.                                     |
-| `rateLimit`         | `{ windowMs, maxAttempts }` | —        | Per-phone rate limiting on sends and verifies. Recommended. |
+| Option              | Type                                   | Default  | Description                                                      |
+| ------------------- | -------------------------------------- | -------- | ---------------------------------------------------------------- |
+| `enabled`           | `boolean`                              | `true`   | Enable phone OTP.                                                |
+| `sendPhoneOtp`      | `(data) => Promise<string>`            | Required | Send the OTP SMS — e.g. `createTwilioSmsOtpSender`.              |
+| `expiresInMs`       | `number`                               | 5 min    | OTP lifetime.                                                    |
+| `disableSignUp`     | `boolean`                              | `false`  | Prevent OTP sign-in from creating new accounts.                  |
+| `sessionTtlMs`      | `number`                               | 7 days   | Session lifetime after sign-in.                                  |
+| `refreshTokenTtlMs` | `number`                               | 30 days  | Refresh-token lifetime.                                          |
+| `rateLimit`         | `{ windowMs, maxAttempts }` \| `false` | 5/60s    | Per-phone rate limiting on sends and verifies. `false` disables. |

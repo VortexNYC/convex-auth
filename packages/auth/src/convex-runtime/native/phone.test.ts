@@ -188,11 +188,11 @@ describe("nativePhone", () => {
     );
   });
 
-  it("sendPhoneOtp rate-limits sends when configured", async () => {
+  it("sendPhoneOtp rate-limits sends by default", async () => {
     const component = createMockComponent();
     const { sendPhoneOtp } = nativePhone(
       component as unknown as NativeEmailAndPasswordComponentHandle,
-      { ...createConfig(), rateLimit: { windowMs: 60_000, maxAttempts: 1 } },
+      createConfig(),
     );
     component.native.rateLimits.recordAttempt.mockResolvedValue({ allowed: false });
 
@@ -202,6 +202,17 @@ describe("nativePhone", () => {
     expect(component.native.rateLimits.recordAttempt).toHaveBeenCalledWith(
       expect.objectContaining({ identifier: `send-phone-otp:${PHONE}` }),
     );
+  });
+
+  it("rateLimit: false disables attempt recording", async () => {
+    const component = createMockComponent();
+    const { sendPhoneOtp } = nativePhone(
+      component as unknown as NativeEmailAndPasswordComponentHandle,
+      { ...createConfig(), rateLimit: false },
+    );
+
+    await exec(sendPhoneOtp).handler(createContext(), { phone: PHONE });
+    expect(component.native.rateLimits.recordAttempt).not.toHaveBeenCalled();
   });
 
   it("verifyPhoneOtp provisions a phoneOtp identity and returns a session", async () => {
@@ -414,11 +425,11 @@ describe("nativePhone", () => {
     );
   });
 
-  it("verifyPhoneOtp rate-limits attempts when configured", async () => {
+  it("verifyPhoneOtp rate-limits attempts by default", async () => {
     const component = createMockComponent();
     const { verifyPhoneOtp } = nativePhone(
       component as unknown as NativeEmailAndPasswordComponentHandle,
-      { ...createConfig(), rateLimit: { windowMs: 60_000, maxAttempts: 5 } },
+      createConfig(),
     );
     component.native.rateLimits.recordAttempt.mockResolvedValue({ allowed: false });
 

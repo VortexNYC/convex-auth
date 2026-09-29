@@ -51,13 +51,16 @@ export type NativePhoneConfig = {
   refreshTokenTtlMs?: number;
   /**
    * Rate limiting applied per normalized phone number on both OTP sends and
-   * verify attempts. Strongly recommended — SMS sends cost money and a
-   * 6-digit code is brute-forceable without an attempt bound.
+   * verify attempts. Enabled by default (5 attempts per 60s window) — SMS
+   * sends cost money and a 6-digit code is brute-forceable without an
+   * attempt bound. Pass `false` to disable.
    */
-  rateLimit?: {
-    windowMs?: number;
-    maxAttempts?: number;
-  };
+  rateLimit?:
+    | {
+        windowMs?: number;
+        maxAttempts?: number;
+      }
+    | false;
 };
 
 export type NativePhoneActions = ReturnType<typeof nativePhone>;
@@ -97,9 +100,10 @@ export function nativePhone(
   const disableSignUp = config.disableSignUp ?? false;
   const sessionTtlMs = config.sessionTtlMs ?? DEFAULT_SESSION_TTL_MS;
   const refreshTokenTtlMs = config.refreshTokenTtlMs ?? DEFAULT_REFRESH_TOKEN_TTL_MS;
-  const rateLimitWindowMs = config.rateLimit?.windowMs ?? DEFAULT_RATE_LIMIT_WINDOW_MS;
-  const rateLimitMaxAttempts = config.rateLimit?.maxAttempts ?? DEFAULT_RATE_LIMIT_MAX_ATTEMPTS;
-  const rateLimitEnabled = config.rateLimit !== undefined;
+  const rateLimitConfig = config.rateLimit === false ? undefined : config.rateLimit;
+  const rateLimitWindowMs = rateLimitConfig?.windowMs ?? DEFAULT_RATE_LIMIT_WINDOW_MS;
+  const rateLimitMaxAttempts = rateLimitConfig?.maxAttempts ?? DEFAULT_RATE_LIMIT_MAX_ATTEMPTS;
+  const rateLimitEnabled = config.rateLimit !== false;
 
   async function recordRateLimitAttempt(ctx: GenericActionCtx<DataModel>, identifier: string) {
     const windowStart = Math.floor(Date.now() / rateLimitWindowMs) * rateLimitWindowMs;

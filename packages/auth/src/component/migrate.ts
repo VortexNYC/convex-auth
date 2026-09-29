@@ -2,7 +2,11 @@ import { v } from "convex/values";
 import { createFunctionHandle, makeFunctionReference } from "convex/server";
 import { internalMutation, internalQuery } from "./_generated/server.js";
 import { DEFAULT_SEED_ROLE_CATALOG } from "./organizations.js";
-import { normalizePhone, normalizeUsername } from "../convex-runtime/native/validation.js";
+import {
+  isValidPhone,
+  normalizePhone,
+  normalizeUsername,
+} from "../convex-runtime/native/validation.js";
 
 const legacyUserValidator = v.object({
   _id: v.optional(v.string()),
@@ -80,6 +84,22 @@ export const migrateUser = internalMutation({
       return { userId: existing._id };
     }
 
+    /* Only store a phone that normalizes to a valid E.164 and is not already
+     * owned — an invalid or conflicting number must not poison by_phoneNumber,
+     * and phoneNumberVerified is meaningless without the number. */
+    const normalizedPhone = normalizePhone(args.legacyUser.phoneNumber ?? undefined);
+    const phoneOwnedElsewhere =
+      normalizedPhone === undefined
+        ? null
+        : await ctx.db
+            .query("users")
+            .withIndex("by_phoneNumber", (q) => q.eq("phoneNumber", normalizedPhone))
+            .first();
+    const phoneNumber =
+      normalizedPhone !== undefined && isValidPhone(normalizedPhone) && phoneOwnedElsewhere === null
+        ? normalizedPhone
+        : undefined;
+
     const userId = await ctx.db.insert("users", {
       email,
       name: args.legacyUser.name,
@@ -87,8 +107,9 @@ export const migrateUser = internalMutation({
       emailVerified: args.legacyUser.emailVerified,
       username: normalizeUsername(args.legacyUser.username ?? undefined),
       displayUsername: args.legacyUser.displayUsername ?? undefined,
-      phoneNumber: normalizePhone(args.legacyUser.phoneNumber ?? undefined),
-      phoneNumberVerified: args.legacyUser.phoneNumberVerified ?? undefined,
+      phoneNumber,
+      phoneNumberVerified:
+        phoneNumber === undefined ? undefined : (args.legacyUser.phoneNumberVerified ?? undefined),
       isActive: true,
       createdAt: args.legacyUser.createdAt,
       updatedAt: args.legacyUser.updatedAt,
