@@ -64,6 +64,7 @@ describe("passkeys", () => {
       displayName: "Shlomo",
       rpName: RP_NAME,
       rpID: RP_ID,
+      origin: ORIGIN,
     })) as { challenge: string };
 
     expect(options.challenge).toBeDefined();
@@ -89,6 +90,7 @@ describe("passkeys", () => {
       identifier: "attacker-supplied@example.com",
       rpName: RP_NAME,
       rpID: RP_ID,
+      origin: ORIGIN,
     })) as { challenge: string };
 
     const challenge = await t.run(async (ctx) =>
@@ -121,6 +123,7 @@ describe("passkeys", () => {
     const options = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
       userId,
       rpID: RP_ID,
+      origin: ORIGIN,
     })) as { challenge: string; allowCredentials: Array<{ id: string }> };
 
     expect(options.challenge).toBeDefined();
@@ -145,6 +148,7 @@ describe("passkeys", () => {
       identifier: "shlomo@example.com",
       rpName: RP_NAME,
       rpID: RP_ID,
+      origin: ORIGIN,
     })) as { challenge: string };
 
     await expect(
@@ -174,6 +178,7 @@ describe("passkeys", () => {
     const options = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
       userId,
       rpID: RP_ID,
+      origin: ORIGIN,
     })) as { challenge: string };
 
     await expect(
@@ -233,6 +238,7 @@ describe("passkeys", () => {
     const options = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
       userId,
       rpID: RP_ID,
+      origin: ORIGIN,
     })) as { challenge: string };
 
     mockVerifyAuthenticationResponse.mockResolvedValue({
@@ -427,6 +433,7 @@ describe("passkeys", () => {
         identifier: "shlomo@example.com",
         rpName: RP_NAME,
         rpID: RP_ID,
+        origin: ORIGIN,
         maxPasskeys: 1,
       }),
     ).rejects.toThrow("Maximum number of passkeys");
@@ -445,6 +452,7 @@ describe("passkeys", () => {
       identifier: "shlomo@example.com",
       rpName: RP_NAME,
       rpID: RP_ID,
+      origin: ORIGIN,
       maxPasskeys: 1,
     });
     expect(options).toBeDefined();
@@ -478,6 +486,7 @@ describe("passkeys", () => {
     const options = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
       userId,
       rpID: RP_ID,
+      origin: ORIGIN,
     })) as { challenge: string };
 
     await expect(
@@ -526,6 +535,7 @@ describe("passkeys", () => {
     const options = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
       userId,
       rpID: RP_ID,
+      origin: ORIGIN,
     })) as { challenge: string };
 
     await expect(
@@ -565,6 +575,7 @@ describe("passkeys", () => {
       identifier: "shlomo@example.com",
       rpName: RP_NAME,
       rpID: RP_ID,
+      origin: ORIGIN,
     })) as { challenge: string };
 
     const err = await t
@@ -604,12 +615,14 @@ describe("passkeys", () => {
     const unscoped = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
       userId,
       rpID: RP_ID,
+      origin: ORIGIN,
     })) as { allowCredentials: Array<{ id: string }> };
     expect(unscoped.allowCredentials).toHaveLength(0);
 
     const authorized = (await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
       userId,
       rpID: RP_ID,
+      origin: ORIGIN,
       enumerateCredentials: true,
     })) as { allowCredentials: Array<{ id: string }> };
     expect(authorized.allowCredentials).toHaveLength(1);
@@ -847,6 +860,7 @@ describe("passkeys", () => {
         identifier: "shlomo@example.com",
         rpName: RP_NAME,
         rpID: RP_ID,
+        origin: ORIGIN,
         maxPasskeys: 1,
       }),
     ).rejects.toThrow("Maximum number of passkeys");
@@ -870,6 +884,7 @@ describe("passkeys", () => {
     await t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
       userId,
       rpID: RP_ID,
+      origin: ORIGIN,
     });
 
     const stale = await t.run(async (ctx) =>
@@ -910,6 +925,7 @@ describe("passkeys", () => {
       identifier: "shlomo@example.com",
       rpName: RP_NAME,
       rpID: RP_ID,
+      origin: ORIGIN,
       maxPasskeys: 1,
     })) as { challenge: string };
 

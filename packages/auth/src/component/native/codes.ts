@@ -6,6 +6,21 @@ import schema, { verificationCodeTypeValidator } from "../schema.js";
 
 const MAX_VERIFICATION_CODES_PER_USER = 1000;
 
+const verificationCodeDocValidator = v.object({
+  _id: v.id("authVerificationCodes"),
+  _creationTime: v.number(),
+  userId: v.id("users"),
+  type: verificationCodeTypeValidator,
+  tokenHash: v.string(),
+  identityId: v.optional(v.string()),
+  credentialId: v.optional(v.string()),
+  rememberMe: v.optional(v.boolean()),
+  expiresAt: v.number(),
+  consumedAt: v.optional(v.number()),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
 async function getVerificationCodeByTokenHashAndType(
   ctx: { db: QueryCtx["db"] },
   tokenHash: string,
@@ -47,6 +62,7 @@ export const createVerificationCode = mutation({
     rememberMe: v.optional(v.boolean()),
     expiresAt: v.number(),
   },
+  returns: v.id("authVerificationCodes"),
   handler: async (ctx, args) => {
     const now = Date.now();
 
@@ -72,6 +88,7 @@ export const getVerificationCodeByTokenHash = query({
     tokenHash: v.string(),
     type: verificationCodeTypeValidator,
   },
+  returns: v.union(verificationCodeDocValidator, v.null()),
   handler: async (ctx, args) => {
     return await getVerificationCodeByTokenHashAndType(ctx, args.tokenHash, args.type);
   },
@@ -82,6 +99,7 @@ export const consumeVerificationCode = mutation({
     tokenHash: v.string(),
     type: verificationCodeTypeValidator,
   },
+  returns: v.union(verificationCodeDocValidator, v.null()),
   handler: async (ctx, args) => {
     const now = Date.now();
 
@@ -105,6 +123,7 @@ export const revokeVerificationCodesForUser = mutation({
     userId: v.id("users"),
     type: verificationCodeTypeValidator,
   },
+  returns: v.number(),
   handler: async (ctx, args) => {
     const now = Date.now();
 

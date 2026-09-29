@@ -4,6 +4,25 @@ import { mutation, query } from "../_generated/server.js";
 import schema from "../schema.js";
 import type { Doc } from "../_generated/dataModel.js";
 
+const authAccountDocValidator = v.object({
+  _id: v.id("authAccounts"),
+  _creationTime: v.number(),
+  userId: v.id("users"),
+  provider: v.string(),
+  issuer: v.string(),
+  subject: v.string(),
+  credentialHash: v.string(),
+  accessToken: v.optional(v.string()),
+  refreshToken: v.optional(v.string()),
+  idToken: v.optional(v.string()),
+  tokenType: v.optional(v.string()),
+  scopes: v.optional(v.array(v.string())),
+  accessTokenExpiresAt: v.optional(v.number()),
+  refreshTokenExpiresAt: v.optional(v.number()),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
 export const updateAccountTokens = mutation({
   args: {
     accountId: v.id("authAccounts"),
@@ -15,6 +34,7 @@ export const updateAccountTokens = mutation({
     accessTokenExpiresAt: v.optional(v.number()),
     refreshTokenExpiresAt: v.optional(v.number()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const now = Date.now();
     const update: Partial<Doc<"authAccounts">> = {
@@ -74,6 +94,7 @@ export const createAccount = mutation({
     accessTokenExpiresAt: v.optional(v.number()),
     refreshTokenExpiresAt: v.optional(v.number()),
   },
+  returns: v.id("authAccounts"),
   handler: async (ctx, args) => {
     const now = Date.now();
     return await ctx.db.insert("authAccounts", {
@@ -90,6 +111,7 @@ export const getAccountBySubject = query({
     issuer: v.string(),
     subject: v.string(),
   },
+  returns: v.union(authAccountDocValidator, v.null()),
   handler: async (ctx, args) => {
     const { page } = await getPage(ctx, {
       table: "authAccounts",
