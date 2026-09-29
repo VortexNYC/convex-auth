@@ -133,10 +133,12 @@ export const {
   verifyPhoneOtp,
   signInOneTap,
   signInAnonymous,
+  linkAnonymousAccount,
   getPasskeyRegistrationOptions,
   verifyPasskeyRegistration,
   getPasskeyAuthenticationOptions,
   verifyPasskeyAuthentication,
   listPasskeys,
   revokePasskey,
+  renamePasskey,
 } = auth;
