@@ -3493,6 +3493,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         { created: boolean; endpointId: string },
         Name
       >;
+      deleteGlobalWebhookEndpoint: FunctionReference<
+        "mutation",
+        "internal",
+        { endpointId: string },
+        { ok: true },
+        Name
+      >;
       deleteWebhookEndpoint: FunctionReference<
         "mutation",
         "internal",
@@ -3582,6 +3589,25 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           updatedAt: number;
           url: string;
         },
+        Name
+      >;
+      listGlobalWebhookEndpoints: FunctionReference<
+        "query",
+        "internal",
+        { limit?: number; status?: "active" | "disabled" | "archived" },
+        Array<{
+          _creationTime: number;
+          _id: string;
+          createdAt: number;
+          createdBy?: string;
+          description?: string;
+          eventTypes: Array<string>;
+          metadataJson?: string;
+          organizationId?: string;
+          status: "active" | "disabled" | "archived";
+          updatedAt: number;
+          url: string;
+        }>,
         Name
       >;
       listPendingWebhookDeliveries: FunctionReference<
@@ -3680,6 +3706,17 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           endpointId: string;
           organizationId: string;
           secret: string;
+          updatedAt?: number;
+        },
+        { ok: true },
+        Name
+      >;
+      setGlobalWebhookEndpointStatus: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          endpointId: string;
+          status: "active" | "disabled" | "archived";
           updatedAt?: number;
         },
         { ok: true },

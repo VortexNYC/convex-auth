@@ -2,7 +2,7 @@ import { internalAction, internalMutation, mutation, query } from "./_generated/
 import { components, internal } from "./_generated/api";
 import { v } from "convex/values";
 import { processConvexWebhookDelivery } from "@vortex-api/convex-auth/convex";
-import { requireCaller } from "./authz";
+import { requireCaller, requireProofCaller } from "./authz";
 
 function generateWebhookSecret(): string {
   const bytes = new Uint8Array(32);
@@ -19,7 +19,7 @@ export const createEndpoint = mutation({
   },
   returns: v.object({ endpointId: v.string(), secret: v.string() }),
   handler: async (ctx, args) => {
-    const callerId = await requireCaller(ctx);
+    const callerId = await requireProofCaller(ctx);
     const secret = args.secret ?? generateWebhookSecret();
     const result = await ctx.runMutation(components.convexAuth.webhooks.createWebhookEndpoint, {
       url: args.url,
@@ -34,15 +34,13 @@ export const createEndpoint = mutation({
 export const setEndpointStatus = mutation({
   args: {
     endpointId: v.string(),
-    organizationId: v.string(),
     status: v.union(v.literal("active"), v.literal("disabled"), v.literal("archived")),
   },
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, args) => {
-    await requireCaller(ctx);
-    await ctx.runMutation(components.convexAuth.webhooks.setWebhookEndpointStatus, {
+    await requireProofCaller(ctx);
+    await ctx.runMutation(components.convexAuth.webhooks.setGlobalWebhookEndpointStatus, {
       endpointId: args.endpointId,
-      organizationId: args.organizationId,
       status: args.status,
     });
     return { ok: true as const };
@@ -61,7 +59,7 @@ export const enqueueEvent = mutation({
     deliveryIds: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
-    await requireCaller(ctx);
+    await requireProofCaller(ctx);
     const eventId = `evt_${crypto.randomUUID()}`;
     const result = await ctx.runMutation(components.convexAuth.webhooks.enqueueWebhookEvent, {
       eventType: args.eventType,
@@ -81,7 +79,7 @@ export const kickProcessing = mutation({
   args: { limit: v.optional(v.number()) },
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, args) => {
-    await requireCaller(ctx);
+    await requireProofCaller(ctx);
     await ctx.scheduler.runAfter(0, internal.webhooks.processWebhookQueue, {
       limit: args.limit ?? 10,
     });
@@ -144,6 +142,37 @@ export const processWebhookQueue = internalAction({
       processed += 1;
     }
     return { processed };
+  },
+});
+
+/* Proof hygiene: wipe sink rows and archive+delete every global endpoint the
+ * fixture created, so repeated runs fan out to exactly the endpoints created
+ * in this run. Org-scoped endpoints are unreachable here by design. */
+export const resetProofState = mutation({
+  args: {},
+  returns: v.object({ ok: v.literal(true) }),
+  handler: async (ctx) => {
+    await requireProofCaller(ctx);
+    const rows = await ctx.db.query("webhookSink").take(500);
+    for (const row of rows) {
+      await ctx.db.delete("webhookSink", row._id);
+    }
+    const endpoints = await ctx.runQuery(
+      components.convexAuth.webhooks.listGlobalWebhookEndpoints,
+      {},
+    );
+    for (const endpoint of endpoints) {
+      if (endpoint.status !== "archived") {
+        await ctx.runMutation(components.convexAuth.webhooks.setGlobalWebhookEndpointStatus, {
+          endpointId: endpoint._id,
+          status: "archived",
+        });
+      }
+      await ctx.runMutation(components.convexAuth.webhooks.deleteGlobalWebhookEndpoint, {
+        endpointId: endpoint._id,
+      });
+    }
+    return { ok: true as const };
   },
 });
 

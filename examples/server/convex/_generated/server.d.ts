@@ -35,6 +35,7 @@ type Env = {
   readonly DISCORD_CLIENT_ID: string | undefined;
   readonly DISCORD_CLIENT_SECRET: string | undefined;
   readonly EMAIL_FROM_ADDRESS: string | undefined;
+  readonly ENABLE_WEBHOOK_PROOFS: string | undefined;
   readonly GITHUB_CLIENT_ID: string | undefined;
   readonly GITHUB_CLIENT_SECRET: string | undefined;
   readonly GOOGLE_CLIENT_ID: string | undefined;

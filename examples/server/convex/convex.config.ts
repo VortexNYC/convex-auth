@@ -20,6 +20,9 @@ const app = defineApp({
      * everywhere else — they must never exist in prod. */
     CONVEX_AUTH_E2E: v.optional(v.string()),
     CONVEX_AUTH_TEST_JWKS: v.optional(v.string()),
+    /* TEST-ONLY: gates the webhook proof receivers and mutating proof
+     * functions in http.ts/webhooks.ts. Leave unset everywhere else. */
+    ENABLE_WEBHOOK_PROOFS: v.optional(v.string()),
   },
 });
 
