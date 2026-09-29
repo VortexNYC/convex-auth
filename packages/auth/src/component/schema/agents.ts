@@ -145,7 +145,4 @@ export const agent_auth_audit_events = defineTable({
   eventType: v.string(),
   reasonCode: v.optional(v.string()),
   createdAt: v.number(),
-})
-  .index("by_organization_created_at", ["organizationId", "createdAt"])
-  .index("by_agent_created_at", ["agentId", "createdAt"])
-  .index("by_host_created_at", ["hostId", "createdAt"]);
+});

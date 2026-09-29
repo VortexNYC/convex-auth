@@ -53,7 +53,6 @@ export const organization_members = defineTable({
   .index("by_user_organization", ["userId", "organizationId"])
   .index("by_role", ["roleId"])
   .index("by_org_status", ["organizationId", "status"])
-  .index("by_invited_email", ["invitedEmail"])
   .index("by_organization_invited_email", ["organizationId", "invitedEmail"]);
 
 export const organization_invitations = defineTable({

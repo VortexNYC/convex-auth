@@ -41,7 +41,5 @@ export const webhook_deliveries = defineTable({
   updatedAt: v.number(),
 })
   .index("by_endpoint", ["endpointId"])
-  .index("by_event", ["eventId"])
   .index("by_endpoint_status", ["endpointId", "status"])
-  .index("by_next_attempt", ["nextAttemptAt"])
   .index("by_status_next_attempt", ["status", "nextAttemptAt"]);

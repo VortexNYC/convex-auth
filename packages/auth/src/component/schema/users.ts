@@ -31,9 +31,7 @@ export const users = defineTable({
 })
   .index("by_email", ["email"])
   .index("by_name", ["name"])
-  .index("by_active", ["isActive"])
-  .index("by_super_admin", ["isSuperAdmin"])
-  .index("by_active_organization", ["activeOrganizationId"]);
+  .index("by_super_admin", ["isSuperAdmin"]);
 
 export const auth_identities = defineTable({
   identityId: v.string(),
@@ -50,7 +48,6 @@ export const auth_identities = defineTable({
 })
   .index("by_identity_id", ["identityId"])
   .index("by_provider_issuer_subject", ["provider", "issuer", "subject"])
-  .index("by_issuer_subject", ["issuer", "subject"])
   .index("by_token_identifier", ["tokenIdentifier"])
   .index("by_user", ["userId"])
   .index("by_user_provider_issuer", ["userId", "provider", "issuer"]);
