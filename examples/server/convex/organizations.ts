@@ -218,7 +218,10 @@ export const acceptInvitation = mutation({
       userId: callerId,
     });
     const callerEmail = (user as { email?: string } | null)?.email;
-    if (callerEmail === undefined || callerEmail.toLowerCase() !== invite.email.toLowerCase()) {
+    if (
+      callerEmail === undefined ||
+      callerEmail.trim().toLowerCase() !== invite.email.trim().toLowerCase()
+    ) {
       throw new Error("Invitation is addressed to a different account");
     }
     const result = await ctx.runMutation(components.convexAuth.organizations.redeemInvitation, {
@@ -285,6 +288,21 @@ export const setMemberRole = mutation({
     }
     const targetCurrentPermissions = await rolePermissions(ctx, args.organizationId, target.roleId);
     assertRoleAssignable(permissions, targetCurrentPermissions);
+    /* Last-owner guard (parity with runtime `wouldRemoveLastActiveOwner`): if
+     * the target currently holds a `*`-granting role and is the only active
+     * member who does, demotion is refused — an org with no owner can never
+     * again satisfy api-keys:manage or assign a privileged role. */
+    if (targetCurrentPermissions.includes("*")) {
+      let activeOwners = 0;
+      for (const m of members) {
+        if (m.status !== "active") continue;
+        const perms = await rolePermissions(ctx, args.organizationId, m.roleId);
+        if (perms.includes("*")) activeOwners++;
+      }
+      if (activeOwners <= 1) {
+        throw new Error("Cannot demote the last owner of the organization");
+      }
+    }
     const role = await roleFor(ctx, args.organizationId, args.roleKey);
     assertRoleAssignable(permissions, role.permissions);
     await ctx.runMutation(components.convexAuth.organizations.setMemberRole, {

@@ -230,19 +230,48 @@ await expectReject(
 );
 
 // owner-tier positives: the owner CAN grant and strip `*` — the ceiling is
-// a coverage rule, not a freeze on the owner role
+// a coverage rule, not a freeze on the owner role (assert actual roleIds)
 await userA.mutation("organizations:setMemberRole", {
   organizationId,
   memberId: inviteeRow?._id,
   roleKey: "owner",
 });
-expect(true, "owner promoted admin to owner (* grant covers *)");
+const asOwner = (await userA.query("organizations:listMembers", { organizationId })).find(
+  (m) => m._id === inviteeRow?._id,
+);
+expect(
+  asOwner?.roleId !== promoted?.roleId && asOwner?.roleId !== inviteeRow?.roleId,
+  "owner promoted admin to owner (roleId actually changed)",
+);
 await userA.mutation("organizations:setMemberRole", {
   organizationId,
   memberId: inviteeRow?._id,
   roleKey: "member",
 });
-expect(true, "owner demoted owner back to member");
+const backToMember = (await userA.query("organizations:listMembers", { organizationId })).find(
+  (m) => m._id === inviteeRow?._id,
+);
+expect(
+  backToMember?.roleId === inviteeRow?.roleId,
+  "owner demoted owner back to member (member roleId restored)",
+);
+
+// last-owner guard: the sole remaining `*` holder cannot be demoted
+await expectReject(
+  userA,
+  "organizations:setMemberRole",
+  { organizationId, memberId: ownerRow?._id, roleKey: "viewer" },
+  "demote the last owner",
+  "last owner",
+);
+
+// username-only accounts carry no email — they cannot redeem email-bound invites
+await expectReject(
+  userC,
+  "organizations:acceptInvitation",
+  { token: ghostInvite.token },
+  "account without email redeems invite",
+);
 
 /* ---------- API keys ---------- */
 
@@ -261,7 +290,7 @@ const issued = await userA.mutation("organizations:issueOrgApiKey", {
   scopes: ["read"],
 });
 expect(
-  !!issued.apiKey && !!issued.apiKeyId && issued.apiKey.startsWith(""),
+  !!issued.apiKey && !!issued.apiKeyId && issued.apiKey.startsWith(issued.keyPrefix),
   `api key issued (prefix ${issued.keyPrefix})`,
 );
 
