@@ -59,6 +59,7 @@ export type ConvexBetterAuthClient = {
       password: string;
       callbackURL?: string;
       rememberMe?: boolean;
+      trustedDeviceToken?: string;
     }): Promise<BetterAuthResponse>;
   };
   linkAccount?: (args: {
@@ -99,10 +100,12 @@ export type ConvexBetterAuthClient = {
       username: string;
       password: string;
       name?: string;
+      displayUsername?: string;
       email?: string;
       image?: string;
       callbackURL?: string;
       rememberMe?: boolean;
+      captchaToken?: string;
     }): Promise<BetterAuthResponse>;
   };
   convex?: {
