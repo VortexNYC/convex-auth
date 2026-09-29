@@ -233,6 +233,14 @@ export type NativeAuthVerifyPhoneOtpResult =
   | NativeAuthSession
   | { success: boolean; reason?: string };
 
+export type NativeAuthSignInOneTapArgs = {
+  idToken: string;
+  nonce?: string;
+  rememberMe?: boolean;
+};
+
+export type NativeAuthSignInOneTapResult = NativeAuthSession;
+
 export type NativeAuthChangeEmailResult = { status: boolean; reason?: string };
 
 export type NativeAuthChangeEmailArgs = {
@@ -424,6 +432,12 @@ export type NativeAuthActions = {
     "public",
     NativeAuthVerifyPhoneOtpArgs,
     NativeAuthVerifyPhoneOtpResult
+  >;
+  signInOneTap?: FunctionReference<
+    "action",
+    "public",
+    NativeAuthSignInOneTapArgs,
+    NativeAuthSignInOneTapResult
   >;
   updateUser?: FunctionReference<
     "action",
@@ -869,6 +883,7 @@ export function useAuthActions() {
   const verifyEmailOtpAction = ctx.verifyEmailOtp ? useAction(ctx.verifyEmailOtp) : null;
   const sendPhoneOtpAction = ctx.sendPhoneOtp ? useAction(ctx.sendPhoneOtp) : null;
   const verifyPhoneOtpAction = ctx.verifyPhoneOtp ? useAction(ctx.verifyPhoneOtp) : null;
+  const signInOneTapAction = ctx.signInOneTap ? useAction(ctx.signInOneTap) : null;
   const signOutAction = useAction(ctx.signOut);
   const updateSessionAction = useAction(ctx.updateSession);
   const sendEmailVerificationAction = useAction(ctx.sendEmailVerification);
@@ -1203,6 +1218,31 @@ export function useAuthActions() {
     [cookieMode, callProxy, verifyPhoneOtpAction, ctx],
   );
 
+  const signInOneTap = useCallback(
+    async (args: NativeAuthSignInOneTapArgs) => {
+      if (!signInOneTapAction) {
+        throw new Error("One Tap authentication is not configured");
+      }
+      setIsLoading(true);
+      try {
+        const result = cookieMode
+          ? await callProxy<NativeAuthSignInOneTapResult>("signInOneTap", args)
+          : await signInOneTapAction(args);
+        if ("token" in result && (cookieMode || "refreshToken" in result)) {
+          ctx.setToken(result.token ?? null);
+          ctx.setSessionId(result.sessionId ?? null);
+          if (!cookieMode && result.refreshToken) {
+            ctx.setRefreshToken(result.refreshToken);
+          }
+        }
+        return result;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [cookieMode, callProxy, signInOneTapAction, ctx],
+  );
+
   const signOut = useCallback(
     async (args?: { callbackURL?: string }): Promise<NativeAuthSignOutResult> => {
       if (cookieMode) {
@@ -1474,6 +1514,7 @@ export function useAuthActions() {
     verifyEmailOtp,
     sendPhoneOtp,
     verifyPhoneOtp,
+    signInOneTap,
     signOut,
     updateSession,
     updateUser,

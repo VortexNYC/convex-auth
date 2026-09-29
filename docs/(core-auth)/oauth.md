@@ -150,6 +150,10 @@ export const auth = convexAuth({
 
 `emailAndPassword.trustedOrigins` is merged into the same allowlist, so a single entry under either field covers OAuth, magic-link, and email routes.
 
+## Google One Tap
+
+Redirect OAuth is not the only way in — [Google One Tap](./one-tap) verifies a Google Identity Services ID token directly, no callback involved. Both flows provision the same `google` identity, so a user's One Tap sign-in and redirect sign-in resolve to one account. With `oauth.google` configured, `oneTap: true` reuses its `clientId`/`hd`/`maxTokenAge`.
+
 ## Server-side OAuth
 
 From a Hono server:

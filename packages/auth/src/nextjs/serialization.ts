@@ -37,6 +37,7 @@ const AUTH_ACTION_KEYS = [
   "verifyEmailOtp",
   "sendPhoneOtp",
   "verifyPhoneOtp",
+  "signInOneTap",
   "updateUser",
   "twoFactorEnable",
   "twoFactorVerifyTOTP",
