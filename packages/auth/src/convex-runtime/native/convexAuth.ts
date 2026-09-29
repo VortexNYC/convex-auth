@@ -92,7 +92,11 @@ type ConfigActions<TConfig extends ConvexAuthConfig> = NativeEmailAndPasswordAct
   (TConfig extends { passkey: NativePasskeyConfig } ? NativePasskeyActions : {}) &
   (TConfig extends { anonymous: NativeAnonymousConfig } ? ReturnType<typeof nativeAnonymous> : {}) &
   (TConfig extends { username: NativeUsernameConfig } ? NativeUsernameActions : {}) &
-  (TConfig extends { oneTap: boolean | NativeOneTapConfig } ? NativeOneTapActions : {}) & {
+  (TConfig extends { oneTap: false }
+    ? {}
+    : TConfig extends { oneTap: boolean | NativeOneTapConfig }
+      ? NativeOneTapActions
+      : {}) & {
     addHttpRoutes(http: HttpRouter): void;
   };
 
@@ -150,8 +154,16 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
       hd: oneTapConfig.hd ?? config.oauth?.google?.hd,
       maxTokenAge: oneTapConfig.maxTokenAge ?? config.oauth?.google?.maxTokenAge,
       fetchImpl: oneTapConfig.fetchImpl ?? config.oauth?.google?.fetchImpl,
-      accountLinking: config.oauth?.accountLinking,
-      trustedProviders: config.oauth?.trustedProviders,
+      /* The Google lockdown flags must follow the provider — `oneTap: true`
+       * cannot silently reopen sign-up or unverified emails that redirect
+       * OAuth was configured to close. Explicit oneTap config wins. */
+      disableSignUp: oneTapConfig.disableSignUp ?? config.oauth?.google?.disableSignUp,
+      disableImplicitSignUp:
+        oneTapConfig.disableImplicitSignUp ?? config.oauth?.google?.disableImplicitSignUp,
+      requireEmailVerification:
+        oneTapConfig.requireEmailVerification ?? config.oauth?.google?.requireEmailVerification,
+      accountLinking: oneTapConfig.accountLinking ?? config.oauth?.accountLinking,
+      trustedProviders: oneTapConfig.trustedProviders ?? config.oauth?.trustedProviders,
     });
   })();
 

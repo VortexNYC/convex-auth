@@ -21,7 +21,7 @@ export const auth = convexAuth({
 });
 ```
 
-`oneTap: true` inherits `clientId`, `hd`, `maxTokenAge`, and `fetchImpl` from `oauth.google` when redirect OAuth is also configured — the two flows share the same Google identity, so a user who signs in with One Tap and later completes the redirect flow lands on the same account.
+`oneTap: true` inherits `clientId`, `hd`, `maxTokenAge`, `fetchImpl`, and the `disableSignUp` / `disableImplicitSignUp` / `requireEmailVerification` lockdowns from `oauth.google` — plus `accountLinking` and `trustedProviders` from the top-level `oauth` block. Explicit `oneTap` config values always win over inherited ones. The two flows share the same Google identity, so a user who signs in with One Tap and later completes the redirect flow lands on the same account.
 
 No `clientSecret` is needed: the ID token is verified locally against Google's public keys, never exchanged.
 
@@ -50,9 +50,9 @@ export function OneTap() {
 
 The Better Auth client exposes the same flow as `signIn.oneTap({ idToken })`. React Native uses the identical `signInOneTap` action — obtain the ID token from `@react-native-google-signin/google-signin` or Expo's Google auth module and pass it through.
 
-Pass `nonce` to pin the token to a value your app generated before rendering the prompt — the action rejects when the token's `nonce` claim doesn't match exactly. Generate the nonce fresh per prompt render; the client owns its lifecycle.
+Pass `nonce` to bind the credential to a value your client generated when initializing the GIS prompt (`google.accounts.id.initialize({ nonce })`) — the action rejects when the token's `nonce` claim doesn't match exactly. This is claim binding: it proves the credential was minted for that initialization, thwarting token substitution. It is **not** server-side replay protection — there is no server-issued nonce store; the client owns nonce freshness.
 
-Rate limiting is **on by default** — 5 verify attempts per Google subject per 60 seconds. Pass `rateLimit: false` to disable, or `{ windowMs, maxAttempts }` to tune.
+Rate limiting is **on by default** — 5 attempts per 60 seconds, enforced twice per call: once on the token hash before any verification (caps replays of the same credential) and once on the Google subject after verification (caps per-account abuse). Pass `rateLimit: false` to disable, or `{ windowMs, maxAttempts }` to tune. The Google JWKS is cached for five minutes, so verification does not fan out to Google on every call.
 
 ## Verification semantics
 
@@ -84,12 +84,12 @@ Set `requireEmailVerification: true` to reject tokens where Google reports `emai
 | `hd`                       | `string`                               | `oauth.google` | Restrict to a Workspace hosted domain.                            |
 | `maxTokenAge`              | `number`                               | `oauth.google` | Max token age in seconds.                                         |
 | `fetchImpl`                | `typeof fetch`                         | `fetch`        | Fetch override (tests).                                           |
-| `disableSignUp`            | `boolean`                              | `false`        | Block new-user creation.                                          |
-| `disableImplicitSignUp`    | `boolean`                              | `false`        | Only allow accounts created by an explicit sign-up.               |
-| `requireEmailVerification` | `boolean`                              | `false`        | Require `email_verified` from Google.                             |
+| `disableSignUp`            | `boolean`                              | `oauth.google` | Block new-user creation.                                          |
+| `disableImplicitSignUp`    | `boolean`                              | `oauth.google` | Only allow accounts created by an explicit sign-up.               |
+| `requireEmailVerification` | `boolean`                              | `oauth.google` | Require `email_verified` from Google.                             |
 | `trustedProvider`          | `boolean`                              | `false`        | Treat Google claims as trusted for implicit linking.              |
 | `sessionTtlMs`             | `number`                               | 7 days         | Session lifetime after sign-in.                                   |
 | `refreshTokenTtlMs`        | `number`                               | 30 days        | Refresh-token lifetime.                                           |
-| `rateLimit`                | `{ windowMs, maxAttempts }` \| `false` | 5/60s          | Per-subject verify-attempt limiting. `false` disables.            |
+| `rateLimit`                | `{ windowMs, maxAttempts }` \| `false` | 5/60s          | Token-hash + subject rate limiting. `false` disables.             |
 | `accountLinking`           | `AccountLinkingConfig`                 | `oauth` config | Inherited linking policy — override only when flows must diverge. |
 | `trustedProviders`         | `string[]`                             | `oauth` config | Inherited trusted-provider list.                                  |

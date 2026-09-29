@@ -18,6 +18,34 @@ import type { AccountLinkingConfig } from "./oauthHandlers.js";
 import { toNativeAuthUser, type NativeEmailAndPasswordComponentHandle } from "./types.js";
 
 const GOOGLE_ISSUER = "https://accounts.google.com";
+const GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
+const GOOGLE_JWKS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+/* The Google provider fetches JWKS on every getUserInfo call — fine for the
+ * low-frequency redirect callback, but One Tap fires once per prompt. Cache
+ * the keyset for 5 minutes: long enough to stop fan-out, short enough that
+ * Google's key rotation self-heals. */
+function withGoogleJwksCache(fetchImpl: typeof fetch): typeof fetch {
+  let cached: { keys: unknown; expiresAt: number } | undefined;
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (url !== GOOGLE_JWKS_URL) return fetchImpl(input, init);
+    if (cached && cached.expiresAt > Date.now()) {
+      return new Response(JSON.stringify(cached.keys), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const response = await fetchImpl(input, init);
+    if (!response.ok) return response;
+    const keys = await response.json();
+    cached = { keys, expiresAt: Date.now() + GOOGLE_JWKS_CACHE_TTL_MS };
+    return new Response(JSON.stringify(keys), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+}
 
 export type NativeOneTapConfig = {
   enabled?: boolean;
@@ -39,10 +67,10 @@ export type NativeOneTapConfig = {
   sessionTtlMs?: number;
   refreshTokenTtlMs?: number;
   /**
-   * Rate limiting on token verify attempts. Enabled by default (5 attempts
-   * per 60s window per subject) — each attempt can fan out to Google's JWKS
-   * endpoint, so unauthenticated callers should not be able to spin it.
-   * Pass `false` to disable.
+   * Rate limiting on sign-in attempts. Enabled by default (5 attempts per
+   * 60s window) and applied twice: once pre-verification keyed on the token
+   * hash (caps replays before any crypto), once post-verification keyed on
+   * the Google subject (caps per-account abuse). Pass `false` to disable.
    */
   rateLimit?:
     | {
@@ -89,7 +117,7 @@ export function nativeOneTap(
     clientSecret: "",
     hd: config.hd,
     maxTokenAge: config.maxTokenAge,
-    fetchImpl: config.fetchImpl,
+    fetchImpl: withGoogleJwksCache(config.fetchImpl ?? fetch),
   });
 
   const isTrustedProvider =
@@ -119,6 +147,17 @@ export function nativeOneTap(
       if (!enabled) {
         throw new Error("One Tap authentication is disabled");
       }
+      /* An empty idToken would fall through the provider's `if (idToken)` into
+       * the userinfo path and surface as an upstream error — reject early. */
+      if (!args.idToken.trim()) {
+        throw new Error("INVALID_ID_TOKEN");
+      }
+
+      /* Pre-verify bucket keyed on the credential itself: replays of the same
+       * token — garbage, stolen, or retried — are capped before any crypto. */
+      if (rateLimitEnabled) {
+        await recordRateLimitAttempt(ctx, `one-tap-token:${await hashToken(args.idToken)}`);
+      }
 
       let user: {
         id: string;
@@ -140,19 +179,30 @@ export function nativeOneTap(
          * JWKS fetch and network failures are upstream infra errors — let
          * those propagate rather than misreporting them as bad tokens. */
         const isTokenError =
-          err instanceof joseErrors.JOSEError ||
+          err instanceof joseErrors.JWTClaimValidationFailed ||
+          err instanceof joseErrors.JWTExpired ||
+          err instanceof joseErrors.JWTInvalid ||
+          err instanceof joseErrors.JWSInvalid ||
+          err instanceof joseErrors.JWSSignatureVerificationFailed ||
+          err instanceof joseErrors.JOSEAlgNotAllowed ||
+          /* A kid absent from the fetched set is a forged or rotated token —
+           * the client should re-prompt, not the operator. */
+          err instanceof joseErrors.JWKSNoMatchingKey ||
           (err instanceof Error &&
             err.message.startsWith("Google id_token hosted domain mismatch"));
         if (!isTokenError) throw err;
         throw new Error("INVALID_ID_TOKEN");
       }
 
-      if (!user.id) {
+      /* `String(payload.sub)` in the provider maps a missing claim to the
+       * literal "undefined" — guard the claim, not the mapped string. */
+      if (typeof payload.sub !== "string" || payload.sub.length === 0) {
         throw new Error("INVALID_ID_TOKEN");
       }
 
-      /* A nonce is the client's replay protection — when the caller pins one,
-       * the token's claim must match exactly. */
+      /* Nonce is claim binding, not server-side replay protection: it proves
+       * this credential was minted for the value the client initialized GIS
+       * with. The client owns nonce issuance and freshness. */
       if (args.nonce !== undefined && payload.nonce !== args.nonce) {
         throw new Error("INVALID_ID_TOKEN");
       }

@@ -186,6 +186,34 @@ describe("nativeOneTap signInOneTap", () => {
     );
   });
 
+  it("rejects an empty idToken without touching the provider", async () => {
+    const component = createMockComponent();
+    const { actions, fetch } = createOneTap(component);
+    await expect(signIn(actions, createContext(component), { idToken: " " })).rejects.toThrow(
+      "INVALID_ID_TOKEN",
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects a token with no sub claim", async () => {
+    const component = createMockComponent();
+    const { actions } = createOneTap(component);
+    const privateJwk = JSON.parse(process.env.JWT_PRIVATE_KEY!);
+    const privateKey = await importJWK(privateJwk, "RS256");
+    const idToken = await new SignJWT({
+      iss: "https://accounts.google.com",
+      aud: "google-client-id",
+      email: "google@example.com",
+    })
+      .setProtectedHeader({ alg: "RS256" })
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(privateKey);
+    await expect(signIn(actions, createContext(component), { idToken })).rejects.toThrow(
+      "INVALID_ID_TOKEN",
+    );
+  });
+
   it("rejects a token with the wrong audience", async () => {
     const component = createMockComponent();
     const { actions } = createOneTap(component);
@@ -242,6 +270,62 @@ describe("nativeOneTap signInOneTap", () => {
     const idToken = await mintGoogleIdToken();
     await expect(signIn(actions, createContext(component), { idToken })).rejects.toThrow(
       "Google JWKS request failed",
+    );
+  });
+
+  it("propagates a malformed JWKS body as an infra error", async () => {
+    const component = createMockComponent();
+    const { actions, responses } = createOneTap(component);
+    responses.set("https://www.googleapis.com/oauth2/v3/certs", {
+      body: { keys: [{ kty: "RSA" }] },
+    });
+    const idToken = await mintGoogleIdToken();
+    let thrown: unknown;
+    try {
+      await signIn(actions, createContext(component), { idToken });
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).toBeInstanceOf(Error);
+    expect((thrown as Error).message).not.toBe("INVALID_ID_TOKEN");
+  });
+
+  it("caches the JWKS across sign-ins", async () => {
+    const component = createMockComponent();
+    const { actions, fetch } = createOneTap(component);
+    const ctx = createContext(component);
+    await signIn(actions, ctx, { idToken: await mintGoogleIdToken() });
+    await signIn(actions, ctx, { idToken: await mintGoogleIdToken({ sub: "google-999" }) });
+    const jwksCalls = fetch.mock.calls.filter(([url]) => String(url).includes("oauth2/v3/certs"));
+    expect(jwksCalls).toHaveLength(1);
+  });
+
+  it("rate-limits replay of the same token before verification", async () => {
+    const component = createMockComponent();
+    component.native.rateLimits.recordAttempt
+      .mockResolvedValueOnce({ allowed: false })
+      .mockResolvedValue({ allowed: true });
+    const { actions } = createOneTap(component);
+    await expect(
+      signIn(actions, createContext(component), { idToken: await mintGoogleIdToken() }),
+    ).rejects.toThrow("Too many requests");
+    expect(component.native.rateLimits.recordAttempt).toHaveBeenCalledTimes(1);
+    expect(component.native.rateLimits.recordAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: expect.stringMatching(/^one-tap-token:/) }),
+    );
+  });
+
+  it("rate-limits per subject after verification", async () => {
+    const component = createMockComponent();
+    component.native.rateLimits.recordAttempt
+      .mockResolvedValueOnce({ allowed: true })
+      .mockResolvedValueOnce({ allowed: false });
+    const { actions } = createOneTap(component);
+    await expect(
+      signIn(actions, createContext(component), { idToken: await mintGoogleIdToken() }),
+    ).rejects.toThrow("Too many requests");
+    expect(component.native.rateLimits.recordAttempt).toHaveBeenLastCalledWith(
+      expect.objectContaining({ identifier: "one-tap:google-12345" }),
     );
   });
 

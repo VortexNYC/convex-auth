@@ -173,13 +173,14 @@ Set the corresponding `*_CLIENT_ID` and `*_CLIENT_SECRET` environment variables.
 | `clientId`                 | `string`                               | `oauth.google` | Google OAuth client ID — the `aud` check. Required when standalone. |
 | `hd`                       | `string`                               | `oauth.google` | Restrict to a Workspace hosted domain.                              |
 | `maxTokenAge`              | `number`                               | `oauth.google` | Max ID-token age in seconds.                                        |
-| `disableSignUp`            | `boolean`                              | `false`        | Block new-user creation.                                            |
-| `requireEmailVerification` | `boolean`                              | `false`        | Require `email_verified` from Google.                               |
+| `disableSignUp`            | `boolean`                              | `oauth.google` | Block new-user creation.                                            |
+| `disableImplicitSignUp`    | `boolean`                              | `oauth.google` | Only allow accounts created by an explicit sign-up.                 |
+| `requireEmailVerification` | `boolean`                              | `oauth.google` | Require `email_verified` from Google.                               |
 | `sessionTtlMs`             | `number`                               | 7 days         | Session lifetime after sign-in.                                     |
 | `refreshTokenTtlMs`        | `number`                               | 30 days        | Refresh-token lifetime.                                             |
-| `rateLimit`                | `{ windowMs, maxAttempts }` \| `false` | 5/60s          | Per-subject verify-attempt limiting. `false` disables.              |
+| `rateLimit`                | `{ windowMs, maxAttempts }` \| `false` | 5/60s          | Token-hash + subject attempt limiting. `false` disables.            |
 
-`oneTap: true` inherits `clientId`/`hd`/`maxTokenAge`/`fetchImpl` from `oauth.google`. See [One Tap](./one-tap) for linking semantics.
+`oneTap: true` inherits `clientId`/`hd`/`maxTokenAge`/`fetchImpl` and the sign-up/verification lockdowns from `oauth.google`, plus `accountLinking`/`trustedProviders` from `oauth`. See [One Tap](./one-tap) for linking semantics.
 
 ## `captcha`
 
