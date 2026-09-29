@@ -129,6 +129,7 @@ const DEFAULT_TWO_FACTOR_BACKUP_CODES_COUNT = 10;
 const DEFAULT_TWO_FACTOR_BACKUP_CODE_BYTES = 10;
 const DEFAULT_TWO_FACTOR_SECRET_BYTES = 20;
 const DEFAULT_TRUST_DEVICE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const NATIVE_CREDENTIAL_PROVIDERS = ["password", "username"] as const;
 
 function buildGenericDuplicateResponse(
   email: string,
@@ -669,9 +670,22 @@ export function nativeEmailAndPassword(
     }),
     handler: async (ctx, args) => {
       const tokenHash = await hashToken(args.token);
+
+      const code = await ctx.runQuery(component.native.codes.getVerificationCodeByTokenHash, {
+        tokenHash,
+        type: "email_verification",
+      });
+      let credentialProvider: (typeof NATIVE_CREDENTIAL_PROVIDERS)[number] = "password";
+      if (code) {
+        const credential = await getNativeCredentialIdentity(ctx, code.userId);
+        if (credential) {
+          credentialProvider = credential.provider;
+        }
+      }
+
       const result = await ctx.runMutation(component.identity.verifyEmail, {
         tokenHash,
-        provider: "password",
+        provider: credentialProvider,
         issuer: "native",
       });
       if (!result.success) {
@@ -760,10 +774,22 @@ export function nativeEmailAndPassword(
 
       const credentialHash = await hashPassword(args.newPassword);
 
+      const code = await ctx.runQuery(component.native.codes.getVerificationCodeByTokenHash, {
+        tokenHash,
+        type: "password_reset",
+      });
+      let credentialProvider: (typeof NATIVE_CREDENTIAL_PROVIDERS)[number] = "password";
+      if (code) {
+        const credential = await getNativeCredentialIdentity(ctx, code.userId);
+        if (credential) {
+          credentialProvider = credential.provider;
+        }
+      }
+
       const result = await ctx.runMutation(component.identity.resetPassword, {
         tokenHash,
         credentialHash,
-        provider: "password",
+        provider: credentialProvider,
         issuer: "native",
         revokeSessions: revokeSessionsOnPasswordReset,
       });
@@ -806,20 +832,7 @@ export function nativeEmailAndPassword(
         return { success: false };
       }
 
-      const identity = await ctx.runQuery(component.native.identities.getNativeIdentityByUser, {
-        userId,
-        provider: "password",
-        issuer: "native",
-      });
-      if (!identity) {
-        return { success: false };
-      }
-
-      const account = await ctx.runQuery(component.native.accounts.getAccountBySubject, {
-        provider: "password",
-        issuer: "native",
-        subject: identity.subject,
-      });
+      const account = await getNativeCredentialAccount(ctx, userId);
       if (!account) {
         return { success: false };
       }
@@ -832,17 +845,25 @@ export function nativeEmailAndPassword(
     },
   });
 
-  async function getNativePasswordAccount(ctx: GenericActionCtx<DataModel>, userId: string) {
-    const identity = await ctx.runQuery(component.native.identities.getNativeIdentityByUser, {
-      userId,
-      provider: "password",
-      issuer: "native",
-    });
-    if (!identity) return null;
+  async function getNativeCredentialIdentity(ctx: GenericActionCtx<DataModel>, userId: string) {
+    for (const provider of NATIVE_CREDENTIAL_PROVIDERS) {
+      const identity = await ctx.runQuery(component.native.identities.getNativeIdentityByUser, {
+        userId,
+        provider,
+        issuer: "native",
+      });
+      if (identity) return { provider, identity };
+    }
+    return null;
+  }
+
+  async function getNativeCredentialAccount(ctx: GenericActionCtx<DataModel>, userId: string) {
+    const credential = await getNativeCredentialIdentity(ctx, userId);
+    if (!credential) return null;
     return await ctx.runQuery(component.native.accounts.getAccountBySubject, {
-      provider: "password",
+      provider: credential.provider,
       issuer: "native",
-      subject: identity.subject,
+      subject: credential.identity.subject,
     });
   }
 
@@ -851,7 +872,7 @@ export function nativeEmailAndPassword(
     userId: string,
     password: string,
   ) {
-    const account = await getNativePasswordAccount(ctx, userId);
+    const account = await getNativeCredentialAccount(ctx, userId);
     if (!account) return false;
     const valid = await verifyPasswordHash(password, account.credentialHash);
     if (valid) {

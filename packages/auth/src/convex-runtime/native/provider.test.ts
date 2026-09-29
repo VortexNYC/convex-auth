@@ -1245,6 +1245,35 @@ describe("nativeEmailAndPassword", () => {
       expect(result).toEqual({ success: true });
     });
 
+    it("verifies a username-credential account when no password identity exists", async () => {
+      const component = createMockComponent();
+      const sessionToken = await mintToken("user_1", "session_1");
+      const usernameIdentity = makeIdentity({ provider: "username" });
+      const account = makeAccount({ credentialHash: defaultPasswordHash });
+      component.native.sessions.getSessionByToken.mockResolvedValue({
+        _id: "session_doc_1",
+        sessionId: "session_1",
+        userId: "user_1",
+        token: sessionToken,
+        expiresAt: Date.now() + 60_000,
+      });
+      component.native.identities.getNativeIdentityByUser.mockImplementation(
+        async (args: { provider?: string }) =>
+          args.provider === "username" ? usernameIdentity : null,
+      );
+      component.native.accounts.getAccountBySubject.mockResolvedValue(account);
+
+      const { verifyPassword } = createActions(component);
+      const result = await exec(verifyPassword).handler(createContext(), {
+        token: sessionToken,
+        password: DEFAULT_PASSWORD,
+      });
+      expect(result).toEqual({ success: true });
+      expect(component.native.accounts.getAccountBySubject).toHaveBeenCalledWith(
+        expect.objectContaining({ provider: "username" }),
+      );
+    });
+
     it("rejects a session that has been revoked", async () => {
       const component = createMockComponent();
       const sessionToken = await mintToken("user_1", "session_1");

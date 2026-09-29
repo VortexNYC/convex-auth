@@ -1120,9 +1120,28 @@ export function addNativeAuthHttpRoutes(
       }
 
       const tokenHash = await hashToken(token);
+      const code = await ctx.runQuery(component.native.codes.getVerificationCodeByTokenHash, {
+        tokenHash,
+        type: "email_verification",
+      });
+      let credentialProvider: "password" | "username" = "password";
+      if (code) {
+        for (const provider of ["password", "username"] as const) {
+          const identity = await ctx.runQuery(component.native.identities.getNativeIdentityByUser, {
+            userId: code.userId,
+            provider,
+            issuer: "native",
+          });
+          if (identity) {
+            credentialProvider = provider;
+            break;
+          }
+        }
+      }
+
       const result = await ctx.runMutation(component.identity.verifyEmail, {
         tokenHash,
-        provider: "password",
+        provider: credentialProvider,
         issuer: "native",
       });
 

@@ -339,10 +339,31 @@ export function nativeEmailOtp(
         }
 
         const credentialHash = await hashPassword(args.newPassword);
+
+        const code = await ctx.runQuery(component.native.codes.getVerificationCodeByTokenHash, {
+          tokenHash,
+          type: "password_reset",
+        });
+        let credentialProvider: "password" | "username" = "password";
+        let credentialIdentity: { provider: string; subject: string } | null = null;
+        if (code) {
+          for (const provider of ["password", "username"] as const) {
+            const identity = await ctx.runQuery(
+              component.native.identities.getNativeIdentityByUser,
+              { userId: code.userId, provider, issuer: "native" },
+            );
+            if (identity) {
+              credentialProvider = provider;
+              credentialIdentity = { provider, subject: identity.subject };
+              break;
+            }
+          }
+        }
+
         const result = await ctx.runMutation(component.identity.resetPassword, {
           tokenHash,
           credentialHash,
-          provider: "password",
+          provider: credentialProvider,
           issuer: "native",
           revokeSessions: true,
         });
@@ -351,33 +372,20 @@ export function nativeEmailOtp(
           return { status: true };
         }
 
-        /* A valid code with no existing password account can still set a
+        /* A valid code with no existing credential account can still set a
          * new password. */
         if (result.reason === "invalid") {
-          const code = await ctx.runQuery(component.native.codes.getVerificationCodeByTokenHash, {
-            tokenHash,
-            type: "password_reset",
-          });
           if (code && !code.consumedAt && code.expiresAt > Date.now()) {
             const user = await ctx.runQuery(component.native.users.getUserById, {
               userId: code.userId,
             });
             if (user) {
-              const existingPasswordIdentity = await ctx.runQuery(
-                component.native.identities.getNativeIdentityByUser,
-                {
-                  userId: user._id,
-                  provider: "password",
-                  issuer: "native",
-                },
-              );
-
-              if (existingPasswordIdentity) {
+              if (credentialIdentity) {
                 await ctx.runMutation(component.native.accounts.createAccount, {
                   userId: user._id,
-                  provider: "password",
+                  provider: credentialIdentity.provider,
                   issuer: "native",
-                  subject: existingPasswordIdentity.subject,
+                  subject: credentialIdentity.subject,
                   credentialHash,
                 });
               } else {
