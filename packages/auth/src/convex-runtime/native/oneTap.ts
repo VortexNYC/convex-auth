@@ -25,9 +25,9 @@ const GOOGLE_JWKS_CACHE_TTL_MS = 5 * 60 * 1000;
  * low-frequency redirect callback, but One Tap fires once per prompt. Cache
  * the keyset for 5 minutes: long enough to stop fan-out, short enough that
  * Google's key rotation self-heals. */
-function withGoogleJwksCache(fetchImpl: typeof fetch): typeof fetch {
+function withGoogleJwksCache(fetchImpl: typeof fetch): typeof fetch & { invalidate(): void } {
   let cached: { keys: unknown; expiresAt: number } | undefined;
-  return async (input: RequestInfo | URL, init?: RequestInit) => {
+  const wrapped = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     if (url !== GOOGLE_JWKS_URL) return fetchImpl(input, init);
     if (cached && cached.expiresAt > Date.now()) {
@@ -45,6 +45,9 @@ function withGoogleJwksCache(fetchImpl: typeof fetch): typeof fetch {
       headers: { "Content-Type": "application/json" },
     });
   };
+  /* The handler clears the cache on JWKSNoMatchingKey so a Google key
+   * rotation refetches instead of rejecting valid tokens until TTL expiry. */
+  return Object.assign(wrapped, { invalidate: () => (cached = undefined) });
 }
 
 export type NativeOneTapConfig = {
@@ -112,12 +115,13 @@ export function nativeOneTap(
   /* The Google provider's id_token path already does the whole verification:
    * JWKS fetch, RS256 signature, iss/aud/exp, hosted domain. One Tap reuses
    * it verbatim — clientSecret is never exercised on this path. */
+  const jwksFetch = withGoogleJwksCache(config.fetchImpl ?? fetch);
   const googleProvider = createGoogleProvider({
     clientId: config.clientId,
     clientSecret: "",
     hd: config.hd,
     maxTokenAge: config.maxTokenAge,
-    fetchImpl: withGoogleJwksCache(config.fetchImpl ?? fetch),
+    fetchImpl: jwksFetch,
   });
 
   const isTrustedProvider =
@@ -168,10 +172,17 @@ export function nativeOneTap(
       };
       let payload: Record<string, unknown>;
       try {
-        const info = await googleProvider.getUserInfo({
-          accessToken: "",
-          idToken: args.idToken,
-        });
+        const verify = () => googleProvider.getUserInfo({ accessToken: "", idToken: args.idToken });
+        let info;
+        try {
+          info = await verify();
+        } catch (err) {
+          /* The cached keyset may predate a Google rotation — refetch once
+           * before treating an unknown kid as a forged token. */
+          if (!(err instanceof joseErrors.JWKSNoMatchingKey)) throw err;
+          jwksFetch.invalidate();
+          info = await verify();
+        }
         user = info.user;
         payload = info.data as Record<string, unknown>;
       } catch (err) {
@@ -233,17 +244,16 @@ export function nativeOneTap(
         throw new Error("SIGN_UP_DISABLED");
       }
 
-      if (isImplicitLink) {
-        const accountLinking = config.accountLinking;
-        const requiresEmailVerification =
-          accountLinking?.requiresEmailVerification === true ? true : !isTrustedProvider;
-        if (
-          (requiresEmailVerification && !user.emailVerified) ||
-          accountLinking?.enabled === false ||
-          accountLinking?.disableImplicitLinking === true
-        ) {
-          throw new Error("ACCOUNT_NOT_LINKED");
-        }
+      const accountLinking = config.accountLinking;
+      const requiresEmailVerification =
+        accountLinking?.requiresEmailVerification === true ? true : !isTrustedProvider;
+      const allowImplicitLink =
+        accountLinking?.enabled !== false &&
+        accountLinking?.disableImplicitLinking !== true &&
+        (!requiresEmailVerification || user.emailVerified);
+
+      if (isImplicitLink && !allowImplicitLink) {
+        throw new Error("ACCOUNT_NOT_LINKED");
       }
 
       const now = Date.now();
@@ -270,8 +280,11 @@ export function nativeOneTap(
           image: user.image,
           emailVerified: user.emailVerified,
         },
-        allowLink: true,
-        allowUnverifiedEmailLink: isTrustedProvider,
+        /* The policy is passed through — not just pre-checked — because the
+         * mutation re-reads email ownership: a user appearing between the
+         * query and the mutation must not link under a disabled policy. */
+        allowLink: allowImplicitLink,
+        allowUnverifiedEmailLink: isTrustedProvider && !requiresEmailVerification,
         initialSession: {
           sessionId,
           sessionExpiresAt: now + resolveSessionTtlMs(args.rememberMe, sessionTtlMs),

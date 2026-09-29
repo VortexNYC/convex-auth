@@ -300,6 +300,46 @@ describe("nativeOneTap signInOneTap", () => {
     expect(jwksCalls).toHaveLength(1);
   });
 
+  it("refetches the JWKS once when the kid is unknown (key rotation)", async () => {
+    const component = createMockComponent();
+    const rotatedKey = await generateKeyPair("RS256", { extractable: true });
+    const staleJwks = {
+      keys: [{ ...(await exportJWK(rotatedKey.publicKey)), kid: "old-key" }],
+    };
+    const freshJwks = {
+      keys: [{ ...JSON.parse(process.env.JWKS!).keys[0], kid: "new-key" }],
+    };
+    let jwksCalls = 0;
+    const fetch = vi.fn(async () => {
+      const body = jwksCalls++ === 0 ? staleJwks : freshJwks;
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    const actions = nativeOneTap(component as never, {
+      clientId: "google-client-id",
+      fetchImpl: fetch as unknown as typeof globalThis.fetch,
+    });
+    const privateJwk = JSON.parse(process.env.JWT_PRIVATE_KEY!);
+    const privateKey = await importJWK(privateJwk, "RS256");
+    const idToken = await new SignJWT({
+      sub: "google-12345",
+      email: "google@example.com",
+      email_verified: true,
+      iss: "https://accounts.google.com",
+      aud: "google-client-id",
+    })
+      .setProtectedHeader({ alg: "RS256", kid: "new-key" })
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(privateKey);
+
+    const result = await signIn(actions, createContext(component), { idToken });
+    expect(result.token).toBe("session-token");
+    expect(jwksCalls).toBe(2);
+  });
+
   it("rate-limits replay of the same token before verification", async () => {
     const component = createMockComponent();
     component.native.rateLimits.recordAttempt
@@ -409,6 +449,30 @@ describe("nativeOneTap signInOneTap", () => {
     await expect(
       signIn(actions, createContext(component), { idToken: await mintGoogleIdToken() }),
     ).rejects.toThrow("ACCOUNT_NOT_LINKED");
+  });
+
+  it("passes the effective link policy into the mutation (TOCTOU)", async () => {
+    const component = createMockComponent();
+    /* No existing user at query time — but allowLink must still travel to the
+     * mutation so a user created between the two cannot be linked into. */
+    const { actions } = createOneTap(component, { accountLinking: { enabled: false } });
+    await signIn(actions, createContext(component), { idToken: await mintGoogleIdToken() });
+    expect(component.identity.provisionFromIdentity).toHaveBeenCalledWith(
+      expect.objectContaining({ allowLink: false }),
+    );
+  });
+
+  it("passes allowUnverifiedEmailLink: false when linking requires verification", async () => {
+    const component = createMockComponent();
+    const { actions } = createOneTap(component, {
+      trustedProvider: true,
+      accountLinking: { requiresEmailVerification: true },
+    });
+    const idToken = await mintGoogleIdToken({ email_verified: false });
+    await signIn(actions, createContext(component), { idToken });
+    expect(component.identity.provisionFromIdentity).toHaveBeenCalledWith(
+      expect.objectContaining({ allowUnverifiedEmailLink: false }),
+    );
   });
 
   it("rejects unverified emails when requireEmailVerification is set", async () => {
