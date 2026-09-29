@@ -8,6 +8,7 @@ import { getOneFrom } from "convex-helpers/server/relationships";
 import { getAllRows } from "./pagination.js";
 import { mutation, query } from "./_generated/server.js";
 import { mintToken } from "../convex-runtime/native/jwt.js";
+import { normalizeEmail, normalizeUsername } from "../convex-runtime/native/validation.js";
 import schema, {
   emailTwoFactorResetReasonValidator,
   emailTwoFactorStatusValidator,
@@ -31,6 +32,8 @@ const identityInputValidator = v.object({
 
 const userProfileInputValidator = v.object({
   email: v.optional(v.string()),
+  username: v.optional(v.string()),
+  displayUsername: v.optional(v.string()),
   name: v.optional(v.string()),
   image: v.optional(v.string()),
   emailVerified: v.boolean(),
@@ -55,6 +58,8 @@ const initialSessionInputValidator = v.object({
 const userReturnValidator = v.object({
   _id: v.id("users"),
   email: v.optional(v.string()),
+  username: v.optional(v.string()),
+  displayUsername: v.optional(v.string()),
   name: v.optional(v.string()),
   image: v.optional(v.string()),
   emailVerified: v.boolean(),
@@ -80,6 +85,7 @@ const provisionResultValidator = v.object({
   createdUser: v.boolean(),
   linkedExistingIdentity: v.boolean(),
   duplicate: v.optional(v.boolean()),
+  duplicateField: v.optional(v.union(v.literal("email"), v.literal("username"))),
   user: v.optional(userReturnValidator),
   sessionId: v.optional(v.string()),
   token: v.optional(v.string()),
@@ -160,6 +166,7 @@ export const provisionFromIdentity = mutation({
     const now = Date.now();
     let token: string | undefined;
     const normalizedEmail = normalizeEmail(args.user.email ?? args.identity.email);
+    const normalizedUsername = normalizeUsername(args.user.username);
     const allowLink = args.allowLink ?? true;
     const existingIdentity =
       (await findIdentityByIdentityId(ctx, args.identity.identityId)) ??
@@ -174,6 +181,9 @@ export const provisionFromIdentity = mutation({
     const existingUserByEmail = normalizedEmail
       ? await getOneFrom(ctx.db, "users", "by_email", normalizedEmail, "email")
       : null;
+    const existingUserByUsername = normalizedUsername
+      ? await getOneFrom(ctx.db, "users", "by_username", normalizedUsername, "username")
+      : null;
     const user = existingUserByIdentity ?? existingUserByEmail;
 
     const emailLinkAllowed =
@@ -187,12 +197,31 @@ export const provisionFromIdentity = mutation({
         createdUser: false,
         linkedExistingIdentity: false,
         duplicate: true,
+        duplicateField: "email" as const,
         user: toUserReturn(existingUserByEmail),
+      };
+    }
+
+    /* Username is a credential identifier, not a provider-attested claim —
+     * there is no linking story for a collision, so it always fails closed.
+     * Re-provisioning the resolved user with their own username (or an
+     * allowed email-link keeping it) is not a collision. */
+    if (existingUserByUsername && existingUserByUsername._id !== user?._id) {
+      return {
+        userId: existingUserByUsername._id,
+        identityId: undefined,
+        createdUser: false,
+        linkedExistingIdentity: false,
+        duplicate: true,
+        duplicateField: "username" as const,
+        user: toUserReturn(existingUserByUsername),
       };
     }
 
     const userPatch = {
       email: normalizedEmail ?? undefined,
+      username: normalizedUsername ?? user?.username,
+      displayUsername: args.user.displayUsername ?? user?.displayUsername,
       name: args.user.name,
       image: args.user.image,
       // Monotonic only while the address is unchanged: once a user is
@@ -356,6 +385,42 @@ export const getUserAndAccount = query({
     }
     const account = await findAccountByProviderIssuerSubject(ctx, {
       provider: "password",
+      issuer: "native",
+      subject: identity.subject,
+    });
+    if (!account) {
+      return null;
+    }
+    return {
+      user: toUserReturn(user),
+      identity: toIdentityReturn(identity),
+      account: toAccountReturn(account),
+    };
+  },
+});
+
+export const getUserAndAccountByUsername = query({
+  args: { username: v.string() },
+  returns: userAndAccountResultValidator,
+  handler: async (ctx, args) => {
+    const normalizedUsername = normalizeUsername(args.username);
+    if (!normalizedUsername) {
+      return null;
+    }
+    const user = await getOneFrom(ctx.db, "users", "by_username", normalizedUsername, "username");
+    if (!user) {
+      return null;
+    }
+    const identity = await findIdentityByUserAndProvider(ctx, {
+      userId: user._id,
+      provider: "username",
+      issuer: "native",
+    });
+    if (!identity) {
+      return null;
+    }
+    const account = await findAccountByProviderIssuerSubject(ctx, {
+      provider: "username",
       issuer: "native",
       subject: identity.subject,
     });
@@ -676,11 +741,6 @@ function toIdentityLookupResult(identity: Doc<"auth_identities">) {
   };
 }
 
-function normalizeEmail(email: string | undefined): string | undefined {
-  const normalized = email?.trim().toLowerCase();
-  return normalized && normalized.length > 0 ? normalized : undefined;
-}
-
 async function findVerificationCodeByTokenHashAndType(
   ctx: { db: QueryCtx["db"] },
   tokenHash: string,
@@ -754,6 +814,8 @@ function toUserReturn(user: Doc<"users">) {
   return {
     _id: user._id,
     email: user.email,
+    username: user.username,
+    displayUsername: user.displayUsername,
     name: user.name,
     image: user.image,
     emailVerified: user.emailVerified,

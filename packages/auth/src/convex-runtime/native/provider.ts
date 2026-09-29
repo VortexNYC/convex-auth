@@ -1,6 +1,6 @@
 import { action } from "../../component/_generated/server.js";
 import type { FunctionReference, GenericActionCtx } from "convex/server";
-import type { DataModel, Id } from "../../component/_generated/dataModel.js";
+import type { DataModel } from "../../component/_generated/dataModel.js";
 import { v } from "convex/values";
 import {
   buildEmailVerificationUrl,
@@ -11,12 +11,16 @@ import {
   buildPasswordResetUrl,
   createPasswordResetEmailDraft,
 } from "../account/passwordResetEmail.js";
-import { mintToken, verifyToken } from "./jwt.js";
+import { verifyToken } from "./jwt.js";
+import {
+  getNativeCredentialAccount,
+  getNativeCredentialIdentity,
+  type NativeCredentialProvider,
+} from "./credential.js";
 import { checkPasswordBreach } from "./breach.js";
 import {
   hashPassword,
   padBcryptCompare,
-  shouldRehashAfterVerify,
   verifyPassword as verifyPasswordHash,
 } from "./password.js";
 import { generateVerificationToken, hashToken } from "./tokens.js";
@@ -32,7 +36,19 @@ import {
   toNativeAuthUser,
   type VerificationCodeType,
 } from "./types.js";
-import { verifyCaptchaResponse, type CaptchaConfig } from "./captcha.js";
+import type { CaptchaConfig } from "./captcha.js";
+import { createSessionIssuer, resolveSessionTtlMs } from "./sessionIssuer.js";
+import {
+  DEFAULT_MAX_PASSWORD_LENGTH,
+  DEFAULT_MIN_PASSWORD_LENGTH,
+  DEFAULT_RATE_LIMIT_MAX_ATTEMPTS,
+  DEFAULT_RATE_LIMIT_WINDOW_MS,
+  DEFAULT_REFRESH_TOKEN_TTL_MS,
+  DEFAULT_SESSION_TTL_MS,
+  isValidEmail,
+  requireCaptcha,
+  validatePassword,
+} from "./validation.js";
 export type { CaptchaConfig, CaptchaProvider } from "./captcha.js";
 
 export type EmailDraft = {
@@ -114,39 +130,10 @@ type EmailSendResult =
 
 const DEFAULT_VERIFICATION_CODE_TTL_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_PASSWORD_RESET_CODE_TTL_MS = 60 * 60 * 1000;
-const DEFAULT_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const DEFAULT_REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const DONT_REMEMBER_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
-const DEFAULT_MIN_PASSWORD_LENGTH = 8;
-const DEFAULT_MAX_PASSWORD_LENGTH = 128;
-const DEFAULT_RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const DEFAULT_RATE_LIMIT_MAX_ATTEMPTS = 5;
 const DEFAULT_TWO_FACTOR_BACKUP_CODES_COUNT = 10;
 const DEFAULT_TWO_FACTOR_BACKUP_CODE_BYTES = 10;
 const DEFAULT_TWO_FACTOR_SECRET_BYTES = 20;
-const DEFAULT_TWO_FACTOR_PENDING_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_TRUST_DEVICE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-
-const EMAIL_REGEX =
-  /^(?!\.)(?!.*\.\.)([A-Z0-9_+-]\.?)+[A-Z0-9_+-]@([A-Z0-9][A-Z0-9-]*\.)+[A-Z]{2,}$/i;
-
-function isValidEmail(email: string): boolean {
-  return EMAIL_REGEX.test(email);
-}
-
-async function requireCaptcha(
-  config: CaptchaConfig | undefined,
-  captchaToken: string | undefined,
-): Promise<void> {
-  if (!config) return;
-  if (!captchaToken) {
-    throw new Error("Captcha response is required");
-  }
-  const result = await verifyCaptchaResponse(config, captchaToken);
-  if (!result.ok) {
-    throw new Error(result.reason);
-  }
-}
 
 function buildGenericDuplicateResponse(
   email: string,
@@ -166,24 +153,6 @@ function buildGenericDuplicateResponse(
     updatedAt: now,
   };
   return { token: null, user: syntheticUser };
-}
-
-function resolveSessionTtlMs(rememberMe: boolean | undefined, sessionTtlMs: number): number {
-  return rememberMe === false ? DONT_REMEMBER_SESSION_TTL_MS : sessionTtlMs;
-}
-
-function validatePassword(
-  password: string,
-  minLength: number,
-  maxLength: number,
-): { valid: true } | { valid: false; reason: "too_short" | "too_long" } {
-  if (password.length < minLength) {
-    return { valid: false, reason: "too_short" };
-  }
-  if (password.length > maxLength) {
-    return { valid: false, reason: "too_long" };
-  }
-  return { valid: true };
 }
 
 export const nativeAuthSessionValidator = v.object({
@@ -256,41 +225,8 @@ export function nativeEmailAndPassword(
   const shouldSendVerificationEmailOnSignIn = sendOnSignIn;
   const revokeSessionsOnPasswordReset = config.revokeSessionsOnPasswordReset ?? true;
 
-  async function createSessionAndRefreshToken(
-    ctx: GenericActionCtx<DataModel>,
-    args: {
-      userId: string;
-      identityId: string;
-      rememberMe: boolean | undefined;
-      credentialId?: string;
-    },
-  ): Promise<{ sessionId: string; token: string; refreshToken: string }> {
-    const now = Date.now();
-    const sessionId = crypto.randomUUID();
-    const refreshToken = generateVerificationToken();
-    const refreshTokenHash = await hashToken(refreshToken);
-    const effectiveSessionTtlMs = resolveSessionTtlMs(args.rememberMe, sessionTtlMs);
-    const expiresAt = now + effectiveSessionTtlMs;
-    const token = await mintToken(
-      args.userId,
-      sessionId,
-      { identityId: args.identityId },
-      { expiresInSeconds: Math.floor(effectiveSessionTtlMs / 1000) },
-    );
-
-    await ctx.runMutation(component.native.sessions.createSessionAndRefreshToken, {
-      sessionId,
-      userId: args.userId,
-      identityId: args.identityId,
-      token,
-      credentialId: args.credentialId,
-      sessionExpiresAt: expiresAt,
-      refreshTokenHash,
-      refreshTokenExpiresAt: now + refreshTokenTtlMs,
-    });
-
-    return { sessionId, token, refreshToken };
-  }
+  const { createSessionAndRefreshToken, handleTwoFactorSignIn, rehashMigratedCredential } =
+    createSessionIssuer(component, { sessionTtlMs, refreshTokenTtlMs });
 
   const signUp = action({
     args: {
@@ -738,9 +674,24 @@ export function nativeEmailAndPassword(
     }),
     handler: async (ctx, args) => {
       const tokenHash = await hashToken(args.token);
+
+      const code = await ctx.runQuery(component.native.codes.getVerificationCodeByTokenHash, {
+        tokenHash,
+        type: "email_verification",
+      });
+      let credentialProvider: NativeCredentialProvider = "password";
+      if (code) {
+        const credential =
+          (await getNativeCredentialAccount(ctx, component, code.userId)) ??
+          (await getNativeCredentialIdentity(ctx, component, code.userId));
+        if (credential) {
+          credentialProvider = credential.provider;
+        }
+      }
+
       const result = await ctx.runMutation(component.identity.verifyEmail, {
         tokenHash,
-        provider: "password",
+        provider: credentialProvider,
         issuer: "native",
       });
       if (!result.success) {
@@ -829,10 +780,24 @@ export function nativeEmailAndPassword(
 
       const credentialHash = await hashPassword(args.newPassword);
 
+      const code = await ctx.runQuery(component.native.codes.getVerificationCodeByTokenHash, {
+        tokenHash,
+        type: "password_reset",
+      });
+      let credentialProvider: NativeCredentialProvider = "password";
+      if (code) {
+        const credential =
+          (await getNativeCredentialAccount(ctx, component, code.userId)) ??
+          (await getNativeCredentialIdentity(ctx, component, code.userId));
+        if (credential) {
+          credentialProvider = credential.provider;
+        }
+      }
+
       const result = await ctx.runMutation(component.identity.resetPassword, {
         tokenHash,
         credentialHash,
-        provider: "password",
+        provider: credentialProvider,
         issuer: "native",
         revokeSessions: revokeSessionsOnPasswordReset,
       });
@@ -875,79 +840,31 @@ export function nativeEmailAndPassword(
         return { success: false };
       }
 
-      const identity = await ctx.runQuery(component.native.identities.getNativeIdentityByUser, {
-        userId,
-        provider: "password",
-        issuer: "native",
-      });
-      if (!identity) {
+      const credential = await getNativeCredentialAccount(ctx, component, userId);
+      if (!credential) {
         return { success: false };
       }
 
-      const account = await ctx.runQuery(component.native.accounts.getAccountBySubject, {
-        provider: "password",
-        issuer: "native",
-        subject: identity.subject,
-      });
-      if (!account) {
-        return { success: false };
-      }
-
-      const valid = await verifyPasswordHash(args.password, account.credentialHash);
+      const valid = await verifyPasswordHash(args.password, credential.account.credentialHash);
       if (valid) {
-        await rehashMigratedCredential(ctx, account, args.password);
+        await rehashMigratedCredential(ctx, credential.account, args.password);
       }
       return { success: valid };
     },
   });
-
-  async function getNativePasswordAccount(ctx: GenericActionCtx<DataModel>, userId: string) {
-    const identity = await ctx.runQuery(component.native.identities.getNativeIdentityByUser, {
-      userId,
-      provider: "password",
-      issuer: "native",
-    });
-    if (!identity) return null;
-    return await ctx.runQuery(component.native.accounts.getAccountBySubject, {
-      provider: "password",
-      issuer: "native",
-      subject: identity.subject,
-    });
-  }
 
   async function verifyUserPassword(
     ctx: GenericActionCtx<DataModel>,
     userId: string,
     password: string,
   ) {
-    const account = await getNativePasswordAccount(ctx, userId);
-    if (!account) return false;
-    const valid = await verifyPasswordHash(password, account.credentialHash);
+    const credential = await getNativeCredentialAccount(ctx, component, userId);
+    if (!credential) return false;
+    const valid = await verifyPasswordHash(password, credential.account.credentialHash);
     if (valid) {
-      await rehashMigratedCredential(ctx, account, password);
+      await rehashMigratedCredential(ctx, credential.account, password);
     }
     return valid;
-  }
-
-  /**
-   * Imported bcrypt credentials (Clerk CSV exports, WorkOS handoffs) are
-   * rehashed to argon2id on first successful verify so bcrypt only ever
-   * serves the one-time migration bridge — every subsequent sign-in hits
-   * the native hasher.
-   */
-  async function rehashMigratedCredential(
-    ctx: GenericActionCtx<DataModel>,
-    account: { _id: string; credentialHash: string },
-    password: string,
-  ) {
-    if (!shouldRehashAfterVerify(account.credentialHash)) return;
-    const credentialHash = await hashPassword(password);
-    /* CAS: if a reset landed between read and write, keep the newer hash. */
-    await ctx.runMutation(component.native.accounts.updateCredentialHash, {
-      accountId: account._id as Id<"authAccounts">,
-      credentialHash,
-      expectedCredentialHash: account.credentialHash,
-    });
   }
 
   async function resolveSessionUser(ctx: GenericActionCtx<DataModel>, token: string) {
@@ -1275,75 +1192,6 @@ export function nativeEmailAndPassword(
       return { backupCodes: codes };
     },
   });
-
-  async function handleTwoFactorSignIn(
-    ctx: GenericActionCtx<DataModel>,
-    user: NativeUserDoc,
-    identityId: string,
-    rememberMe: boolean | undefined,
-    trustedDeviceToken?: string,
-  ): Promise<NativeAuthSession> {
-    if (!user.twoFactorEnabled) {
-      const { sessionId, token, refreshToken } = await createSessionAndRefreshToken(ctx, {
-        userId: user._id,
-        identityId,
-        rememberMe,
-      });
-      return {
-        token,
-        refreshToken,
-        user: toNativeAuthUser(user),
-        userId: user._id,
-        identityId,
-        sessionId,
-      };
-    }
-
-    if (trustedDeviceToken) {
-      const tokenHash = await hashToken(trustedDeviceToken);
-      const trusted = await ctx.runQuery(component.native.codes.getVerificationCodeByTokenHash, {
-        tokenHash,
-        type: "two_factor_trusted_device",
-      });
-      if (trusted && (trusted.expiresAt ?? 0) > Date.now() && trusted.userId === user._id) {
-        const { sessionId, token, refreshToken } = await createSessionAndRefreshToken(ctx, {
-          userId: user._id,
-          identityId,
-          rememberMe,
-        });
-        return {
-          token,
-          refreshToken,
-          user: toNativeAuthUser(user),
-          userId: user._id,
-          identityId,
-          sessionId,
-        };
-      }
-    }
-
-    const challengeToken = generateVerificationToken();
-    const tokenHash = await hashToken(challengeToken);
-    await ctx.runMutation(component.native.codes.createVerificationCode, {
-      userId: user._id,
-      type: "two_factor_pending",
-      tokenHash,
-      identityId,
-      rememberMe,
-      expiresAt: Date.now() + DEFAULT_TWO_FACTOR_PENDING_TTL_MS,
-    });
-
-    return {
-      token: null,
-      user: toNativeAuthUser(user),
-      userId: user._id,
-      identityId,
-      twoFactorRedirect: true,
-      twoFactorMethods: ["totp"],
-      twoFactorChallengeToken: challengeToken,
-      twoFactorCookieMaxAgeMs: DEFAULT_TWO_FACTOR_PENDING_TTL_MS,
-    };
-  }
 
   const updateUser = action({
     args: {

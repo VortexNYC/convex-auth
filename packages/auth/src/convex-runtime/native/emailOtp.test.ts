@@ -510,6 +510,73 @@ describe("nativeEmailOtp", () => {
     expect(component.identity.provisionFromIdentity).toHaveBeenCalled();
   });
 
+  it("verifyEmailOtp for forget-password attaches the account to a username identity", async () => {
+    const component = createMockComponent();
+    const sendVerificationOTP = vi.fn().mockResolvedValue("email_1");
+    const { sendVerificationOtp, verifyEmailOtp } = nativeEmailOtp(
+      component as unknown as NativeEmailAndPasswordComponentHandle,
+      { sendVerificationOTP },
+    );
+
+    component.native.users.getUserByEmail = vi.fn().mockResolvedValue({
+      _id: "user_1",
+      email: "shlomo@example.com",
+    });
+    component.identity.resetPassword = vi
+      .fn()
+      .mockResolvedValue({ status: false, reason: "invalid" });
+
+    const ctx = createContext();
+    await exec(sendVerificationOtp).handler(ctx, {
+      email: "Shlomo@example.com ",
+      type: "forget-password",
+    });
+    const otp = sendVerificationOTP.mock.calls[0][0].otp;
+    const tokenHash = component.native.codes.createVerificationCode.mock.calls[0]?.[0].tokenHash;
+
+    component.native.codes.getVerificationCodeByTokenHash = vi.fn().mockResolvedValue({
+      _id: "code_1",
+      userId: "user_1",
+      type: "password_reset",
+      tokenHash,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    component.native.users.getUserById = vi.fn().mockResolvedValue({
+      _id: "user_1",
+      email: "shlomo@example.com",
+      username: "shlomo",
+      emailVerified: true,
+    });
+    component.native.identities.getNativeIdentityByUser = vi
+      .fn()
+      .mockImplementation(async (args: { provider?: string }) =>
+        args.provider === "username"
+          ? { _id: "identity_u1", provider: "username", issuer: "native", subject: "sub_u1" }
+          : null,
+      );
+    component.native.accounts.getAccountBySubject = vi.fn().mockResolvedValue(null);
+    component.native.accounts.createAccount = vi.fn().mockResolvedValue("account_1");
+    component.native.codes.consumeVerificationCode = vi.fn().mockResolvedValue({});
+
+    const result = await exec(verifyEmailOtp).handler(ctx, {
+      email: "Shlomo@example.com ",
+      otp,
+      type: "forget-password",
+      newPassword: "new-password-123",
+    });
+
+    expect(result).toMatchObject({ status: true });
+    expect(component.identity.resetPassword).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: "username" }),
+    );
+    expect(component.native.accounts.createAccount).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: "username", subject: "sub_u1" }),
+    );
+    expect(component.identity.provisionFromIdentity).not.toHaveBeenCalled();
+  });
+
   it("sendVerificationOtp for change-email uses the authenticated user's id", async () => {
     const component = createMockComponent();
     const sendVerificationOTP = vi.fn().mockResolvedValue("email_1");

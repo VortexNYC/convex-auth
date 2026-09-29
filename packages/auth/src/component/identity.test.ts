@@ -381,4 +381,189 @@ describe("provisionFromIdentity", () => {
     const user = await t.run((ctx) => ctx.db.get("users", userId));
     expect(user?.emailVerified).toBe(true);
   });
+
+  it("stores a normalized username and displayUsername on provision", async () => {
+    const t = convexTest(schema, modules);
+
+    const result = await t.mutation(api.identity.provisionFromIdentity, {
+      identity: {
+        identityId: "username_sub_1",
+        provider: "username",
+        issuer: "native",
+        subject: "username_sub_1",
+        tokenIdentifier: "username_sub_1",
+        emailVerified: false,
+      },
+      user: {
+        username: "  Alice ",
+        displayUsername: "Alice",
+        emailVerified: false,
+      },
+      account: { credentialHash: "hash" },
+    });
+
+    expect(result.createdUser).toBe(true);
+    const user = await t.run((ctx) => ctx.db.get("users", result.userId));
+    expect(user?.username).toBe("alice");
+    expect(user?.displayUsername).toBe("Alice");
+  });
+
+  it("rejects a username collision inside the serialized mutation", async () => {
+    const t = convexTest(schema, modules);
+
+    await t.mutation(api.identity.provisionFromIdentity, {
+      identity: {
+        identityId: "username_sub_1",
+        provider: "username",
+        issuer: "native",
+        subject: "username_sub_1",
+        tokenIdentifier: "username_sub_1",
+        emailVerified: false,
+      },
+      user: { username: "alice", emailVerified: false },
+      account: { credentialHash: "hash" },
+    });
+
+    const result = await t.mutation(api.identity.provisionFromIdentity, {
+      identity: {
+        identityId: "username_sub_2",
+        provider: "username",
+        issuer: "native",
+        subject: "username_sub_2",
+        tokenIdentifier: "username_sub_2",
+        emailVerified: false,
+      },
+      user: { username: " ALICE ", emailVerified: false },
+      account: { credentialHash: "hash2" },
+    });
+
+    expect(result.duplicate).toBe(true);
+    expect(result.duplicateField).toBe("username");
+    expect(result.identityId).toBeUndefined();
+
+    const leakedIdentity = await t.run((ctx) =>
+      ctx.db
+        .query("auth_identities")
+        .withIndex("by_identity_id", (q) => q.eq("identityId", "username_sub_2"))
+        .unique(),
+    );
+    expect(leakedIdentity).toBeNull();
+  });
+
+  it("re-provisioning the resolved user with their own username is not a collision", async () => {
+    const t = convexTest(schema, modules);
+
+    const first = await t.mutation(api.identity.provisionFromIdentity, {
+      identity: {
+        identityId: "username_sub_1",
+        provider: "username",
+        issuer: "native",
+        subject: "username_sub_1",
+        tokenIdentifier: "username_sub_1",
+        emailVerified: false,
+      },
+      user: { username: "alice", displayUsername: "Alice", emailVerified: false },
+      account: { credentialHash: "hash" },
+    });
+
+    const second = await t.mutation(api.identity.provisionFromIdentity, {
+      identity: {
+        identityId: "username_sub_1",
+        provider: "username",
+        issuer: "native",
+        subject: "username_sub_1",
+        tokenIdentifier: "username_sub_1",
+        emailVerified: false,
+      },
+      user: { username: "alice", emailVerified: false },
+    });
+
+    expect(second.duplicate).toBeUndefined();
+    expect(second.userId).toBe(first.userId);
+  });
+
+  it("an OAuth re-provision without a username preserves the stored username", async () => {
+    const t = convexTest(schema, modules);
+
+    const userId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "alice@example.com",
+        username: "alice",
+        displayUsername: "Alice",
+        emailVerified: true,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+    await t.run(async (ctx) =>
+      ctx.db.insert("auth_identities", {
+        identityId: "github:alice",
+        userId,
+        provider: "github",
+        issuer: "github",
+        subject: "alice",
+        tokenIdentifier: "github:alice",
+        email: "alice@example.com",
+        emailVerified: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    await t.mutation(api.identity.provisionFromIdentity, {
+      identity: {
+        identityId: "github:alice",
+        provider: "github",
+        issuer: "github",
+        subject: "alice",
+        tokenIdentifier: "github:alice",
+        email: "alice@example.com",
+        emailVerified: true,
+      },
+      user: { email: "alice@example.com", name: "Alice G", emailVerified: true },
+    });
+
+    const user = await t.run((ctx) => ctx.db.get("users", userId));
+    expect(user?.username).toBe("alice");
+    expect(user?.displayUsername).toBe("Alice");
+  });
+});
+
+describe("getUserAndAccountByUsername", () => {
+  it("returns user, identity, and account for a normalized lookup", async () => {
+    const t = convexTest(schema, modules);
+
+    await t.mutation(api.identity.provisionFromIdentity, {
+      identity: {
+        identityId: "username_sub_1",
+        provider: "username",
+        issuer: "native",
+        subject: "username_sub_1",
+        tokenIdentifier: "username_sub_1",
+        emailVerified: false,
+      },
+      user: { username: "Alice", displayUsername: "Alice", emailVerified: false },
+      account: { credentialHash: "hash" },
+    });
+
+    const result = await t.query(api.identity.getUserAndAccountByUsername, {
+      username: "  ALICE ",
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.user.username).toBe("alice");
+    expect(result?.user.displayUsername).toBe("Alice");
+    expect(result?.identity.provider).toBe("username");
+    expect(result?.account.credentialHash).toBe("hash");
+  });
+
+  it("returns null for unknown and blank usernames", async () => {
+    const t = convexTest(schema, modules);
+
+    expect(
+      await t.query(api.identity.getUserAndAccountByUsername, { username: "ghost" }),
+    ).toBeNull();
+    expect(await t.query(api.identity.getUserAndAccountByUsername, { username: "   " })).toBeNull();
+  });
 });

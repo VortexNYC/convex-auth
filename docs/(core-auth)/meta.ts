@@ -7,6 +7,7 @@ export default defineMeta({
   icon: "shield",
   pages: [
     "email-password",
+    "username",
     "oauth",
     "generic-oauth",
     "two-factor",

@@ -5,6 +5,8 @@ export { createConvexAuthProvider } from "./authProvider.js";
 export type { ConvexAuthProvider } from "./authProvider.js";
 export { nativeEmailAndPassword } from "./provider.js";
 export { type NativeEmailAndPasswordActions } from "./provider.js";
+export { nativeUsername } from "./username.js";
+export { type NativeUsernameActions, type NativeUsernameConfig } from "./username.js";
 export { type EmailDraft, type EmailSender } from "./provider.js";
 export { type CaptchaConfig, type CaptchaProvider } from "./provider.js";
 export { nativeOAuth } from "./oauthActions.js";

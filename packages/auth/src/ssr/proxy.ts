@@ -19,6 +19,8 @@ import { isCorsRequest, jsonResponse, logVerbose } from "./utils.js";
 const SESSION_INTENTS = [
   "signUp",
   "signIn",
+  "signUpUsername",
+  "signInUsername",
   "signInAnonymous",
   "linkAnonymousAccount",
   "verifyEmailOtp",
@@ -36,6 +38,8 @@ type ProxyActions = Pick<NativeAuthActions, "signUp" | "signIn" | "signOut" | "u
   Partial<
     Pick<
       NativeAuthActions,
+      | "signUpUsername"
+      | "signInUsername"
       | "signInAnonymous"
       | "linkAnonymousAccount"
       | "verifyEmailOtp"
@@ -148,14 +152,14 @@ export async function runAuthProxy<Action, R extends Response = Response>(
     }
     args.token = pending;
   }
-  if (intent === "signIn") {
+  if (intent === "signIn" || intent === "signInUsername") {
     if (requestCookies.trustedDevice !== null) {
       args.trustedDeviceToken = requestCookies.trustedDevice;
     } else {
       delete args.trustedDeviceToken;
     }
   }
-  if (intent === "signIn" || intent === "callback") {
+  if (intent === "signIn" || intent === "signInUsername" || intent === "callback") {
     if (requestCookies.landingVerifier !== null) {
       args.landingVerifier = requestCookies.landingVerifier;
     } else {

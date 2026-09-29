@@ -11,6 +11,8 @@ export type VerificationCodeType =
 export type NativeAuthUser = {
   id: string;
   email?: string;
+  username?: string;
+  displayUsername?: string;
   name?: string;
   image?: string;
   emailVerified: boolean;
@@ -38,6 +40,8 @@ export function toNativeAuthUser(user: NativeUserDoc): NativeAuthUser {
     email: user.email,
     name: user.name,
     image: user.image,
+    username: user.username,
+    displayUsername: user.displayUsername,
     emailVerified: user.emailVerified,
     twoFactorEnabled: user.twoFactorEnabled ?? false,
     isActive: user.isActive ?? true,
@@ -69,6 +73,8 @@ export function toNativeAuthUser(user: NativeUserDoc): NativeAuthUser {
 export const nativeAuthUserValidator = v.object({
   id: v.string(),
   email: v.optional(v.string()),
+  username: v.optional(v.string()),
+  displayUsername: v.optional(v.string()),
   name: v.optional(v.string()),
   image: v.optional(v.string()),
   emailVerified: v.boolean(),
@@ -159,6 +165,8 @@ export type NativeUserDoc = {
   _id: string;
   _creationTime?: number;
   email?: string;
+  username?: string;
+  displayUsername?: string;
   name?: string;
   image?: string;
   emailVerified: boolean;
@@ -266,6 +274,8 @@ export type NativeEmailAndPasswordComponentHandle = {
         };
         user: {
           email?: string;
+          username?: string;
+          displayUsername?: string;
           name?: string;
           image?: string;
           emailVerified: boolean;
@@ -287,6 +297,7 @@ export type NativeEmailAndPasswordComponentHandle = {
         linkedExistingIdentity: boolean;
         userId: string;
         duplicate?: boolean;
+        duplicateField?: "email" | "username";
         user?: NativeUserDoc;
         sessionId?: string;
         token?: string;
@@ -297,6 +308,13 @@ export type NativeEmailAndPasswordComponentHandle = {
       "query",
       "public" | "internal",
       { email: string },
+      { user: NativeUserDoc; identity: NativeIdentityDoc; account: NativeAccountDoc } | null,
+      string
+    >;
+    getUserAndAccountByUsername: FunctionReference<
+      "query",
+      "public" | "internal",
+      { username: string },
       { user: NativeUserDoc; identity: NativeIdentityDoc; account: NativeAccountDoc } | null,
       string
     >;

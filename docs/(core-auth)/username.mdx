@@ -1,0 +1,88 @@
+---
+title: Username and password
+description: Configure username/password sign-up and sign-in with normalized uniqueness and display-name preservation.
+sidebar:
+  order: 7
+---
+
+`convex-auth` supports username/password authentication as a native provider. Usernames are normalized (trimmed, lowercased) for lookup and uniqueness; the original casing is preserved on `displayUsername`.
+
+## Enable
+
+```ts
+// convex/auth.ts
+import { components } from "./_generated/api";
+import { convexAuth } from "@vortex-api/convex-auth/convex";
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+  username: {
+    enabled: true,
+  },
+});
+
+export const { signUpUsername, signInUsername } = auth;
+```
+
+## Sign up
+
+```tsx
+import { useAuthActions } from "@vortex-api/convex-auth/react";
+
+export function SignUp() {
+  const { signUpUsername, isLoading } = useAuthActions();
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    await signUpUsername({
+      username: formData.get("username") as string,
+      password: formData.get("password") as string,
+      name: formData.get("name") as string,
+    });
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input name="username" required minLength={3} maxLength={32} />
+      <input name="password" type="password" required minLength={8} />
+      <button type="submit" disabled={isLoading}>
+        Sign up
+      </button>
+    </form>
+  );
+}
+```
+
+By default the user is signed in immediately (`autoSignIn: true`). An optional `email` can be attached at sign-up; a duplicate email fails with `User already exists`, a duplicate username with `Username is already taken`.
+
+:::note
+`signUpUsername` never sends a verification email — that pipeline lives in the email providers (`emailAndPassword` → `sendEmailVerification`/`verifyEmail`, `emailOtp` → `sendVerificationOtp`/`verifyEmailOtp`). If you set `requireVerifiedEmail` without one of those configured, username users who attached an `email` are **permanently blocked from signing in** — only enable it when a verification path actually exists.
+:::
+
+## Sign in
+
+```tsx
+const { signInUsername } = useAuthActions();
+
+await signInUsername({
+  username: "alice",
+  password,
+  rememberMe: true,
+});
+```
+
+Two-factor authentication and trusted devices work exactly as with email/password — the same pending-challenge flow is shared.
+
+## HTTP endpoints
+
+| Method | Path                         | Description         |
+| ------ | ---------------------------- | ------------------- |
+| POST   | `/api/auth/sign-up/username` | Create a user       |
+| POST   | `/api/auth/sign-in/username` | Sign in by username |
+
+Cookie-mode SSR proxies these through the `signUpUsername` / `signInUsername` intents automatically.
+
+## Options
+
+See [`docs/configuration.mdx`](./configuration#username) for the full `username` table, including `usernameValidator`, `minUsernameLength`/`maxUsernameLength`, `checkBreach`, `rateLimit`, and `requireVerifiedEmail`.

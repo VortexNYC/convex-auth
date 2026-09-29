@@ -328,3 +328,122 @@ describe("HTTP transport: /api/auth/magic-link/verify", () => {
     expect(landing.searchParams.get("token")).toBeTruthy();
   });
 });
+
+describe("HTTP transport: username routes", () => {
+  const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
+    new Request(`${SITE}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers },
+      body: JSON.stringify(body),
+    });
+
+  it("does not register username routes when the actions are absent", () => {
+    const routes = captureRoutes(makeComponent());
+    expect(routes.has("POST /api/auth/sign-up/username")).toBe(false);
+    expect(routes.has("POST /api/auth/sign-in/username")).toBe(false);
+  });
+
+  it("sign-up/username forwards parsed args and writes session cookies", async () => {
+    const session = {
+      token: await sessionJwt(),
+      refreshToken: "refresh-token-value",
+      userId: "user_1",
+      sessionId: "session_1",
+    };
+    const signUpUsername = vi.fn(async () => session);
+    const routes = captureRoutes(makeComponent(), { signUpUsername });
+    const handler = routes.get("POST /api/auth/sign-up/username")!;
+
+    const res = await handler(
+      makeCtx({}),
+      post(
+        "/api/auth/sign-up/username",
+        { username: "Shlomo_K", password: "pw", displayUsername: "Shlomo_K" },
+        { "x-captcha-response": "captcha-token" },
+      ),
+    );
+    expect(res.status).toBe(200);
+    expect(signUpUsername).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        username: "Shlomo_K",
+        password: "pw",
+        displayUsername: "Shlomo_K",
+        captchaToken: "captcha-token",
+      }),
+    );
+    const cookies = res.headers.getSetCookie();
+    expect(cookies.some((c) => c.startsWith("convex-auth-token="))).toBe(true);
+    expect(cookies.some((c) => c.startsWith("convex-auth-refresh-token=refresh-token-value"))).toBe(
+      true,
+    );
+  });
+
+  it("sign-up/username rejects a malformed body with invalid_body", async () => {
+    const signUpUsername = vi.fn();
+    const routes = captureRoutes(makeComponent(), { signUpUsername });
+    const handler = routes.get("POST /api/auth/sign-up/username")!;
+
+    const res = await handler(makeCtx({}), post("/api/auth/sign-up/username", { username: 42 }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ success: false, reason: "invalid_body" });
+    expect(signUpUsername).not.toHaveBeenCalled();
+  });
+
+  it("sign-up/username maps 'Username is already taken' to username_already_taken", async () => {
+    const signUpUsername = vi.fn(async () => {
+      throw new Error("Username is already taken");
+    });
+    const routes = captureRoutes(makeComponent(), { signUpUsername });
+    const handler = routes.get("POST /api/auth/sign-up/username")!;
+
+    const res = await handler(
+      makeCtx({}),
+      post("/api/auth/sign-up/username", { username: "taken", password: "pw" }),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ code: "username_already_taken" });
+  });
+
+  it("sign-in/username writes session cookies and forwards the trusted-device cookie", async () => {
+    const session = {
+      token: await sessionJwt(),
+      refreshToken: "refresh-token-value",
+      userId: "user_1",
+      sessionId: "session_1",
+    };
+    const signInUsername = vi.fn(async () => session);
+    const routes = captureRoutes(makeComponent(), { signInUsername });
+    const handler = routes.get("POST /api/auth/sign-in/username")!;
+
+    const res = await handler(
+      makeCtx({}),
+      post(
+        "/api/auth/sign-in/username",
+        { username: "shlomo", password: "pw" },
+        { cookie: "convex-auth-trusted-device=device-token", origin: SITE },
+      ),
+    );
+    expect(res.status).toBe(200);
+    expect(signInUsername).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ username: "shlomo", trustedDeviceToken: "device-token" }),
+    );
+    expect(res.headers.getSetCookie().some((c) => c.startsWith("convex-auth-token="))).toBe(true);
+  });
+
+  it("sign-in/username maps 'Invalid username or password' to a 401", async () => {
+    const signInUsername = vi.fn(async () => {
+      throw new Error("Invalid username or password");
+    });
+    const routes = captureRoutes(makeComponent(), { signInUsername });
+    const handler = routes.get("POST /api/auth/sign-in/username")!;
+
+    const res = await handler(
+      makeCtx({}),
+      post("/api/auth/sign-in/username", { username: "shlomo", password: "wrong" }),
+    );
+    expect(res.status).toBe(401);
+    expect(await res.json()).toMatchObject({ code: "invalid_username_or_password" });
+  });
+});

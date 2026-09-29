@@ -1254,6 +1254,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             _id: string;
             activeOrganizationId?: string;
             createdAt: number;
+            displayUsername?: string;
             email?: string;
             emailTwoFactorDisabledAt?: number;
             emailTwoFactorEmail?: string;
@@ -1271,6 +1272,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             name?: string;
             twoFactorEnabled?: boolean;
             updatedAt: number;
+            username?: string;
           };
         },
         Name
@@ -1327,6 +1329,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             _id: string;
             activeOrganizationId?: string;
             createdAt: number;
+            displayUsername?: string;
             email?: string;
             emailTwoFactorDisabledAt?: number;
             emailTwoFactorEmail?: string;
@@ -1344,6 +1347,56 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             name?: string;
             twoFactorEnabled?: boolean;
             updatedAt: number;
+            username?: string;
+          };
+        },
+        Name
+      >;
+      getUserAndAccountByUsername: FunctionReference<
+        "query",
+        "internal",
+        { username: string },
+        null | {
+          account: {
+            _id: string;
+            credentialHash: string;
+            issuer: string;
+            provider: string;
+            subject: string;
+            userId: string;
+          };
+          identity: {
+            _id: string;
+            email?: string;
+            emailVerified: boolean;
+            issuer: string;
+            provider: string;
+            subject: string;
+            userId: string;
+          };
+          user: {
+            _id: string;
+            activeOrganizationId?: string;
+            createdAt: number;
+            displayUsername?: string;
+            email?: string;
+            emailTwoFactorDisabledAt?: number;
+            emailTwoFactorEmail?: string;
+            emailTwoFactorEnabledAt?: number;
+            emailTwoFactorLastVerifiedAt?: number;
+            emailTwoFactorResetAt?: number;
+            emailTwoFactorResetReason?:
+              "missing_email" | "email_not_verified" | "email_changed";
+            emailTwoFactorStatus?: "disabled" | "enabled" | "reset_required";
+            emailVerified: boolean;
+            image?: string;
+            isActive: boolean;
+            isSuperAdmin?: boolean;
+            metadataJson?: string;
+            name?: string;
+            twoFactorEnabled?: boolean;
+            updatedAt: number;
+            username?: string;
           };
         },
         Name
@@ -1402,16 +1455,19 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             sessionId: string;
           };
           user: {
+            displayUsername?: string;
             email?: string;
             emailVerified: boolean;
             image?: string;
             name?: string;
+            username?: string;
           };
           verificationCode?: { expiresAt: number; tokenHash: string };
         },
         {
           createdUser: boolean;
           duplicate?: boolean;
+          duplicateField?: "email" | "username";
           identityId?: string;
           linkedExistingIdentity: boolean;
           sessionId?: string;
@@ -1420,6 +1476,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             _id: string;
             activeOrganizationId?: string;
             createdAt: number;
+            displayUsername?: string;
             email?: string;
             emailTwoFactorDisabledAt?: number;
             emailTwoFactorEmail?: string;
@@ -1437,6 +1494,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             name?: string;
             twoFactorEnabled?: boolean;
             updatedAt: number;
+            username?: string;
           };
           userId: string;
         },
@@ -1459,6 +1517,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             _id: string;
             activeOrganizationId?: string;
             createdAt: number;
+            displayUsername?: string;
             email?: string;
             emailTwoFactorDisabledAt?: number;
             emailTwoFactorEmail?: string;
@@ -1476,6 +1535,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             name?: string;
             twoFactorEnabled?: boolean;
             updatedAt: number;
+            username?: string;
           };
         },
         Name
@@ -1491,6 +1551,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             _id: string;
             activeOrganizationId?: string;
             createdAt: number;
+            displayUsername?: string;
             email?: string;
             emailTwoFactorDisabledAt?: number;
             emailTwoFactorEmail?: string;
@@ -1508,6 +1569,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             name?: string;
             twoFactorEnabled?: boolean;
             updatedAt: number;
+            username?: string;
           };
         },
         Name

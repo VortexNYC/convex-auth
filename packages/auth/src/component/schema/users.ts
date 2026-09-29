@@ -4,6 +4,10 @@ import { emailTwoFactorResetReasonValidator, emailTwoFactorStatusValidator } fro
 
 export const users = defineTable({
   email: v.optional(v.string()),
+  // Normalized (trimmed, lowercased) sign-in identifier; unique via by_username.
+  username: v.optional(v.string()),
+  // Caller-supplied casing for display.
+  displayUsername: v.optional(v.string()),
   name: v.optional(v.string()),
   image: v.optional(v.string()),
   emailVerified: v.boolean(),
@@ -30,6 +34,7 @@ export const users = defineTable({
   updatedAt: v.number(),
 })
   .index("by_email", ["email"])
+  .index("by_username", ["username"])
   .index("by_name", ["name"])
   .index("by_super_admin", ["isSuperAdmin"]);
 

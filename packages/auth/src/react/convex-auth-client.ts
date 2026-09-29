@@ -46,6 +46,8 @@ export function useConvexAuthClient() {
               emailVerified: actions.user.emailVerified,
               image: actions.user.image ?? null,
               name: actions.user.name ?? null,
+              username: actions.user.username ?? null,
+              displayUsername: actions.user.displayUsername ?? null,
             },
           },
     error: null,
@@ -106,6 +108,21 @@ export function useConvexAuthClient() {
           return { data: null, error: toError(err) };
         }
       },
+      username: async (args) => {
+        if (typeof actions.signInUsername !== "function") {
+          return { data: null, error: toError("Username sign-in is not configured") };
+        }
+        try {
+          const data = await actions.signInUsername({
+            ...args,
+            rememberMe: args.rememberMe ?? false,
+          });
+          actions.setTwoFactorChallengeToken(data.twoFactorChallengeToken ?? null);
+          return { data, error: null };
+        } catch (err) {
+          return { data: null, error: toError(err) };
+        }
+      },
     },
 
     linkAccount: async (args) => {
@@ -160,6 +177,21 @@ export function useConvexAuthClient() {
       email: async (args) => {
         try {
           const data = await actions.signUp({ ...args, rememberMe: args.rememberMe ?? false });
+          actions.setTwoFactorChallengeToken(data.twoFactorChallengeToken ?? null);
+          return { data, error: null };
+        } catch (err) {
+          return { data: null, error: toError(err) };
+        }
+      },
+      username: async (args) => {
+        if (typeof actions.signUpUsername !== "function") {
+          return { data: null, error: toError("Username sign-up is not configured") };
+        }
+        try {
+          const data = await actions.signUpUsername({
+            ...args,
+            rememberMe: args.rememberMe ?? false,
+          });
           actions.setTwoFactorChallengeToken(data.twoFactorChallengeToken ?? null);
           return { data, error: null };
         } catch (err) {

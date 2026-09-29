@@ -8,6 +8,8 @@ const actionRef = (name: string) => name as unknown as FunctionReference<"action
 const actions = {
   signUp: actionRef("auth:signUp"),
   signIn: actionRef("auth:signIn"),
+  signUpUsername: actionRef("auth:signUpUsername"),
+  signInUsername: actionRef("auth:signInUsername"),
   signOut: actionRef("auth:signOut"),
   updateSession: actionRef("auth:updateSession"),
   signInAnonymous: actionRef("auth:signInAnonymous"),
@@ -518,6 +520,119 @@ describe("cookieConfig", () => {
         cookieConfig: { maxAge: -60 },
       }),
     ).rejects.toThrow("cookieConfig.maxAge");
+    expect(actionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("username intents", () => {
+  it("dispatches signUpUsername to its action", async () => {
+    actionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    const response = await proxyAuthActionToConvex(
+      postRequest({
+        intent: "signUpUsername",
+        args: { username: "shlomo", password: "pw" },
+      }),
+      options,
+    );
+    expect(response.status).toBe(200);
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.signUpUsername,
+      { username: "shlomo", password: "pw" },
+      expect.objectContaining({}),
+    );
+    const setCookies = response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=t"))).toBeDefined();
+  });
+
+  it("signInUsername forwards a trusted-device cookie as trustedDeviceToken", async () => {
+    actionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    await proxyAuthActionToConvex(
+      postRequest(
+        { intent: "signInUsername", args: { username: "shlomo", password: "pw" } },
+        { cookie: "__Host-__convexAuthTrustedDevice=td" },
+      ),
+      options,
+    );
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.signInUsername,
+      { username: "shlomo", password: "pw", trustedDeviceToken: "td" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("signInUsername's trusted-device cookie overwrites a body-supplied value", async () => {
+    actionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    await proxyAuthActionToConvex(
+      postRequest(
+        {
+          intent: "signInUsername",
+          args: { username: "shlomo", password: "pw", trustedDeviceToken: "forged" },
+        },
+        { cookie: "__Host-__convexAuthTrustedDevice=real-device" },
+      ),
+      options,
+    );
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.signInUsername,
+      { username: "shlomo", password: "pw", trustedDeviceToken: "real-device" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("signInUsername drops a body-supplied trustedDeviceToken when no cookie is present", async () => {
+    actionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    await proxyAuthActionToConvex(
+      postRequest({
+        intent: "signInUsername",
+        args: { username: "shlomo", password: "pw", trustedDeviceToken: "forged" },
+      }),
+      options,
+    );
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.signInUsername,
+      { username: "shlomo", password: "pw" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("signInUsername injects the landing-verifier cookie and drops a forged body value", async () => {
+    actionMock.mockResolvedValue({ token: "t", refreshToken: "r" });
+    await proxyAuthActionToConvex(
+      postRequest(
+        {
+          intent: "signInUsername",
+          args: { username: "shlomo", password: "pw", landingVerifier: "lv-forged" },
+        },
+        { cookie: "__Host-__convexAuthLandingVerifier=lv-cookie" },
+      ),
+      options,
+    );
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.signInUsername,
+      { username: "shlomo", password: "pw", landingVerifier: "lv-cookie" },
+      expect.objectContaining({}),
+    );
+  });
+
+  it("writes minted tokens to cookies on signInUsername", async () => {
+    actionMock.mockResolvedValue({ token: "u-token", refreshToken: "u-refresh" });
+    const response = await proxyAuthActionToConvex(
+      postRequest({ intent: "signInUsername", args: { username: "shlomo", password: "pw" } }),
+      options,
+    );
+    const setCookies = response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=u-token"))).toBeDefined();
+    expect(
+      setCookies.find((h) => h.startsWith("__Host-__convexAuthRefreshToken=u-refresh")),
+    ).toBeDefined();
+  });
+
+  it("rejects username intents whose action is not configured", async () => {
+    const response = await proxyAuthActionToConvex(
+      postRequest({ intent: "signInUsername", args: { username: "s", password: "p" } }),
+      { actions: { signIn: actionRef("auth:signIn") } as never, transport },
+    );
+    expect(response.status).toBe(400);
     expect(actionMock).not.toHaveBeenCalled();
   });
 });
