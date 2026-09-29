@@ -493,3 +493,95 @@ describe("organization invitation mutations emit canonical webhook events", () =
     assert.equal(await singleDeliveryEventType(t, memberAddedEndpoint), "member.added");
   });
 });
+
+describe("global webhook endpoint lifecycle", () => {
+  it("lists only org-less endpoints", async () => {
+    const t = convexTest(schema, modules);
+    const globalEndpoint = await createEndpoint(t, { eventTypes: ["*"] });
+    const { organizationId } = await t.mutation(api.organizations.upsertOrganization, {
+      name: "Scoped Org",
+      slug: `scoped-${crypto.randomUUID()}`,
+    });
+    await createEndpoint(t, { organizationId, eventTypes: ["*"] });
+
+    const globals = await t.query(api.webhooks.listGlobalWebhookEndpoints, {});
+    assert.equal(globals.length, 1);
+    assert.equal(globals[0]?._id, globalEndpoint);
+    assert.equal(globals[0]?.organizationId, undefined);
+  });
+
+  it("disables a global endpoint and fan-out skips it", async () => {
+    const t = convexTest(schema, modules);
+    const endpointId = await createEndpoint(t, { eventTypes: ["user.created"] });
+
+    await t.mutation(api.webhooks.setGlobalWebhookEndpointStatus, {
+      endpointId,
+      status: "disabled",
+    });
+
+    const result = await t.mutation(api.webhooks.enqueueWebhookEvent, {
+      eventType: "user.created",
+      eventId: "evt_disabled_global",
+      payloadJson: "{}",
+    });
+    assert.equal(result.enqueued, 0);
+  });
+
+  it("archives and deletes a global endpoint", async () => {
+    const t = convexTest(schema, modules);
+    const endpointId = await createEndpoint(t, { eventTypes: ["*"] });
+
+    await assert.rejects(
+      t.mutation(api.webhooks.deleteGlobalWebhookEndpoint, { endpointId }),
+      /Only archived webhook endpoints can be deleted/,
+    );
+
+    await t.mutation(api.webhooks.setGlobalWebhookEndpointStatus, {
+      endpointId,
+      status: "archived",
+    });
+    await t.mutation(api.webhooks.deleteGlobalWebhookEndpoint, { endpointId });
+
+    const endpoint = await t.query(api.webhooks.getWebhookEndpoint, { endpointId });
+    assert.equal(endpoint, null);
+  });
+
+  it("global ops cannot reach org-scoped endpoints", async () => {
+    const t = convexTest(schema, modules);
+    const { organizationId } = await t.mutation(api.organizations.upsertOrganization, {
+      name: "Isolated Org",
+      slug: `isolated-${crypto.randomUUID()}`,
+    });
+    const endpointId = await createEndpoint(t, { organizationId, eventTypes: ["*"] });
+
+    await assert.rejects(
+      t.mutation(api.webhooks.setGlobalWebhookEndpointStatus, {
+        endpointId,
+        status: "disabled",
+      }),
+      /Webhook endpoint not found/,
+    );
+    await assert.rejects(
+      t.mutation(api.webhooks.deleteGlobalWebhookEndpoint, { endpointId }),
+      /Webhook endpoint not found/,
+    );
+  });
+
+  it("org-scoped ops cannot reach global endpoints", async () => {
+    const t = convexTest(schema, modules);
+    const endpointId = await createEndpoint(t, { eventTypes: ["*"] });
+    const { organizationId } = await t.mutation(api.organizations.upsertOrganization, {
+      name: "Wrong Org",
+      slug: `wrong-${crypto.randomUUID()}`,
+    });
+
+    await assert.rejects(
+      t.mutation(api.webhooks.setWebhookEndpointStatus, {
+        organizationId,
+        endpointId,
+        status: "disabled",
+      }),
+      /Webhook endpoint not found/,
+    );
+  });
+});

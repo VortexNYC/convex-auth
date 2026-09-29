@@ -292,6 +292,92 @@ export const deleteWebhookEndpoint = mutation({
   },
 });
 
+/**
+ * Global-scope lifecycle mirrors of the org-scoped ops above. Global endpoints
+ * (organizationId === undefined) are platform subscribers created via
+ * `createWebhookEndpoint` without an org; the org-scoped guard fails closed on
+ * them by design, so without these they could never be disabled, archived, or
+ * deleted. These mutations only ever touch org-less rows — a tenant-scoped
+ * endpoint cannot be reached through the global path either.
+ */
+async function requireGlobalWebhookEndpoint(ctx: DbCtx, endpointId: Id<"webhook_endpoints">) {
+  const endpoint = await requireWebhookEndpoint(ctx, endpointId);
+  if (endpoint.organizationId !== undefined) {
+    throw new Error("Webhook endpoint not found");
+  }
+  return endpoint;
+}
+
+export const listGlobalWebhookEndpoints = query({
+  args: {
+    status: v.optional(webhookEndpointStatusValidator),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(webhookEndpointDocValidator),
+  handler: async (ctx, { status, limit }) => {
+    const resolvedLimit = resolveListLimit(limit);
+    const index = status === undefined ? "by_organization" : "by_org_status";
+    const startIndexKey = status === undefined ? [undefined] : [undefined, status];
+    const { page: endpoints } = await getPage(ctx, {
+      table: "webhook_endpoints",
+      index,
+      startIndexKey,
+      endIndexKey: startIndexKey,
+      absoluteMaxRows: resolvedLimit,
+      schema,
+    });
+    return endpoints.map((endpoint) => ({
+      _id: endpoint._id,
+      _creationTime: endpoint._creationTime,
+      organizationId: endpoint.organizationId,
+      url: endpoint.url,
+      description: endpoint.description,
+      eventTypes: endpoint.eventTypes,
+      status: endpoint.status,
+      createdBy: endpoint.createdBy,
+      metadataJson: endpoint.metadataJson,
+      createdAt: endpoint.createdAt,
+      updatedAt: endpoint.updatedAt,
+    }));
+  },
+});
+
+export const setGlobalWebhookEndpointStatus = mutation({
+  args: {
+    endpointId: v.id("webhook_endpoints"),
+    status: webhookEndpointStatusValidator,
+    updatedAt: v.optional(v.number()),
+  },
+  returns: okResultValidator,
+  handler: async (ctx, args) => {
+    const endpoint = await requireGlobalWebhookEndpoint(ctx, args.endpointId);
+    if (endpoint.status === args.status) {
+      return okResult();
+    }
+    if (args.status === "active") {
+      await assertCanActivateWebhookEndpoint(ctx, endpoint.organizationId);
+    }
+    await ctx.db.patch("webhook_endpoints", args.endpointId, {
+      status: args.status,
+      updatedAt: args.updatedAt ?? Date.now(),
+    });
+    return okResult();
+  },
+});
+
+export const deleteGlobalWebhookEndpoint = mutation({
+  args: { endpointId: v.id("webhook_endpoints") },
+  returns: okResultValidator,
+  handler: async (ctx, args) => {
+    const endpoint = await requireGlobalWebhookEndpoint(ctx, args.endpointId);
+    if (endpoint.status !== "archived") {
+      throw new Error("Only archived webhook endpoints can be deleted");
+    }
+    await ctx.db.delete("webhook_endpoints", args.endpointId);
+    return okResult();
+  },
+});
+
 export const createWebhookDelivery = mutation({
   args: {
     endpointId: v.id("webhook_endpoints"),
