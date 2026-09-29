@@ -35,6 +35,8 @@ import type {
   NativeUsernameConfig,
   NativeUsernameFunctionReferences,
 } from "./username.js";
+import { nativeOneTap } from "./oneTap.js";
+import type { NativeOneTapActions, NativeOneTapConfig } from "./oneTap.js";
 
 type ConvexAuthConfigBase = {
   emailAndPassword?: NativeEmailAndPasswordConfig;
@@ -47,6 +49,13 @@ type ConvexAuthConfigBase = {
   passkey?: NativePasskeyConfig;
   anonymous?: NativeAnonymousConfig;
   username?: NativeUsernameConfig;
+  /**
+   * Google One Tap — accepts a client-obtained ID token. `true` inherits
+   * `oauth.google` (clientId, hd, maxTokenAge, fetchImpl) plus the oauth
+   * accountLinking/trustedProviders policy; a config object overrides per
+   * key and still inherits the linking policy.
+   */
+  oneTap?: boolean | NativeOneTapConfig;
 };
 
 /**
@@ -82,7 +91,12 @@ type ConfigActions<TConfig extends ConvexAuthConfig> = NativeEmailAndPasswordAct
     : {}) &
   (TConfig extends { passkey: NativePasskeyConfig } ? NativePasskeyActions : {}) &
   (TConfig extends { anonymous: NativeAnonymousConfig } ? ReturnType<typeof nativeAnonymous> : {}) &
-  (TConfig extends { username: NativeUsernameConfig } ? NativeUsernameActions : {}) & {
+  (TConfig extends { username: NativeUsernameConfig } ? NativeUsernameActions : {}) &
+  (TConfig extends { oneTap: false }
+    ? {}
+    : TConfig extends { oneTap: boolean | NativeOneTapConfig }
+      ? NativeOneTapActions
+      : {}) & {
     addHttpRoutes(http: HttpRouter): void;
   };
 
@@ -125,6 +139,34 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
       })
     : undefined;
 
+  const oneTapActions = (() => {
+    if (!config.oneTap) return undefined;
+    const oneTapConfig: Partial<NativeOneTapConfig> = config.oneTap === true ? {} : config.oneTap;
+    const clientId = oneTapConfig.clientId ?? config.oauth?.google?.clientId;
+    if (!clientId) {
+      throw new Error(
+        "convexAuth: `oneTap` requires a `clientId` (or `oauth.google.clientId` when set to `true`)",
+      );
+    }
+    return nativeOneTap(component, {
+      ...oneTapConfig,
+      clientId,
+      hd: oneTapConfig.hd ?? config.oauth?.google?.hd,
+      maxTokenAge: oneTapConfig.maxTokenAge ?? config.oauth?.google?.maxTokenAge,
+      fetchImpl: oneTapConfig.fetchImpl ?? config.oauth?.google?.fetchImpl,
+      /* The Google lockdown flags must follow the provider — `oneTap: true`
+       * cannot silently reopen sign-up or unverified emails that redirect
+       * OAuth was configured to close. Explicit oneTap config wins. */
+      disableSignUp: oneTapConfig.disableSignUp ?? config.oauth?.google?.disableSignUp,
+      disableImplicitSignUp:
+        oneTapConfig.disableImplicitSignUp ?? config.oauth?.google?.disableImplicitSignUp,
+      requireEmailVerification:
+        oneTapConfig.requireEmailVerification ?? config.oauth?.google?.requireEmailVerification,
+      accountLinking: oneTapConfig.accountLinking ?? config.oauth?.accountLinking,
+      trustedProviders: oneTapConfig.trustedProviders ?? config.oauth?.trustedProviders,
+    });
+  })();
+
   const emailConfig = config.emailAndPassword ?? {};
   const oauthProviderLoginOrigin = (() => {
     const loginUrl = config.oauthProvider?.loginUrl;
@@ -152,6 +194,7 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
     ...magicLinkActions,
     ...emailOtpActions,
     ...phoneActions,
+    ...oneTapActions,
     ...authQueries,
     ...(oauthActions
       ? { signInWithRedirect: oauthActions.signIn, callback: oauthActions.callback }

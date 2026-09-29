@@ -152,6 +152,21 @@ export function useConvexAuthClient() {
           return { data: null, error: toError(err) };
         }
       },
+      oneTap: async (args) => {
+        if (typeof actions.signInOneTap !== "function") {
+          return { data: null, error: toError("One Tap authentication is not configured") };
+        }
+        try {
+          const data = await actions.signInOneTap({
+            idToken: args.idToken,
+            nonce: args.nonce,
+            rememberMe: args.rememberMe,
+          });
+          return { data, error: null };
+        } catch (err) {
+          return { data: null, error: toError(err) };
+        }
+      },
     },
 
     linkAccount: async (args) => {

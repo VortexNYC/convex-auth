@@ -9,6 +9,7 @@ export default defineMeta({
     "email-password",
     "username",
     "oauth",
+    "one-tap",
     "generic-oauth",
     "two-factor",
     "magic-links",

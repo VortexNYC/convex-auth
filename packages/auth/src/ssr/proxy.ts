@@ -25,6 +25,7 @@ const SESSION_INTENTS = [
   "linkAnonymousAccount",
   "verifyEmailOtp",
   "verifyPhoneOtp",
+  "signInOneTap",
   "callback",
   "twoFactorVerifyTOTP",
   "twoFactorVerifyBackupCode",
@@ -45,6 +46,7 @@ type ProxyActions = Pick<NativeAuthActions, "signUp" | "signIn" | "signOut" | "u
       | "linkAnonymousAccount"
       | "verifyEmailOtp"
       | "verifyPhoneOtp"
+      | "signInOneTap"
       | "callback"
       | "twoFactorVerifyTOTP"
       | "twoFactorVerifyBackupCode"

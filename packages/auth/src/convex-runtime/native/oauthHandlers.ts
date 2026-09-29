@@ -289,17 +289,16 @@ export async function handleCallback<DataModel extends GenericDataModel>(
   }
 
   const isTrustedProvider = config.trustedProviders?.includes(provider.id) ?? false;
-  if (isImplicitLink) {
-    const accountLinking = config.accountLinking;
-    const requiresEmailVerification =
-      accountLinking?.requiresEmailVerification === true ? true : !isTrustedProvider;
-    if (
-      (requiresEmailVerification && !user.emailVerified) ||
-      accountLinking?.enabled === false ||
-      accountLinking?.disableImplicitLinking === true
-    ) {
-      return { error: "account_not_linked", redirectUrl: resolveErrorURL(statePayload) };
-    }
+  const accountLinking = config.accountLinking;
+  const requiresEmailVerification =
+    accountLinking?.requiresEmailVerification === true ? true : !isTrustedProvider;
+  const implicitLinkAllowed =
+    accountLinking?.enabled !== false &&
+    accountLinking?.disableImplicitLinking !== true &&
+    (!requiresEmailVerification || user.emailVerified);
+
+  if (isImplicitLink && !implicitLinkAllowed) {
+    return { error: "account_not_linked", redirectUrl: resolveErrorURL(statePayload) };
   }
 
   const linkTargetUser = linkingUser ?? undefined;
@@ -333,7 +332,12 @@ export async function handleCallback<DataModel extends GenericDataModel>(
     },
     // Explicit links are authorized by the authenticated session — the
     // email match resolves to linkTargetUser, never another account.
-    allowUnverifiedEmailLink: isTrustedProvider || linkTargetUser !== undefined,
+    // For implicit links the policy travels into the mutation: the email
+    // lookup there re-runs, so a user appearing between the query above and
+    // this mutation must not link under a disabled or unverified policy.
+    allowLink: linkTargetUser !== undefined || implicitLinkAllowed,
+    allowUnverifiedEmailLink:
+      linkTargetUser !== undefined || (isTrustedProvider && !requiresEmailVerification),
   });
 
   if (identityResult.duplicate) {

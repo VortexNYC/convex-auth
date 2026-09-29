@@ -73,6 +73,15 @@ export type ConvexBetterAuthClient = {
       name?: string;
       rememberMe?: boolean;
     }): Promise<BetterAuthResponse>;
+    /**
+     * Google One Tap sign-in — pass the ID token obtained from Google's
+     * One Tap prompt (GIS `credential` response).
+     */
+    oneTap?(args: {
+      idToken: string;
+      nonce?: string;
+      rememberMe?: boolean;
+    }): Promise<BetterAuthResponse>;
   };
   linkAccount?: (args: {
     email: string;

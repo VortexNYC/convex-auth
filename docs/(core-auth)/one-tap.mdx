@@ -1,0 +1,94 @@
+---
+title: Google One Tap
+description: Google One Tap sign-in for convex-auth — verify the GIS ID token and mint a session without a redirect.
+sidebar:
+  order: 14
+---
+
+`convex-auth` supports Google One Tap: the Google Identity Services prompt hands the client an ID token, and the server verifies it against Google's JWKS — no redirect round-trip.
+
+## Enable
+
+```ts convex/auth.ts
+import { components } from "./_generated/api";
+import { convexAuth } from "@vortex-api/convex-auth/convex";
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+  oneTap: {
+    clientId: process.env.GOOGLE_CLIENT_ID!,
+  },
+});
+```
+
+`oneTap: true` inherits `clientId`, `hd`, `maxTokenAge`, `fetchImpl`, and the `disableSignUp` / `disableImplicitSignUp` / `requireEmailVerification` lockdowns from `oauth.google` — plus `accountLinking` and `trustedProviders` from the top-level `oauth` block. Explicit `oneTap` config values always win over inherited ones. The two flows share the same Google identity, so a user who signs in with One Tap and later completes the redirect flow lands on the same account.
+
+No `clientSecret` is needed: the ID token is verified locally against Google's public keys, never exchanged.
+
+## Sign in
+
+```tsx src/OneTap.tsx
+import { useEffect } from "react";
+import { useAuthActions } from "@vortex-api/convex-auth/react";
+
+export function OneTap() {
+  const { signInOneTap } = useAuthActions();
+
+  useEffect(() => {
+    window.google?.accounts.id.initialize({
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+      callback: async (response) => {
+        await signInOneTap({ idToken: response.credential });
+      },
+    });
+    window.google?.accounts.id.prompt();
+  }, [signInOneTap]);
+
+  return null;
+}
+```
+
+The Better Auth client exposes the same flow as `signIn.oneTap({ idToken })`. React Native uses the identical `signInOneTap` action — obtain the ID token from `@react-native-google-signin/google-signin` or Expo's Google auth module and pass it through.
+
+Pass `nonce` to bind the credential to a value your client generated when initializing the GIS prompt (`google.accounts.id.initialize({ nonce })`) — the action rejects when the token's `nonce` claim doesn't match exactly. This is claim binding: it proves the credential was minted for that initialization, thwarting token substitution. It is **not** server-side replay protection — there is no server-issued nonce store; the client owns nonce freshness.
+
+Rate limiting is **on by default** — 5 attempts per 60 seconds, enforced twice per call: once on the token hash before any verification (caps replays of the same credential) and once on the Google subject after verification (caps per-account abuse). Pass `rateLimit: false` to disable, or `{ windowMs, maxAttempts }` to tune. The Google JWKS is cached for five minutes, so verification does not fan out to Google on every call.
+
+## Verification semantics
+
+The action verifies the token with `RS256` against `https://www.googleapis.com/oauth2/v3/certs`, enforcing:
+
+- `iss` is `https://accounts.google.com` (or `accounts.google.com`)
+- `aud` equals your `clientId`
+- `exp`/`iat` within `maxTokenAge` when configured
+- `hd` matches when `hd` is set
+
+Signature, claim, and hosted-domain failures raise `INVALID_ID_TOKEN`. Upstream JWKS failures propagate as-is — they are infrastructure errors, not bad tokens.
+
+## Linking
+
+One Tap provisions the same `google`/`https://accounts.google.com`/`<sub>` identity as redirect OAuth:
+
+- **Existing identity** → straight sign-in.
+- **Existing user by email** → implicit link follows the same `oauth.accountLinking`/`trustedProviders` policy as the redirect flow. A Google-**verified** email links under the default policy; an **unverified** claim only links when `"google"` is in `trustedProviders` (or `accountLinking.requiresEmailVerification` is explicitly off) — otherwise `ACCOUNT_NOT_LINKED`.
+- **No match** → a new user, unless `disableSignUp` or `disableImplicitSignUp` raises `SIGN_UP_DISABLED`.
+
+Set `requireEmailVerification: true` to reject tokens where Google reports `email_verified: false`.
+
+## Options
+
+| Option                     | Type                                   | Default        | Description                                                       |
+| -------------------------- | -------------------------------------- | -------------- | ----------------------------------------------------------------- |
+| `enabled`                  | `boolean`                              | `true`         | Enable One Tap.                                                   |
+| `clientId`                 | `string`                               | `oauth.google` | Google OAuth client ID — the `aud` check.                         |
+| `hd`                       | `string`                               | `oauth.google` | Restrict to a Workspace hosted domain.                            |
+| `maxTokenAge`              | `number`                               | `oauth.google` | Max token age in seconds.                                         |
+| `fetchImpl`                | `typeof fetch`                         | `fetch`        | Fetch override (tests).                                           |
+| `disableSignUp`            | `boolean`                              | `oauth.google` | Block new-user creation.                                          |
+| `disableImplicitSignUp`    | `boolean`                              | `oauth.google` | Only allow accounts created by an explicit sign-up.               |
+| `requireEmailVerification` | `boolean`                              | `oauth.google` | Require `email_verified` from Google.                             |
+| `sessionTtlMs`             | `number`                               | 7 days         | Session lifetime after sign-in.                                   |
+| `refreshTokenTtlMs`        | `number`                               | 30 days        | Refresh-token lifetime.                                           |
+| `rateLimit`                | `{ windowMs, maxAttempts }` \| `false` | 5/60s          | Token-hash + subject rate limiting. `false` disables.             |
+| `accountLinking`           | `AccountLinkingConfig`                 | `oauth` config | Inherited linking policy — override only when flows must diverge. |
+| `trustedProviders`         | `string[]`                             | `oauth` config | Inherited trusted-provider list.                                  |

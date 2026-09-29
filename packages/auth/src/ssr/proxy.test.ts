@@ -17,6 +17,7 @@ const actions = {
   verifyEmailOtp: actionRef("auth:verifyEmailOtp"),
   sendPhoneOtp: actionRef("auth:sendPhoneOtp"),
   verifyPhoneOtp: actionRef("auth:verifyPhoneOtp"),
+  signInOneTap: actionRef("auth:signInOneTap"),
   callback: actionRef("auth:callback"),
   twoFactorVerifyTOTP: actionRef("auth:twoFactorVerifyTOTP"),
   twoFactorVerifyBackupCode: actionRef("auth:twoFactorVerifyBackupCode"),
@@ -559,6 +560,30 @@ describe("phone OTP intents", () => {
     );
     expect(response.status).toBe(400);
     expect(actionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("one-tap intents", () => {
+  it("dispatches signInOneTap to its action and writes minted tokens to cookies", async () => {
+    actionMock.mockResolvedValue({ token: "ot-token", refreshToken: "ot-refresh" });
+    const response = await proxyAuthActionToConvex(
+      postRequest({
+        intent: "signInOneTap",
+        args: { idToken: "google-id-token" },
+      }),
+      options,
+    );
+    expect(response.status).toBe(200);
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.signInOneTap,
+      { idToken: "google-id-token" },
+      expect.objectContaining({}),
+    );
+    const setCookies = response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=ot-token"))).toBeDefined();
+    expect(
+      setCookies.find((h) => h.startsWith("__Host-__convexAuthRefreshToken=ot-refresh")),
+    ).toBeDefined();
   });
 });
 

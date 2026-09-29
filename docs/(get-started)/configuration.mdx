@@ -35,6 +35,7 @@ export const { signUp, signIn, signOut, addHttpRoutes } = auth;
 | `magicLink`        | `NativeMagicLinkConfig`               | No       | Magic-link sign-in via email.                              |
 | `emailOtp`         | `NativeEmailOtpConfig`                | No       | Email-based one-time passcodes.                            |
 | `phone`            | `NativePhoneConfig`                   | No       | SMS one-time passcodes for phone sign-in and verification. |
+| `oneTap`           | `boolean \| NativeOneTapConfig`       | No       | Google One Tap sign-in via ID-token verification.          |
 | `captcha`          | `CaptchaConfig`                       | No       | CAPTCHA gating for sign-up and password reset endpoints.   |
 
 ## `emailAndPassword`
@@ -163,6 +164,23 @@ Set the corresponding `*_CLIENT_ID` and `*_CLIENT_SECRET` environment variables.
 | `refreshTokenTtlMs` | `number`                               | 30 days | Refresh-token lifetime.                                          |
 | `rateLimit`         | `{ windowMs, maxAttempts }` \| `false` | 5/60s   | Per-phone rate limiting on sends and verifies. `false` disables. |
 | `sendPhoneOtp`      | `(data) => Promise<string>`            | Yes     | Send the OTP SMS — e.g. `createTwilioSmsOtpSender`.              |
+
+## `oneTap`
+
+| Option                     | Type                                   | Default        | Description                                                         |
+| -------------------------- | -------------------------------------- | -------------- | ------------------------------------------------------------------- |
+| `enabled`                  | `boolean`                              | `true`         | Enable Google One Tap sign-in.                                      |
+| `clientId`                 | `string`                               | `oauth.google` | Google OAuth client ID — the `aud` check. Required when standalone. |
+| `hd`                       | `string`                               | `oauth.google` | Restrict to a Workspace hosted domain.                              |
+| `maxTokenAge`              | `number`                               | `oauth.google` | Max ID-token age in seconds.                                        |
+| `disableSignUp`            | `boolean`                              | `oauth.google` | Block new-user creation.                                            |
+| `disableImplicitSignUp`    | `boolean`                              | `oauth.google` | Only allow accounts created by an explicit sign-up.                 |
+| `requireEmailVerification` | `boolean`                              | `oauth.google` | Require `email_verified` from Google.                               |
+| `sessionTtlMs`             | `number`                               | 7 days         | Session lifetime after sign-in.                                     |
+| `refreshTokenTtlMs`        | `number`                               | 30 days        | Refresh-token lifetime.                                             |
+| `rateLimit`                | `{ windowMs, maxAttempts }` \| `false` | 5/60s          | Token-hash + subject attempt limiting. `false` disables.            |
+
+`oneTap: true` inherits `clientId`/`hd`/`maxTokenAge`/`fetchImpl` and the sign-up/verification lockdowns from `oauth.google`, plus `accountLinking`/`trustedProviders` from `oauth`. See [One Tap](./one-tap) for linking semantics.
 
 ## `captcha`
 
