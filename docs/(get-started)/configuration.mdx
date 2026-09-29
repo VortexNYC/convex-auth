@@ -71,16 +71,16 @@ export const { signUp, signIn, signOut, addHttpRoutes } = auth;
 
 ## `oauth`
 
-| Option             | Type                    | Default | Description                                                           |
-| ------------------ | ----------------------- | ------- | --------------------------------------------------------------------- |
-| `github`           | `GitHubProviderConfig`  | No      | GitHub OAuth app credentials.                                         |
-| `google`           | `GoogleProviderConfig`  | No      | Google OAuth app credentials.                                         |
-| `discord`          | `DiscordProviderConfig` | No      | Discord OAuth app credentials.                                        |
-| `redirectURI`      | `string`                | No      | Full callback URL registered with the OAuth provider.                 |
-| `trustedOrigins`   | `string[]`              | No      | Origins allowed for `callbackURL`, `errorURL`, and `newUserURL`.      |
-| `sessionTtlMs`     | `number`                | 7 days  | OAuth session lifetime.                                               |
-| `trustedProviders` | `string[]`              | No      | Providers whose `emailVerified` claim is trusted for account linking. |
-| `accountLinking`   | `AccountLinkingConfig`  | No      | Policy for linking OAuth accounts to existing users.                  |
+| Option             | Type                    | Default | Description                                                                                                                             |
+| ------------------ | ----------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `github`           | `GitHubProviderConfig`  | No      | GitHub OAuth app credentials.                                                                                                           |
+| `google`           | `GoogleProviderConfig`  | No      | Google OAuth app credentials.                                                                                                           |
+| `discord`          | `DiscordProviderConfig` | No      | Discord OAuth app credentials.                                                                                                          |
+| `redirectURI`      | `string`                | No      | Full callback URL registered with the OAuth provider.                                                                                   |
+| `trustedOrigins`   | `string[]`              | No      | Origins allowed for `callbackURL`, `errorURL`, and `newUserURL`.                                                                        |
+| `sessionTtlMs`     | `number`                | 7 days  | OAuth session lifetime.                                                                                                                 |
+| `trustedProviders` | `string[]`              | No      | Providers whose `emailVerified` claim is trusted for account linking — the only way implicit linking proceeds with an unverified email. |
+| `accountLinking`   | `AccountLinkingConfig`  | No      | Policy for linking OAuth accounts to existing users.                                                                                    |
 
 ### Provider configs
 
@@ -97,11 +97,11 @@ Set the corresponding `*_CLIENT_ID` and `*_CLIENT_SECRET` environment variables.
 
 ### `accountLinking`
 
-| Option                      | Type      | Default | Description                                                          |
-| --------------------------- | --------- | ------- | -------------------------------------------------------------------- |
-| `enabled`                   | `boolean` | `true`  | Allow linking OAuth accounts to existing users.                      |
-| `disableImplicitLinking`    | `boolean` | `false` | Require explicit `linkSocial` to attach an OAuth account.            |
-| `requiresEmailVerification` | `boolean` | `false` | Require the provider to report the email as verified before linking. |
+| Option                      | Type      | Default | Description                                                                                                                                                                                                                         |
+| --------------------------- | --------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`                   | `boolean` | `true`  | Allow linking OAuth accounts to existing users.                                                                                                                                                                                     |
+| `disableImplicitLinking`    | `boolean` | `false` | Require explicit `linkSocial` to attach an OAuth account.                                                                                                                                                                           |
+| `requiresEmailVerification` | `boolean` | `false` | Require the provider to report the email as verified before implicit linking. Effectively required regardless for providers not in `trustedProviders` — the component refuses to link an unverified email into an existing account. |
 
 ## `magicLink`
 

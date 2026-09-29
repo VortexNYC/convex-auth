@@ -18,10 +18,10 @@ export default defineConfig({
   description: "Vortex-native, full-stack authentication for Convex.",
   logo: "/logo.svg",
   banner: {
-    content: "v3.0.1 — MCP OAuth, organizations, passkeys, SSR adapters",
+    content: "v3.1.0 — Clerk/WorkOS migration, Hono adapter, Node 22 floor",
     link: { href: "/changelog", text: "Changelog" },
     dismissible: true,
-    id: "v3.0.1",
+    id: "v3.1.0",
   },
   github: {
     owner: "VortexNYC",
