@@ -46,10 +46,23 @@ export type WorkosMembership = {
   updated_at?: string;
 };
 
+export type WorkosInvitation = {
+  id: string;
+  email?: string;
+  organization_id?: string;
+  role?: string | { slug: string } | null;
+  role_slug?: string;
+  state?: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type WorkosExportInput = {
   users: WorkosUser[];
   organizations?: WorkosOrganization[];
   memberships?: WorkosMembership[];
+  invitations?: WorkosInvitation[];
 };
 
 function isoToMs(value: string | undefined | null): number {
@@ -204,6 +217,36 @@ export function normalizeWorkosExport(input: WorkosExportInput): NormalizedExpor
   const userById = new Map(out.users.map((u) => [u.externalId, u]));
   for (const member of input.memberships ?? []) {
     normalizeWorkosMembership(member, orgById, userById, out);
+  }
+
+  for (const invitation of input.invitations ?? []) {
+    const state = (invitation.state ?? invitation.status ?? "pending").toLowerCase();
+    if (state !== "pending") continue;
+    const org = invitation.organization_id ? orgById.get(invitation.organization_id) : undefined;
+    const email = invitation.email?.toLowerCase().trim();
+    if (!org || !email || !/^[^\s@]+@[^\s@]+$/.test(email)) {
+      out.skipped.push({
+        kind: "membership",
+        externalId: invitation.id,
+        reason: !org
+          ? `organization ${invitation.organization_id ?? "?"} not in export`
+          : "invitation has no valid email",
+      });
+      continue;
+    }
+    const roleSlug =
+      invitation.role_slug ??
+      (typeof invitation.role === "string" ? invitation.role : (invitation.role?.slug ?? "member"));
+    out.memberships.push({
+      organizationExternalId: org.externalId,
+      organizationSlug: org.slug,
+      userExternalId: "",
+      userEmail: email,
+      roleKey: roleSlug,
+      status: "invited",
+      createdAt: isoToMs(invitation.created_at),
+      updatedAt: isoToMs(invitation.updated_at),
+    });
   }
 
   return out;
