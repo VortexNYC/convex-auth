@@ -1,7 +1,13 @@
 /// <reference types="vite/client" />
 import { describe, expect, it } from "vitest";
 import { normalizeClerkExport } from "./clerk.js";
-import type { ClerkApiUser, ClerkCsvRow, ClerkMembership, ClerkOrganization } from "./clerk.js";
+import type {
+  ClerkApiUser,
+  ClerkCsvRow,
+  ClerkMembership,
+  ClerkOrganization,
+  ClerkOrganizationInvitation,
+} from "./clerk.js";
 import fixture from "./fixtures/clerk-export.json";
 
 type Fixture = {
@@ -9,6 +15,7 @@ type Fixture = {
   csvRows: ClerkCsvRow[];
   organizations: ClerkOrganization[];
   memberships: ClerkMembership[];
+  invitations: ClerkOrganizationInvitation[];
 };
 
 const data = fixture as Fixture;
@@ -97,7 +104,7 @@ describe("normalizeClerkExport", () => {
   });
 
   it("joins memberships through org ids and falls back to member identifier email", () => {
-    expect(out.memberships).toHaveLength(4);
+    expect(out.memberships).toHaveLength(6);
     expect(
       out.skipped.find((s) => s.kind === "membership" && s.externalId === "mem_4")?.reason,
     ).toContain("not in export");
@@ -117,5 +124,29 @@ describe("normalizeClerkExport", () => {
     expect(
       out.skipped.find((s) => s.kind === "membership" && s.externalId === "mem_7")?.reason,
     ).toContain("no resolvable email");
+  });
+
+  it("maps pending organization_invitations to invited seats", () => {
+    const invitee = out.memberships.find((m) => m.userEmail === "invitee@example.com");
+    expect(invitee).toMatchObject({
+      organizationSlug: "acme",
+      roleKey: "admin",
+      status: "invited",
+      userExternalId: "",
+    });
+    /* status matching is case-insensitive — "Pending" still emits a seat. */
+    const caps = out.memberships.find((m) => m.userEmail === "caps@example.com");
+    expect(caps?.status).toBe("invited");
+    /* accepted invitations don't emit duplicate seats. */
+    expect(out.memberships.some((m) => m.userEmail === "accepted@example.com")).toBe(false);
+  });
+
+  it("skips invitations with unusable emails or missing orgs", () => {
+    expect(
+      out.skipped.find((s) => s.kind === "membership" && s.externalId === "inv_4badmail")?.reason,
+    ).toContain("no valid email");
+    expect(
+      out.skipped.find((s) => s.kind === "membership" && s.externalId === "inv_5noorg")?.reason,
+    ).toContain("not in export");
   });
 });

@@ -1,13 +1,19 @@
 /// <reference types="vite/client" />
 import { describe, expect, it } from "vitest";
 import { normalizeWorkosExport } from "./workos.js";
-import type { WorkosMembership, WorkosOrganization, WorkosUser } from "./workos.js";
+import type {
+  WorkosInvitation,
+  WorkosMembership,
+  WorkosOrganization,
+  WorkosUser,
+} from "./workos.js";
 import fixture from "./fixtures/workos-export.json";
 
 type Fixture = {
   users: WorkosUser[];
   organizations: WorkosOrganization[];
   memberships: WorkosMembership[];
+  invitations: WorkosInvitation[];
 };
 
 const data = fixture as Fixture;
@@ -54,7 +60,7 @@ describe("normalizeWorkosExport", () => {
   });
 
   it("resolves memberships through external ids and both role shapes", () => {
-    expect(out.memberships).toHaveLength(3);
+    expect(out.memberships).toHaveLength(5);
     const admin = out.memberships.find((m) => m.userEmail === "margaret@example.com");
     expect(admin).toMatchObject({ organizationSlug: "wayne-enterprises", roleKey: "admin" });
     const member = out.memberships.find(
@@ -77,6 +83,30 @@ describe("normalizeWorkosExport", () => {
       out.skipped.find((s) => s.kind === "membership" && s.externalId === "om_01EHZNVPKN1DANGLING")
         ?.reason,
     ).toContain("not in export");
+  });
+
+  it("maps pending invitations to invited seats via role_slug or nested role", () => {
+    const invitee = out.memberships.find((m) => m.userEmail === "invitee@example.com");
+    expect(invitee).toMatchObject({
+      organizationSlug: "wayne-enterprises",
+      roleKey: "admin",
+      status: "invited",
+      userExternalId: "",
+    });
+    const nested = out.memberships.find((m) => m.userEmail === "nested@example.com");
+    expect(nested).toMatchObject({ roleKey: "member", status: "invited" });
+    expect(out.memberships.some((m) => m.userEmail === "accepted@example.com")).toBe(false);
+  });
+
+  it("skips invitations with missing orgs or unusable emails", () => {
+    expect(
+      out.skipped.find((s) => s.kind === "membership" && s.externalId === "invitation_4noorg")
+        ?.reason,
+    ).toContain("not in export");
+    expect(
+      out.skipped.find((s) => s.kind === "membership" && s.externalId === "invitation_5badmail")
+        ?.reason,
+    ).toContain("no valid email");
   });
 
   it("drops users with no email", () => {

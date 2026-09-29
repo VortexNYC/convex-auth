@@ -26,25 +26,48 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const OUT_DIR = resolve(ROOT, "tmp/workos-export");
 const API = "https://api.workos.com";
 
-function loadEnv(): void {
-  for (const candidate of [
-    resolve(ROOT, "packages/auth/.env.local"),
-    resolve(ROOT, ".env.local"),
-  ]) {
-    try {
-      for (const line of readFileSync(candidate, "utf-8").split("\n")) {
-        const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
-        if (match && !process.env[match[1]]) process.env[match[1]] = match[2];
+let fileEnv: Record<string, string> | null = null;
+
+function env(name: string): string | undefined {
+  if (process.env[name]) return process.env[name];
+  if (!fileEnv) {
+    fileEnv = {};
+    for (const candidate of [
+      resolve(ROOT, "packages/auth/.env.local"),
+      resolve(ROOT, ".env.local"),
+      resolve(ROOT, "examples/server/.env.local"),
+    ]) {
+      try {
+        for (const line of readFileSync(candidate, "utf-8").split("\n")) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith("#")) continue;
+          const match = trimmed.match(/^(?:export\s+)?([A-Z0-9_]+)=(.*)$/);
+          if (!match || fileEnv[match[1]]) continue;
+          let value = match[2].trim();
+          if (
+            (value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))
+          ) {
+            value = value.slice(1, -1);
+          }
+          fileEnv[match[1]] = value;
+        }
+      } catch {
+        /* file absent — keep looking */
       }
-    } catch {
-      /* file absent — keep looking */
     }
   }
+  return fileEnv[name];
 }
 
 function apiKey(): string {
-  const key = process.env.WORKOS_API_KEY;
+  const key = env("WORKOS_API_KEY");
   if (!key) throw new Error("WORKOS_API_KEY not set — see packages/auth/.env.local");
+  if (!key.startsWith("sk_test_")) {
+    throw new Error(
+      "WORKOS_API_KEY must be a test-environment key (sk_test_…) — this harness seeds and reads live data; refusing non-test credentials",
+    );
+  }
   return key;
 }
 
@@ -119,7 +142,6 @@ async function findUserByEmail(email: string): Promise<{ id: string } | null> {
 }
 
 async function seed(): Promise<void> {
-  loadEnv();
   mkdirSync(OUT_DIR, { recursive: true });
   const created: Record<string, string> = {};
 
@@ -179,19 +201,29 @@ async function seed(): Promise<void> {
     if (result) console.log(`membership ${m.user} → ${m.role}`);
   }
 
-  const invitation = await workos("/user_management/invitations", {
-    method: "POST",
-    body: {
-      email: "invited.migration@example.com",
-      organization_id: org.id,
-      role_slug: "member",
-    },
-  }).catch((e: Error) => console.log(`invitation: ${e.message}`));
-  if (invitation) console.log("invitation sent: invited.migration@example.com");
+  const pendingInvitations = (await listAll(
+    `/user_management/invitations?organization_id=${org.id}`,
+  ).catch(() => [])) as { email: string; state?: string }[];
+  const alreadyInvited = pendingInvitations.some(
+    (i) => i.email === "invited.migration@example.com" && (i.state ?? "pending") === "pending",
+  );
+  if (alreadyInvited) {
+    console.log("invitation: invited.migration@example.com already pending");
+  } else {
+    const invitation = await workos("/user_management/invitations", {
+      method: "POST",
+      body: {
+        email: "invited.migration@example.com",
+        organization_id: org.id,
+        role_slug: "member",
+      },
+    }).catch((e: Error) => console.log(`invitation: ${e.message}`));
+    if (invitation) console.log("invitation sent: invited.migration@example.com");
+  }
 
   writeFileSync(
     resolve(OUT_DIR, "seed-state.json"),
-    JSON.stringify({ created, orgId: org.id, password: PASSWORD }, null, 2),
+    JSON.stringify({ created, orgId: org.id }, null, 2),
   );
   console.log(`\nseed state → ${resolve(OUT_DIR, "seed-state.json")}`);
 }
@@ -199,7 +231,6 @@ async function seed(): Promise<void> {
 // ---- pull ----------------------------------------------------------------
 
 async function pull(): Promise<void> {
-  loadEnv();
   mkdirSync(OUT_DIR, { recursive: true });
 
   const users = await listAll("/user_management/users");
@@ -229,10 +260,61 @@ async function pull(): Promise<void> {
 
 const SERVER_DIR = resolve(ROOT, "examples/server");
 
-function convexRun(fn: string, args: unknown, component?: string): unknown {
-  const argv = ["convex", "run"];
-  if (component) argv.push("--component", component);
-  argv.push(fn, JSON.stringify(args));
+let warnedArgvFallback = false;
+
+/** Calls a deployment function over HTTPS (`/api/function`) so secret-bearing
+ * args (password digests, reset tokens) ride in the request body instead of
+ * process argv. Component/internal functions need `CONVEX_DEPLOY_KEY` (dashboard
+ * → deployment → generate deploy key); without it we fall back to `npx convex
+ * run`, where args are briefly visible in `ps` on shared hosts. */
+async function convexCall(fn: string, args: unknown, component?: string): Promise<unknown> {
+  const deployKey = env("CONVEX_DEPLOY_KEY");
+  const deploymentUrl = env("CONVEX_URL");
+  if (!deploymentUrl) {
+    throw new Error("CONVEX_URL not set — expected in examples/server/.env.local");
+  }
+  if (component && !deployKey) {
+    if (!warnedArgvFallback) {
+      warnedArgvFallback = true;
+      console.warn(
+        "CONVEX_DEPLOY_KEY unset — component calls fall back to `convex run` (args visible in process argv). Set it to use the authenticated HTTP path.",
+      );
+    }
+    return convexRunCli(fn, args, component);
+  }
+  /* Public app functions ride the unauthenticated /api/action endpoint —
+   * admin auth is never attached so a stale key can't break them.
+   * Component/internal functions need /api/function + Convex deploy key. */
+  const endpoint = component ? `${deploymentUrl}/api/function` : `${deploymentUrl}/api/action`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(deployKey ? { Authorization: `Convex ${deployKey}` } : {}),
+    },
+    body: JSON.stringify({
+      path: fn,
+      args,
+      format: "convex_encoded_json",
+      ...(component ? { componentPath: component } : {}),
+    }),
+  });
+  const payload = (await response.json()) as {
+    status?: string;
+    value?: unknown;
+    errorMessage?: string;
+  };
+  if (!response.ok && response.status !== 445) {
+    throw new Error(`${fn} → HTTP ${response.status}: ${JSON.stringify(payload)}`);
+  }
+  if (payload.status !== "success") {
+    throw new Error(`${fn} failed: ${payload.errorMessage ?? JSON.stringify(payload)}`);
+  }
+  return payload.value;
+}
+
+function convexRunCli(fn: string, args: unknown, component: string): unknown {
+  const argv = ["convex", "run", "--component", component, fn, JSON.stringify(args)];
   const stdout = execFileSync("npx", argv, {
     cwd: SERVER_DIR,
     encoding: "utf-8",
@@ -280,7 +362,6 @@ function loadNormalized(): Normalized {
 }
 
 async function apply(): Promise<void> {
-  loadEnv();
   const out = loadNormalized();
   console.log(
     `normalized: ${out.users.length} users, ${out.accounts.length} accounts, ` +
@@ -288,8 +369,10 @@ async function apply(): Promise<void> {
   );
 
   const userIdByEmail = new Map<string, string>();
+  const emailVerifiedByEmail = new Map<string, boolean>();
   for (const user of out.users) {
-    const result = convexRun(
+    emailVerifiedByEmail.set(user.email, user.emailVerified);
+    const result = (await convexCall(
       "migrate:migrateUser",
       {
         legacyUser: {
@@ -302,7 +385,7 @@ async function apply(): Promise<void> {
         },
       },
       "convexAuth",
-    ) as { userId: string };
+    )) as { userId: string };
     userIdByEmail.set(user.email, result.userId);
     console.log(`user ${user.email} → ${result.userId}`);
   }
@@ -313,7 +396,7 @@ async function apply(): Promise<void> {
       console.log(`account ${account.userEmail}: no migrated user — skipped`);
       continue;
     }
-    convexRun(
+    await convexCall(
       "migrate:migrateAccount",
       {
         legacyAccount: {
@@ -326,7 +409,7 @@ async function apply(): Promise<void> {
         },
         userId,
         email: account.userEmail,
-        emailVerified: true,
+        emailVerified: emailVerifiedByEmail.get(account.userEmail) ?? true,
       },
       "convexAuth",
     );
@@ -335,11 +418,11 @@ async function apply(): Promise<void> {
 
   const orgIdBySlug = new Map<string, string>();
   for (const org of out.organizations) {
-    const result = convexRun(
+    const result = (await convexCall(
       "migrate:migrateOrganization",
       { organization: org },
       "convexAuth",
-    ) as { organizationId: string; created: boolean };
+    )) as { organizationId: string; created: boolean };
     orgIdBySlug.set(org.slug, result.organizationId);
     console.log(
       `org ${org.slug} → ${result.organizationId} (${result.created ? "created" : "existing"})`,
@@ -349,7 +432,7 @@ async function apply(): Promise<void> {
   for (const member of out.memberships) {
     const organizationId = orgIdBySlug.get(member.organizationSlug);
     if (!organizationId) continue;
-    const result = convexRun(
+    const result = (await convexCall(
       "migrate:migrateMembership",
       {
         organizationId,
@@ -360,7 +443,7 @@ async function apply(): Promise<void> {
         updatedAt: member.updatedAt,
       },
       "convexAuth",
-    ) as { skipped?: string };
+    )) as { skipped?: string };
     console.log(
       `member ${member.userEmail}@${member.organizationSlug}` +
         (result.skipped ? ` — skipped: ${result.skipped}` : " written"),
@@ -382,7 +465,6 @@ async function apply(): Promise<void> {
 }
 
 async function verify(): Promise<void> {
-  loadEnv();
   const applied = JSON.parse(readFileSync(resolve(OUT_DIR, "applied.json"), "utf-8")) as {
     userIdByEmail: Record<string, string>;
   };
@@ -395,7 +477,7 @@ async function verify(): Promise<void> {
    * sendPasswordReset returns the token as emailId (the example's sendEmail
    * surfaces the extracted token), resetPassword sets a new argon2id
    * credential, then signIn proves the migrated account is live. */
-  const reset = convexRun("auth:sendPasswordReset", { email }) as {
+  const reset = (await convexCall("auth:sendPasswordReset", { email })) as {
     status: string;
     emailId?: string;
   };
@@ -405,16 +487,16 @@ async function verify(): Promise<void> {
   console.log(`reset token issued for ${email}`);
 
   const newPassword = "Migration-Reset-Password-9!";
-  const changed = convexRun("auth:resetPassword", {
+  const changed = (await convexCall("auth:resetPassword", {
     token: reset.emailId,
     newPassword,
-  }) as { status: boolean; reason?: string };
+  })) as { status: boolean; reason?: string };
   if (!changed.status) {
     throw new Error(`resetPassword failed: ${JSON.stringify(changed)}`);
   }
   console.log("password reset — argon2id credential installed");
 
-  const session = convexRun("auth:signIn", { email, password: newPassword }) as {
+  const session = (await convexCall("auth:signIn", { email, password: newPassword })) as {
     userId?: string;
     token?: string;
   };
@@ -423,11 +505,11 @@ async function verify(): Promise<void> {
   }
   console.log(`sign-in OK — userId ${session.userId}, token issued`);
 
-  const account = convexRun(
+  const account = (await convexCall(
     "native/accounts:getAccountBySubject",
     { provider: "password", issuer: "native", subject: userId },
     "convexAuth",
-  ) as { credentialHash?: string } | null;
+  )) as { credentialHash?: string } | null;
   const hash = account?.credentialHash ?? "";
   if (!hash.startsWith("$argon2id$")) {
     throw new Error(`expected argon2id credential, got: ${hash.slice(0, 20)}`);

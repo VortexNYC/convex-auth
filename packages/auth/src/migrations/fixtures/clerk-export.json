@@ -260,5 +260,52 @@
       "created_at": 1700004200000,
       "updated_at": 1700004200000
     }
+  ],
+  "invitations": [
+    {
+      "id": "inv_1pending",
+      "email_address": "Invitee@Example.com",
+      "role": "org:admin",
+      "organization_id": "org_1acme",
+      "status": "pending",
+      "created_at": 1700000000000,
+      "updated_at": 1700000000000
+    },
+    {
+      "id": "inv_2accepted",
+      "email_address": "accepted@example.com",
+      "role": "org:member",
+      "organization_id": "org_1acme",
+      "status": "accepted",
+      "created_at": 1700000000000,
+      "updated_at": 1700000100000
+    },
+    {
+      "id": "inv_3caps",
+      "email_address": "caps@example.com",
+      "role": "org:member",
+      "organization_id": "org_1acme",
+      "status": "Pending",
+      "created_at": 1700000000000,
+      "updated_at": 1700000000000
+    },
+    {
+      "id": "inv_4badmail",
+      "email_address": "not-an-email",
+      "role": "org:member",
+      "organization_id": "org_1acme",
+      "status": "pending",
+      "created_at": 1700000000000,
+      "updated_at": 1700000000000
+    },
+    {
+      "id": "inv_5noorg",
+      "email_address": "orphan@example.com",
+      "role": "org:member",
+      "organization_id": "org_9missing",
+      "status": "pending",
+      "created_at": 1700000000000,
+      "updated_at": 1700000000000
+    }
   ]
 }

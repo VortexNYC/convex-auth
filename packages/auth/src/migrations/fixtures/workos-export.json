@@ -122,5 +122,54 @@
       "created_at": "2024-02-02T10:00:00.000Z",
       "updated_at": "2024-02-02T10:00:00.000Z"
     }
+  ],
+  "invitations": [
+    {
+      "id": "invitation_1pending",
+      "email": "invitee@example.com",
+      "organization_id": "org_01EHZNVPK2QXHMVQEDHBJYYNV6",
+      "role_slug": "admin",
+      "state": "pending",
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "invitation_2nested",
+      "email": "nested@example.com",
+      "organization_id": "org_01EHZNVPK2QXHMVQEDHBJYYNV6",
+      "role": {
+        "slug": "member"
+      },
+      "state": "pending",
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "invitation_3accepted",
+      "email": "accepted@example.com",
+      "organization_id": "org_01EHZNVPK2QXHMVQEDHBJYYNV6",
+      "role_slug": "member",
+      "state": "accepted",
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2024-01-02T00:00:00.000Z"
+    },
+    {
+      "id": "invitation_4noorg",
+      "email": "orphan@example.com",
+      "organization_id": "org_99missing",
+      "role_slug": "member",
+      "state": "pending",
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "invitation_5badmail",
+      "email": "definitely-not-an-email",
+      "organization_id": "org_01EHZNVPK2QXHMVQEDHBJYYNV6",
+      "role_slug": "member",
+      "state": "pending",
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2024-01-01T00:00:00.000Z"
+    }
   ]
 }

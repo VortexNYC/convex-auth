@@ -385,7 +385,7 @@ export function normalizeClerkExport(input: ClerkExportInput): NormalizedExport 
   }
 
   for (const invitation of input.invitations ?? []) {
-    if (invitation.status !== "pending") continue;
+    if ((invitation.status ?? "pending").toLowerCase() !== "pending") continue;
     const org = invitation.organization_id ? orgById.get(invitation.organization_id) : undefined;
     const email = invitation.email_address?.toLowerCase().trim();
     if (!org || !email || !EMAIL_SHAPE.test(email)) {

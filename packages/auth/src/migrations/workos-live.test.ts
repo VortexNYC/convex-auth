@@ -74,6 +74,7 @@ describe.skipIf(!hasExport)("workos live export normalization", () => {
       (i) => (i.state ?? i.status ?? "pending").toLowerCase() === "pending",
     );
     const invited = out.memberships.filter((m) => m.status === "invited");
+    expect(invited.length).toBe(pending.length);
     for (const invitation of pending) {
       expect(invited.some((m) => m.userEmail === invitation.email?.toLowerCase())).toBe(true);
     }
@@ -91,7 +92,9 @@ describe.skipIf(!hasExport)("workos live export normalization", () => {
     const t = convexTest(schema, import.meta.glob("../component/**/*.*s"));
 
     const userIdByEmail = new Map<string, string>();
+    const emailVerifiedByEmail = new Map<string, boolean>();
     for (const user of out.users) {
+      emailVerifiedByEmail.set(user.email, user.emailVerified);
       const { userId } = await t.mutation(internal.migrate.migrateUser, {
         legacyUser: {
           name: user.name,
@@ -120,7 +123,7 @@ describe.skipIf(!hasExport)("workos live export normalization", () => {
         },
         userId: userId!,
         email: account.userEmail,
-        emailVerified: true,
+        emailVerified: emailVerifiedByEmail.get(account.userEmail) ?? true,
       });
     }
 
