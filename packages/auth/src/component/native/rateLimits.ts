@@ -12,8 +12,6 @@ export const recordAttempt = mutation({
     windowMs: v.number(),
     maxAttempts: v.number(),
   },
-  // `count` is deprecated: the backing rate-limiter component does not expose
-  // bucket counts, so it is no longer emitted (was always `0`).
   returns: v.object({ allowed: v.boolean(), count: v.optional(v.number()) }),
   handler: async (ctx, args) => {
     const { ok } = await rateLimiter.limit(ctx, "auth", {
@@ -51,11 +49,6 @@ export const checkRateLimit = query({
   },
 });
 
-/**
- * Vestigial no-op kept for contract compatibility — the backing rate-limiter
- * component owns and expires its own bucket storage. Scheduled cleanups that
- * call this are safe to remove.
- */
 export const cleanupExpiredRateLimits = mutation({
   args: { before: v.number() },
   returns: v.number(),
