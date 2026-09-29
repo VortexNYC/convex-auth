@@ -70,7 +70,7 @@ Signature, claim, and hosted-domain failures raise `INVALID_ID_TOKEN`. Upstream 
 One Tap provisions the same `google`/`https://accounts.google.com`/`<sub>` identity as redirect OAuth:
 
 - **Existing identity** → straight sign-in.
-- **Existing user by email** → implicit link follows the same `oauth.accountLinking`/`trustedProviders` policy as the redirect flow. With `trustedProvider: true` (or `"google"` in `oauth.trustedProviders`), a Google-verified email links; otherwise an unverified claim raises `ACCOUNT_NOT_LINKED`.
+- **Existing user by email** → implicit link follows the same `oauth.accountLinking`/`trustedProviders` policy as the redirect flow. A Google-**verified** email links under the default policy; an **unverified** claim only links when `"google"` is in `trustedProviders` (or `accountLinking.requiresEmailVerification` is explicitly off) — otherwise `ACCOUNT_NOT_LINKED`.
 - **No match** → a new user, unless `disableSignUp` or `disableImplicitSignUp` raises `SIGN_UP_DISABLED`.
 
 Set `requireEmailVerification: true` to reject tokens where Google reports `email_verified: false`.
@@ -87,7 +87,6 @@ Set `requireEmailVerification: true` to reject tokens where Google reports `emai
 | `disableSignUp`            | `boolean`                              | `oauth.google` | Block new-user creation.                                          |
 | `disableImplicitSignUp`    | `boolean`                              | `oauth.google` | Only allow accounts created by an explicit sign-up.               |
 | `requireEmailVerification` | `boolean`                              | `oauth.google` | Require `email_verified` from Google.                             |
-| `trustedProvider`          | `boolean`                              | `false`        | Treat Google claims as trusted for implicit linking.              |
 | `sessionTtlMs`             | `number`                               | 7 days         | Session lifetime after sign-in.                                   |
 | `refreshTokenTtlMs`        | `number`                               | 30 days        | Refresh-token lifetime.                                           |
 | `rateLimit`                | `{ windowMs, maxAttempts }` \| `false` | 5/60s          | Token-hash + subject rate limiting. `false` disables.             |

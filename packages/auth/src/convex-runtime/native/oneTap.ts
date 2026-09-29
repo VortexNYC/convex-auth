@@ -65,8 +65,6 @@ export type NativeOneTapConfig = {
   disableImplicitSignUp?: boolean;
   /** Require Google to report `email_verified` before signing in. */
   requireEmailVerification?: boolean;
-  /** Treat Google as a trusted provider — verified claims may implicitly link. */
-  trustedProvider?: boolean;
   sessionTtlMs?: number;
   refreshTokenTtlMs?: number;
   /**
@@ -124,8 +122,10 @@ export function nativeOneTap(
     fetchImpl: jwksFetch,
   });
 
-  const isTrustedProvider =
-    config.trustedProvider === true || (config.trustedProviders?.includes("google") ?? false);
+  /* Same trust source as redirect OAuth — a One Tap-only widening knob would
+   * be a takeover footgun, so there is deliberately no `trustedProvider`
+   * boolean: trust comes from `trustedProviders` alone. */
+  const isTrustedProvider = config.trustedProviders?.includes("google") ?? false;
 
   async function recordRateLimitAttempt(ctx: GenericActionCtx<DataModel>, identifier: string) {
     const windowStart = Math.floor(Date.now() / rateLimitWindowMs) * rateLimitWindowMs;
@@ -151,16 +151,17 @@ export function nativeOneTap(
       if (!enabled) {
         throw new Error("One Tap authentication is disabled");
       }
+      /* Pre-verify bucket keyed on the credential itself: replays of the same
+       * token — garbage, stolen, or retried — are capped before any crypto.
+       * Runs before the empty check so whitespace spam is bucketed too. */
+      if (rateLimitEnabled) {
+        await recordRateLimitAttempt(ctx, `one-tap-token:${await hashToken(args.idToken)}`);
+      }
+
       /* An empty idToken would fall through the provider's `if (idToken)` into
        * the userinfo path and surface as an upstream error — reject early. */
       if (!args.idToken.trim()) {
         throw new Error("INVALID_ID_TOKEN");
-      }
-
-      /* Pre-verify bucket keyed on the credential itself: replays of the same
-       * token — garbage, stolen, or retried — are capped before any crypto. */
-      if (rateLimitEnabled) {
-        await recordRateLimitAttempt(ctx, `one-tap-token:${await hashToken(args.idToken)}`);
       }
 
       let user: {

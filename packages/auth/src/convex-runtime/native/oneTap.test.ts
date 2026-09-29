@@ -429,7 +429,7 @@ describe("nativeOneTap signInOneTap", () => {
   it("implicitly links a verified Google email to an existing user", async () => {
     const component = createMockComponent();
     component.native.users.getUserByEmail.mockResolvedValue({ _id: "user-existing" });
-    const { actions } = createOneTap(component, { trustedProvider: true });
+    const { actions } = createOneTap(component, { trustedProviders: ["google"] });
     const result = await signIn(actions, createContext(component), {
       idToken: await mintGoogleIdToken(),
     });
@@ -443,7 +443,7 @@ describe("nativeOneTap signInOneTap", () => {
     const component = createMockComponent();
     component.native.users.getUserByEmail.mockResolvedValue({ _id: "user-existing" });
     const { actions } = createOneTap(component, {
-      trustedProvider: true,
+      trustedProviders: ["google"],
       accountLinking: { enabled: false },
     });
     await expect(
@@ -465,7 +465,7 @@ describe("nativeOneTap signInOneTap", () => {
   it("passes allowUnverifiedEmailLink: false when linking requires verification", async () => {
     const component = createMockComponent();
     const { actions } = createOneTap(component, {
-      trustedProvider: true,
+      trustedProviders: ["google"],
       accountLinking: { requiresEmailVerification: true },
     });
     const idToken = await mintGoogleIdToken({ email_verified: false });

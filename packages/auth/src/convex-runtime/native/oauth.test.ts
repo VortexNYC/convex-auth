@@ -689,6 +689,7 @@ describe("OAuth handlers", () => {
         image: "https://avatar",
         emailVerified: true,
       }),
+      allowLink: true,
       allowUnverifiedEmailLink: false,
     });
     expect(component.native.sessions.createSessionAndRefreshToken).toHaveBeenCalledWith(
@@ -856,6 +857,7 @@ describe("OAuth handlers", () => {
         image: "https://google-avatar",
         emailVerified: true,
       }),
+      allowLink: true,
       allowUnverifiedEmailLink: false,
     });
   });
@@ -1335,6 +1337,40 @@ describe("OAuth handlers", () => {
     if ("error" in result) {
       expect(result.error).toBe("account_not_linked");
     }
+  });
+
+  it("passes allowLink:false to the mutation when linking is disabled, even with no email match at query time", async () => {
+    /* TOCTOU coverage: the mutation re-runs its own email lookup, so the
+     * policy must travel in the args — a user created between the query and
+     * the mutation must not link under a disabled policy. */
+    const config = createOAuthConfig({
+      accountLinking: { enabled: false },
+    });
+    const component = createMockComponent();
+    const { fetch, responses } = createMockFetch();
+    config.github!.fetchImpl = fetch as unknown as typeof globalThis.fetch;
+    setupGitHubResponses(createGitHubProvider(config.github), responses);
+    component.identity.provisionFromIdentity.mockResolvedValue({
+      userId: "user_1",
+      identityId: "identity_1",
+      createdUser: true,
+      linkedExistingIdentity: false,
+    });
+    component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_doc_1");
+
+    const { url } = await handleSignIn(config, { provider: "github" });
+    const state = new URL(url).searchParams.get("state")!;
+
+    await handleCallback(
+      createContext() as unknown as GenericActionCtx<DataModel>,
+      component as unknown as NativeOAuthComponentHandle,
+      config,
+      { provider: "github", code: "code-123", state },
+    );
+
+    expect(component.identity.provisionFromIdentity).toHaveBeenCalledWith(
+      expect.objectContaining({ allowLink: false }),
+    );
   });
 
   it("allows linking for a trusted provider with an unverified email when requiresEmailVerification is not set", async () => {
