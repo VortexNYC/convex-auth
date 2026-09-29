@@ -30,6 +30,7 @@ export const { signUp, signIn, signOut, addHttpRoutes } = auth;
 | `component`        | `ConvexAuthComponentHandle`           | Yes      | Component handle from `components.convexAuth`.            |
 | `components`       | `{ core: ConvexAuthComponentHandle }` | No       | Same as `component`; use one or the other.                |
 | `emailAndPassword` | `NativeEmailAndPasswordConfig`        | No       | Email/password sign-up, sign-in, verification, and reset. |
+| `username`         | `NativeUsernameConfig`                | No       | Username/password sign-up and sign-in.                    |
 | `oauth`            | `NativeOAuthConfig`                   | No       | Google, GitHub, and Discord OAuth.                        |
 | `magicLink`        | `NativeMagicLinkConfig`               | No       | Magic-link sign-in via email.                             |
 | `emailOtp`         | `NativeEmailOtpConfig`                | No       | Email-based one-time passcodes.                           |
@@ -68,6 +69,28 @@ export const { signUp, signIn, signOut, addHttpRoutes } = auth;
 | `sendEmail`    | `(draft) => Promise<string>` | Yes      | Send the email. Return a message/queue id.                  |
 | `sendOnSignUp` | `boolean`                    | No       | Send a verification email on sign-up.                       |
 | `sendOnSignIn` | `boolean`                    | No       | Send a verification email on sign-in for unverified users.  |
+
+## `username`
+
+| Option                 | Type                                                | Default   | Description                                                    |
+| ---------------------- | --------------------------------------------------- | --------- | -------------------------------------------------------------- |
+| `enabled`              | `boolean`                                           | `true`    | Enable username/password sign-up and sign-in.                  |
+| `disableSignUp`        | `boolean`                                           | `false`   | Disable new sign-ups. Existing users can still sign in.        |
+| `autoSignIn`           | `boolean`                                           | `true`    | Automatically sign the user in after successful sign-up.       |
+| `minUsernameLength`    | `number`                                            | `3`       | Minimum normalized username length.                            |
+| `maxUsernameLength`    | `number`                                            | `32`      | Maximum normalized username length.                            |
+| `usernameValidator`    | `(username: string) => boolean \| Promise<boolean>` | —         | Extra validation on the normalized username (`false` rejects). |
+| `minPasswordLength`    | `number`                                            | `8`       | Minimum password length.                                       |
+| `maxPasswordLength`    | `number`                                            | `128`     | Maximum password length.                                       |
+| `checkBreach`          | `boolean`                                           | `true`    | Check new passwords against Have I Been Pwned.                 |
+| `requireVerifiedEmail` | `boolean`                                           | `false`   | Reject sign-in when an attached email is unverified.           |
+| `sessionTtlMs`         | `number`                                            | `7 days`  | Access-token/session lifetime.                                 |
+| `refreshTokenTtlMs`    | `number`                                            | `30 days` | Refresh-token lifetime.                                        |
+| `rateLimit`            | `{ windowMs, maxAttempts }`                         | —         | Rate limiting for sign-in attempts per username.               |
+| `captcha`              | `CaptchaConfig`                                     | —         | CAPTCHA gating for username sign-up.                           |
+| `onExistingUserSignUp` | `(data) => Promise<void>`                           | —         | Callback when a taken username or email is re-registered.      |
+
+Usernames are normalized (trimmed, lowercased) before storage and lookup, and must match `^[a-z0-9._-]+$` after normalization. `displayUsername` preserves the caller-supplied casing.
 
 ## `oauth`
 

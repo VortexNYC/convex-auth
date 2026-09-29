@@ -7,6 +7,7 @@ import { hashToken, isTokenExpired } from "./tokens.js";
 import { handleUpdateSession } from "./updateSession.js";
 import type { NativeEmailAndPasswordFunctionReferences } from "./provider.js";
 import type { NativeMagicLinkFunctionReferences } from "./magicLink.js";
+import type { NativeUsernameFunctionReferences } from "./username.js";
 import {
   type NativeAuthSession,
   type NativeEmailAndPasswordComponentHandle,
@@ -153,6 +154,71 @@ function buildTwoFactorVerifyResponse(
   });
 }
 
+function buildSignUpSessionResponse(
+  request: Request,
+  session: NativeAuthSession,
+  rememberMe: boolean | undefined,
+): Response {
+  const secure = new URL(request.url).protocol === "https:";
+  const headers = new Headers({ "Content-Type": "application/json" });
+  if (session.token) {
+    const expiry = getTokenExpiry(session.token);
+    const maxAge = expiry ? Math.max(0, Math.floor((expiry - Date.now()) / 1000)) : undefined;
+    headers.append(
+      "Set-Cookie",
+      setCookieHeader(ACCESS_TOKEN_COOKIE, session.token, maxAge, secure),
+    );
+  }
+  if (session.refreshToken) {
+    const maxAge = rememberMe ? REFRESH_TOKEN_MAX_AGE_SECONDS : undefined;
+    headers.append(
+      "Set-Cookie",
+      setCookieHeader(REFRESH_TOKEN_COOKIE, session.refreshToken, maxAge, secure),
+    );
+  }
+  return new Response(JSON.stringify(session), { status: 200, headers });
+}
+
+function buildSignInSessionResponse(
+  request: Request,
+  session: NativeAuthSession,
+  rememberMe: boolean | undefined,
+): Response {
+  const secure = new URL(request.url).protocol === "https:";
+  const headers = new Headers({ "Content-Type": "application/json" });
+  if (session.token) {
+    const expiry = getTokenExpiry(session.token);
+    const maxAge = expiry ? Math.max(0, Math.floor((expiry - Date.now()) / 1000)) : undefined;
+    headers.append(
+      "Set-Cookie",
+      setCookieHeader(ACCESS_TOKEN_COOKIE, session.token, maxAge, secure),
+    );
+    if (session.twoFactorChallengeToken) {
+      headers.append("Set-Cookie", clearCookieHeader(TWO_FACTOR_PENDING_COOKIE, secure));
+    }
+  }
+  if (session.refreshToken) {
+    const maxAge = rememberMe ? REFRESH_TOKEN_MAX_AGE_SECONDS : undefined;
+    headers.append(
+      "Set-Cookie",
+      setCookieHeader(REFRESH_TOKEN_COOKIE, session.refreshToken, maxAge, secure),
+    );
+  }
+  if (session.twoFactorChallengeToken) {
+    const maxAge = session.twoFactorCookieMaxAgeMs
+      ? Math.floor(session.twoFactorCookieMaxAgeMs / 1000)
+      : undefined;
+    headers.append(
+      "Set-Cookie",
+      setCookieHeader(TWO_FACTOR_PENDING_COOKIE, session.twoFactorChallengeToken, maxAge, secure),
+    );
+  }
+  if (session.url) {
+    headers.append("Location", session.url);
+  }
+  return new Response(JSON.stringify(session), { status: 200, headers });
+}
+
 function errorStatusAndReason(error: unknown): { status: number; reason: string } {
   const message = error instanceof Error ? error.message : "unknown";
   const map: Record<string, { status: number; reason: string }> = {
@@ -166,6 +232,11 @@ function errorStatusAndReason(error: unknown): { status: number; reason: string 
       reason: "breached_password",
     },
     "User already exists": { status: 400, reason: "user_already_exists" },
+    "Username is required": { status: 400, reason: "username_required" },
+    "Invalid username": { status: 400, reason: "invalid_username" },
+    "Username is already taken": { status: 400, reason: "username_already_taken" },
+    "Username authentication is disabled": { status: 400, reason: "auth_disabled" },
+    "Invalid username or password": { status: 401, reason: "invalid_username_or_password" },
     "Invalid email or password": { status: 401, reason: "invalid_email_or_password" },
     "Email not verified": { status: 401, reason: "email_not_verified" },
     "Too many requests": { status: 429, reason: "too_many_requests" },
@@ -206,7 +277,9 @@ function checkCsrf(request: Request, options?: NativeAuthHttpOptions): Response 
 export function addNativeAuthHttpRoutes(
   http: HttpRouter,
   component?: NativeEmailAndPasswordComponentHandle,
-  actions?: NativeEmailAndPasswordFunctionReferences & Partial<NativeMagicLinkFunctionReferences>,
+  actions?: NativeEmailAndPasswordFunctionReferences &
+    Partial<NativeMagicLinkFunctionReferences> &
+    Partial<NativeUsernameFunctionReferences>,
   options?: NativeAuthHttpOptions,
 ): void {
   http.route({
@@ -270,26 +343,8 @@ export function addNativeAuthHttpRoutes(
         const { status, reason } = errorStatusAndReason(error);
         return buildErrorResponse(status, reason);
       }
-      const secure = new URL(request.url).protocol === "https:";
 
-      const headers = new Headers({ "Content-Type": "application/json" });
-      if (session.token) {
-        const expiry = getTokenExpiry(session.token);
-        const maxAge = expiry ? Math.max(0, Math.floor((expiry - Date.now()) / 1000)) : undefined;
-        headers.append(
-          "Set-Cookie",
-          setCookieHeader(ACCESS_TOKEN_COOKIE, session.token, maxAge, secure),
-        );
-      }
-      if (session.refreshToken) {
-        const maxAge = parsed.rememberMe ? REFRESH_TOKEN_MAX_AGE_SECONDS : undefined;
-        headers.append(
-          "Set-Cookie",
-          setCookieHeader(REFRESH_TOKEN_COOKIE, session.refreshToken, maxAge, secure),
-        );
-      }
-
-      return new Response(JSON.stringify(session), { status: 200, headers });
+      return buildSignUpSessionResponse(request, session, parsed.rememberMe);
     });
 
     http.route({ path: "/api/auth/sign-up", method: "POST", handler: signUpAction });
@@ -338,51 +393,132 @@ export function addNativeAuthHttpRoutes(
         const { status, reason } = errorStatusAndReason(error);
         return buildErrorResponse(status, reason);
       }
-      const secure = new URL(request.url).protocol === "https:";
 
-      const headers = new Headers({ "Content-Type": "application/json" });
-      if (session.token) {
-        const expiry = getTokenExpiry(session.token);
-        const maxAge = expiry ? Math.max(0, Math.floor((expiry - Date.now()) / 1000)) : undefined;
-        headers.append(
-          "Set-Cookie",
-          setCookieHeader(ACCESS_TOKEN_COOKIE, session.token, maxAge, secure),
-        );
-        if (session.twoFactorChallengeToken) {
-          headers.append("Set-Cookie", clearCookieHeader(TWO_FACTOR_PENDING_COOKIE, secure));
-        }
-      }
-      if (session.refreshToken) {
-        const maxAge = parsed.rememberMe ? REFRESH_TOKEN_MAX_AGE_SECONDS : undefined;
-        headers.append(
-          "Set-Cookie",
-          setCookieHeader(REFRESH_TOKEN_COOKIE, session.refreshToken, maxAge, secure),
-        );
-      }
-      if (session.twoFactorChallengeToken) {
-        const maxAge = session.twoFactorCookieMaxAgeMs
-          ? Math.floor(session.twoFactorCookieMaxAgeMs / 1000)
-          : undefined;
-        headers.append(
-          "Set-Cookie",
-          setCookieHeader(
-            TWO_FACTOR_PENDING_COOKIE,
-            session.twoFactorChallengeToken,
-            maxAge,
-            secure,
-          ),
-        );
-      }
-
-      if (session.url) {
-        headers.append("Location", session.url);
-      }
-
-      return new Response(JSON.stringify(session), { status: 200, headers });
+      return buildSignInSessionResponse(request, session, parsed.rememberMe);
     });
 
     http.route({ path: "/api/auth/sign-in", method: "POST", handler: signInAction });
     http.route({ path: "/api/auth/sign-in/email", method: "POST", handler: signInAction });
+
+    if (actions.signUpUsername) {
+      const signUpUsernameAction = httpActionGeneric(async (ctx, request) => {
+        const csrf = checkCsrf(request, options);
+        if (csrf) {
+          return csrf;
+        }
+
+        const body = await request.json().catch(() => undefined);
+
+        const captchaToken = request.headers.get("x-captcha-response") ?? undefined;
+
+        let parsed: {
+          username: string;
+          password: string;
+          name?: string;
+          displayUsername?: string;
+          email?: string;
+          image?: string;
+          callbackURL?: string;
+          rememberMe?: boolean;
+          captchaToken?: string;
+        };
+        try {
+          parsed = parse(
+            v.object({
+              username: v.string(),
+              password: v.string(),
+              name: v.optional(v.string()),
+              displayUsername: v.optional(v.string()),
+              email: v.optional(v.string()),
+              image: v.optional(v.string()),
+              callbackURL: v.optional(v.string()),
+              rememberMe: v.optional(v.boolean()),
+              captchaToken: v.optional(v.string()),
+            }),
+            body,
+          );
+          if (captchaToken && !parsed.captchaToken) {
+            parsed.captchaToken = captchaToken;
+          }
+        } catch {
+          return new Response(JSON.stringify({ success: false, reason: "invalid_body" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        let session;
+        try {
+          session = await callAction<NativeAuthSession>(ctx, actions.signUpUsername, parsed);
+        } catch (error) {
+          const { status, reason } = errorStatusAndReason(error);
+          return buildErrorResponse(status, reason);
+        }
+
+        return buildSignUpSessionResponse(request, session, parsed.rememberMe);
+      });
+
+      http.route({
+        path: "/api/auth/sign-up/username",
+        method: "POST",
+        handler: signUpUsernameAction,
+      });
+    }
+
+    if (actions.signInUsername) {
+      const signInUsernameAction = httpActionGeneric(async (ctx, request) => {
+        const csrf = checkCsrf(request, options);
+        if (csrf) {
+          return csrf;
+        }
+
+        const body = await request.json().catch(() => undefined);
+
+        let parsed: {
+          username: string;
+          password: string;
+          callbackURL?: string;
+          rememberMe?: boolean;
+          trustedDeviceToken?: string;
+        };
+        try {
+          parsed = parse(
+            v.object({
+              username: v.string(),
+              password: v.string(),
+              callbackURL: v.optional(v.string()),
+              rememberMe: v.optional(v.boolean()),
+              trustedDeviceToken: v.optional(v.string()),
+            }),
+            body,
+          );
+        } catch {
+          return new Response(JSON.stringify({ success: false, reason: "invalid_body" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        parsed.trustedDeviceToken =
+          parsed.trustedDeviceToken ?? readCookie(request, TWO_FACTOR_TRUSTED_DEVICE_COOKIE);
+
+        let session;
+        try {
+          session = await callAction<NativeAuthSession>(ctx, actions.signInUsername, parsed);
+        } catch (error) {
+          const { status, reason } = errorStatusAndReason(error);
+          return buildErrorResponse(status, reason);
+        }
+
+        return buildSignInSessionResponse(request, session, parsed.rememberMe);
+      });
+
+      http.route({
+        path: "/api/auth/sign-in/username",
+        method: "POST",
+        handler: signInUsernameAction,
+      });
+    }
 
     http.route({
       path: "/api/auth/sign-out",

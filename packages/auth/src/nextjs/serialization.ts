@@ -46,6 +46,8 @@ const AUTH_ACTION_KEYS = [
   "revokeOtherSessions",
   "signInAnonymous",
   "linkAnonymousAccount",
+  "signUpUsername",
+  "signInUsername",
   "getPasskeyRegistrationOptions",
   "verifyPasskeyRegistration",
   "getPasskeyAuthenticationOptions",

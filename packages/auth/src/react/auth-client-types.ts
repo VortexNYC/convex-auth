@@ -10,6 +10,8 @@ export type BetterAuthUser = {
   emailVerified?: boolean;
   image?: string | null;
   name?: string | null;
+  username?: string | null;
+  displayUsername?: string | null;
 };
 
 export type BetterAuthSession = {
@@ -52,6 +54,12 @@ export type ConvexBetterAuthClient = {
     }): Promise<BetterAuthResponse>;
     social(args: { provider: string; callbackURL?: string }): Promise<BetterAuthResponse>;
     anonymous(args?: { rememberMe?: boolean }): Promise<BetterAuthResponse>;
+    username?(args: {
+      username: string;
+      password: string;
+      callbackURL?: string;
+      rememberMe?: boolean;
+    }): Promise<BetterAuthResponse>;
   };
   linkAccount?: (args: {
     email: string;
@@ -83,6 +91,15 @@ export type ConvexBetterAuthClient = {
       name: string;
       email: string;
       password: string;
+      image?: string;
+      callbackURL?: string;
+      rememberMe?: boolean;
+    }): Promise<BetterAuthResponse>;
+    username?(args: {
+      username: string;
+      password: string;
+      name?: string;
+      email?: string;
       image?: string;
       callbackURL?: string;
       rememberMe?: boolean;

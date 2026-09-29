@@ -27,6 +27,12 @@ import type { ComponentApi as OrganizationsComponentApi } from "../../component/
 import { addOidcProviderHttpRoutes, type OidcProviderConfig } from "../oauth-provider/http.js";
 import type { NativeEmailAndPasswordComponentHandle } from "./types.js";
 import { nativeAnonymous, type NativeAnonymousConfig } from "./anonymous.js";
+import { nativeUsername } from "./username.js";
+import type {
+  NativeUsernameActions,
+  NativeUsernameConfig,
+  NativeUsernameFunctionReferences,
+} from "./username.js";
 
 type ConvexAuthConfigBase = {
   emailAndPassword?: NativeEmailAndPasswordConfig;
@@ -37,6 +43,7 @@ type ConvexAuthConfigBase = {
   emailOtp?: NativeEmailOtpConfig;
   passkey?: NativePasskeyConfig;
   anonymous?: NativeAnonymousConfig;
+  username?: NativeUsernameConfig;
 };
 
 /**
@@ -70,9 +77,8 @@ type ConfigActions<TConfig extends ConvexAuthConfig> = NativeEmailAndPasswordAct
     ? { signInWithRedirect: NativeOAuthActions["signIn"]; callback: NativeOAuthActions["callback"] }
     : {}) &
   (TConfig extends { passkey: NativePasskeyConfig } ? NativePasskeyActions : {}) &
-  (TConfig extends { anonymous: NativeAnonymousConfig }
-    ? ReturnType<typeof nativeAnonymous>
-    : {}) & {
+  (TConfig extends { anonymous: NativeAnonymousConfig } ? ReturnType<typeof nativeAnonymous> : {}) &
+  (TConfig extends { username: NativeUsernameConfig } ? NativeUsernameActions : {}) & {
     addHttpRoutes(http: HttpRouter): void;
   };
 
@@ -107,6 +113,13 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
       )
     : undefined;
 
+  const usernameActions = config.username
+    ? nativeUsername(component, {
+        ...config.username,
+        captcha: config.username.captcha ?? config.captcha,
+      })
+    : undefined;
+
   const emailConfig = config.emailAndPassword ?? {};
   const oauthProviderLoginOrigin = (() => {
     const loginUrl = config.oauthProvider?.loginUrl;
@@ -139,15 +152,15 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
       : {}),
     ...passkeyActions,
     ...anonymousActions,
+    ...usernameActions,
     addHttpRoutes(http: HttpRouter) {
-      const httpActions = magicLinkActions
-        ? ({
-            ...emailAndPasswordActions,
-            ...magicLinkActions,
-          } as unknown as NativeEmailAndPasswordFunctionReferences &
-            Partial<NativeMagicLinkFunctionReferences>)
-        : (emailAndPasswordActions as unknown as NativeEmailAndPasswordFunctionReferences &
-            Partial<NativeMagicLinkFunctionReferences>);
+      const httpActions = {
+        ...emailAndPasswordActions,
+        ...magicLinkActions,
+        ...usernameActions,
+      } as unknown as NativeEmailAndPasswordFunctionReferences &
+        Partial<NativeMagicLinkFunctionReferences> &
+        Partial<NativeUsernameFunctionReferences>;
 
       addNativeAuthHttpRoutes(http, component, httpActions, { trustedOrigins });
       if (oauthActions && oauthConfig) {

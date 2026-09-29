@@ -109,6 +109,26 @@ export type NativeAuthSignInArgs = {
   rememberMe?: boolean;
 };
 
+export type NativeAuthSignUpUsernameArgs = {
+  username: string;
+  password: string;
+  name?: string;
+  displayUsername?: string;
+  email?: string;
+  image?: string;
+  callbackURL?: string;
+  rememberMe?: boolean;
+  captchaToken?: string;
+};
+
+export type NativeAuthSignInUsernameArgs = {
+  username: string;
+  password: string;
+  callbackURL?: string;
+  rememberMe?: boolean;
+  trustedDeviceToken?: string;
+};
+
 export type NativeAuthSignInMagicLinkArgs = {
   email: string;
   name?: string;
@@ -327,6 +347,18 @@ export type NativeAuthActions = {
     "public",
     { token?: string; sessionId?: string },
     { user?: NativeAuthUser; sessionId?: string }
+  >;
+  signUpUsername?: FunctionReference<
+    "action",
+    "public",
+    NativeAuthSignUpUsernameArgs,
+    NativeAuthSession
+  >;
+  signInUsername?: FunctionReference<
+    "action",
+    "public",
+    NativeAuthSignInUsernameArgs,
+    NativeAuthSession
   >;
   signInMagicLink?: FunctionReference<
     "action",
@@ -789,6 +821,8 @@ export function useAuthActions() {
 
   const signUpAction = useAction(ctx.signUp);
   const signInAction = useAction(ctx.signIn);
+  const signUpUsernameAction = ctx.signUpUsername ? useAction(ctx.signUpUsername) : null;
+  const signInUsernameAction = ctx.signInUsername ? useAction(ctx.signInUsername) : null;
   const signInAnonymousAction = ctx.signInAnonymous ? useAction(ctx.signInAnonymous) : null;
   const linkAnonymousAccountAction = ctx.linkAnonymousAccount
     ? useAction(ctx.linkAnonymousAccount)
@@ -873,6 +907,44 @@ export function useAuthActions() {
       }
     },
     [cookieMode, callProxy, signInAction, applySession],
+  );
+
+  const signUpUsername = useCallback(
+    async (args: NativeAuthSignUpUsernameArgs) => {
+      if (!signUpUsernameAction) {
+        throw new Error("Username sign-up is not configured");
+      }
+      setIsLoading(true);
+      try {
+        const session = cookieMode
+          ? await callProxy<NativeAuthSession>("signUpUsername", args)
+          : await signUpUsernameAction(args);
+        applySession(session);
+        return session;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [cookieMode, callProxy, signUpUsernameAction, applySession],
+  );
+
+  const signInUsername = useCallback(
+    async (args: NativeAuthSignInUsernameArgs) => {
+      if (!signInUsernameAction) {
+        throw new Error("Username sign-in is not configured");
+      }
+      setIsLoading(true);
+      try {
+        const session = cookieMode
+          ? await callProxy<NativeAuthSession>("signInUsername", args)
+          : await signInUsernameAction(args);
+        applySession(session);
+        return session;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [cookieMode, callProxy, signInUsernameAction, applySession],
   );
 
   const signInAnonymous = useCallback(
@@ -1311,6 +1383,8 @@ export function useAuthActions() {
   return {
     signUp,
     signIn,
+    signUpUsername,
+    signInUsername,
     signInAnonymous,
     linkAnonymousAccount,
     signInWithMagicLink,
