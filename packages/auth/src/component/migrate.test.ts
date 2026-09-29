@@ -102,11 +102,19 @@ describe("cross-vendor migration writers", () => {
         .withIndex("by_organization", (q) => q.eq("organizationId", orgIdBySlug.get("acme")!))
         .take(50),
     );
-    expect(acmeMembers).toHaveLength(3);
+    /* ada + grace active; newbie (pending membership) plus the two pending
+     * fixture invitations (Invitee@Example.com, caps@example.com) invited. */
+    expect(acmeMembers).toHaveLength(5);
 
-    const invited = acmeMembers.find((m) => m.status === "invited");
-    expect(invited?.invitedEmail).toBe("newbie@example.com");
-    expect(invited?.userId).toBeUndefined();
+    const invited = acmeMembers.filter((m) => m.status === "invited");
+    expect(invited.map((m) => m.invitedEmail).sort()).toEqual([
+      "caps@example.com",
+      "invitee@example.com",
+      "newbie@example.com",
+    ]);
+    for (const seat of invited) {
+      expect(seat.userId).toBeUndefined();
+    }
 
     const admin = acmeMembers.find((m) => m.userId === userIdByEmail.get("ada@example.com"));
     expect(admin?.status).toBe("active");
