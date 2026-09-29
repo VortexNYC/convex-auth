@@ -76,9 +76,6 @@ function parseCsv(text: string): Record<string, string>[] {
 }
 
 describe.skipIf(!hasExport)("clerk live export normalization", () => {
-  /* Vitest executes describe bodies during collection even for skipped
-   * suites — file reads must stay lazy so a missing export dir doesn't
-   * fail collection on machines without a live pull. */
   let input: {
     users: ClerkApiUser[];
     organizations: ClerkOrganization[];
@@ -99,9 +96,6 @@ describe.skipIf(!hasExport)("clerk live export normalization", () => {
         : undefined,
     };
     out = normalizeClerkExport(input);
-    /* Materialize the normalized export for the deploy-side harness —
-     * `scripts/migration-e2e/clerk.ts apply` consumes this file (the
-     * normalizer pulls argon2id-wasm, which tsx can't load). */
     writeFileSync(resolve(EXPORT_DIR, "normalized.json"), JSON.stringify(out, null, 2));
   });
 
@@ -148,8 +142,6 @@ describe.skipIf(!hasExport)("clerk live export normalization", () => {
   it("carries bcrypt credentials only when the CSV export is present", () => {
     const credentialAccounts = out.accounts.filter((a) => a.passwordHash);
     if (hasCsv) {
-      /* The CSV carries a digest row for every user — including the banned
-       * one, which is skipped before credential normalization. */
       const skippedUserIds = new Set(
         out.skipped.filter((s) => s.kind === "user").map((s) => s.externalId),
       );
@@ -178,9 +170,6 @@ describe.skipIf(!hasExport)("clerk live export normalization", () => {
         `${account.userEmail} digest should verify`,
       ).toBe(true);
       expect(await verifyPassword("wrong-password", account.passwordHash!)).toBe(false);
-      /* The lazy-rehash predicate must fire for a real Clerk digest — the
-       * provider's post-verify hook upgrades it to argon2id. Simulate the
-       * replacement round-trip to prove the new hash is servable. */
       expect(shouldRehashAfterVerify(account.passwordHash!)).toBe(true);
       const upgraded = await hashPassword(seed.password);
       expect(upgraded).toMatch(/^\$argon2id\$/);

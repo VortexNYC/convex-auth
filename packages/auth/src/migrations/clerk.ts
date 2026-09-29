@@ -83,8 +83,6 @@ export type ClerkMembership = {
   updated_at?: number;
 };
 
-/** `GET /v1/organization_invitations` object — pending seats are a separate
- * resource from memberships; only `pending` invitations emit invite rows. */
 export type ClerkOrganizationInvitation = {
   id: string;
   email_address?: string;
@@ -386,8 +384,6 @@ export function normalizeClerkExport(input: ClerkExportInput): NormalizedExport 
     normalizeClerkMembership(member, orgById, userById, skippedUserIds, out);
   }
 
-  /* Pending invitations are a separate Clerk resource — they carry only an
-   * email + role and normalize to invited seats on the organization. */
   for (const invitation of input.invitations ?? []) {
     if (invitation.status !== "pending") continue;
     const org = invitation.organization_id ? orgById.get(invitation.organization_id) : undefined;
