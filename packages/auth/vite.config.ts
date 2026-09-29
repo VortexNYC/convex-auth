@@ -28,7 +28,9 @@ export default defineConfig({
     include: ["**/*.{test,spec}.?(c|m)[jt]s?(x)", "src/**/*.vitest.ts"],
     server: {
       deps: {
-        inline: ["argon2id-wasm"],
+        /* The rate-limiter/batch-worker ./test entries are raw TypeScript
+         * with import.meta.glob — inline them so Vite transforms them. */
+        inline: ["argon2id-wasm", "@convex-dev/rate-limiter", "@convex-dev/batch-worker"],
       },
     },
   },
