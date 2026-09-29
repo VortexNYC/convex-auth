@@ -383,10 +383,7 @@ const reg = await fetch(`${SITE}/oauth/register`, {
   }),
 });
 const regBody = await reg.json();
-expect(
-  reg.status === 201 && !!regBody.client_id,
-  `dynamic client registered (${regBody.client_id ?? reg.status})`,
-);
+expect(reg.status === 201 && !!regBody.client_id, "dynamic client registered");
 const clientId = regBody.client_id;
 
 const b64url = (b) =>
@@ -427,14 +424,11 @@ const authorizeFor = async (
 
 // authorize: no session -> 401 login_required
 const noAuth = await authorizeFor(null);
-expect(noAuth.status === 401, `authorize without session -> 401 (got ${noAuth.status})`);
+expect(noAuth.status === 401, "authorize without session -> 401");
 
 // outsider (no org membership) -> access_denied 403
 const outsiderAuth = await authorizeFor(sC.token);
-expect(
-  outsiderAuth.status === 403,
-  `outsider org authorization denied (got ${outsiderAuth.status})`,
-);
+expect(outsiderAuth.status === 403, "outsider org authorization denied");
 
 /* Ambiguity rule: a user with multiple memberships must pass
  * organization_id explicitly. Owner A creates a second org first. */
@@ -445,36 +439,27 @@ await userA.mutation("organizations:createOrganization", {
 const ambiguous = await authorizeFor(sA.token, { orgId: null });
 expect(
   ambiguous.status === 400 && ambiguous.body?.error === "invalid_request",
-  `multi-org authorize without organization_id -> 400 (got ${ambiguous.status})`,
+  "multi-org authorize without organization_id -> 400",
 );
 
 // single-membership user can omit organization_id — auto-selects their org
 const autoSel = await authorizeFor(sD.token, { orgId: null });
-expect(
-  autoSel.status === 302 && !!autoSel.code,
-  `single-membership authorize auto-selects org (${autoSel.status})`,
-);
+expect(autoSel.status === 302 && !!autoSel.code, "single-membership authorize auto-selects org");
 
 // scope ceiling: member role lacks organization:members:manage -> mcp:admin denied
 const deniedScope = await authorizeFor(sD.token, { scope: "openid mcp:admin" });
 expect(
   deniedScope.status === 403 && deniedScope.body?.error === "insufficient_scope",
-  `member requesting mcp:admin -> 403 insufficient_scope (got ${deniedScope.status})`,
+  "member requesting mcp:admin -> 403 insufficient_scope",
 );
 
 // owner (`*`) CAN be granted mcp:admin — proves the ceiling is role-driven
 const ownerAdmin = await authorizeFor(sA.token, { scope: "openid mcp:admin" });
-expect(
-  ownerAdmin.status === 302 && !!ownerAdmin.code,
-  `owner requesting mcp:admin granted (${ownerAdmin.status})`,
-);
+expect(ownerAdmin.status === 302 && !!ownerAdmin.code, "owner requesting mcp:admin granted");
 
 // real authorize for member — negative flow consumes its own code
 const badAuthz = await authorizeFor(sA.token);
-expect(
-  badAuthz.status === 302 && !!badAuthz.code,
-  `authorize #1 -> 302 with code (${badAuthz.status})`,
-);
+expect(badAuthz.status === 302 && !!badAuthz.code, "authorize #1 -> 302 with code");
 
 // code exchange
 const tokenForm = (fields) =>
@@ -493,15 +478,12 @@ const badExchange = await tokenForm({
   code: badAuthz.code,
   code_verifier: "wrong-verifier",
 });
-expect(
-  badExchange.status === 400,
-  `wrong code_verifier rejected (${badExchange.status} ${badExchange.body.error})`,
-);
+expect(badExchange.status === 400, "wrong code_verifier rejected (400)");
 
 const authz = await authorizeFor(sA.token);
 expect(
   authz.status === 302 && !!authz.code && authz.state === `st-${stamp}`,
-  `authorize #2 -> 302 with code + state (${authz.status})`,
+  "authorize #2 -> 302 with code + state",
 );
 const code = authz.code;
 
@@ -514,7 +496,7 @@ const exchange = await tokenForm({
 });
 expect(
   exchange.status === 200 && !!exchange.body.access_token && !!exchange.body.refresh_token,
-  `code exchange -> access+refresh (${exchange.status})`,
+  "code exchange -> access+refresh",
 );
 
 // code replay
@@ -525,7 +507,7 @@ const replay = await tokenForm({
   code,
   code_verifier: authz.verifier,
 });
-expect(replay.status === 400, `code replay rejected (${replay.status})`);
+expect(replay.status === 400, "code replay rejected");
 
 // verify access token against live JWKS (offline signature check)
 const jwksResp = await fetch(`${SITE}/oauth/jwks`);
@@ -534,7 +516,7 @@ const [h, p, s] = exchange.body.access_token.split(".");
 const header = JSON.parse(Buffer.from(h, "base64url").toString());
 const payloadJwt = JSON.parse(Buffer.from(p, "base64url").toString());
 const jwk = jwks.keys.find((k) => k.kid === header.kid);
-expect(!!jwk, `jwks exposes signing key kid=${header.kid}`);
+expect(!!jwk, "jwks exposes signing key kid");
 if (jwk) {
   const key = createPublicKey({ key: jwk, format: "jwk" });
   const okSig = cryptoVerify(
@@ -550,7 +532,7 @@ expect(
     payloadJwt.sub === sA.user.id &&
     payloadJwt.org_id === organizationId &&
     (payloadJwt.scope ?? "").includes("openid"),
-  `access token claims correct (iss=${payloadJwt.iss} org=${payloadJwt.org_id})`,
+  "access token claims correct (iss + org bound)",
 );
 
 // refresh grant
@@ -561,7 +543,7 @@ const refreshed = await tokenForm({
 });
 expect(
   refreshed.status === 200 && !!refreshed.body.access_token && !!refreshed.body.refresh_token,
-  `refresh grant -> rotated tokens (${refreshed.status})`,
+  "refresh grant -> rotated tokens",
 );
 
 // old refresh token replay
@@ -570,10 +552,7 @@ const refreshReplay = await tokenForm({
   client_id: clientId,
   refresh_token: exchange.body.refresh_token,
 });
-expect(
-  refreshReplay.status === 400,
-  `old refresh token replay rejected (${refreshReplay.status} ${refreshReplay.body.error})`,
-);
+expect(refreshReplay.status === 400, "old refresh token replay rejected (400)");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
