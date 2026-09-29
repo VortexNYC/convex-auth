@@ -205,7 +205,9 @@ async function seed(): Promise<void> {
     `/user_management/invitations?organization_id=${org.id}`,
   ).catch(() => [])) as { email: string; state?: string }[];
   const alreadyInvited = pendingInvitations.some(
-    (i) => i.email === "invited.migration@example.com" && (i.state ?? "pending") === "pending",
+    (i) =>
+      i.email === "invited.migration@example.com" &&
+      (i.state ?? "pending").toLowerCase() === "pending",
   );
   if (alreadyInvited) {
     console.log("invitation: invited.migration@example.com already pending");
@@ -290,7 +292,7 @@ async function convexCall(fn: string, args: unknown, component?: string): Promis
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(deployKey ? { Authorization: `Convex ${deployKey}` } : {}),
+      ...(component && deployKey ? { Authorization: `Convex ${deployKey}` } : {}),
     },
     body: JSON.stringify({
       path: fn,
@@ -334,6 +336,7 @@ type NormalizedUser = {
 type NormalizedAccount = {
   userEmail: string;
   provider: string;
+  issuer: string;
   subject: string;
   passwordHash?: string;
   createdAt: number;
@@ -401,6 +404,7 @@ async function apply(): Promise<void> {
       {
         legacyAccount: {
           providerId: account.provider,
+          issuer: account.issuer,
           accountId: account.subject,
           userId,
           password: account.passwordHash ?? null,
@@ -482,7 +486,8 @@ async function verify(): Promise<void> {
     emailId?: string;
   };
   if (reset.status !== "queued" || !reset.emailId) {
-    throw new Error(`password reset not issued: ${JSON.stringify(reset)}`);
+    /* emailId is the raw reset token — never stringify the whole response. */
+    throw new Error(`password reset not issued (status: ${reset.status})`);
   }
   console.log(`reset token issued for ${email}`);
 
@@ -492,7 +497,7 @@ async function verify(): Promise<void> {
     newPassword,
   })) as { status: boolean; reason?: string };
   if (!changed.status) {
-    throw new Error(`resetPassword failed: ${JSON.stringify(changed)}`);
+    throw new Error(`resetPassword failed (reason: ${changed.reason ?? "unknown"})`);
   }
   console.log("password reset — argon2id credential installed");
 
@@ -501,7 +506,9 @@ async function verify(): Promise<void> {
     token?: string;
   };
   if (!session.userId || !session.token) {
-    throw new Error(`post-reset sign-in failed: ${JSON.stringify(session)}`);
+    throw new Error(
+      `post-reset sign-in failed (userId: ${session.userId ?? "none"}, token issued: ${Boolean(session.token)})`,
+    );
   }
   console.log(`sign-in OK — userId ${session.userId}, token issued`);
 

@@ -226,7 +226,8 @@ async function seed(): Promise<void> {
   )) as { email_address: string; status?: string }[];
   const alreadyInvited = existingInvitations.some(
     (i) =>
-      i.email_address === "invited.migration@example.com" && (i.status ?? "pending") === "pending",
+      i.email_address === "invited.migration@example.com" &&
+      (i.status ?? "pending").toLowerCase() === "pending",
   );
   if (alreadyInvited) {
     console.log("invitation: invited.migration@example.com already pending");
@@ -304,7 +305,7 @@ async function convexCall(fn: string, args: unknown, component?: string): Promis
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(deployKey ? { Authorization: `Convex ${deployKey}` } : {}),
+      ...(component && deployKey ? { Authorization: `Convex ${deployKey}` } : {}),
     },
     body: JSON.stringify({
       path: fn,
@@ -348,6 +349,7 @@ type NormalizedUser = {
 type NormalizedAccount = {
   userEmail: string;
   provider: string;
+  issuer: string;
   subject: string;
   passwordHash?: string;
   createdAt: number;
@@ -417,6 +419,7 @@ async function apply(): Promise<void> {
       {
         legacyAccount: {
           providerId: account.provider,
+          issuer: account.issuer,
           accountId: account.subject,
           userId,
           password: account.passwordHash ?? null,
@@ -481,10 +484,6 @@ async function apply(): Promise<void> {
 }
 
 async function verify(): Promise<void> {
-  const seed = JSON.parse(readFileSync(resolve(OUT_DIR, "seed-state.json"), "utf-8")) as {
-    password: string;
-    created: Record<string, string>;
-  };
   const applied = JSON.parse(readFileSync(resolve(OUT_DIR, "applied.json"), "utf-8")) as {
     userIdByEmail: Record<string, string>;
   };
@@ -500,12 +499,14 @@ async function verify(): Promise<void> {
   )) as { credentialHash?: string } | null;
   console.log(`credential before sign-in: ${before?.credentialHash?.slice(0, 10)}…`);
 
-  const session = (await convexCall("auth:signIn", { email, password: seed.password })) as {
+  const session = (await convexCall("auth:signIn", { email, password: PASSWORD })) as {
     userId?: string;
     token?: string;
   };
   if (!session.userId || !session.token)
-    throw new Error(`sign-in failed: ${JSON.stringify(session)}`);
+    throw new Error(
+      `sign-in failed (userId: ${session.userId ?? "none"}, token issued: ${Boolean(session.token)})`,
+    );
   console.log(`sign-in OK — userId ${session.userId}, token issued`);
 
   const after = (await convexCall(
@@ -520,7 +521,7 @@ async function verify(): Promise<void> {
   }
   console.log("lazy rehash confirmed — bcrypt → argon2id");
 
-  const again = (await convexCall("auth:signIn", { email, password: seed.password })) as {
+  const again = (await convexCall("auth:signIn", { email, password: PASSWORD })) as {
     token?: string;
   };
   if (!again.token) throw new Error("second sign-in after rehash failed");

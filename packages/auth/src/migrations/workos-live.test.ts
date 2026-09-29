@@ -115,6 +115,7 @@ describe.skipIf(!hasExport)("workos live export normalization", () => {
       await t.mutation(internal.migrate.migrateAccount, {
         legacyAccount: {
           providerId: account.provider,
+          issuer: account.issuer,
           accountId: account.subject,
           userId: userId!,
           password: account.passwordHash ?? null,

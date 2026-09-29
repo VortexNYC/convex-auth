@@ -8,14 +8,14 @@ live development sandboxes. Wired for **Clerk** and **WorkOS** (see
 
 | Piece                      | What                                                                                                                                                                                                                                                          | Where it lives                                        |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Clerk development instance | Seeded with the fixture matrix: password users, `external_id` user, username-identifier user, banned user, unverified secondary email, 2 organizations, owner/member memberships, pending invitation                                                          | Clerk Dashboard — **dev mode only, never production** |
+| Clerk development instance | Seeded with the fixture matrix: password users, `external_id` user, username-identifier user, banned user, unverified secondary email, an organization, `org:admin`/`org:member` memberships, pending invitation                                              | Clerk Dashboard — **dev mode only, never production** |
 | `CLERK_SECRET_KEY`         | `sk_test_...` Backend API key                                                                                                                                                                                                                                 | `packages/auth/.env.local` (gitignored)               |
 | `CONVEX_DEPLOYMENT`        | Scratch deployment used by `examples/server` (`npx convex dev --once`)                                                                                                                                                                                        | `examples/server/.env.local`                          |
 | `CONVEX_DEPLOY_KEY`        | Optional — deploy key for the scratch deployment (dashboard → deployment → generate deploy key). When set, all function calls go over authenticated HTTPS; without it, component calls fall back to `npx convex run` (args briefly visible in process `argv`) | `examples/server/.env.local` (gitignored)             |
 | API export                 | `tmp/clerk-export/{users,organizations,memberships,invitations}.json`                                                                                                                                                                                         | produced by `pull` — gitignored                       |
 | Password digests           | `tmp/clerk-export/users.csv` — **manual step**: Clerk Dashboard → instance Settings → User Exports → Export all users → download                                                                                                                              | gitignored                                            |
 | WorkOS sandbox             | Same matrix minus banned (no WorkOS banned flag): password users, `external_id` user, unverified user, organization, admin/member memberships, pending invitation                                                                                             | WorkOS Dashboard — **staging/test environment only**  |
-| `WORKOS_API_KEY`           | `sk_...` server-side key for the test environment                                                                                                                                                                                                             | `packages/auth/.env.local` (gitignored)               |
+| `WORKOS_API_KEY`           | `sk_test_...` server-side key for the test environment                                                                                                                                                                                                        | `packages/auth/.env.local` (gitignored)               |
 | WorkOS export              | `tmp/workos-export/{users,organizations,memberships,invitations}.json`                                                                                                                                                                                        | produced by `pull` — gitignored                       |
 
 ### WorkOS password digests
@@ -79,8 +79,11 @@ pnpm tsx scripts/migration-e2e/workos.ts verify   # reset-path sign-in
   by email, orgs by name.
 - The CSV is the only manual step; it is also the only artifact containing
   password material. Keep `tmp/` out of commits (already gitignored).
-- `convex run --component convexAuth migrate:*` calls the component's
-  internal writer mutations directly — admin-level access, so this harness
-  only ever runs against scratch/dev deployments.
+- Function calls go over HTTPS: public `auth:*` actions via
+  `/api/action` (never authenticated, so a stale key can't break them),
+  component/internal writers via `/api/function` + `CONVEX_DEPLOY_KEY`.
+  Without a deploy key the harness falls back to `npx convex run
+--component`, where args are briefly visible in `argv` — either way,
+  only ever run this against scratch/dev deployments.
 - CI does not need the export: `clerk-live.test.ts` skips cleanly when
   `tmp/clerk-export/` is absent.

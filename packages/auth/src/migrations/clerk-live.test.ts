@@ -31,6 +31,10 @@ const EXPORT_DIR = resolve(__dirname, "../../../../tmp/clerk-export");
 const hasExport = existsSync(resolve(EXPORT_DIR, "users.json"));
 const hasCsv = existsSync(resolve(EXPORT_DIR, "users.csv"));
 
+/** Must match PASSWORD in scripts/migration-e2e/clerk.ts — kept out of
+ * seed-state.json so the on-disk state file carries no secrets. */
+const SEED_PASSWORD = "Migration-Test-Password-1!";
+
 function readJson<T>(name: string): T {
   return JSON.parse(readFileSync(resolve(EXPORT_DIR, name), "utf-8")) as T;
 }
@@ -161,21 +165,18 @@ describe.skipIf(!hasExport)("clerk live export normalization", () => {
 
   it("verifies real Clerk digests against the seeded password", async () => {
     if (!hasCsv) return;
-    const seed = JSON.parse(readFileSync(resolve(EXPORT_DIR, "seed-state.json"), "utf-8")) as {
-      password: string;
-    };
     const credentialAccounts = out.accounts.filter((a) => a.passwordHash);
     expect(credentialAccounts.length).toBeGreaterThan(0);
     for (const account of credentialAccounts) {
       expect(
-        await verifyPassword(seed.password, account.passwordHash!),
+        await verifyPassword(SEED_PASSWORD, account.passwordHash!),
         `${account.userEmail} digest should verify`,
       ).toBe(true);
       expect(await verifyPassword("wrong-password", account.passwordHash!)).toBe(false);
       expect(shouldRehashAfterVerify(account.passwordHash!)).toBe(true);
-      const upgraded = await hashPassword(seed.password);
+      const upgraded = await hashPassword(SEED_PASSWORD);
       expect(upgraded).toMatch(/^\$argon2id\$/);
-      expect(await verifyPassword(seed.password, upgraded)).toBe(true);
+      expect(await verifyPassword(SEED_PASSWORD, upgraded)).toBe(true);
       expect(shouldRehashAfterVerify(upgraded)).toBe(false);
     }
   });
@@ -226,6 +227,7 @@ describe.skipIf(!hasExport)("clerk live export normalization", () => {
       await t.mutation(internal.migrate.migrateAccount, {
         legacyAccount: {
           providerId: account.provider,
+          issuer: account.issuer,
           accountId: account.subject,
           userId: userId!,
           password: account.passwordHash ?? null,
