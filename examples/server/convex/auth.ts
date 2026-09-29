@@ -28,7 +28,8 @@ function extractTokenFromEmailDraft(draft: EmailDraft): string | null {
  * keyset so the conformance suite can drive signInOneTap with a locally-
  * signed RS256 token. When inactive (the normal case, including any real
  * deployment) the real Google JWKS is used. */
-const googleTestJwks = env.CONVEX_AUTH_E2E === "true" ? env.CONVEX_AUTH_TEST_JWKS : undefined;
+const e2eSeamsEnabled = env.CONVEX_AUTH_E2E === "true";
+const googleTestJwks = e2eSeamsEnabled ? env.CONVEX_AUTH_TEST_JWKS : undefined;
 const googleTestJwksFetch: typeof fetch | undefined = googleTestJwks
   ? async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -46,10 +47,12 @@ export const auth = convexAuth({
   component: components.convexAuth,
   username: { enabled: true },
   phone: {
-    /* Conformance seam: the sender echoes the OTP back as the messageId so
-     * `convex run` output carries the code — no SMS provider needed. A real
-     * app sends the code via Twilio/etc. and returns the provider's ID. */
-    sendPhoneOtp: async ({ otp }) => otp,
+    /* Conformance seam: with CONVEX_AUTH_E2E="true" the sender echoes the
+     * OTP back as the messageId so `convex run` output carries the code —
+     * no SMS provider needed. Without the flag it returns an opaque receipt
+     * (the code then can't reach the caller, which is the safe default).
+     * A real app sends via Twilio/etc. and returns the provider's ID. */
+    sendPhoneOtp: async ({ otp }) => (e2eSeamsEnabled ? otp : "sms-enqueued"),
   },
   oneTap: {
     /* The placeholder can never be satisfied: Google cannot mint a token
@@ -73,8 +76,11 @@ export const auth = convexAuth({
       from: env.EMAIL_FROM_ADDRESS ?? "auth@example.com",
       appOrigin: siteUrl,
       sendEmail: async (draft) => {
+        /* The conformance harness (scripts/migration-e2e) reads the emailed
+         * token out of this return value — expose it only when the E2E flag
+         * is explicitly set on the deployment. */
         const token = extractTokenFromEmailDraft(draft);
-        return token ?? "no-token";
+        return e2eSeamsEnabled ? (token ?? "no-token") : "email-enqueued";
       },
       sendOnSignUp: false,
       sendOnSignIn: false,
