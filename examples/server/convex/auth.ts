@@ -100,6 +100,12 @@ export const auth = convexAuth({
       clientSecret: env.DISCORD_CLIENT_SECRET ?? "",
     },
   },
+  anonymous: {},
+  passkey: {
+    rpID: "localhost",
+    origin: ["http://localhost:8088", "http://localhost:3000", "http://localhost:3002"],
+    rpName: "convex-auth e2e fixture",
+  },
 });
 
 export const {
@@ -126,4 +132,13 @@ export const {
   sendPhoneOtp,
   verifyPhoneOtp,
   signInOneTap,
+  signInAnonymous,
+  linkAnonymousAccount,
+  getPasskeyRegistrationOptions,
+  verifyPasskeyRegistration,
+  getPasskeyAuthenticationOptions,
+  verifyPasskeyAuthentication,
+  listPasskeys,
+  revokePasskey,
+  renamePasskey,
 } = auth;
