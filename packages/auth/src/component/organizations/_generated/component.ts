@@ -359,8 +359,12 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         updateCredentialHash: FunctionReference<
           "mutation",
           "internal",
-          { accountId: string; credentialHash: string },
-          any,
+          {
+            accountId: string;
+            credentialHash: string;
+            expectedCredentialHash?: string;
+          },
+          { updated: boolean },
           Name
         >;
       };
@@ -572,6 +576,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "internal",
           {
             expiresAt: number;
+            familyId?: string;
             sessionId: string;
             tokenHash: string;
             userId: string;
@@ -653,6 +658,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "internal",
           {
             expiresAt: number;
+            familyId?: string;
             identityId?: string;
             sessionId: string;
             token: string;
@@ -665,6 +671,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "mutation",
           "internal",
           {
+            credentialId?: string;
+            familyId?: string;
             identityId: string;
             refreshTokenExpiresAt: number;
             refreshTokenHash: string;

@@ -50,6 +50,7 @@ export const updateAccountTokens = mutation({
     if (args.refreshTokenExpiresAt !== undefined)
       update.refreshTokenExpiresAt = args.refreshTokenExpiresAt;
     await ctx.db.patch("authAccounts", args.accountId, update);
+    return null;
   },
 });
 
