@@ -5,6 +5,7 @@ export type VerificationCodeType =
   | "email_verification"
   | "password_reset"
   | "email_change"
+  | "phone_verification"
   | "two_factor_pending"
   | "two_factor_trusted_device";
 
@@ -13,6 +14,8 @@ export type NativeAuthUser = {
   email?: string;
   username?: string;
   displayUsername?: string;
+  phoneNumber?: string;
+  phoneNumberVerified?: boolean;
   name?: string;
   image?: string;
   emailVerified: boolean;
@@ -42,6 +45,8 @@ export function toNativeAuthUser(user: NativeUserDoc): NativeAuthUser {
     image: user.image,
     username: user.username,
     displayUsername: user.displayUsername,
+    phoneNumber: user.phoneNumber,
+    phoneNumberVerified: user.phoneNumberVerified,
     emailVerified: user.emailVerified,
     twoFactorEnabled: user.twoFactorEnabled ?? false,
     isActive: user.isActive ?? true,
@@ -75,6 +80,8 @@ export const nativeAuthUserValidator = v.object({
   email: v.optional(v.string()),
   username: v.optional(v.string()),
   displayUsername: v.optional(v.string()),
+  phoneNumber: v.optional(v.string()),
+  phoneNumberVerified: v.optional(v.boolean()),
   name: v.optional(v.string()),
   image: v.optional(v.string()),
   emailVerified: v.boolean(),
@@ -167,6 +174,8 @@ export type NativeUserDoc = {
   email?: string;
   username?: string;
   displayUsername?: string;
+  phoneNumber?: string;
+  phoneNumberVerified?: boolean;
   name?: string;
   image?: string;
   emailVerified: boolean;
@@ -276,6 +285,8 @@ export type NativeEmailAndPasswordComponentHandle = {
           email?: string;
           username?: string;
           displayUsername?: string;
+          phoneNumber?: string;
+          phoneNumberVerified?: boolean;
           name?: string;
           image?: string;
           emailVerified: boolean;
@@ -297,7 +308,7 @@ export type NativeEmailAndPasswordComponentHandle = {
         linkedExistingIdentity: boolean;
         userId: string;
         duplicate?: boolean;
-        duplicateField?: "email" | "username";
+        duplicateField?: "email" | "username" | "phoneNumber";
         user?: NativeUserDoc;
         sessionId?: string;
         token?: string;
@@ -322,6 +333,13 @@ export type NativeEmailAndPasswordComponentHandle = {
       "mutation",
       "public" | "internal",
       { tokenHash: string; provider: string; issuer: string },
+      { success: boolean; user?: NativeUserDoc; reason?: string },
+      string
+    >;
+    verifyPhone: FunctionReference<
+      "mutation",
+      "public" | "internal",
+      { tokenHash: string },
       { success: boolean; user?: NativeUserDoc; reason?: string },
       string
     >;
@@ -596,6 +614,13 @@ export type NativeEmailAndPasswordComponentHandle = {
         "query",
         "public" | "internal",
         { email: string },
+        NativeUserDoc | null,
+        string
+      >;
+      getUserByPhoneNumber: FunctionReference<
+        "query",
+        "public" | "internal",
+        { phoneNumber: string },
         NativeUserDoc | null,
         string
       >;

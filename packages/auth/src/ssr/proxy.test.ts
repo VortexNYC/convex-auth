@@ -15,6 +15,8 @@ const actions = {
   signInAnonymous: actionRef("auth:signInAnonymous"),
   linkAnonymousAccount: actionRef("auth:linkAnonymousAccount"),
   verifyEmailOtp: actionRef("auth:verifyEmailOtp"),
+  sendPhoneOtp: actionRef("auth:sendPhoneOtp"),
+  verifyPhoneOtp: actionRef("auth:verifyPhoneOtp"),
   callback: actionRef("auth:callback"),
   twoFactorVerifyTOTP: actionRef("auth:twoFactorVerifyTOTP"),
   twoFactorVerifyBackupCode: actionRef("auth:twoFactorVerifyBackupCode"),
@@ -520,6 +522,42 @@ describe("cookieConfig", () => {
         cookieConfig: { maxAge: -60 },
       }),
     ).rejects.toThrow("cookieConfig.maxAge");
+    expect(actionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("phone OTP intents", () => {
+  it("dispatches verifyPhoneOtp to its action and writes minted tokens to cookies", async () => {
+    actionMock.mockResolvedValue({ token: "p-token", refreshToken: "p-refresh" });
+    const response = await proxyAuthActionToConvex(
+      postRequest({
+        intent: "verifyPhoneOtp",
+        args: { phone: "+15551234567", otp: "123456" },
+      }),
+      options,
+    );
+    expect(response.status).toBe(200);
+    expect(actionMock).toHaveBeenCalledWith(
+      actions.verifyPhoneOtp,
+      { phone: "+15551234567", otp: "123456" },
+      expect.objectContaining({}),
+    );
+    const setCookies = response.headers.getSetCookie();
+    expect(setCookies.find((h) => h.startsWith("__Host-__convexAuthToken=p-token"))).toBeDefined();
+    expect(
+      setCookies.find((h) => h.startsWith("__Host-__convexAuthRefreshToken=p-refresh")),
+    ).toBeDefined();
+  });
+
+  it("rejects sendPhoneOtp — OTP send is not a session intent", async () => {
+    const response = await proxyAuthActionToConvex(
+      postRequest({
+        intent: "sendPhoneOtp",
+        args: { phone: "+15551234567" },
+      }),
+      options,
+    );
+    expect(response.status).toBe(400);
     expect(actionMock).not.toHaveBeenCalled();
   });
 });

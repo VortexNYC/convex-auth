@@ -48,6 +48,8 @@ export function useConvexAuthClient() {
               name: actions.user.name ?? null,
               username: actions.user.username ?? null,
               displayUsername: actions.user.displayUsername ?? null,
+              phoneNumber: actions.user.phoneNumber ?? null,
+              phoneNumberVerified: actions.user.phoneNumberVerified ?? null,
             },
           },
     error: null,
@@ -118,6 +120,33 @@ export function useConvexAuthClient() {
             rememberMe: args.rememberMe ?? false,
           });
           actions.setTwoFactorChallengeToken(data.twoFactorChallengeToken ?? null);
+          return { data, error: null };
+        } catch (err) {
+          return { data: null, error: toError(err) };
+        }
+      },
+      phoneOtp: async (args) => {
+        if (
+          typeof actions.sendPhoneOtp !== "function" ||
+          typeof actions.verifyPhoneOtp !== "function"
+        ) {
+          return { data: null, error: toError("Phone authentication is not configured") };
+        }
+        try {
+          if (args.otp === undefined) {
+            const data = await actions.sendPhoneOtp({
+              phone: args.phone,
+              type: "sign-in",
+              name: args.name,
+            });
+            return { data, error: null };
+          }
+          const data = await actions.verifyPhoneOtp({
+            phone: args.phone,
+            otp: args.otp,
+            type: "sign-in",
+            rememberMe: args.rememberMe,
+          });
           return { data, error: null };
         } catch (err) {
           return { data: null, error: toError(err) };

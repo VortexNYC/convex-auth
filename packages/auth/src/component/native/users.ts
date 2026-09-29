@@ -3,11 +3,25 @@ import { v } from "convex/values";
 import { getOneFrom } from "convex-helpers/server/relationships";
 import { mutation, query } from "../_generated/server.js";
 import type { DataModel, Doc, Id } from "../_generated/dataModel.js";
+import { normalizePhone } from "../../convex-runtime/native/validation.js";
 
 export const getUserByEmail = query({
   args: { email: v.string() },
   handler: async (ctx, args) => {
     return await getOneFrom(ctx.db, "users", "by_email", args.email.toLowerCase().trim());
+  },
+});
+
+export const getUserByPhoneNumber = query({
+  args: { phoneNumber: v.string() },
+  handler: async (ctx, args) => {
+    return await getOneFrom(
+      ctx.db,
+      "users",
+      "by_phoneNumber",
+      normalizePhone(args.phoneNumber) ?? "",
+      "phoneNumber",
+    );
   },
 });
 

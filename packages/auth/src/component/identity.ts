@@ -8,7 +8,11 @@ import { getOneFrom } from "convex-helpers/server/relationships";
 import { getAllRows } from "./pagination.js";
 import { mutation, query } from "./_generated/server.js";
 import { mintToken } from "../convex-runtime/native/jwt.js";
-import { normalizeEmail, normalizeUsername } from "../convex-runtime/native/validation.js";
+import {
+  normalizeEmail,
+  normalizePhone,
+  normalizeUsername,
+} from "../convex-runtime/native/validation.js";
 import schema, {
   emailTwoFactorResetReasonValidator,
   emailTwoFactorStatusValidator,
@@ -34,6 +38,8 @@ const userProfileInputValidator = v.object({
   email: v.optional(v.string()),
   username: v.optional(v.string()),
   displayUsername: v.optional(v.string()),
+  phoneNumber: v.optional(v.string()),
+  phoneNumberVerified: v.optional(v.boolean()),
   name: v.optional(v.string()),
   image: v.optional(v.string()),
   emailVerified: v.boolean(),
@@ -60,6 +66,8 @@ const userReturnValidator = v.object({
   email: v.optional(v.string()),
   username: v.optional(v.string()),
   displayUsername: v.optional(v.string()),
+  phoneNumber: v.optional(v.string()),
+  phoneNumberVerified: v.optional(v.boolean()),
   name: v.optional(v.string()),
   image: v.optional(v.string()),
   emailVerified: v.boolean(),
@@ -85,7 +93,9 @@ const provisionResultValidator = v.object({
   createdUser: v.boolean(),
   linkedExistingIdentity: v.boolean(),
   duplicate: v.optional(v.boolean()),
-  duplicateField: v.optional(v.union(v.literal("email"), v.literal("username"))),
+  duplicateField: v.optional(
+    v.union(v.literal("email"), v.literal("username"), v.literal("phoneNumber")),
+  ),
   user: v.optional(userReturnValidator),
   sessionId: v.optional(v.string()),
   token: v.optional(v.string()),
@@ -167,6 +177,7 @@ export const provisionFromIdentity = mutation({
     let token: string | undefined;
     const normalizedEmail = normalizeEmail(args.user.email ?? args.identity.email);
     const normalizedUsername = normalizeUsername(args.user.username);
+    const normalizedPhone = normalizePhone(args.user.phoneNumber);
     const allowLink = args.allowLink ?? true;
     const existingIdentity =
       (await findIdentityByIdentityId(ctx, args.identity.identityId)) ??
@@ -183,6 +194,9 @@ export const provisionFromIdentity = mutation({
       : null;
     const existingUserByUsername = normalizedUsername
       ? await getOneFrom(ctx.db, "users", "by_username", normalizedUsername, "username")
+      : null;
+    const existingUserByPhone = normalizedPhone
+      ? await getOneFrom(ctx.db, "users", "by_phoneNumber", normalizedPhone, "phoneNumber")
       : null;
     const user = existingUserByIdentity ?? existingUserByEmail;
 
@@ -218,6 +232,20 @@ export const provisionFromIdentity = mutation({
       };
     }
 
+    /* Same credential-identifier semantics as username: a phoneNumber
+     * collision always fails closed, never links. */
+    if (existingUserByPhone && existingUserByPhone._id !== user?._id) {
+      return {
+        userId: existingUserByPhone._id,
+        identityId: undefined,
+        createdUser: false,
+        linkedExistingIdentity: false,
+        duplicate: true,
+        duplicateField: "phoneNumber" as const,
+        user: toUserReturn(existingUserByPhone),
+      };
+    }
+
     const userPatch = {
       email: normalizedEmail ?? undefined,
       username: normalizedUsername ?? user?.username,
@@ -231,6 +259,12 @@ export const provisionFromIdentity = mutation({
         user && normalizedEmail === normalizeEmail(user.email)
           ? user.emailVerified || args.user.emailVerified
           : args.user.emailVerified,
+      phoneNumber: normalizedPhone ?? user?.phoneNumber,
+      // Same monotonic-while-unchanged rule as emailVerified.
+      phoneNumberVerified:
+        user && normalizedPhone === normalizePhone(user.phoneNumber)
+          ? (user.phoneNumberVerified ?? false) || (args.user.phoneNumberVerified ?? false)
+          : (args.user.phoneNumberVerified ?? user?.phoneNumberVerified ?? false),
       isActive: true,
       updatedAt: now,
     };
@@ -472,6 +506,60 @@ export const verifyEmail = mutation({
     await ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now, updatedAt: now });
 
     const userRecord = await ctx.db.get("users", code.userId);
+    return { success: true, user: userRecord ? toUserReturn(userRecord) : undefined };
+  },
+});
+
+export const verifyPhone = mutation({
+  args: {
+    tokenHash: v.string(),
+  },
+  returns: emailVerificationResultValidator,
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const code = await findVerificationCodeByTokenHashAndType(
+      ctx,
+      args.tokenHash,
+      "phone_verification",
+    );
+
+    if (!code) {
+      return { success: false, reason: "invalid" };
+    }
+
+    if (code.consumedAt || code.expiresAt <= now) {
+      return { success: false, reason: "expired" };
+    }
+
+    await ctx.db.patch("users", code.userId, { phoneNumberVerified: true, updatedAt: now });
+    await ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now, updatedAt: now });
+
+    const userRecord = await ctx.db.get("users", code.userId);
+    /* Session-bound verification proves the user owns this SIM, so attach the
+     * phoneOtp identity — without it, OTP sign-in on this number would keep
+     * failing closed on the phoneNumber collision check. Only create when no
+     * identity with this id exists; an identity already bound to another user
+     * is left alone. */
+    const phone = normalizePhone(userRecord?.phoneNumber);
+    if (userRecord && phone) {
+      const identityId = `phone-otp:native:${phone}`;
+      const existing = await findIdentityByIdentityId(ctx, identityId);
+      if (!existing) {
+        await ctx.db.insert("auth_identities", {
+          identityId,
+          userId: code.userId,
+          provider: "phoneOtp",
+          issuer: "native",
+          subject: phone,
+          tokenIdentifier: phone,
+          emailVerified: userRecord.emailVerified,
+          sessionId: null,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
+
     return { success: true, user: userRecord ? toUserReturn(userRecord) : undefined };
   },
 });
@@ -816,6 +904,8 @@ function toUserReturn(user: Doc<"users">) {
     email: user.email,
     username: user.username,
     displayUsername: user.displayUsername,
+    phoneNumber: user.phoneNumber,
+    phoneNumberVerified: user.phoneNumberVerified,
     name: user.name,
     image: user.image,
     emailVerified: user.emailVerified,

@@ -25,16 +25,17 @@ export const auth = convexAuth({
 export const { signUp, signIn, signOut, addHttpRoutes } = auth;
 ```
 
-| Option             | Type                                  | Required | Description                                               |
-| ------------------ | ------------------------------------- | -------- | --------------------------------------------------------- |
-| `component`        | `ConvexAuthComponentHandle`           | Yes      | Component handle from `components.convexAuth`.            |
-| `components`       | `{ core: ConvexAuthComponentHandle }` | No       | Same as `component`; use one or the other.                |
-| `emailAndPassword` | `NativeEmailAndPasswordConfig`        | No       | Email/password sign-up, sign-in, verification, and reset. |
-| `username`         | `NativeUsernameConfig`                | No       | Username/password sign-up and sign-in.                    |
-| `oauth`            | `NativeOAuthConfig`                   | No       | Google, GitHub, and Discord OAuth.                        |
-| `magicLink`        | `NativeMagicLinkConfig`               | No       | Magic-link sign-in via email.                             |
-| `emailOtp`         | `NativeEmailOtpConfig`                | No       | Email-based one-time passcodes.                           |
-| `captcha`          | `CaptchaConfig`                       | No       | CAPTCHA gating for sign-up and password reset endpoints.  |
+| Option             | Type                                  | Required | Description                                                |
+| ------------------ | ------------------------------------- | -------- | ---------------------------------------------------------- |
+| `component`        | `ConvexAuthComponentHandle`           | Yes      | Component handle from `components.convexAuth`.             |
+| `components`       | `{ core: ConvexAuthComponentHandle }` | No       | Same as `component`; use one or the other.                 |
+| `emailAndPassword` | `NativeEmailAndPasswordConfig`        | No       | Email/password sign-up, sign-in, verification, and reset.  |
+| `username`         | `NativeUsernameConfig`                | No       | Username/password sign-up and sign-in.                     |
+| `oauth`            | `NativeOAuthConfig`                   | No       | Google, GitHub, and Discord OAuth.                         |
+| `magicLink`        | `NativeMagicLinkConfig`               | No       | Magic-link sign-in via email.                              |
+| `emailOtp`         | `NativeEmailOtpConfig`                | No       | Email-based one-time passcodes.                            |
+| `phone`            | `NativePhoneConfig`                   | No       | SMS one-time passcodes for phone sign-in and verification. |
+| `captcha`          | `CaptchaConfig`                       | No       | CAPTCHA gating for sign-up and password reset endpoints.   |
 
 ## `emailAndPassword`
 
@@ -150,6 +151,18 @@ Set the corresponding `*_CLIENT_ID` and `*_CLIENT_SECRET` environment variables.
 | `minPasswordLength`   | `number`                    | `8`     | Minimum password length when OTP creates a user. |
 | `maxPasswordLength`   | `number`                    | `256`   | Maximum password length when OTP creates a user. |
 | `sendVerificationOTP` | `(data) => Promise<string>` | Yes     | Send the OTP email.                              |
+
+## `phone`
+
+| Option              | Type                        | Default | Description                                                 |
+| ------------------- | --------------------------- | ------- | ----------------------------------------------------------- |
+| `enabled`           | `boolean`                   | `true`  | Enable phone OTP.                                           |
+| `disableSignUp`     | `boolean`                   | `false` | Prevent OTP sign-in from creating new accounts.             |
+| `expiresInMs`       | `number`                    | 5 min   | OTP lifetime.                                               |
+| `sessionTtlMs`      | `number`                    | 7 days  | Session lifetime after verification.                        |
+| `refreshTokenTtlMs` | `number`                    | 30 days | Refresh-token lifetime.                                     |
+| `rateLimit`         | `{ windowMs, maxAttempts }` | —       | Per-phone rate limiting on sends and verifies. Recommended. |
+| `sendPhoneOtp`      | `(data) => Promise<string>` | Yes     | Send the OTP SMS — e.g. `createTwilioSmsOtpSender`.         |
 
 ## `captcha`
 

@@ -7,6 +7,8 @@ export { nativeEmailAndPassword } from "./provider.js";
 export { type NativeEmailAndPasswordActions } from "./provider.js";
 export { nativeUsername } from "./username.js";
 export { type NativeUsernameActions, type NativeUsernameConfig } from "./username.js";
+export { nativePhone } from "./phone.js";
+export { type NativePhoneActions, type NativePhoneConfig, type PhoneOtpType } from "./phone.js";
 export { type EmailDraft, type EmailSender } from "./provider.js";
 export { type CaptchaConfig, type CaptchaProvider } from "./provider.js";
 export { nativeOAuth } from "./oauthActions.js";

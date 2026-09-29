@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { createFunctionHandle, makeFunctionReference } from "convex/server";
 import { internalMutation, internalQuery } from "./_generated/server.js";
 import { DEFAULT_SEED_ROLE_CATALOG } from "./organizations.js";
+import { normalizePhone, normalizeUsername } from "../convex-runtime/native/validation.js";
 
 const legacyUserValidator = v.object({
   _id: v.optional(v.string()),
@@ -84,6 +85,10 @@ export const migrateUser = internalMutation({
       name: args.legacyUser.name,
       image: args.legacyUser.image ?? undefined,
       emailVerified: args.legacyUser.emailVerified,
+      username: normalizeUsername(args.legacyUser.username ?? undefined),
+      displayUsername: args.legacyUser.displayUsername ?? undefined,
+      phoneNumber: normalizePhone(args.legacyUser.phoneNumber ?? undefined),
+      phoneNumberVerified: args.legacyUser.phoneNumberVerified ?? undefined,
       isActive: true,
       createdAt: args.legacyUser.createdAt,
       updatedAt: args.legacyUser.updatedAt,

@@ -35,6 +35,8 @@ const AUTH_ACTION_KEYS = [
   "callback",
   "sendVerificationOtp",
   "verifyEmailOtp",
+  "sendPhoneOtp",
+  "verifyPhoneOtp",
   "updateUser",
   "twoFactorEnable",
   "twoFactorVerifyTOTP",
