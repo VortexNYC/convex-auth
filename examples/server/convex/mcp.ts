@@ -8,18 +8,23 @@ import {
   signMcpOAuthAccessTokenWithStoredKey,
 } from "@vortex-api/convex-auth/mcp";
 import type { McpOAuthClient } from "@vortex-api/convex-auth/mcp";
+import { permissionGranted } from "./authz";
 
 type ActionCtx = GenericActionCtx<GenericDataModel>;
 
-const SUPPORTED_SCOPES = ["openid", "email", "profile", "mcp"] as const;
+const SUPPORTED_SCOPES = ["openid", "email", "profile", "mcp", "mcp:admin"] as const;
 
 /* Scope → org permission binding. Identity scopes need no permission; `mcp`
- * (API access on behalf of the org) requires at least org:read membership. */
+ * (API access on behalf of the org) requires org membership; `mcp:admin`
+ * requires the members:manage permission — the ceiling that keeps a plain
+ * member from minting admin-scoped tokens. Scopes missing from this map are
+ * DENIED (fail closed), not granted. */
 const SCOPE_PERMISSIONS: Record<string, string | null> = {
   openid: null,
   email: null,
   profile: null,
   mcp: "organization:read",
+  "mcp:admin": "organization:members:manage",
 };
 
 function issuerFor(request: Request): string {
@@ -105,16 +110,27 @@ function handlersFor(ctx: ActionCtx, issuer: string) {
           roleId: member.roleId,
         });
         const permissions: string[] = role?.permissions ?? [];
-        const granted = (needed: string | null): boolean =>
-          needed === null ||
-          permissions.includes("*") ||
-          permissions.includes(needed) ||
-          permissions.includes(`${needed.split(":")[0]}:*`);
-
-        const grantedScopes = requestedScopes.filter((scope) =>
-          granted(SCOPE_PERMISSIONS[scope] ?? null),
-        );
-        return { ok: true as const, organizationId, scopes: grantedScopes };
+        /* Deny the whole request if any requested scope exceeds the member's
+         * role — mirrors the runtime's validateScopes (403), and refuses to
+         * mint a silently-scoped-down token the client never asked for. */
+        const denied = requestedScopes.some((scope) => {
+          const needed = SCOPE_PERMISSIONS[scope];
+          /* unmapped scope → fail closed; null → identity scope, always OK */
+          return (
+            needed === undefined || (needed !== null && !permissionGranted(permissions, needed))
+          );
+        });
+        if (denied) {
+          return {
+            ok: false as const,
+            status: 403,
+            body: {
+              error: "insufficient_scope",
+              error_description: "Requested scope exceeds the member's role permissions",
+            },
+          };
+        }
+        return { ok: true as const, organizationId, scopes: [...requestedScopes] };
       },
       createAuthorizationCode: async (input) => {
         await ctx.runMutation(components.convexAuth.mcp.createAuthorizationCode, {

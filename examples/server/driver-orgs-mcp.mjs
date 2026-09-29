@@ -32,6 +32,7 @@ const expect = (cond, msg) => {
 const userA = new ConvexHttpClient(URL_);
 const userB = new ConvexHttpClient(URL_);
 const userC = new ConvexHttpClient(URL_);
+const userD = new ConvexHttpClient(URL_);
 const stamp = Date.now().toString(36);
 
 const signUp = async (client, username) => {
@@ -54,7 +55,20 @@ const signUp = async (client, username) => {
 const sA = await signUp(userA, `org-owner-${stamp}`);
 const sB = await signUp(userB, `org-invitee-${stamp}`);
 const sC = await signUp(userC, `org-outsider-${stamp}`);
+const sD = await signUp(userD, `org-member2-${stamp}`);
 console.log("users signed in");
+
+const expectReject = async (client, fn, args, label, fragment) => {
+  try {
+    await client.mutation(fn, args);
+    expect(false, `${label} was allowed`);
+  } catch (e) {
+    expect(
+      fragment === undefined || String(e.message).includes(fragment),
+      `${label} rejected${fragment ? ` (${fragment})` : ""}`,
+    );
+  }
+};
 
 /* ---------- organizations + invitations ---------- */
 
@@ -63,6 +77,16 @@ const { organizationId } = await userA.mutation("organizations:createOrganizatio
   slug: `proof-${stamp}`,
 });
 expect(!!organizationId, `organization created (${organizationId})`);
+
+// slug collision: an existing org must not be re-creatable (would seed the
+// caller as owner of someone else's org)
+await expectReject(
+  userC,
+  "organizations:createOrganization",
+  { name: "Hijack Org", slug: `proof-${stamp}` },
+  "outsider re-create org via slug collision",
+  "slug already taken",
+);
 
 const invite = await userA.mutation("organizations:inviteMember", {
   organizationId,
@@ -102,39 +126,27 @@ try {
 }
 
 // member-as-attacker negatives (B is still "member" tier here)
-const rejects = async (fn, args, label) => {
-  try {
-    await userB.mutation(fn, args);
-    expect(false, `member was able to ${label}`);
-  } catch (e) {
-    expect(String(e.message).includes("Missing permission"), `member ${label} rejected`);
-  }
-};
-await rejects(
+const ownerRow = members.find((m) => m.userId === sA.user.id);
+await expectReject(
+  userB,
   "organizations:setMemberRole",
-  {
-    organizationId,
-    memberId: members.find((m) => m.userId === sA.user.id)?._id,
-    roleKey: "viewer",
-  },
-  "demote the owner",
+  { organizationId, memberId: ownerRow?._id, roleKey: "viewer" },
+  "member demote the owner",
+  "Missing permission",
 );
-await rejects(
+await expectReject(
+  userB,
   "organizations:inviteMember",
-  {
-    organizationId,
-    email: "sneaky@example.test",
-    roleKey: "owner",
-  },
-  "invite as owner",
+  { organizationId, email: "sneaky@example.test", roleKey: "owner" },
+  "member invite as owner",
+  "Missing permission",
 );
-await rejects(
+await expectReject(
+  userB,
   "organizations:issueOrgApiKey",
-  {
-    organizationId,
-    name: "rogue-key",
-  },
-  "mint an org api key",
+  { organizationId, name: "rogue-key" },
+  "member mint an org api key",
+  "Missing permission",
 );
 
 // role change: promote invitee to admin
@@ -147,7 +159,50 @@ const after = await userA.query("organizations:listMembers", { organizationId })
 const promoted = after.find((m) => m._id === inviteeRow?._id);
 expect(promoted?.roleId !== inviteeRow?.roleId, "setMemberRole changed the invitee role");
 
+// admin-tier negatives: members:manage/invitations:manage do NOT unlock the
+// owner role — assigning or stripping `*` requires holding `*`
+await expectReject(
+  userB,
+  "organizations:setMemberRole",
+  { organizationId, memberId: inviteeRow?._id, roleKey: "owner" },
+  "admin self-promote to owner",
+  "more privileged",
+);
+await expectReject(
+  userB,
+  "organizations:inviteMember",
+  { organizationId, email: "sneaky2@example.test", roleKey: "owner" },
+  "admin invite as owner",
+  "more privileged",
+);
+await expectReject(
+  userB,
+  "organizations:setMemberRole",
+  { organizationId, memberId: ownerRow?._id, roleKey: "viewer" },
+  "admin demote the owner",
+  "more privileged",
+);
+// but admin CAN do its actual job: invite a plain member
+const inviteD = await userB.mutation("organizations:inviteMember", {
+  organizationId,
+  email: "member2@example.test",
+});
+expect(!!inviteD.token, "admin can invite a member-tier invitee");
+const redeemD = await userD.mutation("organizations:acceptInvitation", {
+  token: inviteD.token,
+});
+expect(redeemD.accepted === true, "second member joined via admin invite");
+
 /* ---------- API keys ---------- */
+
+// scope vocabulary ceiling — even the owner cannot mint unknown scopes
+await expectReject(
+  userA,
+  "organizations:issueOrgApiKey",
+  { organizationId, name: "bad-scope-key", scopes: ["root:all"] },
+  "issue key with out-of-vocabulary scope",
+  "Unknown API key scope",
+);
 
 const issued = await userA.mutation("organizations:issueOrgApiKey", {
   organizationId,
@@ -182,13 +237,23 @@ const vGarbage = await userA.mutation("organizations:verifyApiKey", {
 });
 expect(vGarbage.valid === false, `garbage key rejected (${vGarbage.reason})`);
 
-// cross-tenant oracle: outsider presenting the real key learns nothing
+// cross-tenant oracle: outsider presenting the real key learns nothing —
+// every verdict collapses to not_found, including failures that would leak
+// key state (scope_missing, revoked) to a member caller
 const outsiderVerdict = await userC.mutation("organizations:verifyApiKey", {
   presentedKey: issued.apiKey,
 });
 expect(
   outsiderVerdict.valid === false && outsiderVerdict.reason === "not_found",
   `outsider cannot probe a real key (got ${outsiderVerdict.reason})`,
+);
+const outsiderScoped = await userC.mutation("organizations:verifyApiKey", {
+  presentedKey: issued.apiKey,
+  requiredScopes: ["write"],
+});
+expect(
+  outsiderScoped.valid === false && outsiderScoped.reason === "not_found",
+  `outsider gets not_found, not scope_missing (got ${outsiderScoped.reason})`,
 );
 
 await userA.mutation("organizations:revokeApiKey", {
@@ -202,20 +267,28 @@ expect(
   vRevoked.valid === false && vRevoked.reason === "revoked",
   `revoked key fails closed (${vRevoked.reason})`,
 );
+const outsiderRevoked = await userC.mutation("organizations:verifyApiKey", {
+  presentedKey: issued.apiKey,
+});
+expect(
+  outsiderRevoked.valid === false && outsiderRevoked.reason === "not_found",
+  `outsider gets not_found, not revoked (got ${outsiderRevoked.reason})`,
+);
 
 /* ---------- MCP OAuth over real HTTP ---------- */
 
 const ISSUER = SITE;
 const REDIRECT_URI = "https://client.example/cb";
 
-// dynamic client registration
+// dynamic client registration — scope includes mcp:admin so requests for it
+// reach the authorize policy (client allowlist ∩ supported scopes)
 const reg = await fetch(`${SITE}/oauth/register`, {
   method: "POST",
   headers: { "content-type": "application/json" },
   body: JSON.stringify({
     client_name: `e2e-mcp-${stamp}`,
     redirect_uris: [REDIRECT_URI],
-    scope: "openid email profile mcp",
+    scope: "openid email profile mcp mcp:admin",
     grant_types: ["authorization_code", "refresh_token"],
     response_types: ["code"],
     token_endpoint_auth_method: "none",
@@ -228,12 +301,18 @@ expect(
 );
 const clientId = regBody.client_id;
 
-// authorize: no session -> 401 login_required
 const b64url = (b) =>
   b.toString("base64").replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-const verifier = b64url(randomBytes(32));
-const challenge = b64url(createHash("sha256").update(verifier).digest());
-const authorizeUrl = (orgId) => {
+
+/* Each authorize call gets a fresh PKCE pair; the returned verifier feeds the
+ * matching token exchange (codes burn on presentation, so negatives need
+ * fresh codes). */
+const authorizeFor = async (
+  token,
+  { orgId = organizationId, scope = "openid email profile" } = {},
+) => {
+  const verifier = b64url(randomBytes(32));
+  const challenge = b64url(createHash("sha256").update(verifier).digest());
   const u = new URL(`${SITE}/oauth/authorize`);
   u.searchParams.set("response_type", "code");
   u.searchParams.set("client_id", clientId);
@@ -241,40 +320,69 @@ const authorizeUrl = (orgId) => {
   u.searchParams.set("code_challenge", challenge);
   u.searchParams.set("code_challenge_method", "S256");
   u.searchParams.set("state", "st-" + stamp);
-  u.searchParams.set("scope", "openid email profile");
+  u.searchParams.set("scope", scope);
   if (orgId) u.searchParams.set("organization_id", orgId);
-  return u.toString();
+  const resp = await fetch(u, {
+    redirect: "manual",
+    headers: token ? { authorization: `Bearer ${token}` } : {},
+  });
+  const loc = resp.headers.get("location") ?? "";
+  const parsed = loc ? new URL(loc, REDIRECT_URI) : null;
+  return {
+    status: resp.status,
+    code: parsed?.searchParams.get("code"),
+    state: parsed?.searchParams.get("state"),
+    verifier,
+    body: resp.status >= 400 ? await resp.json().catch(() => null) : null,
+  };
 };
 
-const noAuth = await fetch(authorizeUrl(organizationId), { redirect: "manual" });
+// authorize: no session -> 401 login_required
+const noAuth = await authorizeFor(null);
 expect(noAuth.status === 401, `authorize without session -> 401 (got ${noAuth.status})`);
 
 // outsider (no org membership) -> access_denied 403
-const outsiderAuth = await fetch(authorizeUrl(organizationId), {
-  redirect: "manual",
-  headers: { authorization: `Bearer ${sC.token}` },
-});
+const outsiderAuth = await authorizeFor(sC.token);
 expect(
   outsiderAuth.status === 403,
   `outsider org authorization denied (got ${outsiderAuth.status})`,
 );
 
-// real authorize for member — negative flow consumes its own code
-const authorize = async () => {
-  const resp = await fetch(authorizeUrl(organizationId), {
-    redirect: "manual",
-    headers: { authorization: `Bearer ${sA.token}` },
-  });
-  const loc = resp.headers.get("location") ?? "";
-  const u = new URL(loc, REDIRECT_URI);
-  return {
-    status: resp.status,
-    code: u.searchParams.get("code"),
-    state: u.searchParams.get("state"),
-  };
-};
+/* Ambiguity rule: a user with multiple memberships must pass
+ * organization_id explicitly. Owner A creates a second org first. */
+await userA.mutation("organizations:createOrganization", {
+  name: `Proof Org Two ${stamp}`,
+  slug: `proof2-${stamp}`,
+});
+const ambiguous = await authorizeFor(sA.token, { orgId: null });
+expect(
+  ambiguous.status === 400 && ambiguous.body?.error === "invalid_request",
+  `multi-org authorize without organization_id -> 400 (got ${ambiguous.status})`,
+);
 
-const badAuthz = await authorize();
+// single-membership user can omit organization_id — auto-selects their org
+const autoSel = await authorizeFor(sD.token, { orgId: null });
+expect(
+  autoSel.status === 302 && !!autoSel.code,
+  `single-membership authorize auto-selects org (${autoSel.status})`,
+);
+
+// scope ceiling: member role lacks organization:members:manage -> mcp:admin denied
+const deniedScope = await authorizeFor(sD.token, { scope: "openid mcp:admin" });
+expect(
+  deniedScope.status === 403 && deniedScope.body?.error === "insufficient_scope",
+  `member requesting mcp:admin -> 403 insufficient_scope (got ${deniedScope.status})`,
+);
+
+// owner (`*`) CAN be granted mcp:admin — proves the ceiling is role-driven
+const ownerAdmin = await authorizeFor(sA.token, { scope: "openid mcp:admin" });
+expect(
+  ownerAdmin.status === 302 && !!ownerAdmin.code,
+  `owner requesting mcp:admin granted (${ownerAdmin.status})`,
+);
+
+// real authorize for member — negative flow consumes its own code
+const badAuthz = await authorizeFor(sA.token);
 expect(
   badAuthz.status === 302 && !!badAuthz.code,
   `authorize #1 -> 302 with code (${badAuthz.status})`,
@@ -302,7 +410,7 @@ expect(
   `wrong code_verifier rejected (${badExchange.status} ${badExchange.body.error})`,
 );
 
-const authz = await authorize();
+const authz = await authorizeFor(sA.token);
 expect(
   authz.status === 302 && !!authz.code && authz.state === `st-${stamp}`,
   `authorize #2 -> 302 with code + state (${authz.status})`,
@@ -314,7 +422,7 @@ const exchange = await tokenForm({
   client_id: clientId,
   redirect_uri: REDIRECT_URI,
   code,
-  code_verifier: verifier,
+  code_verifier: authz.verifier,
 });
 expect(
   exchange.status === 200 && !!exchange.body.access_token && !!exchange.body.refresh_token,
@@ -327,7 +435,7 @@ const replay = await tokenForm({
   client_id: clientId,
   redirect_uri: REDIRECT_URI,
   code,
-  code_verifier: verifier,
+  code_verifier: authz.verifier,
 });
 expect(replay.status === 400, `code replay rejected (${replay.status})`);
 
