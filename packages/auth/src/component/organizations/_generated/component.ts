@@ -165,6 +165,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         {
           account?: { credentialHash: string };
           allowLink?: boolean;
+          allowUnverifiedEmailLink?: boolean;
           identity: {
             email?: string;
             emailVerified: boolean;
@@ -312,14 +313,31 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             tokenType?: string;
             userId: string;
           },
-          any,
+          string,
           Name
         >;
         getAccountBySubject: FunctionReference<
           "query",
           "internal",
           { issuer: string; provider: string; subject: string },
-          any,
+          {
+            _creationTime: number;
+            _id: string;
+            accessToken?: string;
+            accessTokenExpiresAt?: number;
+            createdAt: number;
+            credentialHash: string;
+            idToken?: string;
+            issuer: string;
+            provider: string;
+            refreshToken?: string;
+            refreshTokenExpiresAt?: number;
+            scopes?: Array<string>;
+            subject: string;
+            tokenType?: string;
+            updatedAt: number;
+            userId: string;
+          } | null,
           Name
         >;
         updateAccountTokens: FunctionReference<
@@ -335,7 +353,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             scopes?: Array<string>;
             tokenType?: string;
           },
-          any,
+          null,
           Name
         >;
         updateCredentialHash: FunctionReference<
@@ -375,14 +393,35 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "two_factor_pending"
               | "two_factor_trusted_device";
           },
-          any,
+          {
+            _creationTime: number;
+            _id: string;
+            consumedAt?: number;
+            createdAt: number;
+            credentialId?: string;
+            expiresAt: number;
+            identityId?: string;
+            rememberMe?: boolean;
+            tokenHash: string;
+            type:
+              | "email_verification"
+              | "password_reset"
+              | "email_change"
+              | "two_factor_pending"
+              | "two_factor_trusted_device";
+            updatedAt: number;
+            userId: string;
+          } | null,
           Name
         >;
         createVerificationCode: FunctionReference<
           "mutation",
           "internal",
           {
+            credentialId?: string;
             expiresAt: number;
+            identityId?: string;
+            rememberMe?: boolean;
             tokenHash: string;
             type:
               | "email_verification"
@@ -392,7 +431,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "two_factor_trusted_device";
             userId: string;
           },
-          any,
+          string,
           Name
         >;
         getVerificationCodeByTokenHash: FunctionReference<
@@ -407,7 +446,25 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "two_factor_pending"
               | "two_factor_trusted_device";
           },
-          any,
+          {
+            _creationTime: number;
+            _id: string;
+            consumedAt?: number;
+            createdAt: number;
+            credentialId?: string;
+            expiresAt: number;
+            identityId?: string;
+            rememberMe?: boolean;
+            tokenHash: string;
+            type:
+              | "email_verification"
+              | "password_reset"
+              | "email_change"
+              | "two_factor_pending"
+              | "two_factor_trusted_device";
+            updatedAt: number;
+            userId: string;
+          } | null,
           Name
         >;
         revokeVerificationCodesForUser: FunctionReference<
@@ -422,7 +479,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "two_factor_trusted_device";
             userId: string;
           },
-          any,
+          number,
           Name
         >;
       };
@@ -459,7 +516,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             windowMs: number;
             windowStart: number;
           },
-          { allowed: boolean; count: number },
+          { allowed: boolean; count?: number },
           Name
         >;
         cleanupExpiredRateLimits: FunctionReference<
@@ -478,7 +535,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             windowMs: number;
             windowStart: number;
           },
-          { allowed: boolean; count: number },
+          { allowed: boolean; count?: number },
           Name
         >;
       };

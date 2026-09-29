@@ -185,6 +185,11 @@ export const generatePasskeyRegistrationOptions = mutation({
       transports: pk.transports ?? [],
     }));
 
+    const origins = [args.origin].flat().filter((o) => o.length > 0);
+    if (origins.length === 0) {
+      throw new Error("origin must contain at least one non-empty origin");
+    }
+
     const userVerification = args.userVerification ?? "required";
 
     const options = await generateRegistrationOptions({
@@ -208,7 +213,7 @@ export const generatePasskeyRegistrationOptions = mutation({
       userId: args.userId,
       identifier,
       rpID: args.rpID,
-      origin: [args.origin].flat(),
+      origin: origins,
       userVerification,
       expiresAt: now + CHALLENGE_TTL_MS,
       createdAt: now,
@@ -505,6 +510,11 @@ export const generatePasskeyAuthenticationOptions = mutation({
 
     const userVerification = args.userVerification ?? "required";
 
+    const origins = [args.origin].flat().filter((o) => o.length > 0);
+    if (origins.length === 0) {
+      throw new Error("origin must contain at least one non-empty origin");
+    }
+
     const options = await generateAuthenticationOptions({
       rpID: args.rpID,
       challenge,
@@ -518,7 +528,7 @@ export const generatePasskeyAuthenticationOptions = mutation({
       userId: args.userId ?? undefined,
       identifier: undefined,
       rpID: args.rpID,
-      origin: [args.origin].flat(),
+      origin: origins,
       userVerification,
       expiresAt: now + CHALLENGE_TTL_MS,
       createdAt: now,

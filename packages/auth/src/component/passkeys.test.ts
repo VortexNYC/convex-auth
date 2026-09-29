@@ -54,6 +54,28 @@ async function insertUser(t: ReturnType<typeof convexTest>) {
 }
 
 describe("passkeys", () => {
+  it("rejects option generation without an origin", async () => {
+    const t = convexTest(schema, modules);
+    const userId = await insertUser(t);
+
+    await expect(
+      t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
+        userId,
+        identifier: "shlomo@example.com",
+        rpName: RP_NAME,
+        rpID: RP_ID,
+        origin: [],
+      }),
+    ).rejects.toThrow("at least one non-empty origin");
+
+    await expect(
+      t.mutation(api.passkeys.generatePasskeyAuthenticationOptions, {
+        rpID: RP_ID,
+        origin: "",
+      }),
+    ).rejects.toThrow("at least one non-empty origin");
+  });
+
   it("generates registration options and stores a challenge", async () => {
     const t = convexTest(schema, modules);
     const userId = await insertUser(t);

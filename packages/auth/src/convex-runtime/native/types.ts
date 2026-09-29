@@ -377,7 +377,7 @@ export type NativeEmailAndPasswordComponentHandle = {
           accessTokenExpiresAt?: number;
           refreshTokenExpiresAt?: number;
         },
-        void,
+        null,
         string
       >;
       getAccountBySubject: FunctionReference<
