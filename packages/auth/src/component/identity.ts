@@ -8,7 +8,11 @@ import { getOneFrom } from "convex-helpers/server/relationships";
 import { getAllRows } from "./pagination.js";
 import { mutation, query } from "./_generated/server.js";
 import { mintToken } from "../convex-runtime/native/jwt.js";
-import { normalizeEmail, normalizeUsername } from "../convex-runtime/native/validation.js";
+import {
+  normalizeEmail,
+  normalizePhone,
+  normalizeUsername,
+} from "../convex-runtime/native/validation.js";
 import schema, {
   emailTwoFactorResetReasonValidator,
   emailTwoFactorStatusValidator,
@@ -34,6 +38,8 @@ const userProfileInputValidator = v.object({
   email: v.optional(v.string()),
   username: v.optional(v.string()),
   displayUsername: v.optional(v.string()),
+  phoneNumber: v.optional(v.string()),
+  phoneNumberVerified: v.optional(v.boolean()),
   name: v.optional(v.string()),
   image: v.optional(v.string()),
   emailVerified: v.boolean(),
@@ -60,6 +66,8 @@ const userReturnValidator = v.object({
   email: v.optional(v.string()),
   username: v.optional(v.string()),
   displayUsername: v.optional(v.string()),
+  phoneNumber: v.optional(v.string()),
+  phoneNumberVerified: v.optional(v.boolean()),
   name: v.optional(v.string()),
   image: v.optional(v.string()),
   emailVerified: v.boolean(),
@@ -85,7 +93,9 @@ const provisionResultValidator = v.object({
   createdUser: v.boolean(),
   linkedExistingIdentity: v.boolean(),
   duplicate: v.optional(v.boolean()),
-  duplicateField: v.optional(v.union(v.literal("email"), v.literal("username"))),
+  duplicateField: v.optional(
+    v.union(v.literal("email"), v.literal("username"), v.literal("phoneNumber")),
+  ),
   user: v.optional(userReturnValidator),
   sessionId: v.optional(v.string()),
   token: v.optional(v.string()),
@@ -167,6 +177,7 @@ export const provisionFromIdentity = mutation({
     let token: string | undefined;
     const normalizedEmail = normalizeEmail(args.user.email ?? args.identity.email);
     const normalizedUsername = normalizeUsername(args.user.username);
+    const normalizedPhone = normalizePhone(args.user.phoneNumber);
     const allowLink = args.allowLink ?? true;
     const existingIdentity =
       (await findIdentityByIdentityId(ctx, args.identity.identityId)) ??
@@ -183,6 +194,9 @@ export const provisionFromIdentity = mutation({
       : null;
     const existingUserByUsername = normalizedUsername
       ? await getOneFrom(ctx.db, "users", "by_username", normalizedUsername, "username")
+      : null;
+    const existingUserByPhone = normalizedPhone
+      ? await getOneFrom(ctx.db, "users", "by_phoneNumber", normalizedPhone, "phoneNumber")
       : null;
     const user = existingUserByIdentity ?? existingUserByEmail;
 
@@ -218,6 +232,20 @@ export const provisionFromIdentity = mutation({
       };
     }
 
+    /* Same credential-identifier semantics as username: a phoneNumber
+     * collision always fails closed, never links. */
+    if (existingUserByPhone && existingUserByPhone._id !== user?._id) {
+      return {
+        userId: existingUserByPhone._id,
+        identityId: undefined,
+        createdUser: false,
+        linkedExistingIdentity: false,
+        duplicate: true,
+        duplicateField: "phoneNumber" as const,
+        user: toUserReturn(existingUserByPhone),
+      };
+    }
+
     const userPatch = {
       email: normalizedEmail ?? undefined,
       username: normalizedUsername ?? user?.username,
@@ -231,6 +259,13 @@ export const provisionFromIdentity = mutation({
         user && normalizedEmail === normalizeEmail(user.email)
           ? user.emailVerified || args.user.emailVerified
           : args.user.emailVerified,
+      phoneNumber: normalizedPhone ?? user?.phoneNumber,
+      // Same monotonic-while-unchanged rule as emailVerified — a changed
+      // number takes the caller's claim only, never inherits the old flag.
+      phoneNumberVerified:
+        user && normalizedPhone === normalizePhone(user.phoneNumber)
+          ? (user.phoneNumberVerified ?? false) || (args.user.phoneNumberVerified ?? false)
+          : (args.user.phoneNumberVerified ?? false),
       isActive: true,
       updatedAt: now,
     };
@@ -259,36 +294,11 @@ export const provisionFromIdentity = mutation({
       updatedAt: now,
     };
 
-    if (existingIdentity) {
-      await ctx.db.patch("auth_identities", existingIdentity._id, identityPatch);
-      const userRecord = await ctx.db.get("users", userId);
-      return {
-        userId,
-        identityId: existingIdentity._id,
-        createdUser: false,
-        linkedExistingIdentity: true,
-        user: userRecord ? toUserReturn(userRecord) : undefined,
-      };
-    }
-
-    const identityId = await ctx.db.insert("auth_identities", {
-      ...identityPatch,
-      createdAt: now,
-    });
-
-    if (args.account) {
-      await ctx.db.insert("authAccounts", {
-        userId,
-        provider: args.identity.provider,
-        issuer: args.identity.issuer,
-        subject: args.identity.subject,
-        credentialHash: args.account.credentialHash,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-
-    if (args.initialSession) {
+    /* `initialSession` must be honored on the existing-identity path too —
+     * otherwise a repeat OTP sign-in returns a token that was never minted
+     * and a refresh token that was never persisted. */
+    const mintInitialSession = async (identityId: Doc<"auth_identities">["_id"]) => {
+      if (!args.initialSession) return;
       const sessionExpiresInSeconds = Math.max(
         0,
         Math.floor((args.initialSession.sessionExpiresAt - now) / 1000),
@@ -322,7 +332,41 @@ export const provisionFromIdentity = mutation({
         createdAt: now,
         updatedAt: now,
       });
+    };
+
+    if (existingIdentity) {
+      await ctx.db.patch("auth_identities", existingIdentity._id, identityPatch);
+      await mintInitialSession(existingIdentity._id);
+      const userRecord = await ctx.db.get("users", userId);
+      return {
+        userId,
+        identityId: existingIdentity._id,
+        createdUser: false,
+        linkedExistingIdentity: true,
+        token,
+        sessionId: args.initialSession?.sessionId,
+        user: userRecord ? toUserReturn(userRecord) : undefined,
+      };
     }
+
+    const identityId = await ctx.db.insert("auth_identities", {
+      ...identityPatch,
+      createdAt: now,
+    });
+
+    if (args.account) {
+      await ctx.db.insert("authAccounts", {
+        userId,
+        provider: args.identity.provider,
+        issuer: args.identity.issuer,
+        subject: args.identity.subject,
+        credentialHash: args.account.credentialHash,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    await mintInitialSession(identityId);
 
     if (args.verificationCode) {
       const existingCodes = await getAllRows(ctx, {
@@ -472,6 +516,70 @@ export const verifyEmail = mutation({
     await ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now, updatedAt: now });
 
     const userRecord = await ctx.db.get("users", code.userId);
+    return { success: true, user: userRecord ? toUserReturn(userRecord) : undefined };
+  },
+});
+
+export const verifyPhone = mutation({
+  args: {
+    tokenHash: v.string(),
+    phone: v.string(),
+  },
+  returns: emailVerificationResultValidator,
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const code = await findVerificationCodeByTokenHashAndType(
+      ctx,
+      args.tokenHash,
+      "phone_verification",
+    );
+
+    if (!code) {
+      return { success: false, reason: "invalid" };
+    }
+
+    if (code.consumedAt || code.expiresAt <= now) {
+      return { success: false, reason: "expired" };
+    }
+
+    const userRecord = await ctx.db.get("users", code.userId);
+    /* The token hash binds otp+phone at send time, but the user's stored
+     * number could have been rewritten since — re-check it here so the code
+     * can never verify a phone other than the one it was issued for. */
+    const phone = normalizePhone(args.phone);
+    if (!userRecord || !phone || normalizePhone(userRecord.phoneNumber) !== phone) {
+      return { success: false, reason: "phone_mismatch" };
+    }
+
+    /* If another user already holds the phoneOtp identity for this number the
+     * claim is contested — fail closed rather than mark this user verified. */
+    const identityId = `phone-otp:native:${phone}`;
+    const existingIdentity = await findIdentityByIdentityId(ctx, identityId);
+    if (existingIdentity && existingIdentity.userId !== code.userId) {
+      return { success: false, reason: "conflict" };
+    }
+
+    await ctx.db.patch("users", code.userId, { phoneNumberVerified: true, updatedAt: now });
+    await ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now, updatedAt: now });
+
+    /* Session-bound verification proves the user owns this SIM, so attach the
+     * phoneOtp identity — without it, OTP sign-in on this number would keep
+     * failing closed on the phoneNumber collision check. */
+    if (!existingIdentity) {
+      await ctx.db.insert("auth_identities", {
+        identityId,
+        userId: code.userId,
+        provider: "phoneOtp",
+        issuer: "native",
+        subject: phone,
+        tokenIdentifier: phone,
+        emailVerified: userRecord.emailVerified,
+        sessionId: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
     return { success: true, user: userRecord ? toUserReturn(userRecord) : undefined };
   },
 });
@@ -816,6 +924,8 @@ function toUserReturn(user: Doc<"users">) {
     email: user.email,
     username: user.username,
     displayUsername: user.displayUsername,
+    phoneNumber: user.phoneNumber,
+    phoneNumberVerified: user.phoneNumberVerified,
     name: user.name,
     image: user.image,
     emailVerified: user.emailVerified,

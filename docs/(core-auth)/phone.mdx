@@ -1,0 +1,110 @@
+---
+title: Phone OTP
+description: SMS one-time passcodes for phone-number sign-in and verification with convex-auth.
+sidebar:
+  order: 13
+---
+
+`convex-auth` can sign users in or verify a phone number on an existing account with a one-time code delivered by SMS.
+
+## Enable
+
+```ts convex/auth.ts
+import { components } from "./_generated/api";
+import { convexAuth, createTwilioSmsOtpSender } from "@vortex-api/convex-auth/convex";
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+  phone: {
+    enabled: true,
+    sendPhoneOtp: createTwilioSmsOtpSender({
+      accountSid: process.env.TWILIO_ACCOUNT_SID!,
+      authToken: process.env.TWILIO_AUTH_TOKEN!,
+      from: process.env.TWILIO_FROM_NUMBER!,
+    }),
+  },
+});
+```
+
+Rate limiting is **on by default** — 5 attempts per phone number per 60 seconds on both sends and verifies. SMS sends cost money and a 6-digit code is brute-forceable without an attempt bound. Pass `rateLimit: false` to disable, or `{ windowMs, maxAttempts }` to tune.
+
+`sendPhoneOtp` receives `{ phone, otp, type }` and returns a message id. `type` is `sign-in` or `phone-verification`. Any `async ({ phone, otp, type }) => string` function works — `createTwilioSmsOtpSender` is the first-party Twilio helper, or bring your own SMS provider.
+
+Phone numbers are normalized to E.164 before storage and lookup — `+1 (555) 123-4567` and `+15551234567` resolve to the same account. Verified sign-ins set `users.phoneNumberVerified = true`.
+
+## Sign in with an OTP
+
+```tsx src/SignInWithPhone.tsx
+import { useAuthActions } from "@vortex-api/convex-auth/react";
+
+export function SignInWithPhone() {
+  const { sendPhoneOtp, verifyPhoneOtp, isLoading } = useAuthActions();
+
+  const [step, setStep] = useState<"request" | "verify">("request");
+  const [phone, setPhone] = useState("");
+
+  async function requestCode(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const phone = formData.get("phone") as string;
+    setPhone(phone);
+    await sendPhoneOtp({ phone, type: "sign-in" });
+    setStep("verify");
+  }
+
+  async function confirmCode(otp: string) {
+    // Returns a session — the user is signed in.
+    await verifyPhoneOtp({ phone, otp, type: "sign-in" });
+  }
+
+  // ...
+}
+```
+
+The Better Auth client exposes the same flow as `signIn.phoneOtp({ phone })` to send the code and `signIn.phoneOtp({ phone, otp })` to verify and sign in.
+
+## Verify a phone on a signed-in account
+
+Pass `type: "phone-verification"`. The send requires an active session, and the code is bound to the user's stored `phoneNumber` — a verification code can never be minted for a number the account does not already own.
+
+```tsx
+import { useAuthActions } from "@vortex-api/convex-auth/react";
+
+export function VerifyPhone() {
+  const { sendPhoneOtp, verifyPhoneOtp } = useAuthActions();
+
+  async function start(phone: string) {
+    await sendPhoneOtp({ phone, type: "phone-verification" });
+  }
+
+  async function confirm(phone: string, otp: string) {
+    await verifyPhoneOtp({ phone, otp, type: "phone-verification" });
+  }
+
+  // ...
+}
+```
+
+`verifyPhoneOtp` returns a session for `type: "sign-in"`, or `{ success }` for `phone-verification`.
+
+## Collisions and recycled numbers
+
+Phone numbers get recycled, so SMS proof alone is too weak to claim a pre-existing account. If an OTP sign-in resolves to a `phoneNumber` already bound to another user that has no `phoneOtp` identity, provisioning fails closed — no linking, no session. Users on the recycled number should sign in with their original method and update their number.
+
+## Migrating from Better Auth
+
+The migration CLI carries `user.phoneNumber` and `user.phoneNumberVerified` onto `users` automatically. It does **not** create `phoneOtp` identities — a Better Auth `phoneNumber` account does not prove the number still belongs to the same person (numbers get recycled), so linking it silently would reopen an account-takeover path.
+
+After migrating, have each user run the `type: "phone-verification"` flow once after signing in with their usual method. Consuming that code marks `phoneNumberVerified` and links a `phoneOtp` identity with fresh SIM proof — from then on, OTP sign-in works.
+
+## Options
+
+| Option              | Type                                   | Default  | Description                                                      |
+| ------------------- | -------------------------------------- | -------- | ---------------------------------------------------------------- |
+| `enabled`           | `boolean`                              | `true`   | Enable phone OTP.                                                |
+| `sendPhoneOtp`      | `(data) => Promise<string>`            | Required | Send the OTP SMS — e.g. `createTwilioSmsOtpSender`.              |
+| `expiresInMs`       | `number`                               | 5 min    | OTP lifetime.                                                    |
+| `disableSignUp`     | `boolean`                              | `false`  | Prevent OTP sign-in from creating new accounts.                  |
+| `sessionTtlMs`      | `number`                               | 7 days   | Session lifetime after sign-in.                                  |
+| `refreshTokenTtlMs` | `number`                               | 30 days  | Refresh-token lifetime.                                          |
+| `rateLimit`         | `{ windowMs, maxAttempts }` \| `false` | 5/60s    | Per-phone rate limiting on sends and verifies. `false` disables. |

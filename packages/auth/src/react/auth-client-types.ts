@@ -12,6 +12,8 @@ export type BetterAuthUser = {
   name?: string | null;
   username?: string | null;
   displayUsername?: string | null;
+  phoneNumber?: string | null;
+  phoneNumberVerified?: boolean | null;
 };
 
 export type BetterAuthSession = {
@@ -60,6 +62,16 @@ export type ConvexBetterAuthClient = {
       callbackURL?: string;
       rememberMe?: boolean;
       trustedDeviceToken?: string;
+    }): Promise<BetterAuthResponse>;
+    /**
+     * Phone OTP sign-in: pass `{ phone }` to send the SMS code, then
+     * `{ phone, otp }` to verify it and complete sign-in.
+     */
+    phoneOtp?(args: {
+      phone: string;
+      otp?: string;
+      name?: string;
+      rememberMe?: boolean;
     }): Promise<BetterAuthResponse>;
   };
   linkAccount?: (args: {

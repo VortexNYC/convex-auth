@@ -1270,6 +1270,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             isSuperAdmin?: boolean;
             metadataJson?: string;
             name?: string;
+            phoneNumber?: string;
+            phoneNumberVerified?: boolean;
             twoFactorEnabled?: boolean;
             updatedAt: number;
             username?: string;
@@ -1345,6 +1347,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             isSuperAdmin?: boolean;
             metadataJson?: string;
             name?: string;
+            phoneNumber?: string;
+            phoneNumberVerified?: boolean;
             twoFactorEnabled?: boolean;
             updatedAt: number;
             username?: string;
@@ -1394,6 +1398,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             isSuperAdmin?: boolean;
             metadataJson?: string;
             name?: string;
+            phoneNumber?: string;
+            phoneNumberVerified?: boolean;
             twoFactorEnabled?: boolean;
             updatedAt: number;
             username?: string;
@@ -1460,6 +1466,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             emailVerified: boolean;
             image?: string;
             name?: string;
+            phoneNumber?: string;
+            phoneNumberVerified?: boolean;
             username?: string;
           };
           verificationCode?: { expiresAt: number; tokenHash: string };
@@ -1467,7 +1475,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         {
           createdUser: boolean;
           duplicate?: boolean;
-          duplicateField?: "email" | "username";
+          duplicateField?: "email" | "username" | "phoneNumber";
           identityId?: string;
           linkedExistingIdentity: boolean;
           sessionId?: string;
@@ -1492,6 +1500,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             isSuperAdmin?: boolean;
             metadataJson?: string;
             name?: string;
+            phoneNumber?: string;
+            phoneNumberVerified?: boolean;
             twoFactorEnabled?: boolean;
             updatedAt: number;
             username?: string;
@@ -1533,6 +1543,8 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             isSuperAdmin?: boolean;
             metadataJson?: string;
             name?: string;
+            phoneNumber?: string;
+            phoneNumberVerified?: boolean;
             twoFactorEnabled?: boolean;
             updatedAt: number;
             username?: string;
@@ -1567,6 +1579,44 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             isSuperAdmin?: boolean;
             metadataJson?: string;
             name?: string;
+            phoneNumber?: string;
+            phoneNumberVerified?: boolean;
+            twoFactorEnabled?: boolean;
+            updatedAt: number;
+            username?: string;
+          };
+        },
+        Name
+      >;
+      verifyPhone: FunctionReference<
+        "mutation",
+        "internal",
+        { phone: string; tokenHash: string },
+        {
+          reason?: string;
+          success: boolean;
+          user?: {
+            _id: string;
+            activeOrganizationId?: string;
+            createdAt: number;
+            displayUsername?: string;
+            email?: string;
+            emailTwoFactorDisabledAt?: number;
+            emailTwoFactorEmail?: string;
+            emailTwoFactorEnabledAt?: number;
+            emailTwoFactorLastVerifiedAt?: number;
+            emailTwoFactorResetAt?: number;
+            emailTwoFactorResetReason?:
+              "missing_email" | "email_not_verified" | "email_changed";
+            emailTwoFactorStatus?: "disabled" | "enabled" | "reset_required";
+            emailVerified: boolean;
+            image?: string;
+            isActive: boolean;
+            isSuperAdmin?: boolean;
+            metadataJson?: string;
+            name?: string;
+            phoneNumber?: string;
+            phoneNumberVerified?: boolean;
             twoFactorEnabled?: boolean;
             updatedAt: number;
             username?: string;
@@ -1937,6 +1987,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
             userId: string;
@@ -1953,6 +2004,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
           },
@@ -1970,6 +2022,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
             updatedAt: number;
@@ -1990,6 +2043,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
             userId: string;
@@ -2006,6 +2060,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
           },
@@ -2023,6 +2078,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
             updatedAt: number;
@@ -2038,6 +2094,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
             userId: string;
@@ -2363,6 +2420,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "query",
           "internal",
           { userId: string },
+          any,
+          Name
+        >;
+        getUserByPhoneNumber: FunctionReference<
+          "query",
+          "internal",
+          { phoneNumber: string },
           any,
           Name
         >;

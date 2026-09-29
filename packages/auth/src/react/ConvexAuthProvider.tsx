@@ -210,6 +210,29 @@ export type NativeAuthVerifyEmailOtpResult =
   | NativeAuthResetResult
   | NativeAuthChangeEmailResult;
 
+export type NativeAuthSendPhoneOtpArgs = {
+  phone: string;
+  type?: string;
+  name?: string;
+};
+
+export type NativeAuthSendPhoneOtpResult = {
+  status: "queued" | "not_configured" | "failed";
+  reason?: string;
+  messageId?: string;
+};
+
+export type NativeAuthVerifyPhoneOtpArgs = {
+  phone: string;
+  otp: string;
+  type?: string;
+  rememberMe?: boolean;
+};
+
+export type NativeAuthVerifyPhoneOtpResult =
+  | NativeAuthSession
+  | { success: boolean; reason?: string };
+
 export type NativeAuthChangeEmailResult = { status: boolean; reason?: string };
 
 export type NativeAuthChangeEmailArgs = {
@@ -389,6 +412,18 @@ export type NativeAuthActions = {
     "public",
     NativeAuthVerifyEmailOtpArgs,
     NativeAuthVerifyEmailOtpResult
+  >;
+  sendPhoneOtp?: FunctionReference<
+    "action",
+    "public",
+    NativeAuthSendPhoneOtpArgs,
+    NativeAuthSendPhoneOtpResult
+  >;
+  verifyPhoneOtp?: FunctionReference<
+    "action",
+    "public",
+    NativeAuthVerifyPhoneOtpArgs,
+    NativeAuthVerifyPhoneOtpResult
   >;
   updateUser?: FunctionReference<
     "action",
@@ -832,6 +867,8 @@ export function useAuthActions() {
     ? useAction(ctx.sendVerificationOtp)
     : null;
   const verifyEmailOtpAction = ctx.verifyEmailOtp ? useAction(ctx.verifyEmailOtp) : null;
+  const sendPhoneOtpAction = ctx.sendPhoneOtp ? useAction(ctx.sendPhoneOtp) : null;
+  const verifyPhoneOtpAction = ctx.verifyPhoneOtp ? useAction(ctx.verifyPhoneOtp) : null;
   const signOutAction = useAction(ctx.signOut);
   const updateSessionAction = useAction(ctx.updateSession);
   const sendEmailVerificationAction = useAction(ctx.sendEmailVerification);
@@ -1125,6 +1162,47 @@ export function useAuthActions() {
     },
     [cookieMode, callProxy, verifyEmailOtpAction, ctx],
   );
+
+  const sendPhoneOtp = useCallback(
+    async (args: NativeAuthSendPhoneOtpArgs) => {
+      if (!sendPhoneOtpAction) {
+        throw new Error("Phone authentication is not configured");
+      }
+      setIsLoading(true);
+      try {
+        return await sendPhoneOtpAction(args);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [sendPhoneOtpAction],
+  );
+
+  const verifyPhoneOtp = useCallback(
+    async (args: NativeAuthVerifyPhoneOtpArgs) => {
+      if (!verifyPhoneOtpAction) {
+        throw new Error("Phone authentication is not configured");
+      }
+      setIsLoading(true);
+      try {
+        const result = cookieMode
+          ? await callProxy<NativeAuthVerifyPhoneOtpResult>("verifyPhoneOtp", args)
+          : await verifyPhoneOtpAction(args);
+        if ("token" in result && (cookieMode || "refreshToken" in result)) {
+          ctx.setToken(result.token ?? null);
+          ctx.setSessionId(result.sessionId ?? null);
+          if (!cookieMode && result.refreshToken) {
+            ctx.setRefreshToken(result.refreshToken);
+          }
+        }
+        return result;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [cookieMode, callProxy, verifyPhoneOtpAction, ctx],
+  );
+
   const signOut = useCallback(
     async (args?: { callbackURL?: string }): Promise<NativeAuthSignOutResult> => {
       if (cookieMode) {
@@ -1394,6 +1472,8 @@ export function useAuthActions() {
     sendVerificationOtp,
     changeEmail,
     verifyEmailOtp,
+    sendPhoneOtp,
+    verifyPhoneOtp,
     signOut,
     updateSession,
     updateUser,

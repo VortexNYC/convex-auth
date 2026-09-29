@@ -13,6 +13,7 @@ export default defineMeta({
     "two-factor",
     "magic-links",
     "email-otp",
+    "phone",
     "passkeys",
     "anonymous",
   ],

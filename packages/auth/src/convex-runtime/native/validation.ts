@@ -32,6 +32,17 @@ export function isValidUsername(username: string): boolean {
   return USERNAME_REGEX.test(username);
 }
 
+const PHONE_REGEX = /^\+[1-9]\d{6,14}$/;
+
+export function normalizePhone(phone: string | undefined): string | undefined {
+  const normalized = phone?.trim().replace(/[\s().-]/g, "");
+  return normalized && normalized.length > 0 ? normalized : undefined;
+}
+
+export function isValidPhone(phone: string): boolean {
+  return PHONE_REGEX.test(phone);
+}
+
 export function validatePassword(
   password: string,
   minLength: number,

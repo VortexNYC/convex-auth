@@ -19,12 +19,14 @@ A runnable cutover lives in `examples/better-auth-migration`.
 
 **Migrated:**
 
-- Users (email, name, image, email verified status)
+- Users (email, name, image, email verified status, username/displayUsername, phoneNumber/phoneNumberVerified)
 - Credential accounts (password hashes — Better Auth scrypt is supported)
 - OAuth accounts (provider/issuer/subject, so the same social sign-in keeps working)
 - Sessions are migrated as rows, but the old tokens are not usable. Users must sign in again.
 
 **Not migrated:**
+
+- `phoneOtp` identities for phone sign-in. A migrated `phoneNumber` does not prove the number still belongs to the same person (numbers get recycled). Have users run the `phone-verification` OTP flow once after signing in — consuming that code marks `phoneNumberVerified` and links a `phoneOtp` identity with fresh SIM proof. See the Phone OTP docs.
 
 - TOTP 2FA secrets and backup codes. Migrated users have `twoFactorEnabled` set to `false` so they are not locked out. They must re-enroll in `convex-auth`.
 - Passkeys, organizations, members, and other advanced Better Auth tables. These are not part of the one-time migration today.

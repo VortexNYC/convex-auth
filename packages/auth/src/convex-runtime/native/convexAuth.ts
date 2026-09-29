@@ -19,6 +19,8 @@ import type {
 } from "./magicLink.js";
 import { nativeEmailOtp } from "./emailOtp.js";
 import type { NativeEmailOtpActions, NativeEmailOtpConfig } from "./emailOtp.js";
+import { nativePhone } from "./phone.js";
+import type { NativePhoneActions, NativePhoneConfig } from "./phone.js";
 import { nativePasskey } from "./passkeys.js";
 import type { NativePasskeyActions, NativePasskeyConfig, PasskeyComponentApi } from "./passkeys.js";
 import type { ComponentApi as FullComponentApi } from "../../component/_generated/component.js";
@@ -41,6 +43,7 @@ type ConvexAuthConfigBase = {
   oauthProvider?: OidcProviderConfig;
   magicLink?: NativeMagicLinkConfig;
   emailOtp?: NativeEmailOtpConfig;
+  phone?: NativePhoneConfig;
   passkey?: NativePasskeyConfig;
   anonymous?: NativeAnonymousConfig;
   username?: NativeUsernameConfig;
@@ -73,6 +76,7 @@ type ConfigActions<TConfig extends ConvexAuthConfig> = NativeEmailAndPasswordAct
   NativeAuthQueries &
   (TConfig extends { magicLink: NativeMagicLinkConfig } ? NativeMagicLinkActions : {}) &
   (TConfig extends { emailOtp: NativeEmailOtpConfig } ? NativeEmailOtpActions : {}) &
+  (TConfig extends { phone: NativePhoneConfig } ? NativePhoneActions : {}) &
   (TConfig extends { oauth: NativeOAuthConfig }
     ? { signInWithRedirect: NativeOAuthActions["signIn"]; callback: NativeOAuthActions["callback"] }
     : {}) &
@@ -100,6 +104,7 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
     ? nativeMagicLink(component, config.magicLink)
     : undefined;
   const emailOtpActions = config.emailOtp ? nativeEmailOtp(component, config.emailOtp) : undefined;
+  const phoneActions = config.phone ? nativePhone(component, config.phone) : undefined;
 
   const passkeyActions =
     config.passkey && component.passkeys
@@ -146,6 +151,7 @@ export function convexAuth<TConfig extends ConvexAuthConfig>(config: TConfig): C
     ...emailAndPasswordActions,
     ...magicLinkActions,
     ...emailOtpActions,
+    ...phoneActions,
     ...authQueries,
     ...(oauthActions
       ? { signInWithRedirect: oauthActions.signIn, callback: oauthActions.callback }

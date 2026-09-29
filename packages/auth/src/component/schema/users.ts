@@ -8,6 +8,9 @@ export const users = defineTable({
   username: v.optional(v.string()),
   // Caller-supplied casing for display.
   displayUsername: v.optional(v.string()),
+  // Normalized E.164 sign-in identifier; unique via by_phoneNumber.
+  phoneNumber: v.optional(v.string()),
+  phoneNumberVerified: v.optional(v.boolean()),
   name: v.optional(v.string()),
   image: v.optional(v.string()),
   emailVerified: v.boolean(),
@@ -35,6 +38,7 @@ export const users = defineTable({
 })
   .index("by_email", ["email"])
   .index("by_username", ["username"])
+  .index("by_phoneNumber", ["phoneNumber"])
   .index("by_name", ["name"])
   .index("by_super_admin", ["isSuperAdmin"]);
 
