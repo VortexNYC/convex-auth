@@ -1,3 +1,4 @@
+import { components } from "./_generated/api";
 import { env, type MutationCtx, type QueryCtx } from "./_generated/server";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -20,5 +21,12 @@ export async function requireProofCaller(ctx: Ctx): Promise<string> {
   if (env.ENABLE_WEBHOOK_PROOFS !== "true") {
     throw new Error("Webhook proof functions are disabled");
   }
-  return await requireCaller(ctx);
+  const userId = await requireCaller(ctx);
+  const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, {
+    userId,
+  });
+  if (user === null || user.isAnonymous === true) {
+    throw new Error("Webhook proof functions require a real (non-anonymous) account");
+  }
+  return userId;
 }

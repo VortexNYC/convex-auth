@@ -153,28 +153,44 @@ export const resetProofState = mutation({
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx) => {
     await requireProofCaller(ctx);
-    const rows = await ctx.db.query("webhookSink").take(500);
-    for (const row of rows) {
-      await ctx.db.delete("webhookSink", row._id);
+    /* Sink wipe is batched: delete shrinks the set, so re-list until empty
+     * rather than trusting a single take() page. */
+    for (;;) {
+      const rows = await ctx.db.query("webhookSink").take(500);
+      if (rows.length === 0) break;
+      for (const row of rows) {
+        await ctx.db.delete("webhookSink", row._id);
+      }
     }
-    const endpoints = await ctx.runQuery(
-      components.convexAuth.webhooks.listGlobalWebhookEndpoints,
-      {},
-    );
-    for (const endpoint of endpoints) {
-      if (endpoint.status !== "archived") {
-        await ctx.runMutation(components.convexAuth.webhooks.setGlobalWebhookEndpointStatus, {
+    /* Same for global endpoints: the list page size is capped component-side,
+     * and deleting shrinks the set, so loop until the page comes back empty.
+     * Deliveries orphaned by a delete terminate via the inactive-endpoint
+     * path in processConvexWebhookDelivery on the next claim. */
+    for (;;) {
+      const endpoints = await ctx.runQuery(
+        components.convexAuth.webhooks.listGlobalWebhookEndpoints,
+        { limit: 500 },
+      );
+      if (endpoints.length === 0) break;
+      for (const endpoint of endpoints) {
+        if (endpoint.status !== "archived") {
+          await ctx.runMutation(components.convexAuth.webhooks.setGlobalWebhookEndpointStatus, {
+            endpointId: endpoint._id,
+            status: "archived",
+          });
+        }
+        await ctx.runMutation(components.convexAuth.webhooks.deleteGlobalWebhookEndpoint, {
           endpointId: endpoint._id,
-          status: "archived",
         });
       }
-      await ctx.runMutation(components.convexAuth.webhooks.deleteGlobalWebhookEndpoint, {
-        endpointId: endpoint._id,
-      });
     }
     return { ok: true as const };
   },
 });
+
+/* Sink stays bounded while the receiver is public: at capacity the oldest
+ * rows are evicted FIFO so a proof run always keeps its newest deliveries. */
+const SINK_ROW_CAP = 500;
 
 export const insertSinkRow = internalMutation({
   args: {
@@ -186,6 +202,15 @@ export const insertSinkRow = internalMutation({
   },
   returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("webhookSink")
+      .order("asc")
+      .take(SINK_ROW_CAP + 1);
+    if (existing.length > SINK_ROW_CAP) {
+      for (const row of existing.slice(0, existing.length - SINK_ROW_CAP)) {
+        await ctx.db.delete("webhookSink", row._id);
+      }
+    }
     await ctx.db.insert("webhookSink", {
       eventId: args.eventId,
       eventType: args.eventType,

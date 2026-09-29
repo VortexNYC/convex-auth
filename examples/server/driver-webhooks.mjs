@@ -53,7 +53,8 @@ try {
   );
 }
 
-// anonymous session on mutating paths: identity + flag both hold, so it succeeds — documented behavior
+// anonymous sessions carry an identity but are not real accounts — the proof
+// paths must reject them even with the flag on (outbound-fetch surface)
 const anonSignin = await anon.action("auth:signInAnonymous", {});
 console.log("anon session minted:", !!anonSignin.token);
 anon.setAuth(anonSignin.token);
@@ -62,9 +63,12 @@ try {
     url: `${SITE}/webhooks/receiver`,
     eventTypes: ["*"],
   });
-  console.log("NOTE: anonymous+flag createEndpoint succeeded (identity present)");
+  expect(false, "anonymous+flag createEndpoint succeeded (should reject)");
 } catch (e) {
-  console.log("NOTE: anonymous createEndpoint rejected:", String(e.message).slice(0, 80));
+  expect(
+    String(e.message).includes("non-anonymous"),
+    `anonymous createEndpoint rejected (${String(e.message).slice(0, 80)})`,
+  );
 }
 
 // reset sink + delete every stale global endpoint from prior runs
