@@ -2,7 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { components } from "./_generated/api";
 import { v } from "convex/values";
 import { defaultOrganizationRoleCatalog } from "@vortex-api/convex-auth/convex";
-import { permissionGranted, requireCaller } from "./authz";
+import { grantCoversGrant, permissionGranted, requireCaller } from "./authz";
 
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -105,15 +105,19 @@ async function roleFor(ctx: Ctx, organizationId: string, key: string): Promise<O
   return role as OrgRole;
 }
 
-/* Assignment ceiling: the caller may only bestow permissions they already
- * hold. `owner` (`*`) is therefore assignable only by owners — an admin or
- * manager holding members:manage / invitations:manage can operate the roster
- * but cannot mint or demote an owner. */
+/* Assignment ceiling: every permission grant on the target role must be
+ * COVERED by a grant the caller already holds — grant⊇grant, not
+ * grant⊇concrete-need, so owner (`*`) covers `*` and can assign/demote
+ * owners, while admin/manager (concrete perms only) cannot touch the owner
+ * role. A role with empty permissions grants nothing and is vacuously
+ * covered — assigning it can never escalate, so it stays allowed. */
 function assertRoleAssignable(
   callerPermissions: readonly string[],
   targetPermissions: readonly string[],
 ): void {
-  const uncovered = targetPermissions.filter((p) => !permissionGranted(callerPermissions, p));
+  const uncovered = targetPermissions.filter(
+    (p) => !callerPermissions.some((cp) => grantCoversGrant(cp, p)),
+  );
   if (uncovered.length > 0) {
     throw new Error("Cannot assign a role more privileged than your own");
   }
@@ -198,8 +202,27 @@ export const acceptInvitation = mutation({
   returns: v.object({ accepted: v.boolean(), memberId: v.string() }),
   handler: async (ctx, args) => {
     const callerId = await requireCaller(ctx);
+    /* Email binding: the token is addressed to an email — redeeming it
+     * requires the caller's account email to match, mirroring the runtime's
+     * FORBIDDEN-on-mismatch policy. Without this, possession of the token
+     * alone grants membership (forwarded/leaked token -> arbitrary join). */
+    const tokenHash = await sha256Hex(args.token);
+    const invite = await ctx.runQuery(
+      components.convexAuth.organizations.getInvitationByTokenHash,
+      { tokenHash },
+    );
+    if (invite === null) {
+      return { accepted: false, memberId: "" };
+    }
+    const user = await ctx.runQuery(components.convexAuth.native.users.getUserById, {
+      userId: callerId,
+    });
+    const callerEmail = (user as { email?: string } | null)?.email;
+    if (callerEmail === undefined || callerEmail.toLowerCase() !== invite.email.toLowerCase()) {
+      throw new Error("Invitation is addressed to a different account");
+    }
     const result = await ctx.runMutation(components.convexAuth.organizations.redeemInvitation, {
-      tokenHash: await sha256Hex(args.token),
+      tokenHash,
       acceptedByUserId: callerId,
       acceptedAt: Date.now(),
     });
@@ -316,15 +339,19 @@ export const issueOrgApiKey = mutation({
   },
 });
 
-/* API-key verification. A real API verifies the presented key instead of a
- * user session; the fixture still requires authentication, and the verdict's
- * org binding is only revealed to members of that org.
+/* API-key verification. NOTE for consumers: real API-key auth should be
+ * key-as-credential — the resource server verifies the presented key on its
+ * own behalf, no user session involved. This endpoint exists to PROVE the
+ * component surface, so it additionally requires a session user holding
+ * `organization:api-keys:manage` in the key's org — anything weaker would be
+ * an in-tenant oracle (members probing revoked/scope state and burning rate
+ * counters through the mutating verify).
  *
  * Order matters: a READ-ONLY prefix lookup (no side effects) resolves the
- * key's org and the membership gate runs BEFORE the mutating verify — an
- * outsider never touches lastUsedAt/rate counters, and every outsider-facing
- * outcome collapses to `not_found` so the endpoint can't probe key state
- * (exists/revoked/scope-missing) across tenants. */
+ * key's org and the permission gate runs BEFORE the mutating verify —
+ * non-privileged callers never touch lastUsedAt/rate counters, and every
+ * denied outcome collapses to `not_found` so the endpoint can't probe key
+ * state (exists/revoked/scope-missing) across or within tenants. */
 const KEY_PREFIX_LENGTH = 12;
 
 export const verifyApiKey = mutation({
@@ -347,8 +374,13 @@ export const verifyApiKey = mutation({
     if (keyRow === null || keyRow.organizationId === undefined) {
       return { valid: false, reason: "not_found" };
     }
-    const membership = await callerMembership(ctx, keyRow.organizationId, callerId);
-    if (membership === null) {
+    const organizationId = keyRow.organizationId;
+    const member = await callerMembership(ctx, organizationId, callerId);
+    if (member === null) {
+      return { valid: false, reason: "not_found" };
+    }
+    const permissions = await rolePermissions(ctx, organizationId, member.roleId);
+    if (!permissionGranted(permissions, API_KEYS_MANAGE)) {
       return { valid: false, reason: "not_found" };
     }
     const verdict = await ctx.runMutation(components.convexAuth.apiKeys.verifyApiKey, {

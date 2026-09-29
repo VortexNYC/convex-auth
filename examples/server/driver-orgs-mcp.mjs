@@ -52,10 +52,32 @@ const signUp = async (client, username) => {
   return s;
 };
 
+/* B and D sign up with email+password so their accounts carry a real email —
+ * invitation redemption binds invite.email to the accepting account's email. */
+const signUpEmail = async (client, email) => {
+  try {
+    await client.action("auth:signUp", {
+      email,
+      password: "Driver-Pass-1234!",
+      name: email.split("@")[0],
+    });
+  } catch {
+    /* exists already — sign in */
+  }
+  const s = await client.action("auth:signIn", {
+    email,
+    password: "Driver-Pass-1234!",
+  });
+  client.setAuth(s.token);
+  return s;
+};
+
 const sA = await signUp(userA, `org-owner-${stamp}`);
-const sB = await signUp(userB, `org-invitee-${stamp}`);
+const emailB = `invitee-${stamp}@example.test`;
+const emailD = `member2-${stamp}@example.test`;
+const sB = await signUpEmail(userB, emailB);
 const sC = await signUp(userC, `org-outsider-${stamp}`);
-const sD = await signUp(userD, `org-member2-${stamp}`);
+const sD = await signUpEmail(userD, emailD);
 console.log("users signed in");
 
 const expectReject = async (client, fn, args, label, fragment) => {
@@ -90,7 +112,7 @@ await expectReject(
 
 const invite = await userA.mutation("organizations:inviteMember", {
   organizationId,
-  email: "invitee@example.test",
+  email: emailB,
 });
 expect(!!invite.token && !!invite.invitationId, "invitation issued with plaintext token");
 
@@ -185,13 +207,42 @@ await expectReject(
 // but admin CAN do its actual job: invite a plain member
 const inviteD = await userB.mutation("organizations:inviteMember", {
   organizationId,
-  email: "member2@example.test",
+  email: emailD,
 });
 expect(!!inviteD.token, "admin can invite a member-tier invitee");
 const redeemD = await userD.mutation("organizations:acceptInvitation", {
   token: inviteD.token,
 });
 expect(redeemD.accepted === true, "second member joined via admin invite");
+
+// email binding: a token addressed to a different email cannot be redeemed
+// by this account, even though the token itself is valid
+const ghostInvite = await userA.mutation("organizations:inviteMember", {
+  organizationId,
+  email: `ghost-${stamp}@example.test`,
+});
+await expectReject(
+  userD,
+  "organizations:acceptInvitation",
+  { token: ghostInvite.token },
+  "redeem invitation addressed to another email",
+  "different account",
+);
+
+// owner-tier positives: the owner CAN grant and strip `*` — the ceiling is
+// a coverage rule, not a freeze on the owner role
+await userA.mutation("organizations:setMemberRole", {
+  organizationId,
+  memberId: inviteeRow?._id,
+  roleKey: "owner",
+});
+expect(true, "owner promoted admin to owner (* grant covers *)");
+await userA.mutation("organizations:setMemberRole", {
+  organizationId,
+  memberId: inviteeRow?._id,
+  roleKey: "member",
+});
+expect(true, "owner demoted owner back to member");
 
 /* ---------- API keys ---------- */
 
@@ -254,6 +305,14 @@ const outsiderScoped = await userC.mutation("organizations:verifyApiKey", {
 expect(
   outsiderScoped.valid === false && outsiderScoped.reason === "not_found",
   `outsider gets not_found, not scope_missing (got ${outsiderScoped.reason})`,
+);
+// in-tenant oracle: a plain member (no api-keys:manage) also gets not_found
+const memberVerdict = await userB.mutation("organizations:verifyApiKey", {
+  presentedKey: issued.apiKey,
+});
+expect(
+  memberVerdict.valid === false && memberVerdict.reason === "not_found",
+  `member cannot probe a real key either (got ${memberVerdict.reason})`,
 );
 
 await userA.mutation("organizations:revokeApiKey", {

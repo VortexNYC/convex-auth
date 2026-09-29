@@ -70,9 +70,16 @@ function handlersFor(ctx: ActionCtx, issuer: string) {
       },
       /* Org-scoped authorization: organization_id is required when the user
        * has anything but exactly one active membership (mirrors the reference
-       * runtime's ambiguity rule), and the member's role must carry each
-       * scope's backing permission — granted scopes are the requested set
-       * intersected with what the member is allowed. */
+       * runtime's ambiguity rule), and the member's role must carry every
+       * requested scope's backing permission — denied scopes fail the whole
+       * request with insufficient_scope rather than minting a silently
+       * narrowed token.
+       *
+       * NOTE (TOCTOU): this policy runs once at authorize time. The issued
+       * code (5min TTL) and its refresh token remain exchangeable even if the
+       * member is demoted or removed in the gap — resource servers should
+       * treat token scopes as authorize-time snapshots and revalidate on the
+       * API path for sensitive ops. */
       authorize: async ({ identity, requestedOrganizationId, requestedScopes }) => {
         const memberships = (await ctx.runQuery(
           components.convexAuth.organizations.listMembershipsByUser,
