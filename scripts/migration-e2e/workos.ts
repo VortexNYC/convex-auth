@@ -156,7 +156,15 @@ async function seed(): Promise<void> {
     { user: "external-id", role: "member" },
     { user: "unverified", role: "member" },
   ] as const;
+  const existing = (await listAll(
+    `/user_management/organization_memberships?organization_id=${org.id}`,
+  )) as { user_id: string }[];
+  const memberUserIds = new Set(existing.map((m) => m.user_id));
   for (const m of memberships) {
+    if (memberUserIds.has(created[m.user])) {
+      console.log(`membership ${m.user}: already a member`);
+      continue;
+    }
     const result = await workos("/user_management/organization_memberships", {
       method: "POST",
       body: {
