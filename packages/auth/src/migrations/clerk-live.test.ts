@@ -7,7 +7,7 @@
  * (Settings → User Exports → Export all users) carries `password_digest`
  * columns and enables the credential-carryover assertions.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { convexTest } from "convex-test";
@@ -99,6 +99,10 @@ describe.skipIf(!hasExport)("clerk live export normalization", () => {
         : undefined,
     };
     out = normalizeClerkExport(input);
+    /* Materialize the normalized export for the deploy-side harness —
+     * `scripts/migration-e2e/clerk.ts apply` consumes this file (the
+     * normalizer pulls argon2id-wasm, which tsx can't load). */
+    writeFileSync(resolve(EXPORT_DIR, "normalized.json"), JSON.stringify(out, null, 2));
   });
 
   it("normalizes every non-banned user", () => {

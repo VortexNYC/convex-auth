@@ -17,6 +17,7 @@
  * path is covered by supplying that file separately.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -240,12 +241,219 @@ async function pull(): Promise<void> {
   );
 }
 
+// ---- apply / verify ------------------------------------------------------
+
+const SERVER_DIR = resolve(ROOT, "examples/server");
+
+/** `npx convex run` against the example app's configured deployment. */
+function convexRun(fn: string, args: unknown, component?: string): unknown {
+  const argv = ["convex", "run"];
+  if (component) argv.push("--component", component);
+  argv.push(fn, JSON.stringify(args));
+  const stdout = execFileSync("npx", argv, {
+    cwd: SERVER_DIR,
+    encoding: "utf-8",
+    stdio: ["ignore", "pipe", "inherit"],
+  });
+  return JSON.parse(stdout.trim());
+}
+
+type NormalizedUser = {
+  name: string;
+  email: string;
+  emailVerified: boolean;
+  image?: string | null;
+  createdAt: number;
+  updatedAt: number;
+};
+type NormalizedAccount = {
+  userEmail: string;
+  provider: string;
+  subject: string;
+  passwordHash?: string;
+  createdAt: number;
+  updatedAt: number;
+};
+type NormalizedOrganization = { slug: string; name: string } & Record<string, unknown>;
+type NormalizedMembership = {
+  organizationSlug: string;
+  userEmail: string;
+  roleKey?: string;
+  status?: "active" | "invited";
+  createdAt: number;
+  updatedAt: number;
+};
+type Normalized = {
+  users: NormalizedUser[];
+  accounts: NormalizedAccount[];
+  organizations: NormalizedOrganization[];
+  memberships: NormalizedMembership[];
+  skipped: { kind: string; externalId: string; reason: string }[];
+};
+
+/** `tmp/clerk-export/normalized.json` is written by the live vitest run —
+ * normalization pulls argon2id-wasm transitively, which tsx cannot load,
+ * so the wasm-capable vitest step materializes it as plain JSON here. */
+function loadNormalized(): Normalized {
+  return JSON.parse(readFileSync(resolve(OUT_DIR, "normalized.json"), "utf-8")) as Normalized;
+}
+
+async function apply(): Promise<void> {
+  loadEnv();
+  const out = loadNormalized();
+  console.log(
+    `normalized: ${out.users.length} users, ${out.accounts.length} accounts, ` +
+      `${out.organizations.length} orgs, ${out.memberships.length} memberships, ${out.skipped.length} skipped`,
+  );
+
+  const userIdByEmail = new Map<string, string>();
+  for (const user of out.users) {
+    const result = convexRun(
+      "migrate:migrateUser",
+      {
+        legacyUser: {
+          name: user.name,
+          email: user.email,
+          emailVerified: user.emailVerified,
+          image: user.image ?? null,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        },
+      },
+      "convexAuth",
+    ) as { userId: string };
+    userIdByEmail.set(user.email, result.userId);
+    console.log(`user ${user.email} → ${result.userId}`);
+  }
+
+  for (const account of out.accounts) {
+    const userId = userIdByEmail.get(account.userEmail);
+    if (!userId) {
+      console.log(`account ${account.userEmail}: no migrated user — skipped`);
+      continue;
+    }
+    convexRun(
+      "migrate:migrateAccount",
+      {
+        legacyAccount: {
+          providerId: account.provider,
+          accountId: account.subject,
+          userId,
+          password: account.passwordHash ?? null,
+          createdAt: account.createdAt,
+          updatedAt: account.updatedAt,
+        },
+        userId,
+        email: account.userEmail,
+        emailVerified: true,
+      },
+      "convexAuth",
+    );
+    console.log(`account ${account.userEmail} (${account.provider}) written`);
+  }
+
+  const orgIdBySlug = new Map<string, string>();
+  for (const org of out.organizations) {
+    const result = convexRun(
+      "migrate:migrateOrganization",
+      { organization: org },
+      "convexAuth",
+    ) as { organizationId: string; created: boolean };
+    orgIdBySlug.set(org.slug, result.organizationId);
+    console.log(
+      `org ${org.slug} → ${result.organizationId} (${result.created ? "created" : "existing"})`,
+    );
+  }
+
+  for (const member of out.memberships) {
+    const organizationId = orgIdBySlug.get(member.organizationSlug);
+    if (!organizationId) continue;
+    const result = convexRun(
+      "migrate:migrateMembership",
+      {
+        organizationId,
+        email: member.userEmail,
+        roleKey: member.roleKey,
+        status: member.status,
+        createdAt: member.createdAt,
+        updatedAt: member.updatedAt,
+      },
+      "convexAuth",
+    ) as { skipped?: string };
+    console.log(
+      `member ${member.userEmail}@${member.organizationSlug}` +
+        (result.skipped ? ` — skipped: ${result.skipped}` : " written"),
+    );
+  }
+
+  writeFileSync(
+    resolve(OUT_DIR, "applied.json"),
+    JSON.stringify(
+      {
+        userIdByEmail: Object.fromEntries(userIdByEmail),
+        orgIdBySlug: Object.fromEntries(orgIdBySlug),
+      },
+      null,
+      2,
+    ),
+  );
+  console.log("\napplied → tmp/clerk-export/applied.json");
+}
+
+async function verify(): Promise<void> {
+  loadEnv();
+  const seed = JSON.parse(readFileSync(resolve(OUT_DIR, "seed-state.json"), "utf-8")) as {
+    password: string;
+    created: Record<string, string>;
+  };
+  const applied = JSON.parse(readFileSync(resolve(OUT_DIR, "applied.json"), "utf-8")) as {
+    userIdByEmail: Record<string, string>;
+  };
+
+  const email = "ada.migration@example.com";
+  const userId = applied.userIdByEmail[email];
+  if (!userId) throw new Error(`${email} not in applied.json — run apply first`);
+
+  const before = convexRun(
+    "native/accounts:getAccountBySubject",
+    { provider: "password", issuer: "native", subject: userId },
+    "convexAuth",
+  ) as { credentialHash?: string } | null;
+  console.log(`credential before sign-in: ${before?.credentialHash?.slice(0, 10)}…`);
+
+  const session = convexRun("auth:signIn", { email, password: seed.password }) as {
+    userId?: string;
+    token?: string;
+  };
+  if (!session.userId || !session.token)
+    throw new Error(`sign-in failed: ${JSON.stringify(session)}`);
+  console.log(`sign-in OK — userId ${session.userId}, token issued`);
+
+  const after = convexRun(
+    "native/accounts:getAccountBySubject",
+    { provider: "password", issuer: "native", subject: userId },
+    "convexAuth",
+  ) as { credentialHash?: string } | null;
+  const hash = after?.credentialHash ?? "";
+  console.log(`credential after sign-in:  ${hash.slice(0, 10)}…`);
+  if (!hash.startsWith("$argon2id$")) {
+    throw new Error(`expected lazy rehash to argon2id, got: ${hash.slice(0, 20)}`);
+  }
+  console.log("lazy rehash confirmed — bcrypt → argon2id");
+
+  const again = convexRun("auth:signIn", { email, password: seed.password }) as { token?: string };
+  if (!again.token) throw new Error("second sign-in after rehash failed");
+  console.log("second sign-in OK — argon2id path verified end-to-end");
+}
+
 async function main(): Promise<void> {
   const command = process.argv[2];
   if (command === "seed") await seed();
   else if (command === "pull") await pull();
+  else if (command === "apply") await apply();
+  else if (command === "verify") await verify();
   else {
-    console.error("usage: clerk.ts seed|pull");
+    console.error("usage: clerk.ts seed|pull|apply|verify");
     process.exit(1);
   }
 }
