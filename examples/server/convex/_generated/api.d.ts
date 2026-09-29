@@ -11,6 +11,8 @@
 import type * as auth from "../auth.js";
 import type * as authz from "../authz.js";
 import type * as http from "../http.js";
+import type * as mcp from "../mcp.js";
+import type * as organizations from "../organizations.js";
 import type * as webhooks from "../webhooks.js";
 
 import type {
@@ -23,6 +25,8 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   authz: typeof authz;
   http: typeof http;
+  mcp: typeof mcp;
+  organizations: typeof organizations;
   webhooks: typeof webhooks;
 }>;
 

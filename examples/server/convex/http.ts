@@ -2,9 +2,14 @@ import { httpRouter } from "convex/server";
 import { env, httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { auth } from "./auth";
+import { registerMcpOAuthRoutes } from "./mcp";
 
 const http = httpRouter();
 auth.addHttpRoutes(http);
+/* MCP/OIDC provider routes: /oauth/register (dynamic client registration),
+ * /oauth/authorize (PKCE auth-code), /oauth/token (code exchange + refresh),
+ * /oauth/jwks — backed by component.mcp storage. */
+registerMcpOAuthRoutes(http);
 
 /* TEST-ONLY: webhook proof receivers for the e2e fixture. Every route 404s
  * unless ENABLE_WEBHOOK_PROOFS=true is set on the deployment — they must never
