@@ -1091,7 +1091,7 @@ export function nativeEmailAndPassword(
       }
 
       const sessionResolved = await resolveSessionUser(ctx, args.token);
-      if (!sessionResolved) throw new Error("Unauthorized");
+      if (!sessionResolved) throw new Error("Invalid two factor token");
 
       const user = await ctx.runQuery(component.native.users.getUserById, {
         userId: sessionResolved.userId,

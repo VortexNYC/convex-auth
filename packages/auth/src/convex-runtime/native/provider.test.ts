@@ -1815,7 +1815,7 @@ describe("nativeEmailAndPassword", () => {
           token: challengeToken,
           code,
         }),
-      ).rejects.toThrow("Unauthorized");
+      ).rejects.toThrow("Invalid two factor token");
       expect(component.native.sessions.createSessionAndRefreshToken).not.toHaveBeenCalled();
     });
 
@@ -1904,7 +1904,7 @@ describe("nativeEmailAndPassword", () => {
           token: challengeToken,
           code: "000000",
         }),
-      ).rejects.toThrow("Unauthorized");
+      ).rejects.toThrow("Invalid two factor token");
       expect(component.native.sessions.createSessionAndRefreshToken).not.toHaveBeenCalled();
     });
 
