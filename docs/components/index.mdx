@@ -15,37 +15,359 @@ import { ConvexAuthProvider, ConvexAuthSignInPage } from "@vortex-api/convex-aut
 
 ## React
 
+The complete catalog — every export in `@vortex-api/convex-auth/react`, grouped by surface. Cards link to the component's props and examples.
+
+### Sign-in & onboarding
+
 <CardGroup cols={2}>
-  <Card title="Sign-in & onboarding" href="./react/sign-in" icon="log-in">
-    Full sign-in/sign-up pages, forms, social buttons, trigger buttons, and client screens.
+  <Card title="ConvexAuthSignInPage" href="./react/sign-in#convexauthsigninpage">
+    Full sign-in page — every configured method, routing handled.
   </Card>
-  <Card title="Organizations" href="./react/organization" icon="building">
-    Org switcher, creation, member lists, invitations, and the role manager surface.
+  <Card title="ConvexAuthSignUpPage" href="./react/sign-in#convexauthsignuppage">
+    Full sign-up page with the same routing and theming.
   </Card>
-  <Card title="Account & profile" href="./react/account" icon="user-round">
-    User profile, image upload, email change, password reset, 2FA, and session management.
+  <Card title="AuthSignInForm" href="./react/sign-in#authsigninform">
+    Standalone values-and-callbacks sign-in form for custom layouts.
   </Card>
-  <Card title="API keys" href="./react/api-keys" icon="key">
-    Issue, rotate, and revoke keys without building the UI yourself.
+  <Card title="AuthSignUpForm" href="./react/sign-in#authsignupform">
+    Standalone sign-up form — same controlled contract as the sign-in form.
   </Card>
-  <Card title="Webhooks" href="./react/webhooks" icon="webhook">
-    Endpoint and delivery management with filters, pagination, and settings.
+  <Card title="AuthProviderButtons" href="./react/sign-in#authproviderbuttons">
+    Row of social/provider buttons driven by your configured providers.
   </Card>
-  <Card title="Security audit" href="./react/security" icon="shield-check">
-    Audit log list and row components for the security event trail.
+  <Card title="ConvexAuthSignInButton" href="./react/sign-in#convexauthsigninbutton">
+    Button that routes to sign-in.
   </Card>
-  <Card title="Providers & primitives" href="./react/providers" icon="blocks">
-    Runtime providers, auth-state boundaries, and the shared primitives everything is built from.
+  <Card title="ConvexAuthSignUpButton" href="./react/sign-in#convexauthsignupbutton">
+    Button that routes to sign-up.
+  </Card>
+  <Card title="ConvexAuthSignOutButton" href="./react/sign-in#convexauthsignoutbutton">
+    Signs the user out and clears session UI.
+  </Card>
+  <Card title="ConvexAuthActionButton" href="./react/sign-in#convexauthactionbutton">
+    Async action button with pending/disabled handling.
+  </Card>
+  <Card title="ConvexAuthClientSignInScreen" href="./react/sign-in#convexauthclientsigninscreen">
+    Client-driven sign-in screen — no router required.
+  </Card>
+  <Card title="ConvexAuthClientSignUpScreen" href="./react/sign-in#convexauthclientsignupscreen">
+    Client-driven sign-up screen — no router required.
+  </Card>
+  <Card title="ConvexAuthAcceptInvitePage" href="./react/sign-in#convexauthacceptinvitepage">
+    Invitation acceptance page with event callbacks.
+  </Card>
+  <Card
+    title="ConvexAuthOrganizationChooserPage"
+    href="./react/sign-in#convexauthorganizationchooserpage"
+  >
+    Org picker shown after sign-in for multi-org users.
+  </Card>
+  <Card title="ConvexAuthPostSignUpPage" href="./react/sign-in#convexauthpostsignuppage">
+    Post-sign-up step — verification and profile completion.
+  </Card>
+  <Card title="ConvexAuthLoadingCard" href="./react/sign-in#convexauthloadingcard">
+    Loading card shown while auth state resolves.
+  </Card>
+  <Card title="ConvexAuthUnavailableCard" href="./react/sign-in#convexauthunavailablecard">
+    Fallback card when the auth backend is unreachable.
+  </Card>
+  <Card title="ConvexAuthSurface" href="./react/sign-in#convexauthsurface">
+    Themed container that wraps auth screens.
+  </Card>
+</CardGroup>
+
+### Organizations
+
+<CardGroup cols={2}>
+  <Card title="ConvexOrganizationSwitcher" href="./react/organization#convexorganizationswitcher">
+    Active-organization dropdown.
+  </Card>
+  <Card title="ConvexCreateOrganization" href="./react/organization#convexcreateorganization">
+    Org creation form.
+  </Card>
+  <Card title="ConvexOrganizationList" href="./react/organization#convexorganizationlist">
+    The user's organizations.
+  </Card>
+  <Card title="ConvexOrganizationProfile" href="./react/organization#convexorganizationprofile">
+    Org profile and settings surface.
+  </Card>
+  <Card
+    title="ConvexOrganizationMembersSurface"
+    href="./react/organization#convexorganizationmemberssurface"
+  >
+    Complete member-management surface.
+  </Card>
+  <Card
+    title="ConvexOrganizationMemberList"
+    href="./react/organization#convexorganizationmemberlist"
+  >
+    Member roster with roles and actions.
+  </Card>
+  <Card
+    title="ConvexOrganizationInviteForm"
+    href="./react/organization#convexorganizationinviteform"
+  >
+    Send org invitations.
+  </Card>
+  <Card
+    title="ConvexOrganizationInvitationLinkNotice"
+    href="./react/organization#convexorganizationinvitationlinknotice"
+  >
+    Shareable invitation link display.
+  </Card>
+  <Card
+    title="ConvexOrganizationMemberActionErrorNotice"
+    href="./react/organization#convexorganizationmemberactionerrornotice"
+  >
+    Error surface for member actions.
+  </Card>
+  <Card
+    title="ConvexOrganizationRoleManagerSurface"
+    href="./react/organization#convexorganizationrolemanagersurface"
+  >
+    Complete role-management surface.
+  </Card>
+  <Card title="ConvexOrganizationRoleList" href="./react/organization#convexorganizationrolelist">
+    Role roster with actions.
+  </Card>
+  <Card
+    title="ConvexOrganizationRoleCreateForm"
+    href="./react/organization#convexorganizationrolecreateform"
+  >
+    Create custom roles.
+  </Card>
+  <Card
+    title="ConvexOrganizationRoleActionErrorNotice"
+    href="./react/organization#convexorganizationroleactionerrornotice"
+  >
+    Error surface for role actions.
+  </Card>
+  <Card
+    title="ConvexOrganizationPermissionChecklist"
+    href="./react/organization#convexorganizationpermissionchecklist"
+  >
+    Permission picker matrix for role forms.
+  </Card>
+</CardGroup>
+
+### Account & profile
+
+<CardGroup cols={2}>
+  <Card title="ConvexUserButton" href="./react/account#convexuserbutton">
+    Avatar menu — account link and sign-out.
+  </Card>
+  <Card title="ConvexUserProfile" href="./react/account#convexuserprofile">
+    Full profile page surface.
+  </Card>
+  <Card title="ConvexProfileEditForm" href="./react/account#convexprofileeditform">
+    Name and profile fields.
+  </Card>
+  <Card title="ConvexProfileImageUploader" href="./react/account#convexprofileimageuploader">
+    Avatar upload.
+  </Card>
+  <Card title="ConvexChangeEmailForm" href="./react/account#convexchangeemailform">
+    Email change with verification.
+  </Card>
+  <Card title="ConvexForgotPasswordForm" href="./react/account#convexforgotpasswordform">
+    Password reset request.
+  </Card>
+  <Card title="ConvexResetPasswordForm" href="./react/account#convexresetpasswordform">
+    Set a new password from a reset token.
+  </Card>
+  <Card title="ConvexSessionList" href="./react/account#convexsessionlist">
+    Active sessions with revoke controls.
+  </Card>
+  <Card title="ConvexVerifyEmailScreen" href="./react/account#convexverifyemailscreen">
+    Email verification screen.
+  </Card>
+  <Card title="ConvexEnableTwoFactorForm" href="./react/account#convexenabletwofactorform">
+    TOTP enrollment flow.
+  </Card>
+  <Card title="ConvexVerifyTwoFactorForm" href="./react/account#convexverifytwofactorform">
+    Two-factor challenge form.
+  </Card>
+</CardGroup>
+
+### API keys
+
+<CardGroup cols={2}>
+  <Card title="ConvexApiKeyList" href="./react/api-keys#convexapikeylist">
+    Issued keys with revoke controls.
+  </Card>
+  <Card title="ConvexApiKeyCreateForm" href="./react/api-keys#convexapikeycreateform">
+    Issue a new key with scopes and expiry.
+  </Card>
+  <Card title="ConvexApiKeyCreated" href="./react/api-keys">
+    One-time secret reveal shown after creation.
+  </Card>
+</CardGroup>
+
+### Webhooks
+
+<CardGroup cols={2}>
+  <Card title="ConvexWebhookEndpointList" href="./react/webhooks#convexwebhookendpointlist">
+    Registered endpoints.
+  </Card>
+  <Card title="ConvexWebhookCreateForm" href="./react/webhooks#convexwebhookcreateform">
+    Register a new endpoint.
+  </Card>
+  <Card title="ConvexWebhookSettingsSurface" href="./react/webhooks#convexwebhooksettingssurface">
+    Endpoint settings surface.
+  </Card>
+  <Card title="ConvexWebhookDeliveryList" href="./react/webhooks#convexwebhookdeliverylist">
+    Delivery history.
+  </Card>
+  <Card
+    title="ConvexExhaustedWebhookDeliveryList"
+    href="./react/webhooks#convexexhaustedwebhookdeliverylist"
+  >
+    Deliveries that exhausted retries.
+  </Card>
+  <Card title="ConvexWebhookDeliveryFilters" href="./react/webhooks#convexwebhookdeliveryfilters">
+    Filter bar for delivery history.
+  </Card>
+  <Card
+    title="ConvexWebhookDeliveryPagination"
+    href="./react/webhooks#convexwebhookdeliverypagination"
+  >
+    Pagination controls for deliveries.
+  </Card>
+</CardGroup>
+
+### Security audit
+
+<CardGroup cols={2}>
+  <Card title="ConvexSecurityAuditList" href="./react/security#convexsecurityauditlist">
+    Audit log list for the security event trail.
+  </Card>
+  <Card title="ConvexSecurityAuditRow" href="./react/security#convexsecurityauditrow">
+    Single audit event row.
+  </Card>
+</CardGroup>
+
+### Admin & passkeys
+
+<CardGroup cols={2}>
+  <Card title="PasskeyManager" href="/passkeys">
+    Passkey management — prompts WebAuthn, invokes your callbacks.
+  </Card>
+  <Card title="ConvexAdminDashboard">
+    Admin surface for users, sessions, and audit — ships in the package; component page coming. See
+    `dist/react.d.ts` for props.
+  </Card>
+</CardGroup>
+
+### Providers & primitives
+
+<CardGroup cols={2}>
+  <Card title="ConvexAuthProvider" href="./react/providers#convexauthprovider">
+    Root provider — session restore and runtime wiring.
+  </Card>
+  <Card title="ConvexAuthClientProvider" href="./react/providers#convexauthclientprovider">
+    Drop-in provider for the client API.
+  </Card>
+  <Card
+    title="ConvexAuthClientContextProvider"
+    href="./react/providers#convexauthclientcontextprovider"
+  >
+    Low-level client context provider.
+  </Card>
+  <Card title="ConvexAuthAppearanceProvider" href="./react/providers#convexauthappearanceprovider">
+    Theme provider — light/dark/system with persistence.
+  </Card>
+  <Card
+    title="ConvexAuthConvexIdentityProvisioner"
+    href="./react/providers#convexauthconvexidentityprovisioner"
+  >
+    Provisions identities as sessions resolve.
+  </Card>
+  <Card title="ConvexAuthIdentityProvisioner" href="./react/providers">
+    Base identity provisioner.
+  </Card>
+  <Card title="AuthSignedInBoundary" href="./react/providers#authsignedinboundary">
+    Renders children only when signed in.
+  </Card>
+  <Card title="AuthSignedOutBoundary" href="./react/providers#authsignedoutboundary">
+    Renders children only when signed out.
+  </Card>
+  <Card title="AuthLoadedBoundaryView" href="./react/providers#authloadedboundaryview">
+    Boundary that waits for auth state to load.
+  </Card>
+  <Card title="AuthLoadingBoundaryView" href="./react/providers#authloadingboundaryview">
+    Loading boundary view.
+  </Card>
+  <Card title="AuthRuntimeProvider" href="./react/providers#authruntimeprovider">
+    Supplies the runtime object to the component tree.
+  </Card>
+  <Card title="AuthRuntimeStatusBadge" href="./react/providers#authruntimestatusbadge">
+    Runtime status chip for diagnostics UIs.
+  </Card>
+  <Card title="AuthRuntimeSummary" href="./react/providers#authruntimesummary">
+    Runtime summary block.
+  </Card>
+  <Card title="AuthScreen" href="./react/providers#authscreen">
+    Screen scaffold shared by auth pages.
+  </Card>
+  <Card title="AuthCard" href="./react/providers#authcard">
+    Card container primitive.
+  </Card>
+  <Card title="AuthCardHeader" href="./react/providers#authcardheader">
+    Card header primitive.
+  </Card>
+  <Card title="AuthCardContent" href="./react/providers#authcardcontent">
+    Card body primitive.
+  </Card>
+  <Card title="AuthField" href="./react/providers#authfield">
+    Field wrapper — label, control, error.
+  </Card>
+  <Card title="AuthLabel" href="./react/providers#authlabel">
+    Form label primitive.
+  </Card>
+  <Card title="AuthInput" href="./react/providers#authinput">
+    Text input primitive.
+  </Card>
+  <Card title="AuthAlert" href="./react/providers#authalert">
+    Inline alert for form and boundary errors.
+  </Card>
+  <Card title="AuthButton" href="./react/providers#authbutton">
+    Base button primitive.
+  </Card>
+  <Card title="AuthDivider" href="./react/providers#authdivider">
+    “Or continue with” divider.
+  </Card>
+  <Card title="AuthProviderButton" href="./react/providers#authproviderbutton">
+    Single provider button.
+  </Card>
+  <Card title="AuthInvitationEmailTemplate" href="./react/providers#authinvitationemailtemplate">
+    Invitation email template function.
   </Card>
 </CardGroup>
 
 ## React Native
 
-The Expo component set — auth screens, org switcher and members, session list, profile and 2FA forms — built on secure token storage and deep links.
+The Expo component set — auth screens, org switcher and members, session list, profile and 2FA forms — built on secure token storage and deep links. The `Convex*` component names above have native implementations on the same names; the screens below are Expo-specific.
 
 <CardGroup cols={2}>
-  <Card title="React Native components" href="./react-native" icon="smartphone">
-    The full Expo component catalog.
+  <Card title="ExpoConvexAuthProvider" href="./react-native">
+    Root provider — SecureStore tokens, deep links, session restore.
+  </Card>
+  <Card title="ExpoConvexAuthClientProvider" href="./react-native">
+    Drop-in client provider for the client API.
+  </Card>
+  <Card title="ExpoAuthClientSignInScreen" href="./react-native">
+    Client-driven sign-in screen.
+  </Card>
+  <Card title="ExpoAuthClientSignUpScreen" href="./react-native">
+    Client-driven sign-up screen.
+  </Card>
+  <Card title="ExpoAuthPostSignUpPage" href="./react-native">
+    Post-sign-up step.
+  </Card>
+  <Card title="ExpoAuthOrganizationChooserPage" href="./react-native">
+    Org picker after sign-in.
+  </Card>
+  <Card title="ExpoAuthAcceptInvitePage" href="./react-native">
+    Deep-linked invitation acceptance screen.
   </Card>
 </CardGroup>
 
@@ -58,24 +380,3 @@ Wrap your app with `ConvexAuthAppearanceProvider` to manage light/dark/system th
   {children}
 </ConvexAuthAppearanceProvider>
 ```
-
-Every component accepts `classNames` and `copy` props for per-component styling and text overrides — see [Theming](/theming) for the full token model.
-
-## Migrating from Clerk or WorkOS
-
-| convex-auth component                                                           | Clerk equivalent                                  | WorkOS equivalent                 |
-| ------------------------------------------------------------------------------- | ------------------------------------------------- | --------------------------------- |
-| `ConvexAuthProvider`                                                            | `ClerkProvider`                                   | — (AuthKit is hosted)             |
-| `ConvexAuthSignInPage` / `ConvexAuthSignUpPage`                                 | `SignIn` / `SignUp`                               | AuthKit hosted flow               |
-| `ConvexAuthSignInButton` / `ConvexAuthSignUpButton` / `ConvexAuthSignOutButton` | `SignInButton` / `SignUpButton` / `SignOutButton` | —                                 |
-| `AuthSignedInBoundary` / `AuthSignedOutBoundary`                                | `SignedIn` / `SignedOut`                          | —                                 |
-| `ConvexUserButton`                                                              | `UserButton`                                      | `UsersManagement` widget (hosted) |
-| `ConvexUserProfile`                                                             | `UserProfile`                                     | `UserProfile` widget              |
-| `ConvexOrganizationSwitcher`                                                    | `OrganizationSwitcher`                            | —                                 |
-| `ConvexOrganizationList`                                                        | `OrganizationList`                                | —                                 |
-| `ConvexCreateOrganization`                                                      | `CreateOrganization`                              | —                                 |
-| `ConvexOrganizationProfile`                                                     | `OrganizationProfile`                             | —                                 |
-| `ConvexOrganizationMembersSurface` / `ConvexOrganizationMemberList`             | `OrganizationProfile` members view                | Admin Portal users table          |
-| `ConvexOrganizationInviteForm`                                                  | `OrganizationProfile` invite tab                  | —                                 |
-
-No Clerk or WorkOS equivalents exist for `ConvexApiKeyCreateForm` / `ConvexApiKeyList`, the `ConvexWebhook*` delivery surfaces, `ConvexSecurityAuditList`, `ConvexOrganizationRoleManagerSurface` (custom-role RBAC editor), or the standalone `ConvexEnableTwoFactorForm` / `ConvexVerifyTwoFactorForm` / `ConvexChangeEmailForm` — those are convex-auth capabilities with no drop-in counterpart to migrate. Full cutover paths: [from Clerk](/migrating-from-clerk), [from WorkOS](/migrating-from-workos).
