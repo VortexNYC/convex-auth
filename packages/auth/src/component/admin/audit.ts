@@ -3,7 +3,7 @@ import { query } from "../_generated/server.js";
 import { v } from "convex/values";
 import { requireSuperAdmin } from "../../convex-runtime/admin/admin.js";
 import schema from "../schema.js";
-import type { Doc } from "../_generated/dataModel.js";
+import type { Doc, Id } from "../_generated/dataModel.js";
 
 const MAX_PAGE_LIMIT = 100;
 
@@ -89,15 +89,19 @@ export const listAdminAudits = query({
       to: args.to,
     };
 
-    const { page, continueCursor, isDone } = await paginator(ctx.db, schema)
-      .query("auth_admin_audits")
-      .order("desc")
-      .filterWith(async (audit) => matchesAuditFilters(audit, filters))
-      .paginate({
-        cursor: args.cursor ?? null,
-        numItems: limit,
-        maximumRowsRead: Math.max(limit * 20, 1000),
-      });
+    const adminIdFilter = filters.adminId?.toLowerCase() as Id<"users"> | undefined;
+    const base = paginator(ctx.db, schema).query("auth_admin_audits");
+    const q = adminIdFilter
+      ? base
+          .withIndex("by_admin", (index) => index.eq("adminId", adminIdFilter))
+          .order("desc")
+          .filterWith(async (audit) => matchesAuditFilters(audit, filters))
+      : base.order("desc").filterWith(async (audit) => matchesAuditFilters(audit, filters));
+    const { page, continueCursor, isDone } = await q.paginate({
+      cursor: args.cursor ?? null,
+      numItems: limit,
+      maximumRowsRead: Math.max(limit * 20, 1000),
+    });
 
     const audits = page.map((audit) => ({
       _id: audit._id,
