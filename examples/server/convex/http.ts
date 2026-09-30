@@ -2,9 +2,11 @@ import { httpRouter } from "convex/server";
 import { env, httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { auth } from "./auth";
+import { registerMcpOAuthRoutes } from "./mcp";
 
 const http = httpRouter();
 auth.addHttpRoutes(http);
+registerMcpOAuthRoutes(http);
 
 /* TEST-ONLY: webhook proof receivers for the e2e fixture. Every route 404s
  * unless ENABLE_WEBHOOK_PROOFS=true is set on the deployment — they must never
