@@ -134,6 +134,7 @@ const DEFAULT_TWO_FACTOR_BACKUP_CODES_COUNT = 10;
 const DEFAULT_TWO_FACTOR_BACKUP_CODE_BYTES = 10;
 const DEFAULT_TWO_FACTOR_SECRET_BYTES = 20;
 const DEFAULT_TRUST_DEVICE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const MAX_TWO_FACTOR_ATTEMPTS = 5;
 
 function buildGenericDuplicateResponse(
   email: string,
@@ -950,11 +951,11 @@ export function nativeEmailAndPassword(
 
   async function resolveTwoFactorChallengeToken(ctx: GenericActionCtx<DataModel>, token: string) {
     const tokenHash = await hashToken(token);
-    const code = await ctx.runMutation(component.native.codes.consumeVerificationCode, {
+    const code = await ctx.runQuery(component.native.codes.getVerificationCodeByTokenHash, {
       tokenHash,
       type: "two_factor_pending",
     });
-    if (!code || (code.expiresAt ?? 0) < Date.now()) {
+    if (!code || code.consumedAt !== undefined || (code.expiresAt ?? 0) < Date.now()) {
       return null;
     }
     const userId = code.userId;
@@ -963,6 +964,30 @@ export function nativeEmailAndPassword(
     const identityId = typeof code.identityId === "string" ? code.identityId : userId;
     const rememberMe = code.rememberMe;
     return { user, userId, identityId, rememberMe, credentialId: code.credentialId };
+  }
+
+  async function consumeTwoFactorChallengeToken(
+    ctx: GenericActionCtx<DataModel>,
+    token: string,
+  ): Promise<boolean> {
+    const tokenHash = await hashToken(token);
+    const consumed = await ctx.runMutation(component.native.codes.consumeVerificationCode, {
+      tokenHash,
+      type: "two_factor_pending",
+    });
+    return consumed !== null;
+  }
+
+  async function recordTwoFactorFailedAttempt(
+    ctx: GenericActionCtx<DataModel>,
+    token: string,
+  ): Promise<void> {
+    const tokenHash = await hashToken(token);
+    await ctx.runMutation(component.native.codes.recordFailedVerificationAttempt, {
+      tokenHash,
+      type: "two_factor_pending",
+      maxAttempts: MAX_TWO_FACTOR_ATTEMPTS,
+    });
   }
 
   async function verifyTwoFactorCode(
@@ -1061,7 +1086,13 @@ export function nativeEmailAndPassword(
       const resolved = await resolveTwoFactorChallengeToken(ctx, args.token);
       if (resolved) {
         const valid = await verifyTwoFactorCode(resolved.user, args.code, "totp");
-        if (!valid) throw new Error("Invalid two factor code");
+        if (!valid) {
+          await recordTwoFactorFailedAttempt(ctx, args.token);
+          throw new Error("Invalid two factor code");
+        }
+        if (!(await consumeTwoFactorChallengeToken(ctx, args.token))) {
+          throw new Error("Invalid two factor token");
+        }
         return await finishTwoFactorVerify(
           ctx,
           resolved.user,
@@ -1117,7 +1148,13 @@ export function nativeEmailAndPassword(
       if (!resolved) throw new Error("Invalid two factor token");
 
       const consumed = await consumeBackupCode(ctx, resolved.user, resolved.userId, args.code);
-      if (!consumed) throw new Error("Invalid two factor code");
+      if (!consumed) {
+        await recordTwoFactorFailedAttempt(ctx, args.token);
+        throw new Error("Invalid two factor code");
+      }
+      if (!(await consumeTwoFactorChallengeToken(ctx, args.token))) {
+        throw new Error("Invalid two factor token");
+      }
 
       return await finishTwoFactorVerify(
         ctx,

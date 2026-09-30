@@ -17,6 +17,7 @@ const verificationCodeDocValidator = v.object({
   rememberMe: v.optional(v.boolean()),
   expiresAt: v.number(),
   consumedAt: v.optional(v.number()),
+  failedAttempts: v.optional(v.number()),
   createdAt: v.number(),
   updatedAt: v.number(),
 });
@@ -114,6 +115,34 @@ export const consumeVerificationCode = mutation({
     }
 
     await ctx.db.patch("authVerificationCodes", code._id, { consumedAt: now, updatedAt: now });
+    return (await ctx.db.get("authVerificationCodes", code._id)) ?? null;
+  },
+});
+
+export const recordFailedVerificationAttempt = mutation({
+  args: {
+    tokenHash: v.string(),
+    type: verificationCodeTypeValidator,
+    maxAttempts: v.number(),
+  },
+  returns: v.union(verificationCodeDocValidator, v.null()),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    const code = await getVerificationCodeByTokenHashAndType(ctx, args.tokenHash, args.type);
+
+    if (!code || code.consumedAt !== undefined || code.expiresAt <= now) {
+      return null;
+    }
+
+    const failedAttempts = (code.failedAttempts ?? 0) + 1;
+    const locked = failedAttempts >= args.maxAttempts;
+
+    await ctx.db.patch("authVerificationCodes", code._id, {
+      failedAttempts,
+      consumedAt: locked ? now : code.consumedAt,
+      updatedAt: now,
+    });
     return (await ctx.db.get("authVerificationCodes", code._id)) ?? null;
   },
 });

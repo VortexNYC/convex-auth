@@ -70,6 +70,7 @@ export const authVerificationCodes = defineTable({
   rememberMe: v.optional(v.boolean()),
   expiresAt: v.number(),
   consumedAt: v.optional(v.number()),
+  failedAttempts: v.optional(v.number()),
   createdAt: v.number(),
   updatedAt: v.number(),
 })
