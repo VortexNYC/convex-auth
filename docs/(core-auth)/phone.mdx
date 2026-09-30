@@ -28,7 +28,41 @@ export const auth = convexAuth({
 
 Rate limiting is **on by default** — 5 attempts per phone number per 60 seconds on both sends and verifies. SMS sends cost money and a 6-digit code is brute-forceable without an attempt bound. Pass `rateLimit: false` to disable, or `{ windowMs, maxAttempts }` to tune.
 
-`sendPhoneOtp` receives `{ phone, otp, type }` and returns a message id. `type` is `sign-in` or `phone-verification`. Any `async ({ phone, otp, type }) => string` function works — `createTwilioSmsOtpSender` is the first-party Twilio helper, or bring your own SMS provider.
+`sendPhoneOtp` receives `{ phone, otp, type }` plus the calling action's `ctx` as a second argument, and returns a message id. `type` is `sign-in` or `phone-verification`. Any `async ({ phone, otp, type }) => string` function works — `createTwilioSmsOtpSender` is the first-party Twilio helper, or bring your own SMS provider.
+
+## Delivery tracking via the Twilio component
+
+`createTwilioSmsOtpSender` is a thin `fetch` wrapper — it returns once Twilio accepts the message, with no delivery confirmation. For production OTP traffic, use the official [`@convex-dev/twilio`](https://www.npmjs.com/package/@convex-dev/twilio) component: it records every message, handles delivery-status callbacks, and retries.
+
+```ts convex/convex.config.ts
+import { defineApp } from "convex/server";
+import twilio from "@convex-dev/twilio/convex.config.js";
+
+const app = defineApp();
+app.use(twilio);
+// app.use(convexAuth) stays — the component sits alongside it
+export default app;
+```
+
+```ts convex/auth.ts
+import { Twilio } from "@convex-dev/twilio";
+import { components } from "./_generated/api";
+import { convexAuth, createConvexTwilioOtpSender } from "@vortex-api/convex-auth/convex";
+
+const twilio = new Twilio(components.twilio, {
+  defaultFrom: process.env.TWILIO_PHONE_NUMBER!,
+});
+
+export const auth = convexAuth({
+  component: components.convexAuth,
+  phone: {
+    enabled: true,
+    sendPhoneOtp: createConvexTwilioOtpSender(twilio),
+  },
+});
+```
+
+The component reads `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` from your Convex environment — set them with `npx convex env set`. Both senders work; the component path is recommended when you need delivery observability.
 
 Phone numbers are normalized to E.164 before storage and lookup — `+1 (555) 123-4567` and `+15551234567` resolve to the same account. Verified sign-ins set `users.phoneNumberVerified = true`.
 

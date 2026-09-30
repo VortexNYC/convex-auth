@@ -1,5 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { createTwilioSmsOtpSender, createTwilioSmsSender } from "./twilio.js";
+import { describe, expect, it, vi } from "vitest";
+import {
+  createConvexTwilioOtpSender,
+  createTwilioSmsOtpSender,
+  createTwilioSmsSender,
+} from "./twilio.js";
 
 type CapturedRequest = {
   url: string;
@@ -136,7 +140,7 @@ describe("createTwilioSmsOtpSender", () => {
       fetch,
     });
 
-    const sid = await send({ phone: "+15559876543", otp: "123456", type: "sign-in" });
+    const sid = await send({ phone: "+15559876543", otp: "123456", type: "sign-in" }, {} as never);
 
     expect(sid).toBe("SMtest");
     const body = new URLSearchParams(getRequest()!.init.body as string);
@@ -154,9 +158,38 @@ describe("createTwilioSmsOtpSender", () => {
       buildMessage: (otp, type) => `[${type}] ${otp}`,
     });
 
-    await send({ phone: "+15559876543", otp: "987654", type: "verify" });
+    await send({ phone: "+15559876543", otp: "987654", type: "verify" }, {} as never);
 
     const body = new URLSearchParams(getRequest()!.init.body as string);
     expect(body.get("Body")).toBe("[verify] 987654");
+  });
+});
+
+describe("createConvexTwilioOtpSender", () => {
+  it("delegates to the component client's sendMessage and returns the sid", async () => {
+    const sendMessage = vi.fn().mockResolvedValue({ sid: "SMcomponent", status: "queued" });
+    const send = createConvexTwilioOtpSender({ sendMessage });
+    const ctx = { marker: "action-ctx" };
+
+    const sid = await send({ phone: "+15559876543", otp: "123456", type: "sign-in" }, ctx as never);
+
+    expect(sid).toBe("SMcomponent");
+    expect(sendMessage).toHaveBeenCalledWith(ctx, {
+      to: "+15559876543",
+      body: "Your sign-in code is: 123456",
+    });
+  });
+
+  it("passes the from override through to the component", async () => {
+    const sendMessage = vi.fn().mockResolvedValue({ sid: "SMcomponent" });
+    const send = createConvexTwilioOtpSender({ sendMessage }, { from: "+15550001111" });
+
+    await send({ phone: "+15559876543", otp: "123456", type: "phone-verification" }, {} as never);
+
+    expect(sendMessage).toHaveBeenCalledWith(expect.anything(), {
+      to: "+15559876543",
+      body: "Your phone verification code is: 123456",
+      from: "+15550001111",
+    });
   });
 });

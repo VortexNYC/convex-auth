@@ -188,7 +188,7 @@ export function nativePhone(
         throw new Error(`Unsupported phone OTP type: ${type}`);
       }
 
-      const messageId = await config.sendPhoneOtp({ phone, otp, type });
+      const messageId = await config.sendPhoneOtp({ phone, otp, type }, ctx);
 
       return { status: "queued" as const, messageId };
     },

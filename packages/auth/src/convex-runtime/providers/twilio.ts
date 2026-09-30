@@ -5,6 +5,7 @@
  * `fetch`, so they work in Convex `action` handlers without any Node SDK. API
  * credentials should live in Convex environment variables, not source code.
  */
+import type { GenericActionCtx } from "convex/server";
 
 export type TwilioSmsDraft = {
   /** Recipient phone number in E.164 format. */
@@ -17,11 +18,18 @@ export type TwilioSmsDraft = {
 
 export type SmsSender = (draft: TwilioSmsDraft) => Promise<string>;
 
-export type PhoneOtpSender = (data: {
-  phone: string;
-  otp: string;
-  type: string;
-}) => Promise<string>;
+export type PhoneOtpSender = (
+  data: {
+    phone: string;
+    otp: string;
+    type: string;
+  },
+  /**
+   * The calling action's ctx — component-backed senders need it for
+   * `ctx.runAction`. Fetch-based senders ignore it.
+   */
+  ctx: GenericActionCtx<any>,
+) => Promise<string>;
 
 export type TwilioSmsSenderOptions = {
   /** Twilio Account SID. */
@@ -145,5 +153,48 @@ export function createTwilioSmsOtpSender(options: TwilioSmsOtpSenderOptions): Ph
       to: phone,
       body: buildMessage(otp, type),
     });
+  };
+}
+
+/**
+ * Minimal surface of the `@convex-dev/twilio` component's `Twilio` client —
+ * the object returned by `new Twilio(components.twilio, {...})`. Duck-typed
+ * so consumers get the adapter without the package becoming a hard dep.
+ */
+export type TwilioComponentClient = {
+  sendMessage: (
+    ctx: GenericActionCtx<any>,
+    args: { to: string; body: string; from?: string },
+  ) => Promise<{ sid: string }>;
+};
+
+export type ConvexTwilioOtpSenderOptions = {
+  /** Override the component client's `defaultFrom`. */
+  from?: string;
+  /** Optional message builder. Defaults to a type-specific plain-text message. */
+  buildMessage?: (otp: string, type: string) => string;
+};
+
+/**
+ * OTP sender backed by the official `@convex-dev/twilio` component — the
+ * component records each message and handles delivery-status callbacks and
+ * retries, so this is the recommended sender for production OTP traffic.
+ *
+ * Requires `app.use(twilio)` in `convex/convex.config.ts` and
+ * `new Twilio(components.twilio, { defaultFrom })` — see the phone docs.
+ */
+export function createConvexTwilioOtpSender(
+  twilio: TwilioComponentClient,
+  options?: ConvexTwilioOtpSenderOptions,
+): PhoneOtpSender {
+  const buildMessage = options?.buildMessage ?? defaultSmsOtpMessage;
+
+  return async ({ phone, otp, type }, ctx) => {
+    const message = await twilio.sendMessage(ctx, {
+      to: phone,
+      body: buildMessage(otp, type),
+      ...(options?.from ? { from: options.from } : {}),
+    });
+    return message.sid;
   };
 }

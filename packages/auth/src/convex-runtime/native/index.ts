@@ -53,10 +53,13 @@ export {
   type ResendEmailSenderOptions,
 } from "../providers/resend.js";
 export {
+  createConvexTwilioOtpSender,
   createTwilioSmsOtpSender,
   createTwilioSmsSender,
+  type ConvexTwilioOtpSenderOptions,
   type PhoneOtpSender,
   type SmsSender,
+  type TwilioComponentClient,
   type TwilioSmsDraft,
   type TwilioSmsOtpSenderOptions,
   type TwilioSmsSenderOptions,

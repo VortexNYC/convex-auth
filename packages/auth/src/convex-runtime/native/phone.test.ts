@@ -147,7 +147,7 @@ describe("nativePhone", () => {
     const result = await exec(sendPhoneOtp).handler(ctx, {
       phone: "+1 (555) 123-4567 ",
       type: "sign-in",
-      name: "Shlomo",
+      name: "Riley",
     });
 
     expect(result).toMatchObject({ status: "queued", messageId: "sms_1" });
@@ -159,7 +159,9 @@ describe("nativePhone", () => {
 
     expect(sendPhoneOtpSender).toHaveBeenCalledWith(
       expect.objectContaining({ phone: PHONE, type: "sign-in" }),
+      expect.anything(),
     );
+    expect(sendPhoneOtpSender.mock.calls[0][1]).toBe(ctx);
     expect(sendPhoneOtpSender.mock.calls[0][0].otp).toMatch(/^\d{6}$/);
   });
 
@@ -392,6 +394,7 @@ describe("nativePhone", () => {
     );
     expect(sendPhoneOtpSender).toHaveBeenCalledWith(
       expect.objectContaining({ phone: PHONE, type: "phone-verification" }),
+      expect.anything(),
     );
   });
 
