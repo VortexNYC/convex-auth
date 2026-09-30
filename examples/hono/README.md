@@ -20,8 +20,9 @@ pnpm run dev
   cookies from cross-origin requests.
 - `getConvexAuthSession(c, { actions: api.auth })` in `/me` — a
   revocation-aware verified session for route guards.
-- `convex/convex.config.ts` + `convex/auth.ts` + `convex/http.ts` — the
-  standard consumer wiring (component mount, `convexAuth`, HTTP routes).
+- `convex/convex.config.ts` + `convex/auth.config.ts` + `convex/auth.ts` +
+  `convex/http.ts` — the standard consumer wiring (component mount, auth
+  provider registration, `convexAuth`, HTTP routes).
 
 Prefer token mode (mobile/SPA, cross-origin APIs)? See `examples/server`
 for the manual `ConvexHttpClient` pattern this package builds on.
