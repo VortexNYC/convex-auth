@@ -84,7 +84,7 @@ export function logVerbose(message: string, verbose: boolean) {
  * @returns NextjsOptions
  */
 export function getConvexNextjsOptions(options: { convexUrl?: string }): NextjsOptions {
-  if (Object.hasOwn(options, "convexUrl")) {
+  if (options.convexUrl !== undefined) {
     return {
       url: options.convexUrl,
     };

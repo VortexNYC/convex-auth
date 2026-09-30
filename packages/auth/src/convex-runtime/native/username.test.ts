@@ -376,6 +376,38 @@ describe("nativeUsername", () => {
       expect(result.sessionId).toBeTypeOf("string");
     });
 
+    it("accepts a landingVerifier arg and echoes it into the session result", async () => {
+      /* The cookie-mode SSR proxy substitutes the landing verifier from its
+       * cookie — the validator must accept it or the action throws
+       * ArgumentValidationError before the handler runs. */
+      const component = createMockComponent();
+      const actions = nativeUsername(component);
+      const exportArgs = Reflect.get(actions.signInUsername, "exportArgs") as () => string;
+      const argsSchema = JSON.parse(exportArgs()) as {
+        value: Record<string, { fieldType: { type: string }; optional: boolean }>;
+      };
+      expect(argsSchema.value.landingVerifier).toEqual({
+        fieldType: { type: "string" },
+        optional: true,
+      });
+
+      const ctx = createContext();
+      const { credentialHash } = await seedCredential();
+      component.identity.getUserAndAccountByUsername.mockResolvedValue({
+        user: makeUser(),
+        identity: makeIdentity(),
+        account: makeAccount(credentialHash),
+      });
+      component.native.sessions.createSessionAndRefreshToken.mockResolvedValue(undefined);
+
+      const result = (await exec(actions.signInUsername).handler(ctx, {
+        username: "shlomo",
+        password: DEFAULT_PASSWORD,
+        landingVerifier: "lv-cookie",
+      })) as { landingVerifier?: string };
+      expect(result.landingVerifier).toBe("lv-cookie");
+    });
+
     it("rejects a wrong password with a generic error", async () => {
       const component = createMockComponent();
       const actions = nativeUsername(component);

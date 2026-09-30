@@ -245,6 +245,7 @@ export function nativeUsername(
       callbackURL: v.optional(v.string()),
       rememberMe: v.optional(v.boolean()),
       trustedDeviceToken: v.optional(v.string()),
+      landingVerifier: v.optional(v.string()),
     },
     returns: nativeAuthSessionValidator,
     handler: async (ctx, args) => {
@@ -302,6 +303,7 @@ export function nativeUsername(
         ...result,
         redirect: !!args.callbackURL,
         url: args.callbackURL,
+        landingVerifier: args.landingVerifier,
       };
     },
   });
