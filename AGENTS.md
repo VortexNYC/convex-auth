@@ -11,6 +11,13 @@ pnpm run build
 pnpm test
 ```
 
+## Verifying changes live in examples
+
+Examples resolve `@vortex-api/convex-auth` via `packages/auth/dist`, not `src/`.
+After editing package source: `pnpm -F @vortex-api/convex-auth build`, then force
+a rebundle with `npx convex dev --once` inside the example — a long-running
+`convex dev` watcher can push a stale copy of the package dist.
+
 ## Deployment placeholders
 
 Use generic placeholders in examples and never commit real deployment names:

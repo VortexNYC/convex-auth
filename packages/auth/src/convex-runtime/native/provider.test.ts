@@ -609,6 +609,35 @@ describe("nativeEmailAndPassword", () => {
     expect(payload.identityId).toBe("identity_1");
   });
 
+  it("signIn accepts a landingVerifier arg and echoes it into the session result", async () => {
+    /* The cookie-mode SSR proxy substitutes the landing verifier from its
+     * cookie into signIn args — the validator must accept it or the
+     * action throws ArgumentValidationError before the handler runs. */
+    const component = createMockComponent();
+    const { signIn } = createActions(component);
+    const exportArgs = Reflect.get(signIn, "exportArgs") as () => string;
+    const argsSchema = JSON.parse(exportArgs()) as {
+      value: Record<string, { fieldType: { type: string }; optional: boolean }>;
+    };
+    expect(argsSchema.value.landingVerifier).toEqual({
+      fieldType: { type: "string" },
+      optional: true,
+    });
+
+    const user = makeUser({ emailVerified: true });
+    const identity = makeIdentity({ emailVerified: true });
+    const account = makeAccount();
+    component.identity.getUserAndAccount.mockResolvedValue({ user, identity, account });
+    component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_1");
+
+    const result = (await exec(signIn).handler(createContext(), {
+      email: "shlomo@example.com",
+      password: DEFAULT_PASSWORD,
+      landingVerifier: "lv-cookie",
+    })) as { landingVerifier?: string };
+    expect(result.landingVerifier).toBe("lv-cookie");
+  });
+
   it("rehashes imported bcrypt credentials to argon2id on sign-in", async () => {
     const component = createMockComponent();
     const user = makeUser({ emailVerified: true });
