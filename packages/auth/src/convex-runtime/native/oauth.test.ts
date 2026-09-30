@@ -1688,6 +1688,28 @@ describe("addNativeOAuthHttpRoutes", () => {
     );
   });
 
+  it("redirects with unsupported_provider instead of throwing on an unconfigured provider", async () => {
+    const config = createOAuthConfig();
+    const routes: {
+      path?: string;
+      pathPrefix?: string;
+      method: string;
+      handler: (ctx: unknown, request: Request) => Promise<Response>;
+    }[] = [];
+    const http = { route: (r: (typeof routes)[number]) => routes.push(r) };
+    addNativeOAuthHttpRoutes(http as unknown as import("convex/server").HttpRouter, {
+      component: createMockComponent() as unknown as NativeOAuthComponentHandle,
+      oauth: config,
+    });
+    const signinRoute = routes.find((r) => r.pathPrefix === "/api/auth/signin/")!;
+    const response = (await exec(signinRoute.handler).handler(
+      createContext(),
+      new Request("https://app.example.com/api/auth/signin/notreal"),
+    )) as Response;
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toContain("error=unsupported_provider");
+  });
+
   it("maps a provider error to provider_error and preserves the absolute errorURL", async () => {
     const config = createOAuthConfig();
     const component = createMockComponent();

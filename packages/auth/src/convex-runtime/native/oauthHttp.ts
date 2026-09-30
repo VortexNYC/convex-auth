@@ -110,19 +110,28 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
         );
       }
 
-      const result = await handleSignIn(
-        config.oauth,
-        {
-          provider,
-          callbackURL,
-          errorURL,
-          newUserURL,
-          requestSignUp,
-          link,
-          landingVerifier,
-        },
-        { baseOrigin: requestOrigin, trustedOrigins },
-      );
+      let result;
+      try {
+        result = await handleSignIn(
+          config.oauth,
+          {
+            provider,
+            callbackURL,
+            errorURL,
+            newUserURL,
+            requestSignUp,
+            link,
+            landingVerifier,
+          },
+          { baseOrigin: requestOrigin, trustedOrigins },
+        );
+      } catch (error) {
+        return buildErrorRedirect(
+          process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
+          "unsupported_provider",
+          error instanceof Error ? error.message : "unknown",
+        );
+      }
 
       return new Response(null, {
         status: 302,
@@ -286,18 +295,27 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
         } catch {}
       }
 
-      const result = await handleCallback(
-        ctx,
-        config.component,
-        config.oauth,
-        {
-          provider,
-          code,
-          state,
-          linkingUserId,
-        },
-        { boundaryEnforcesVerifier: true },
-      );
+      let result;
+      try {
+        result = await handleCallback(
+          ctx,
+          config.component,
+          config.oauth,
+          {
+            provider,
+            code,
+            state,
+            linkingUserId,
+          },
+          { boundaryEnforcesVerifier: true },
+        );
+      } catch (error) {
+        return buildErrorRedirect(
+          process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
+          "unsupported_provider",
+          error instanceof Error ? error.message : "unknown",
+        );
+      }
       if ("error" in result) {
         return buildErrorRedirect(result.redirectUrl, result.error, result.errorDescription);
       }
