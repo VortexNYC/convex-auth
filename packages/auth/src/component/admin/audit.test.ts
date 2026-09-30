@@ -108,6 +108,54 @@ describe("admin audit log", () => {
     expect(result.audits[0].action).toBe("createUser");
   });
 
+  it("filters by adminId", async () => {
+    const t = convexTest(schema, modules);
+    const adminId = await insertUser(t, "admin@example.com", "Admin", true);
+    const otherId = await insertUser(t, "other@example.com", "Other", true);
+
+    await t.run((ctx) =>
+      ctx.db.insert("auth_admin_audits", {
+        adminId,
+        action: "createUser",
+        targetType: "user",
+        targetId: "user-a",
+        result: "success",
+        createdAt: 1,
+      }),
+    );
+    await t.run((ctx) =>
+      ctx.db.insert("auth_admin_audits", {
+        adminId: otherId,
+        action: "removeUser",
+        targetType: "user",
+        targetId: "user-b",
+        result: "success",
+        createdAt: 2,
+      }),
+    );
+
+    const result = await t
+      .withIdentity({ subject: adminId })
+      .query(makeFunctionReference<"query">("admin/audit:listAdminAudits"), {
+        adminId: String(adminId),
+        limit: 10,
+      });
+
+    expect(result.audits).toHaveLength(1);
+    expect(result.audits[0].adminId).toBe(adminId);
+    expect(result.audits[0].action).toBe("createUser");
+
+    const empty = await t
+      .withIdentity({ subject: adminId })
+      .query(makeFunctionReference<"query">("admin/audit:listAdminAudits"), {
+        adminId: "not-an-id",
+        limit: 10,
+      });
+
+    expect(empty.audits).toHaveLength(0);
+    expect(empty.hasNextPage).toBe(false);
+  });
+
   it("filters by date range", async () => {
     const t = convexTest(schema, modules);
     const adminId = await insertUser(t, "admin@example.com", "Admin", true);
