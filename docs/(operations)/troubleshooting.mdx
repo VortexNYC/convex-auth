@@ -46,6 +46,20 @@ If any are missing or suspicious, the report lists them under **Diagnostics chec
 - Configure `RESEND_API_KEY` and `EMAIL_FROM_ADDRESS`.
 - For local testing, set `ALLOW_EMAIL_TOKEN_FALLBACK=true` to return tokens in the response instead of sending email.
 
+### `NoAuthProvider` errors, or a session that survives sign-out
+
+`No auth provider found matching the given token` means Convex could not
+authenticate the caller's session JWT — almost always because
+`convex/auth.config.ts` is missing or does not register
+`createConvexAuthProvider()`. Convex authenticates the token _before_ your
+function runs, so the failed call never executes: a proxied `signOut`, for
+example, clears the browser cookies but the server-side session stays valid
+— the user looks signed out while the session is still live.
+
+- Add `convex/auth.config.ts` with `providers: [createConvexAuthProvider()]` (see [Quickstart](./quickstart)).
+- Re-push your functions (`convex dev` or `convex deploy`), then sign out again — the revoked session must 401 on replay.
+- `convex-auth preflight` fails when the file is missing, so run it after wiring changes.
+
 ### Theming does not toggle dark mode
 
 - Wrap the app with `ConvexAuthAppearanceProvider`.
