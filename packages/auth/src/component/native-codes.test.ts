@@ -360,4 +360,95 @@ describe("native verification codes", () => {
     });
     expect(expiredConsume).toBeNull();
   });
+
+  it("reserveVerificationAttempt grants five slots then rejects, leaving the challenge consumable", async () => {
+    const t = convexTest(schema, modules);
+
+    const userId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "shlomo@example.com",
+        name: "Shlomo",
+        emailVerified: false,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    await t.mutation(api.native.codes.createVerificationCode, {
+      userId,
+      type: "two_factor_pending",
+      tokenHash: "pending-hash",
+      expiresAt: Date.now() + 300_000,
+    });
+
+    for (let i = 1; i <= 5; i++) {
+      const attempt = await t.mutation(api.native.codes.reserveVerificationAttempt, {
+        tokenHash: "pending-hash",
+        type: "two_factor_pending",
+        maxAttempts: 5,
+      });
+      expect(attempt?.failedAttempts).toBe(i);
+      expect(attempt?.consumedAt).toBeUndefined();
+    }
+
+    /* Exhausted: no more slots, but the last reserver must still be able to consume. */
+    const sixth = await t.mutation(api.native.codes.reserveVerificationAttempt, {
+      tokenHash: "pending-hash",
+      type: "two_factor_pending",
+      maxAttempts: 5,
+    });
+    expect(sixth).toBeNull();
+
+    const consume = await t.mutation(api.native.codes.consumeVerificationCode, {
+      tokenHash: "pending-hash",
+      type: "two_factor_pending",
+    });
+    expect(consume?.consumedAt).toBeGreaterThan(0);
+  });
+
+  it("reserveVerificationAttempt ignores expired, consumed, and unknown tokens", async () => {
+    const t = convexTest(schema, modules);
+
+    const userId = await t.run(async (ctx) =>
+      ctx.db.insert("users", {
+        email: "shlomo@example.com",
+        name: "Shlomo",
+        emailVerified: false,
+        isActive: true,
+        createdAt: 0,
+        updatedAt: 0,
+      }),
+    );
+
+    const now = Date.now();
+    await t.run(async (ctx) => {
+      await ctx.db.insert("authVerificationCodes", {
+        userId,
+        type: "two_factor_pending",
+        tokenHash: "expired",
+        expiresAt: now - 1,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert("authVerificationCodes", {
+        userId,
+        type: "two_factor_pending",
+        tokenHash: "consumed",
+        expiresAt: now + 60_000,
+        consumedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    for (const tokenHash of ["expired", "consumed", "unknown"]) {
+      const result = await t.mutation(api.native.codes.reserveVerificationAttempt, {
+        tokenHash,
+        type: "two_factor_pending",
+        maxAttempts: 5,
+      });
+      expect(result).toBeNull();
+    }
+  });
 });

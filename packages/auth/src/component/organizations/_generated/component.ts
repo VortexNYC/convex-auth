@@ -490,6 +490,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
             userId: string;
@@ -506,6 +507,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
           },
@@ -516,6 +518,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             createdAt: number;
             credentialId?: string;
             expiresAt: number;
+            failedAttempts?: number;
             identityId?: string;
             rememberMe?: boolean;
             tokenHash: string;
@@ -523,6 +526,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
             updatedAt: number;
@@ -543,6 +547,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
             userId: string;
@@ -559,6 +564,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
           },
@@ -569,6 +575,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             createdAt: number;
             credentialId?: string;
             expiresAt: number;
+            failedAttempts?: number;
             identityId?: string;
             rememberMe?: boolean;
             tokenHash: string;
@@ -576,6 +583,44 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
+              | "two_factor_pending"
+              | "two_factor_trusted_device";
+            updatedAt: number;
+            userId: string;
+          } | null,
+          Name
+        >;
+        reserveVerificationAttempt: FunctionReference<
+          "mutation",
+          "internal",
+          {
+            maxAttempts: number;
+            tokenHash: string;
+            type:
+              | "email_verification"
+              | "password_reset"
+              | "email_change"
+              | "phone_verification"
+              | "two_factor_pending"
+              | "two_factor_trusted_device";
+          },
+          {
+            _creationTime: number;
+            _id: string;
+            consumedAt?: number;
+            createdAt: number;
+            credentialId?: string;
+            expiresAt: number;
+            failedAttempts?: number;
+            identityId?: string;
+            rememberMe?: boolean;
+            tokenHash: string;
+            type:
+              | "email_verification"
+              | "password_reset"
+              | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
             updatedAt: number;
@@ -591,6 +636,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               | "email_verification"
               | "password_reset"
               | "email_change"
+              | "phone_verification"
               | "two_factor_pending"
               | "two_factor_trusted_device";
             userId: string;
@@ -600,6 +646,22 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         >;
       };
       identities: {
+        createIdentity: FunctionReference<
+          "mutation",
+          "internal",
+          {
+            email?: string;
+            emailVerified: boolean;
+            issuer: string;
+            provider: string;
+            sessionId?: string | null;
+            subject: string;
+            tokenIdentifier: string;
+            userId: string;
+          },
+          string,
+          Name
+        >;
         getIdentityById: FunctionReference<
           "query",
           "internal",
@@ -732,6 +794,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
         >;
       };
       sessions: {
+        cleanupExpiredSessions: FunctionReference<
+          "mutation",
+          "internal",
+          { batchSize?: number; before?: number },
+          number,
+          Name
+        >;
         convergeSession: FunctionReference<
           "mutation",
           "internal",
@@ -756,13 +825,6 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
               updatedAt: number;
             };
           },
-          Name
-        >;
-        cleanupExpiredSessions: FunctionReference<
-          "mutation",
-          "internal",
-          { batchSize?: number; before?: number },
-          number,
           Name
         >;
         createSession: FunctionReference<
@@ -880,6 +942,13 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           "internal",
           { backupCodeHash: string; userId: string },
           { success: boolean },
+          Name
+        >;
+        deleteUser: FunctionReference<
+          "mutation",
+          "internal",
+          { userId: string },
+          { deleted: boolean; userId: string },
           Name
         >;
         getUserByEmail: FunctionReference<

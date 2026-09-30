@@ -143,6 +143,7 @@ function createMockComponent(): MockedComponent {
         createVerificationCode: vi.fn(),
         getVerificationCodeByTokenHash: vi.fn(),
         consumeVerificationCode: vi.fn(),
+        reserveVerificationAttempt: vi.fn(),
         revokeVerificationCodesForUser: vi.fn(),
       },
       rateLimits: {
@@ -1704,7 +1705,7 @@ describe("nativeEmailAndPassword", () => {
         twoFactorSecret: await encryptAccountToken(secret),
       });
       component.native.accounts.getAccountBySubject.mockResolvedValue(account);
-      component.native.codes.consumeVerificationCode.mockResolvedValue({
+      const pendingCode = {
         _id: "code_1",
         _creationTime: 0,
         userId: "user_1",
@@ -1716,7 +1717,9 @@ describe("nativeEmailAndPassword", () => {
         expiresAt: Date.now() + 60_000,
         createdAt: 0,
         updatedAt: 0,
-      });
+      };
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(pendingCode);
+      component.native.codes.consumeVerificationCode.mockResolvedValue(pendingCode);
       component.native.sessions.createSessionAndRefreshToken.mockResolvedValue({
         sessionId: "session_2",
         token: oneDayToken,
@@ -1741,6 +1744,148 @@ describe("nativeEmailAndPassword", () => {
       );
     });
 
+    it("keeps a pending challenge retryable after a wrong TOTP code", async () => {
+      const component = createMockComponent();
+      const user = makeUser({ emailVerified: true, twoFactorEnabled: true });
+      const secret = encodeBase32(generateSecret());
+      const challengeToken = "opaque-pending-challenge";
+
+      component.native.users.getUserById.mockResolvedValue({
+        ...user,
+        twoFactorSecret: await encryptAccountToken(secret),
+      });
+      const pendingCode = {
+        _id: "code_1",
+        _creationTime: 0,
+        userId: "user_1",
+        type: "two_factor_pending",
+        tokenHash: await hashToken(challengeToken),
+        identityId: "identity_1",
+        expiresAt: Date.now() + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      };
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(pendingCode);
+      component.native.codes.consumeVerificationCode.mockResolvedValue(pendingCode);
+      component.native.sessions.createSessionAndRefreshToken.mockResolvedValue({
+        sessionId: "session_2",
+        token: oneDayToken,
+        refreshToken: "refresh_2",
+      });
+
+      const { twoFactorVerifyTOTP } = createActions(component);
+      const { handler } = exec(twoFactorVerifyTOTP);
+
+      await expect(
+        handler(createContext(), { token: challengeToken, code: "000000" }),
+      ).rejects.toThrow("Invalid two factor code");
+      expect(component.native.codes.reserveVerificationAttempt).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "two_factor_pending", maxAttempts: 5 }),
+      );
+      expect(component.native.codes.consumeVerificationCode).not.toHaveBeenCalled();
+      expect(component.native.sessions.createSessionAndRefreshToken).not.toHaveBeenCalled();
+
+      const code = await generateTOTP(decodeBase32(secret), getCurrentTOTPCounter());
+      const result = (await handler(createContext(), {
+        token: challengeToken,
+        code,
+      })) as { token: string | null };
+
+      expect(result.token).toEqual(expect.any(String));
+      expect(component.native.codes.consumeVerificationCode).toHaveBeenCalledTimes(1);
+    });
+
+    it("rejects a locked challenge once the pending code is consumed", async () => {
+      const component = createMockComponent();
+      const user = makeUser({ emailVerified: true, twoFactorEnabled: true });
+      const secret = encodeBase32(generateSecret());
+      const code = await generateTOTP(decodeBase32(secret), getCurrentTOTPCounter());
+      const challengeToken = "opaque-pending-challenge";
+
+      component.native.users.getUserById.mockResolvedValue({
+        ...user,
+        twoFactorSecret: await encryptAccountToken(secret),
+      });
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(null);
+      component.native.sessions.getSessionByToken.mockResolvedValue(null);
+
+      const { twoFactorVerifyTOTP } = createActions(component);
+      await expect(
+        exec(twoFactorVerifyTOTP).handler(createContext(), {
+          token: challengeToken,
+          code,
+        }),
+      ).rejects.toThrow("Invalid two factor token");
+      expect(component.native.sessions.createSessionAndRefreshToken).not.toHaveBeenCalled();
+    });
+
+    it("keeps a pending challenge retryable after a wrong backup code", async () => {
+      const component = createMockComponent();
+      const user = makeUser({ emailVerified: true, twoFactorEnabled: true });
+      const backupCode = "BACKUP123";
+      const backupCodeHash = await hashPassword(backupCode);
+      const challengeToken = "opaque-pending-challenge";
+
+      component.native.users.getUserById.mockResolvedValue({
+        ...user,
+        twoFactorBackupCodes: [backupCodeHash],
+      });
+      const pendingCode = {
+        _id: "code_1",
+        _creationTime: 0,
+        userId: "user_1",
+        type: "two_factor_pending",
+        tokenHash: await hashToken(challengeToken),
+        identityId: "identity_1",
+        expiresAt: Date.now() + 60_000,
+        createdAt: 0,
+        updatedAt: 0,
+      };
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(pendingCode);
+      component.native.codes.consumeVerificationCode.mockResolvedValue(pendingCode);
+      component.native.users.consumeBackupCode.mockResolvedValue({ success: true });
+      component.native.sessions.createSessionAndRefreshToken.mockResolvedValue({
+        sessionId: "session_2",
+        token: oneDayToken,
+        refreshToken: "refresh_2",
+      });
+
+      const { twoFactorVerifyBackupCode } = createActions(component);
+      const { handler } = exec(twoFactorVerifyBackupCode);
+
+      await expect(
+        handler(createContext(), { token: challengeToken, code: "WRONG-CODE" }),
+      ).rejects.toThrow("Invalid two factor code");
+      expect(component.native.codes.reserveVerificationAttempt).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "two_factor_pending", maxAttempts: 5 }),
+      );
+      expect(component.native.codes.consumeVerificationCode).not.toHaveBeenCalled();
+
+      const result = (await handler(createContext(), {
+        token: challengeToken,
+        code: backupCode,
+      })) as { token: string | null };
+
+      expect(result.token).toEqual(expect.any(String));
+      expect(component.native.codes.consumeVerificationCode).toHaveBeenCalledTimes(1);
+    });
+
+    it("rejects a locked challenge on the backup-code route", async () => {
+      const component = createMockComponent();
+      const challengeToken = "opaque-pending-challenge";
+
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(null);
+
+      const { twoFactorVerifyBackupCode } = createActions(component);
+      await expect(
+        exec(twoFactorVerifyBackupCode).handler(createContext(), {
+          token: challengeToken,
+          code: "BACKUP123",
+        }),
+      ).rejects.toThrow("Invalid two factor token");
+      expect(component.native.users.consumeBackupCode).not.toHaveBeenCalled();
+    });
+
     it("rejects a pending challenge that has no stored code row", async () => {
       const component = createMockComponent();
       const challengeToken = await mintToken(
@@ -1750,7 +1895,7 @@ describe("nativeEmailAndPassword", () => {
         { expiresInSeconds: 600 },
       );
 
-      component.native.codes.consumeVerificationCode.mockResolvedValue(null);
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(null);
       component.native.sessions.getSessionByToken.mockResolvedValue(null);
 
       const { twoFactorVerifyTOTP } = createActions(component);
@@ -1759,7 +1904,7 @@ describe("nativeEmailAndPassword", () => {
           token: challengeToken,
           code: "000000",
         }),
-      ).rejects.toThrow("Unauthorized");
+      ).rejects.toThrow("Invalid two factor token");
       expect(component.native.sessions.createSessionAndRefreshToken).not.toHaveBeenCalled();
     });
 
@@ -1777,7 +1922,7 @@ describe("nativeEmailAndPassword", () => {
         twoFactorBackupCodes: [backupCodeHash],
       });
       component.native.accounts.getAccountBySubject.mockResolvedValue(account);
-      component.native.codes.consumeVerificationCode.mockResolvedValue({
+      const pendingCode = {
         _id: "code_1",
         _creationTime: 0,
         userId: "user_1",
@@ -1787,7 +1932,9 @@ describe("nativeEmailAndPassword", () => {
         expiresAt: Date.now() + 60_000,
         createdAt: 0,
         updatedAt: 0,
-      });
+      };
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(pendingCode);
+      component.native.codes.consumeVerificationCode.mockResolvedValue(pendingCode);
       component.native.users.consumeBackupCode.mockResolvedValue({ success: true });
       component.native.sessions.createSessionAndRefreshToken.mockResolvedValue({
         sessionId: "session_2",

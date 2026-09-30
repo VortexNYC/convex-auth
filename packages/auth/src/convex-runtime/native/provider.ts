@@ -134,6 +134,7 @@ const DEFAULT_TWO_FACTOR_BACKUP_CODES_COUNT = 10;
 const DEFAULT_TWO_FACTOR_BACKUP_CODE_BYTES = 10;
 const DEFAULT_TWO_FACTOR_SECRET_BYTES = 20;
 const DEFAULT_TRUST_DEVICE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const MAX_TWO_FACTOR_ATTEMPTS = 5;
 
 function buildGenericDuplicateResponse(
   email: string,
@@ -948,15 +949,14 @@ export function nativeEmailAndPassword(
     },
   });
 
-  async function resolveTwoFactorChallengeToken(ctx: GenericActionCtx<DataModel>, token: string) {
+  async function reserveTwoFactorChallenge(ctx: GenericActionCtx<DataModel>, token: string) {
     const tokenHash = await hashToken(token);
-    const code = await ctx.runMutation(component.native.codes.consumeVerificationCode, {
+    const code = await ctx.runMutation(component.native.codes.reserveVerificationAttempt, {
       tokenHash,
       type: "two_factor_pending",
+      maxAttempts: MAX_TWO_FACTOR_ATTEMPTS,
     });
-    if (!code || (code.expiresAt ?? 0) < Date.now()) {
-      return null;
-    }
+    if (!code) return null;
     const userId = code.userId;
     const user = await ctx.runQuery(component.native.users.getUserById, { userId });
     if (!user) return null;
@@ -965,14 +965,26 @@ export function nativeEmailAndPassword(
     return { user, userId, identityId, rememberMe, credentialId: code.credentialId };
   }
 
+  async function consumeTwoFactorChallengeToken(
+    ctx: GenericActionCtx<DataModel>,
+    token: string,
+  ): Promise<boolean> {
+    const tokenHash = await hashToken(token);
+    const consumed = await ctx.runMutation(component.native.codes.consumeVerificationCode, {
+      tokenHash,
+      type: "two_factor_pending",
+    });
+    return consumed !== null;
+  }
+
   async function verifyTwoFactorCode(
     user: NativeUserDoc,
     code: string,
     method: "totp" | "backup_code",
   ): Promise<boolean> {
-    if (!user.twoFactorSecret) return false;
-    const secretPlain = await decryptAccountToken(user.twoFactorSecret);
     if (method === "totp") {
+      if (!user.twoFactorSecret) return false;
+      const secretPlain = await decryptAccountToken(user.twoFactorSecret);
       return verifyTOTP(decodeBase32(secretPlain), code, undefined, 1);
     }
     if (!user.twoFactorBackupCodes) return false;
@@ -1058,10 +1070,15 @@ export function nativeEmailAndPassword(
     },
     returns: nativeAuthSessionValidator,
     handler: async (ctx, args) => {
-      const resolved = await resolveTwoFactorChallengeToken(ctx, args.token);
+      const resolved = await reserveTwoFactorChallenge(ctx, args.token);
       if (resolved) {
         const valid = await verifyTwoFactorCode(resolved.user, args.code, "totp");
-        if (!valid) throw new Error("Invalid two factor code");
+        if (!valid) {
+          throw new Error("Invalid two factor code");
+        }
+        if (!(await consumeTwoFactorChallengeToken(ctx, args.token))) {
+          throw new Error("Invalid two factor token");
+        }
         return await finishTwoFactorVerify(
           ctx,
           resolved.user,
@@ -1074,7 +1091,7 @@ export function nativeEmailAndPassword(
       }
 
       const sessionResolved = await resolveSessionUser(ctx, args.token);
-      if (!sessionResolved) throw new Error("Unauthorized");
+      if (!sessionResolved) throw new Error("Invalid two factor token");
 
       const user = await ctx.runQuery(component.native.users.getUserById, {
         userId: sessionResolved.userId,
@@ -1113,9 +1130,18 @@ export function nativeEmailAndPassword(
     },
     returns: nativeAuthSessionValidator,
     handler: async (ctx, args) => {
-      const resolved = await resolveTwoFactorChallengeToken(ctx, args.token);
+      const resolved = await reserveTwoFactorChallenge(ctx, args.token);
       if (!resolved) throw new Error("Invalid two factor token");
 
+      const matches = await verifyTwoFactorCode(resolved.user, args.code, "backup_code");
+      if (!matches) {
+        throw new Error("Invalid two factor code");
+      }
+      /* Lock the challenge before burning the backup code so a concurrent
+       * winner cannot leave the user without both a session and the code. */
+      if (!(await consumeTwoFactorChallengeToken(ctx, args.token))) {
+        throw new Error("Invalid two factor token");
+      }
       const consumed = await consumeBackupCode(ctx, resolved.user, resolved.userId, args.code);
       if (!consumed) throw new Error("Invalid two factor code");
 

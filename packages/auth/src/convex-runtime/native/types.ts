@@ -148,6 +148,7 @@ export type NativeVerificationCodeDoc = {
   rememberMe?: boolean;
   expiresAt: number;
   consumedAt?: number;
+  failedAttempts?: number;
   createdAt: number;
   updatedAt: number;
 };
@@ -697,6 +698,13 @@ export type NativeEmailAndPasswordComponentHandle = {
         "mutation",
         "public" | "internal",
         { tokenHash: string; type: VerificationCodeType },
+        NativeVerificationCodeDoc | null,
+        string
+      >;
+      reserveVerificationAttempt: FunctionReference<
+        "mutation",
+        "public" | "internal",
+        { tokenHash: string; type: VerificationCodeType; maxAttempts: number },
         NativeVerificationCodeDoc | null,
         string
       >;

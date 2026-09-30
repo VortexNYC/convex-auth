@@ -2015,6 +2015,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             createdAt: number;
             credentialId?: string;
             expiresAt: number;
+            failedAttempts?: number;
             identityId?: string;
             rememberMe?: boolean;
             tokenHash: string;
@@ -2071,6 +2072,44 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
             createdAt: number;
             credentialId?: string;
             expiresAt: number;
+            failedAttempts?: number;
+            identityId?: string;
+            rememberMe?: boolean;
+            tokenHash: string;
+            type:
+              | "email_verification"
+              | "password_reset"
+              | "email_change"
+              | "phone_verification"
+              | "two_factor_pending"
+              | "two_factor_trusted_device";
+            updatedAt: number;
+            userId: string;
+          } | null,
+          Name
+        >;
+        reserveVerificationAttempt: FunctionReference<
+          "mutation",
+          "internal",
+          {
+            maxAttempts: number;
+            tokenHash: string;
+            type:
+              | "email_verification"
+              | "password_reset"
+              | "email_change"
+              | "phone_verification"
+              | "two_factor_pending"
+              | "two_factor_trusted_device";
+          },
+          {
+            _creationTime: number;
+            _id: string;
+            consumedAt?: number;
+            createdAt: number;
+            credentialId?: string;
+            expiresAt: number;
+            failedAttempts?: number;
             identityId?: string;
             rememberMe?: boolean;
             tokenHash: string;
