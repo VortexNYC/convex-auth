@@ -447,3 +447,86 @@ describe("HTTP transport: username routes", () => {
     expect(await res.json()).toMatchObject({ code: "invalid_username_or_password" });
   });
 });
+
+describe("HTTP transport: /api/auth/two-factor error mapping", () => {
+  const postWithPending = (path: string, body: unknown) =>
+    new Request(`${SITE}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        cookie: "convex-auth-two-factor=pending-token",
+        origin: SITE,
+      },
+      body: JSON.stringify(body),
+    });
+
+  it("verify-totp maps 'Invalid two factor code' to a 401, not 500", async () => {
+    const twoFactorVerifyTOTP = vi.fn(async () => {
+      throw new Error("Invalid two factor code");
+    });
+    const routes = captureRoutes(makeComponent(), { twoFactorVerifyTOTP });
+    const handler = routes.get("POST /api/auth/two-factor/verify-totp")!;
+
+    const res = await handler(
+      makeCtx({}),
+      postWithPending("/api/auth/two-factor/verify-totp", { code: "000000" }),
+    );
+    expect(res.status).toBe(401);
+    expect(await res.json()).toMatchObject({ code: "invalid_two_factor_code" });
+  });
+
+  it("verify-totp maps 'Unauthorized' to a 401 and 'Not enrolled' to a 400", async () => {
+    for (const [message, status, code] of [
+      ["Unauthorized", 401, "unauthorized"],
+      ["Not enrolled", 400, "two_factor_not_enrolled"],
+    ] as const) {
+      const twoFactorVerifyTOTP = vi.fn(async () => {
+        throw new Error(message);
+      });
+      const routes = captureRoutes(makeComponent(), { twoFactorVerifyTOTP });
+      const handler = routes.get("POST /api/auth/two-factor/verify-totp")!;
+
+      const res = await handler(
+        makeCtx({}),
+        postWithPending("/api/auth/two-factor/verify-totp", { code: "000000" }),
+      );
+      expect(res.status).toBe(status);
+      expect(await res.json()).toMatchObject({ code });
+    }
+  });
+
+  it("verify-backup-code maps 'Invalid two factor token' and 'Invalid two factor code' to 401s", async () => {
+    for (const [message, code] of [
+      ["Invalid two factor token", "invalid_two_factor_token"],
+      ["Invalid two factor code", "invalid_two_factor_code"],
+    ] as const) {
+      const twoFactorVerifyBackupCode = vi.fn(async () => {
+        throw new Error(message);
+      });
+      const routes = captureRoutes(makeComponent(), { twoFactorVerifyBackupCode });
+      const handler = routes.get("POST /api/auth/two-factor/verify-backup-code")!;
+
+      const res = await handler(
+        makeCtx({}),
+        postWithPending("/api/auth/two-factor/verify-backup-code", { code: "abcd-efgh" }),
+      );
+      expect(res.status).toBe(401);
+      expect(await res.json()).toMatchObject({ code });
+    }
+  });
+
+  it("unknown errors still surface as 500 unknown", async () => {
+    const twoFactorVerifyTOTP = vi.fn(async () => {
+      throw new Error("database on fire");
+    });
+    const routes = captureRoutes(makeComponent(), { twoFactorVerifyTOTP });
+    const handler = routes.get("POST /api/auth/two-factor/verify-totp")!;
+
+    const res = await handler(
+      makeCtx({}),
+      postWithPending("/api/auth/two-factor/verify-totp", { code: "000000" }),
+    );
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ code: "unknown" });
+  });
+});
