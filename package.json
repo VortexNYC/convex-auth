@@ -30,7 +30,7 @@
     "check": "vp check",
     "fix": "vp lint --fix && vp fmt",
     "changeset": "changeset",
-    "version-packages": "changeset version",
+    "version-packages": "changeset version && vp fmt '**/CHANGELOG.md'",
     "ci:publish": "pnpm changeset publish",
     "scan:deps": "node scripts/scan-deps.mjs",
     "scan:sast": "semgrep scan --config=auto --severity=ERROR --error .",
