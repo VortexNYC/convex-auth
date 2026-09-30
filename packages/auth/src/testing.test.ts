@@ -198,6 +198,58 @@ describe("testing helpers", () => {
     );
   });
 
+  it("fails auth preflight command when auth.config.ts is missing", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "convex-auth-preflight-noconfig-"));
+    await mkdir(join(repoRoot, "apps/web"), { recursive: true });
+    await mkdir(join(repoRoot, "convex"), { recursive: true });
+    await mkdir(join(repoRoot, "node_modules/@vortex-api/convex-auth"), {
+      recursive: true,
+    });
+    await writeFile(
+      join(repoRoot, "package.json"),
+      JSON.stringify({ dependencies: { "@vortex-api/convex-auth": "0.1.25" } }),
+    );
+    await writeFile(join(repoRoot, "apps/web/package.json"), JSON.stringify({}));
+    await writeFile(
+      join(repoRoot, "node_modules/@vortex-api/convex-auth/package.json"),
+      JSON.stringify({ version: "0.1.25" }),
+    );
+    await writeFile(
+      join(repoRoot, ".test-env"),
+      ["VITE_CONVEX_URL=https://convex.example.test"].join("\n"),
+    );
+    await writeFile(
+      join(repoRoot, "convex/convex.config.ts"),
+      'import convexAuth from "@vortex-api/convex-auth/convex.config.js";\napp.use(convexAuth);',
+    );
+    await writeFile(
+      join(repoRoot, "convex/auth.ts"),
+      'import { convexAuth } from "@vortex-api/convex-auth/convex";\nexport const auth = convexAuth({});',
+    );
+    await writeFile(
+      join(repoRoot, "convex/http.ts"),
+      'import { httpRouter } from "convex/server";\nconst http = httpRouter();\nauth.addHttpRoutes(http);',
+    );
+
+    const lines: string[] = [];
+    const exitCode = await runConvexAuthPreflightCommand({
+      repoRoot,
+      env: {},
+      logger: (line) => lines.push(line),
+      fetchImpl: async () => new Response("ok", { status: 200 }),
+    });
+
+    assert.equal(exitCode, 1);
+    assert.equal(
+      lines.some(
+        (line) =>
+          line.includes("[ERROR] Convex auth provider config") &&
+          line.includes("auth.config.ts is missing"),
+      ),
+      true,
+    );
+  });
+
   it("signs in through legacy email password UI defaults", async () => {
     const page = new SignInPage();
 

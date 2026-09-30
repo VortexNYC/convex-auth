@@ -104,6 +104,7 @@ export type ConvexAuthPreflightCommandOptions = {
 
 export type ConvexAuthPreflightBackendSetupOptions = {
   authConfigPath?: string;
+  providerConfigPath?: string;
   convexConfigPath?: string;
   httpPath?: string;
 };
@@ -436,7 +437,8 @@ async function readBackendSetup(
   options: ConvexAuthPreflightBackendSetupOptions = {},
 ): Promise<ConvexAuthPreflightBackendSetup> {
   const convexConfigPath = options.convexConfigPath ?? "convex/convex.config.ts";
-  const authConfigPath = options.authConfigPath ?? "convex/auth.config.ts";
+  const authConfigPath = options.authConfigPath ?? "convex/auth.ts";
+  const providerConfigPath = options.providerConfigPath ?? "convex/auth.config.ts";
   const httpPath = options.httpPath ?? "convex/http.ts";
 
   return {
@@ -452,6 +454,12 @@ async function readBackendSetup(
         path: authConfigPath,
         content: await readOptionalText(resolve(repoRoot, authConfigPath)),
         requiredSnippets: ["convexAuth", 'from "@vortex-api/convex-auth/convex"'],
+      },
+      {
+        name: "Convex auth provider config",
+        path: providerConfigPath,
+        content: await readOptionalText(resolve(repoRoot, providerConfigPath)),
+        requiredSnippets: ["createConvexAuthProvider"],
       },
       {
         name: "Convex HTTP auth routes",
