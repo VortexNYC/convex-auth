@@ -301,36 +301,18 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
         } catch {}
       }
 
-      let result;
-      try {
-        result = await handleCallback(
-          ctx,
-          config.component,
-          config.oauth,
-          {
-            provider,
-            code,
-            state,
-            linkingUserId,
-          },
-          { boundaryEnforcesVerifier: true },
-        );
-      } catch (error) {
-        if (!(error instanceof UnsupportedOAuthProviderError)) throw error;
-        const stateErrorURL = await (async () => {
-          try {
-            const statePayload = await verifyOAuthState(state);
-            return statePayload.errorURL;
-          } catch {
-            return undefined;
-          }
-        })();
-        return buildErrorRedirect(
-          stateErrorURL ?? process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
-          "unsupported_provider",
-          `Unsupported OAuth provider: ${error.providerId}`,
-        );
-      }
+      const result = await handleCallback(
+        ctx,
+        config.component,
+        config.oauth,
+        {
+          provider,
+          code,
+          state,
+          linkingUserId,
+        },
+        { boundaryEnforcesVerifier: true },
+      );
       if ("error" in result) {
         return buildErrorRedirect(result.redirectUrl, result.error, result.errorDescription);
       }

@@ -223,7 +223,17 @@ export async function handleCallback<DataModel extends GenericDataModel>(
     };
   }
 
-  const provider = getProvider(config, args.provider);
+  let provider: NativeOAuthProvider;
+  try {
+    provider = getProvider(config, args.provider);
+  } catch (error) {
+    if (!(error instanceof UnsupportedOAuthProviderError)) throw error;
+    return {
+      error: "unsupported_provider",
+      errorDescription: error.message,
+      redirectUrl: resolveErrorURL(statePayload),
+    };
+  }
   const redirectURI = getRedirectURI(config, provider);
 
   let tokens: OAuthToken;
