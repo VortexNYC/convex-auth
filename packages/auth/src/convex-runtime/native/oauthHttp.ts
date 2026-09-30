@@ -1,5 +1,10 @@
 import { httpActionGeneric, type HttpRouter } from "convex/server";
-import { handleCallback, handleSignIn, type NativeOAuthConfig } from "./oauthHandlers.js";
+import {
+  handleCallback,
+  handleSignIn,
+  UnsupportedOAuthProviderError,
+  type NativeOAuthConfig,
+} from "./oauthHandlers.js";
 import { verifyOAuthState } from "./oauthState.js";
 import type { NativeOAuthComponentHandle } from "./types.js";
 import { verifyToken } from "./jwt.js";
@@ -126,10 +131,11 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
           { baseOrigin: requestOrigin, trustedOrigins },
         );
       } catch (error) {
+        if (!(error instanceof UnsupportedOAuthProviderError)) throw error;
         return buildErrorRedirect(
-          process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
+          errorURL ?? process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
           "unsupported_provider",
-          error instanceof Error ? error.message : "unknown",
+          `Unsupported OAuth provider: ${error.providerId}`,
         );
       }
 
@@ -310,10 +316,19 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
           { boundaryEnforcesVerifier: true },
         );
       } catch (error) {
+        if (!(error instanceof UnsupportedOAuthProviderError)) throw error;
+        const stateErrorURL = await (async () => {
+          try {
+            const statePayload = await verifyOAuthState(state);
+            return statePayload.errorURL;
+          } catch {
+            return undefined;
+          }
+        })();
         return buildErrorRedirect(
-          process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
+          stateErrorURL ?? process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
           "unsupported_provider",
-          error instanceof Error ? error.message : "unknown",
+          `Unsupported OAuth provider: ${error.providerId}`,
         );
       }
       if ("error" in result) {
