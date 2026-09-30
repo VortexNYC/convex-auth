@@ -6,8 +6,7 @@ import { api } from "../convex/_generated/api";
 import App from "./App";
 import "./index.css";
 
-const env = import.meta as unknown as { env: Record<string, string | undefined> };
-const convexUrl = env.env.VITE_CONVEX_URL;
+const convexUrl = import.meta.env.VITE_CONVEX_URL;
 if (typeof convexUrl !== "string" || convexUrl.length === 0) {
   throw new Error("VITE_CONVEX_URL is not set");
 }
