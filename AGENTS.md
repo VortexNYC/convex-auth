@@ -18,6 +18,20 @@ After editing package source: `pnpm -F @vortex-api/convex-auth build`, then forc
 a rebundle with `npx convex dev --once` inside the example — a long-running
 `convex dev` watcher can push a stale copy of the package dist.
 
+## vite-plus peer-context trap (SSR examples)
+
+`vite` is overridden to `npm:@voidzero-dev/vite-plus-core` workspace-wide. pnpm
+splits it into per-peer-context instances (peers like `typescript` and
+`@types/node` each change the suffix); when a consumer's `vite` resolves to a
+different copy than the `vp` CLI's, `instanceof`-based environment checks
+(TanStack Start's `isRunnableDevEnvironment`) silently fail — `vp dev` answers
+every route with connect's bare `Cannot GET` 404 and no error. Keep `typescript`
+in `examples/tanstack-start` pinned exactly to the version in the root importer's
+resolved peer suffix in `pnpm-lock.yaml` (currently `6.0.3`) so the plugin and
+the running dev server share one `vite-plus-core` instance. If this recurs, the
+existing `react` override in `pnpm-workspace.yaml` is the precedent for a
+workspace-wide pin.
+
 ## Deployment placeholders
 
 Use generic placeholders in examples and never commit real deployment names:
