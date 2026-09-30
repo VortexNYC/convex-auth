@@ -119,7 +119,7 @@ export const consumeVerificationCode = mutation({
   },
 });
 
-export const recordFailedVerificationAttempt = mutation({
+export const reserveVerificationAttempt = mutation({
   args: {
     tokenHash: v.string(),
     type: verificationCodeTypeValidator,
@@ -135,12 +135,13 @@ export const recordFailedVerificationAttempt = mutation({
       return null;
     }
 
-    const failedAttempts = (code.failedAttempts ?? 0) + 1;
-    const locked = failedAttempts >= args.maxAttempts;
+    const failedAttempts = code.failedAttempts ?? 0;
+    if (failedAttempts >= args.maxAttempts) {
+      return null;
+    }
 
     await ctx.db.patch("authVerificationCodes", code._id, {
-      failedAttempts,
-      consumedAt: locked ? now : code.consumedAt,
+      failedAttempts: failedAttempts + 1,
       updatedAt: now,
     });
     return (await ctx.db.get("authVerificationCodes", code._id)) ?? null;

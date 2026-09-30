@@ -361,7 +361,7 @@ describe("native verification codes", () => {
     expect(expiredConsume).toBeNull();
   });
 
-  it("recordFailedVerificationAttempt counts failures without consuming, then locks at the cap", async () => {
+  it("reserveVerificationAttempt grants five slots then rejects, leaving the challenge consumable", async () => {
     const t = convexTest(schema, modules);
 
     const userId = await t.run(async (ctx) =>
@@ -382,8 +382,8 @@ describe("native verification codes", () => {
       expiresAt: Date.now() + 300_000,
     });
 
-    for (let i = 1; i <= 4; i++) {
-      const attempt = await t.mutation(api.native.codes.recordFailedVerificationAttempt, {
+    for (let i = 1; i <= 5; i++) {
+      const attempt = await t.mutation(api.native.codes.reserveVerificationAttempt, {
         tokenHash: "pending-hash",
         type: "two_factor_pending",
         maxAttempts: 5,
@@ -392,16 +392,8 @@ describe("native verification codes", () => {
       expect(attempt?.consumedAt).toBeUndefined();
     }
 
-    const fifth = await t.mutation(api.native.codes.recordFailedVerificationAttempt, {
-      tokenHash: "pending-hash",
-      type: "two_factor_pending",
-      maxAttempts: 5,
-    });
-    expect(fifth?.failedAttempts).toBe(5);
-    expect(fifth?.consumedAt).toBeGreaterThan(0);
-
-    /* Locked: further attempts and consumes both get nothing back. */
-    const sixth = await t.mutation(api.native.codes.recordFailedVerificationAttempt, {
+    /* Exhausted: no more slots, but the last reserver must still be able to consume. */
+    const sixth = await t.mutation(api.native.codes.reserveVerificationAttempt, {
       tokenHash: "pending-hash",
       type: "two_factor_pending",
       maxAttempts: 5,
@@ -412,10 +404,10 @@ describe("native verification codes", () => {
       tokenHash: "pending-hash",
       type: "two_factor_pending",
     });
-    expect(consume).toBeNull();
+    expect(consume?.consumedAt).toBeGreaterThan(0);
   });
 
-  it("recordFailedVerificationAttempt ignores expired, consumed, and unknown tokens", async () => {
+  it("reserveVerificationAttempt ignores expired, consumed, and unknown tokens", async () => {
     const t = convexTest(schema, modules);
 
     const userId = await t.run(async (ctx) =>
@@ -451,7 +443,7 @@ describe("native verification codes", () => {
     });
 
     for (const tokenHash of ["expired", "consumed", "unknown"]) {
-      const result = await t.mutation(api.native.codes.recordFailedVerificationAttempt, {
+      const result = await t.mutation(api.native.codes.reserveVerificationAttempt, {
         tokenHash,
         type: "two_factor_pending",
         maxAttempts: 5,

@@ -591,7 +591,7 @@ export type ComponentApi<Name extends string | undefined = string | undefined> =
           } | null,
           Name
         >;
-        recordFailedVerificationAttempt: FunctionReference<
+        reserveVerificationAttempt: FunctionReference<
           "mutation",
           "internal",
           {

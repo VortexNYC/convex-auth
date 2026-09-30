@@ -143,7 +143,7 @@ function createMockComponent(): MockedComponent {
         createVerificationCode: vi.fn(),
         getVerificationCodeByTokenHash: vi.fn(),
         consumeVerificationCode: vi.fn(),
-        recordFailedVerificationAttempt: vi.fn(),
+        reserveVerificationAttempt: vi.fn(),
         revokeVerificationCodesForUser: vi.fn(),
       },
       rateLimits: {
@@ -1718,7 +1718,7 @@ describe("nativeEmailAndPassword", () => {
         createdAt: 0,
         updatedAt: 0,
       };
-      component.native.codes.getVerificationCodeByTokenHash.mockResolvedValue(pendingCode);
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(pendingCode);
       component.native.codes.consumeVerificationCode.mockResolvedValue(pendingCode);
       component.native.sessions.createSessionAndRefreshToken.mockResolvedValue({
         sessionId: "session_2",
@@ -1765,7 +1765,7 @@ describe("nativeEmailAndPassword", () => {
         createdAt: 0,
         updatedAt: 0,
       };
-      component.native.codes.getVerificationCodeByTokenHash.mockResolvedValue(pendingCode);
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(pendingCode);
       component.native.codes.consumeVerificationCode.mockResolvedValue(pendingCode);
       component.native.sessions.createSessionAndRefreshToken.mockResolvedValue({
         sessionId: "session_2",
@@ -1779,7 +1779,7 @@ describe("nativeEmailAndPassword", () => {
       await expect(
         handler(createContext(), { token: challengeToken, code: "000000" }),
       ).rejects.toThrow("Invalid two factor code");
-      expect(component.native.codes.recordFailedVerificationAttempt).toHaveBeenCalledWith(
+      expect(component.native.codes.reserveVerificationAttempt).toHaveBeenCalledWith(
         expect.objectContaining({ type: "two_factor_pending", maxAttempts: 5 }),
       );
       expect(component.native.codes.consumeVerificationCode).not.toHaveBeenCalled();
@@ -1806,19 +1806,7 @@ describe("nativeEmailAndPassword", () => {
         ...user,
         twoFactorSecret: await encryptAccountToken(secret),
       });
-      component.native.codes.getVerificationCodeByTokenHash.mockResolvedValue({
-        _id: "code_1",
-        _creationTime: 0,
-        userId: "user_1",
-        type: "two_factor_pending",
-        tokenHash: await hashToken(challengeToken),
-        identityId: "identity_1",
-        expiresAt: Date.now() + 60_000,
-        consumedAt: Date.now(),
-        failedAttempts: 5,
-        createdAt: 0,
-        updatedAt: 0,
-      });
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(null);
       component.native.sessions.getSessionByToken.mockResolvedValue(null);
 
       const { twoFactorVerifyTOTP } = createActions(component);
@@ -1853,7 +1841,7 @@ describe("nativeEmailAndPassword", () => {
         createdAt: 0,
         updatedAt: 0,
       };
-      component.native.codes.getVerificationCodeByTokenHash.mockResolvedValue(pendingCode);
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(pendingCode);
       component.native.codes.consumeVerificationCode.mockResolvedValue(pendingCode);
       component.native.users.consumeBackupCode.mockResolvedValue({ success: true });
       component.native.sessions.createSessionAndRefreshToken.mockResolvedValue({
@@ -1868,7 +1856,7 @@ describe("nativeEmailAndPassword", () => {
       await expect(
         handler(createContext(), { token: challengeToken, code: "WRONG-CODE" }),
       ).rejects.toThrow("Invalid two factor code");
-      expect(component.native.codes.recordFailedVerificationAttempt).toHaveBeenCalledWith(
+      expect(component.native.codes.reserveVerificationAttempt).toHaveBeenCalledWith(
         expect.objectContaining({ type: "two_factor_pending", maxAttempts: 5 }),
       );
       expect(component.native.codes.consumeVerificationCode).not.toHaveBeenCalled();
@@ -1886,19 +1874,7 @@ describe("nativeEmailAndPassword", () => {
       const component = createMockComponent();
       const challengeToken = "opaque-pending-challenge";
 
-      component.native.codes.getVerificationCodeByTokenHash.mockResolvedValue({
-        _id: "code_1",
-        _creationTime: 0,
-        userId: "user_1",
-        type: "two_factor_pending",
-        tokenHash: await hashToken(challengeToken),
-        identityId: "identity_1",
-        expiresAt: Date.now() + 60_000,
-        consumedAt: Date.now(),
-        failedAttempts: 5,
-        createdAt: 0,
-        updatedAt: 0,
-      });
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(null);
 
       const { twoFactorVerifyBackupCode } = createActions(component);
       await expect(
@@ -1919,7 +1895,7 @@ describe("nativeEmailAndPassword", () => {
         { expiresInSeconds: 600 },
       );
 
-      component.native.codes.getVerificationCodeByTokenHash.mockResolvedValue(null);
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(null);
       component.native.sessions.getSessionByToken.mockResolvedValue(null);
 
       const { twoFactorVerifyTOTP } = createActions(component);
@@ -1957,7 +1933,7 @@ describe("nativeEmailAndPassword", () => {
         createdAt: 0,
         updatedAt: 0,
       };
-      component.native.codes.getVerificationCodeByTokenHash.mockResolvedValue(pendingCode);
+      component.native.codes.reserveVerificationAttempt.mockResolvedValue(pendingCode);
       component.native.codes.consumeVerificationCode.mockResolvedValue(pendingCode);
       component.native.users.consumeBackupCode.mockResolvedValue({ success: true });
       component.native.sessions.createSessionAndRefreshToken.mockResolvedValue({

@@ -701,7 +701,7 @@ export type NativeEmailAndPasswordComponentHandle = {
         NativeVerificationCodeDoc | null,
         string
       >;
-      recordFailedVerificationAttempt: FunctionReference<
+      reserveVerificationAttempt: FunctionReference<
         "mutation",
         "public" | "internal",
         { tokenHash: string; type: VerificationCodeType; maxAttempts: number },
