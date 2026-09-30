@@ -23,7 +23,7 @@ servers:
     variables:
       deployment:
         default: your-deployment
-        description: Convex deployment name, e.g. `perfect-dragon-698`
+        description: Convex deployment name, e.g. `happy-otter-123`
 tags:
   - name: Session
     description: Read, rotate, and destroy sessions.

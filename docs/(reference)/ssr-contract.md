@@ -485,7 +485,7 @@ Adapter-level (upstream's bar is `test-nextjs/e2e-tests` — match it):
    pre-column rows), with the component-level tests above. All
    component-level contract items are now covered.
 
-   **Real-deployment validation (fast-gopher-450, 2026-09-18):** the
+   **Real-deployment validation (live dev deployment, 2026-09-18):** the
    parallel-refresh race was exercised over HTTP on a live Convex
    deployment — eight simultaneous `update-session` calls on one refresh
    token produced one rotation and seven converged siblings, all bound to
