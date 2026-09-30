@@ -1688,6 +1688,120 @@ describe("addNativeOAuthHttpRoutes", () => {
     );
   });
 
+  it("redirects with unsupported_provider instead of throwing on an unconfigured provider", async () => {
+    const config = createOAuthConfig();
+    const routes: {
+      path?: string;
+      pathPrefix?: string;
+      method: string;
+      handler: (ctx: unknown, request: Request) => Promise<Response>;
+    }[] = [];
+    const http = { route: (r: (typeof routes)[number]) => routes.push(r) };
+    addNativeOAuthHttpRoutes(http as unknown as import("convex/server").HttpRouter, {
+      component: createMockComponent() as unknown as NativeOAuthComponentHandle,
+      oauth: config,
+    });
+    const signinRoute = routes.find((r) => r.pathPrefix === "/api/auth/signin/")!;
+    const response = (await exec(signinRoute.handler).handler(
+      createContext(),
+      new Request("https://app.example.com/api/auth/signin/notreal"),
+    )) as Response;
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe(
+      "https://test.convex.site/?error=unsupported_provider&error_description=Unsupported+OAuth+provider%3A+notreal",
+    );
+  });
+
+  it("honors the validated errorURL for an unconfigured provider", async () => {
+    const config = createOAuthConfig();
+    const routes: {
+      path?: string;
+      pathPrefix?: string;
+      method: string;
+      handler: (ctx: unknown, request: Request) => Promise<Response>;
+    }[] = [];
+    const http = { route: (r: (typeof routes)[number]) => routes.push(r) };
+    addNativeOAuthHttpRoutes(http as unknown as import("convex/server").HttpRouter, {
+      component: createMockComponent() as unknown as NativeOAuthComponentHandle,
+      oauth: config,
+    });
+    const signinRoute = routes.find((r) => r.pathPrefix === "/api/auth/signin/")!;
+    const response = (await exec(signinRoute.handler).handler(
+      createContext(),
+      new Request(
+        "https://app.example.com/api/auth/signin/notreal?errorURL=https://app.example.com/error",
+      ),
+    )) as Response;
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe(
+      "https://app.example.com/error?error=unsupported_provider&error_description=Unsupported+OAuth+provider%3A+notreal",
+    );
+  });
+
+  it("redirects with unsupported_provider on the callback route and honors the state errorURL", async () => {
+    const config = createOAuthConfig();
+    const state = await mintOAuthState({
+      provider: "notreal",
+      codeVerifier: await generateCodeVerifier(),
+      errorURL: "https://app.example.com/error",
+    });
+    const routes: {
+      path?: string;
+      pathPrefix?: string;
+      method: string;
+      handler: (ctx: unknown, request: Request) => Promise<Response>;
+    }[] = [];
+    const http = { route: (r: (typeof routes)[number]) => routes.push(r) };
+    addNativeOAuthHttpRoutes(http as unknown as import("convex/server").HttpRouter, {
+      component: createMockComponent() as unknown as NativeOAuthComponentHandle,
+      oauth: config,
+    });
+    const callbackRoute = routes.find((r) => r.pathPrefix === "/api/auth/callback/")!;
+    const response = (await exec(callbackRoute.handler).handler(
+      createContext() as unknown as GenericActionCtx<DataModel>,
+      new Request(`https://app.example.com/api/auth/callback/notreal?code=code-123&state=${state}`),
+    )) as Response;
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe(
+      "https://app.example.com/error?error=unsupported_provider&error_description=Unsupported+OAuth+provider%3A+notreal",
+    );
+  });
+
+  it("still throws for non-provider failures so misconfiguration keeps a 500 signal", async () => {
+    const failingFetch = vi.fn(async () => {
+      throw new Error("discovery fetch exploded");
+    });
+    const config = createOAuthConfig({
+      providers: {
+        broken: {
+          clientId: "test-client",
+          clientSecret: "test-secret",
+          issuer: "https://broken.example.com",
+          discovery: true,
+          fetchImpl: failingFetch as unknown as typeof globalThis.fetch,
+        },
+      },
+    });
+    const routes: {
+      path?: string;
+      pathPrefix?: string;
+      method: string;
+      handler: (ctx: unknown, request: Request) => Promise<Response>;
+    }[] = [];
+    const http = { route: (r: (typeof routes)[number]) => routes.push(r) };
+    addNativeOAuthHttpRoutes(http as unknown as import("convex/server").HttpRouter, {
+      component: createMockComponent() as unknown as NativeOAuthComponentHandle,
+      oauth: config,
+    });
+    const signinRoute = routes.find((r) => r.pathPrefix === "/api/auth/signin/")!;
+    await expect(
+      exec(signinRoute.handler).handler(
+        createContext(),
+        new Request("https://app.example.com/api/auth/signin/broken"),
+      ),
+    ).rejects.toThrow("discovery fetch exploded");
+  });
+
   it("maps a provider error to provider_error and preserves the absolute errorURL", async () => {
     const config = createOAuthConfig();
     const component = createMockComponent();

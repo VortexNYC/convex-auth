@@ -1,5 +1,10 @@
 import { httpActionGeneric, type HttpRouter } from "convex/server";
-import { handleCallback, handleSignIn, type NativeOAuthConfig } from "./oauthHandlers.js";
+import {
+  handleCallback,
+  handleSignIn,
+  UnsupportedOAuthProviderError,
+  type NativeOAuthConfig,
+} from "./oauthHandlers.js";
 import { verifyOAuthState } from "./oauthState.js";
 import type { NativeOAuthComponentHandle } from "./types.js";
 import { verifyToken } from "./jwt.js";
@@ -110,19 +115,29 @@ export function addNativeOAuthHttpRoutes(http: HttpRouter, config: NativeOAuthHt
         );
       }
 
-      const result = await handleSignIn(
-        config.oauth,
-        {
-          provider,
-          callbackURL,
-          errorURL,
-          newUserURL,
-          requestSignUp,
-          link,
-          landingVerifier,
-        },
-        { baseOrigin: requestOrigin, trustedOrigins },
-      );
+      let result;
+      try {
+        result = await handleSignIn(
+          config.oauth,
+          {
+            provider,
+            callbackURL,
+            errorURL,
+            newUserURL,
+            requestSignUp,
+            link,
+            landingVerifier,
+          },
+          { baseOrigin: requestOrigin, trustedOrigins },
+        );
+      } catch (error) {
+        if (!(error instanceof UnsupportedOAuthProviderError)) throw error;
+        return buildErrorRedirect(
+          errorURL ?? process.env.SITE_URL ?? process.env.CONVEX_SITE_URL ?? "/",
+          "unsupported_provider",
+          `Unsupported OAuth provider: ${error.providerId}`,
+        );
+      }
 
       return new Response(null, {
         status: 302,

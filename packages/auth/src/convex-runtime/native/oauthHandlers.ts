@@ -107,6 +107,16 @@ export type NativeOAuthCallbackErrorResult = {
 
 const DEFAULT_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** Thrown only when the request names a provider id with no configured backend. */
+export class UnsupportedOAuthProviderError extends Error {
+  readonly providerId: string;
+  constructor(providerId: string) {
+    super(`Unsupported OAuth provider: ${providerId}`);
+    this.name = "UnsupportedOAuthProviderError";
+    this.providerId = providerId;
+  }
+}
+
 function getProvider(config: NativeOAuthConfig, providerId: string): NativeOAuthProvider {
   if (providerId === "github" && config.github) {
     return createGitHubProvider(config.github);
@@ -120,7 +130,7 @@ function getProvider(config: NativeOAuthConfig, providerId: string): NativeOAuth
   if (config.providers?.[providerId]) {
     return createGenericOAuthProvider(providerId, config.providers[providerId]);
   }
-  throw new Error(`Unsupported OAuth provider: ${providerId}`);
+  throw new UnsupportedOAuthProviderError(providerId);
 }
 
 function getRedirectURI(config: NativeOAuthConfig, provider: NativeOAuthProvider): string {
@@ -213,7 +223,17 @@ export async function handleCallback<DataModel extends GenericDataModel>(
     };
   }
 
-  const provider = getProvider(config, args.provider);
+  let provider: NativeOAuthProvider;
+  try {
+    provider = getProvider(config, args.provider);
+  } catch (error) {
+    if (!(error instanceof UnsupportedOAuthProviderError)) throw error;
+    return {
+      error: "unsupported_provider",
+      errorDescription: error.message,
+      redirectUrl: resolveErrorURL(statePayload),
+    };
+  }
   const redirectURI = getRedirectURI(config, provider);
 
   let tokens: OAuthToken;
