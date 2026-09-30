@@ -8,8 +8,7 @@ import {
 import { api } from "../convex/_generated/api";
 import App from "./App";
 
-const env = import.meta as unknown as { env: Record<string, string | undefined> };
-const convexUrl = env.env.EXPO_PUBLIC_CONVEX_URL;
+const convexUrl = import.meta.env.EXPO_PUBLIC_CONVEX_URL;
 if (typeof convexUrl !== "string" || convexUrl.length === 0) {
   throw new Error("EXPO_PUBLIC_CONVEX_URL is not set");
 }
