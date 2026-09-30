@@ -15,11 +15,12 @@ branch `feat/tanstack-start-adapter`, head `8bab3b9`, all pushed.
 
 Cloud:
 
-- `perfect-dragon-698` — react example SPA + backend (dev).
-- `cheerful-buzzard-770` — oauth example SPA + backend (prod slot; moved
-  off `perfect-dragon-698` — the two were clobbering each other).
-- `stoic-pony-614` — react-native backend (dev).
-- `fast-gopher-450` — server example backend (dev).
+- `<react-example-deployment>` — react example SPA + backend (dev).
+- `<oauth-example-deployment>` — oauth example SPA + backend (prod slot;
+  moved off the react example's deployment — the two were clobbering
+  each other).
+- `<react-native-deployment>` — react-native backend (dev).
+- `<server-example-deployment>` — server example backend (dev).
 
 Local anonymous backends (unique ports so all coexist):
 
@@ -248,7 +249,7 @@ green (includes site/changelog). CI pending on `8bab3b9`.
 - **Verified live**: action pushed tag `@vortex-api/convex-auth@3.0.1`
   itself; release created manually this once; next publish should be
   fully automatic (watch the next version PR for a CHANGELOG.md diff).
-- **Docs deployed** to resilient-mule-559.convex.site: v2 frozen tree at
+- **Docs deployed** to <docs-deployment>.convex.site: v2 frozen tree at
   /v2/\*, changelog pages incl. 3.0.1 generated from GitHub Releases.
 - `blume version` quirk: needs `content.root: "../docs"` in
   site/blume.config.ts to snapshot into the real docs dir.
@@ -273,7 +274,7 @@ green (includes site/changelog). CI pending on `8bab3b9`.
 - **PR #401** — blume 2.0.2: adapter-model config (sources/reference
   factories), `content.root` removed — `blume version` snapshots at the
   first filesystem() source root, so docs/v2 freeze is preserved.
-  deployment.site fixed to resilient-mule-559. 2.0 validator surfaced
+  deployment.site fixed to <docs-deployment>. 2.0 validator surfaced
   30 pre-existing dead /docs/* hrefs — fixed (live `/X`, frozen
   `/v2/X`). Adopted: changelog nav tab + agents.llmsTxt.details.
 - **PR #402** — CI gap closed: `sitechanged` scope runs `blume
@@ -349,10 +350,10 @@ base: "/convex-auth" }` in site/blume.config.ts prefixes every
   internal link/asset/canonical; `site/convex/http.ts` strips the
   prefix before resolving stored assets (files upload to dist root;
   asset storage paths stay root-relative). Requests outside the
-  prefix 302 into it — old resilient-mule-559.convex.site deep links
+  prefix 302 into it — old <docs-deployment>.convex.site deep links
   keep working.
 - Routing requirement for Vortex infra: `labs.vortex.nyc/convex-auth/*`
-  must reach `resilient-mule-559.convex.site/convex-auth/*` with the
+  must reach `<docs-deployment>.convex.site/convex-auth/*` with the
   path PRESERVED (no rewrite needed). Any proxy that forwards the path
   as-is works. A Convex custom-domain map of labs.vortex.nyc → this
   deployment would also work but locks the whole domain to one
