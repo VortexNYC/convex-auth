@@ -56,6 +56,7 @@ function backendSetupFromConvexDir(convexDir: string): ConvexAuthPreflightBacken
   const base = convexDir.replace(/\/+$/, "");
   return {
     authConfigPath: `${base}/auth.ts`,
+    providerConfigPath: `${base}/auth.config.ts`,
     convexConfigPath: `${base}/convex.config.ts`,
     httpPath: `${base}/http.ts`,
   };

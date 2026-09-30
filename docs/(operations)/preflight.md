@@ -10,7 +10,7 @@ description: Validate your auth setup before deploying.
 - `VITE_CONVEX_URL` or `CONVEX_URL` is set and looks like a Convex URL.
 - `CONVEX_SITE_URL` is set and uses the `.convex.site` origin.
 - `convex/convex.config.ts` mounts the `convex-auth` component with the expected environment shape (`JWT_PRIVATE_KEY`, `JWKS`).
-- `convex/auth.ts` and `convex/http.ts` are present.
+- `convex/auth.ts` calls `convexAuth`, `convex/auth.config.ts` registers `createConvexAuthProvider`, and `convex/http.ts` mounts the auth routes.
 - The generated `convex/_generated` files are committed and not stale.
 
 ## Run it
