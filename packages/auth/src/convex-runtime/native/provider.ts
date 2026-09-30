@@ -995,9 +995,9 @@ export function nativeEmailAndPassword(
     code: string,
     method: "totp" | "backup_code",
   ): Promise<boolean> {
-    if (!user.twoFactorSecret) return false;
-    const secretPlain = await decryptAccountToken(user.twoFactorSecret);
     if (method === "totp") {
+      if (!user.twoFactorSecret) return false;
+      const secretPlain = await decryptAccountToken(user.twoFactorSecret);
       return verifyTOTP(decodeBase32(secretPlain), code, undefined, 1);
     }
     if (!user.twoFactorBackupCodes) return false;
@@ -1147,14 +1147,18 @@ export function nativeEmailAndPassword(
       const resolved = await resolveTwoFactorChallengeToken(ctx, args.token);
       if (!resolved) throw new Error("Invalid two factor token");
 
-      const consumed = await consumeBackupCode(ctx, resolved.user, resolved.userId, args.code);
-      if (!consumed) {
+      const matches = await verifyTwoFactorCode(resolved.user, args.code, "backup_code");
+      if (!matches) {
         await recordTwoFactorFailedAttempt(ctx, args.token);
         throw new Error("Invalid two factor code");
       }
+      /* Lock the challenge before burning the backup code so a concurrent
+       * winner cannot leave the user without both a session and the code. */
       if (!(await consumeTwoFactorChallengeToken(ctx, args.token))) {
         throw new Error("Invalid two factor token");
       }
+      const consumed = await consumeBackupCode(ctx, resolved.user, resolved.userId, args.code);
+      if (!consumed) throw new Error("Invalid two factor code");
 
       return await finishTwoFactorVerify(
         ctx,
