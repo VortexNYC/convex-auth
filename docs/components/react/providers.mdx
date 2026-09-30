@@ -151,3 +151,16 @@ No props.
 | `inviterLabel`     | `string` | No       |
 | `organizationName` | `string` | No       |
 | `roleName`         | `string` | No       |
+
+### `ConvexAuthIdentityProvisioner`
+
+Lower-level provisioner — `ConvexAuthConvexIdentityProvisioner` wraps this with the Convex function references already bound.
+
+**Props**
+
+| Name                   | Type                     | Optional | Description                                     |
+| ---------------------- | ------------------------ | -------- | ----------------------------------------------- |
+| `auth`                 | `ConvexAuthState`        | No       | Current auth state to provision against.        |
+| `currentUser`          | `unknown`                | No       | The resolved user, if already provisioned.      |
+| `sessionSubject`       | `string \| null`         | No       | Session subject being provisioned.              |
+| `provisionCurrentUser` | `() => Promise<unknown>` | No       | Mutation that provisions the user when invoked. |
