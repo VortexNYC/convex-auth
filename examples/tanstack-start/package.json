@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@tanstack/react-router": "1.170.36",
-    "@tanstack/react-start": "1.168.54",
+    "@tanstack/react-start": "1.168.59",
     "@vortex-api/convex-auth": "workspace:*",
     "convex": "^1.46.0",
     "react": "^19.3.0",
