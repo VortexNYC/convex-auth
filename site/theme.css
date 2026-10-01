@@ -54,6 +54,13 @@
   border: 1px solid var(--blume-border);
 }
 
+/* Table headers sit on the muted surface so framed tables read as
+   header/body instead of a flat grid — covers markdown tables (wrapped in
+   .blume-table-scroll) and PropsTable output alike. */
+table :where(thead) tr {
+  background: var(--blume-muted);
+}
+
 /* Nested sidebar groups (React, React Native under UI components) get a
    24px gap that detaches them from the page rows above — halve it so the
    group headers track the sidebar's tighter item rhythm. Scoped to li>…>li
