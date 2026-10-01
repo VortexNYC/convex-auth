@@ -81,6 +81,7 @@ export default defineConfig({
     { from: "/components/api-keys", to: "/components/react/api-keys" },
     { from: "/components/webhooks", to: "/components/react/webhooks" },
     { from: "/components/security", to: "/components/react/security" },
+    { from: "/components/admin", to: "/components/react/admin" },
     { from: "/components/providers", to: "/components/react/providers" },
     // The v2 archive was removed; land its deep links on the closest v3 page.
     { from: "/v2", to: "/" },

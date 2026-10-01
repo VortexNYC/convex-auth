@@ -15,19 +15,39 @@ No props.
 
 ### `AuthLoadedBoundaryView`
 
-No props.
+**Props**
+
+| Name       | Type              | Optional | Description                         |
+| ---------- | ----------------- | -------- | ----------------------------------- |
+| `auth`     | `ConvexAuthState` | No       | Auth state to inspect.              |
+| `children` | `ReactNode`       | No       | Rendered once the auth state loads. |
 
 ### `AuthLoadingBoundaryView`
 
-No props.
+**Props**
+
+| Name       | Type              | Optional | Description                                     |
+| ---------- | ----------------- | -------- | ----------------------------------------------- |
+| `auth`     | `ConvexAuthState` | No       | Auth state to inspect.                          |
+| `children` | `ReactNode`       | No       | Rendered while the auth state is still loading. |
 
 ### `AuthSignedInBoundary`
 
-No props.
+**Props**
+
+| Name       | Type              | Optional | Description                                |
+| ---------- | ----------------- | -------- | ------------------------------------------ |
+| `auth`     | `ConvexAuthState` | No       | Auth state to inspect.                     |
+| `children` | `ReactNode`       | No       | Rendered only when a session is signed in. |
 
 ### `AuthSignedOutBoundary`
 
-No props.
+**Props**
+
+| Name       | Type              | Optional | Description                                 |
+| ---------- | ----------------- | -------- | ------------------------------------------- |
+| `auth`     | `ConvexAuthState` | No       | Auth state to inspect.                      |
+| `children` | `ReactNode`       | No       | Rendered only when no session is signed in. |
 
 ## Providers & runtime
 
@@ -57,6 +77,19 @@ No props.
 | `auth`                 | `ConvexAuthState`                                         | No       |
 | `getCurrentUser`       | `FunctionReference<query, public, EmptyArgs, unknown>`    | No       |
 | `provisionCurrentUser` | `FunctionReference<mutation, public, EmptyArgs, unknown>` | No       |
+
+### `ConvexAuthIdentityProvisioner`
+
+Lower-level provisioner — `ConvexAuthConvexIdentityProvisioner` wraps this with the Convex function references already bound.
+
+**Props**
+
+| Name                   | Type                     | Optional | Description                                              |
+| ---------------------- | ------------------------ | -------- | -------------------------------------------------------- |
+| `auth`                 | `ConvexAuthState`        | No       | Current auth state to provision against.                 |
+| `currentUser`          | `unknown`                | No       | The resolved user — `null` until provisioning completes. |
+| `sessionSubject`       | `string \| null`         | No       | Session subject being provisioned.                       |
+| `provisionCurrentUser` | `() => Promise<unknown>` | No       | Callback that provisions the user when invoked.          |
 
 ### `ConvexAuthProvider`
 
@@ -151,16 +184,3 @@ No props.
 | `inviterLabel`     | `string` | No       |
 | `organizationName` | `string` | No       |
 | `roleName`         | `string` | No       |
-
-### `ConvexAuthIdentityProvisioner`
-
-Lower-level provisioner — `ConvexAuthConvexIdentityProvisioner` wraps this with the Convex function references already bound.
-
-**Props**
-
-| Name                   | Type                     | Optional | Description                                     |
-| ---------------------- | ------------------------ | -------- | ----------------------------------------------- |
-| `auth`                 | `ConvexAuthState`        | No       | Current auth state to provision against.        |
-| `currentUser`          | `unknown`                | No       | The resolved user, if already provisioned.      |
-| `sessionSubject`       | `string \| null`         | No       | Session subject being provisioned.              |
-| `provisionCurrentUser` | `() => Promise<unknown>` | No       | Mutation that provisions the user when invoked. |
