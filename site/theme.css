@@ -8,7 +8,9 @@
   --blume-muted: oklch(0.962 0.005 250);
   --blume-muted-foreground: oklch(0.47 0.012 250);
   --blume-border: oklch(0.875 0.007 250 / 0.72);
-  --blume-code-background: oklch(0.97 0.004 250);
+  /* Kept near-white: github-light syntax colors fall below AA on darker
+     surfaces, and this preserves separation from --blume-muted. */
+  --blume-code-background: oklch(0.985 0.003 250);
 }
 
 :root[data-theme="dark"] {
@@ -17,7 +19,13 @@
   --blume-muted: oklch(0.185 0.008 250);
   --blume-muted-foreground: oklch(0.73 0.012 250);
   --blume-border: oklch(0.28 0.01 250 / 0.8);
-  --blume-code-background: oklch(0.155 0.007 250);
+  /* Sits between page and muted; lighter would push github-dark comment
+     contrast further under AA. */
+  --blume-code-background: oklch(0.14 0.008 250);
+  /* Blume pins dark accent-foreground to white regardless of the configured
+     accent — fine for colored accents, invisible on a near-white one. Pair
+     it with the page tone so accent-filled controls stay readable. */
+  --blume-accent-foreground: oklch(0.1 0.005 250);
 }
 
 /* Header action icons — Blume header links are text-only, so the npm and
