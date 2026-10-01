@@ -131,3 +131,15 @@ Forms and lists for the [API keys](/api-keys) feature — issue, rotate, and rev
 | `revokeLabel`         | `string` |
 | `rotateLabel`         | `string` |
 | `unknownCreatorLabel` | `string` |
+
+### `ConvexApiKeyCreated`
+
+One-time secret reveal shown immediately after a key is created — the only time the raw key is ever visible.
+
+**Props**
+
+| Name         | Type                                            | Optional | Description                          |
+| ------------ | ----------------------------------------------- | -------- | ------------------------------------ |
+| `apiKey`     | `string`                                        | No       | The newly created key value.         |
+| `classNames` | `{ card, content, title, token, hint, button }` | Yes      | Per-element class overrides.         |
+| `onClose`    | `() => void`                                    | Yes      | Called when the reveal is dismissed. |
