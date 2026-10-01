@@ -12,13 +12,7 @@
 // inherited DOM attributes collapse into a `(rest)` row naming the base
 // type instead of dumping hundreds of lib entries.
 
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
@@ -43,11 +37,7 @@ const files = tsxFiles(reactSrc);
 
 const configPath = join(repoRoot, "packages/auth/tsconfig.json");
 const { config } = ts.readConfigFile(configPath, ts.sys.readFile);
-const { options } = ts.parseJsonConfigFileContent(
-  config,
-  ts.sys,
-  dirname(configPath),
-);
+const { options } = ts.parseJsonConfigFileContent(config, ts.sys, dirname(configPath));
 
 const program = ts.createProgram(files, { ...options, noEmit: true });
 const checker = program.getTypeChecker();
@@ -167,10 +157,7 @@ function externalBases(param) {
 
   // Interface heritage on an interface declared in this repo
   for (const decl of type.symbol?.declarations ?? []) {
-    if (
-      ts.isInterfaceDeclaration(decl) &&
-      !isExternalFile(decl.getSourceFile().fileName)
-    ) {
+    if (ts.isInterfaceDeclaration(decl) && !isExternalFile(decl.getSourceFile().fileName)) {
       for (const clause of decl.heritageClauses ?? []) {
         for (const t of clause.types) {
           const resolved = checker.getTypeAtLocation(t.expression);
@@ -203,12 +190,9 @@ function propsOfFunction(decl) {
       const name = p.getName();
       const propType = checker.getTypeOfSymbolAtLocation(p, propDecl);
       const undefInUnion =
-        propType.isUnion() &&
-        propType.types.some((u) => (u.flags & ts.TypeFlags.Undefined) !== 0);
+        propType.isUnion() && propType.types.some((u) => (u.flags & ts.TypeFlags.Undefined) !== 0);
       const optional =
-        (p.flags & ts.SymbolFlags.Optional) !== 0 ||
-        defaults.has(name) ||
-        undefInUnion;
+        (p.flags & ts.SymbolFlags.Optional) !== 0 || defaults.has(name) || undefInUnion;
       const required = !optional;
       const docs = ts.displayPartsToString(p.getDocumentationComment(checker));
       // Prefer the written annotation (`ReactNode`, `Foo<T>`) over the
@@ -310,9 +294,7 @@ function validateMdxRefs() {
 if (process.argv.includes("--check")) {
   const current = existsSync(outFile) ? readFileSync(outFile, "utf8") : "";
   if (current !== json) {
-    console.error(
-      "[props-registry] registry is stale — run `pnpm --dir site run codegen:props`",
-    );
+    console.error("[props-registry] registry is stale — run `pnpm --dir site run codegen:props`");
     process.exit(1);
   }
   const failures = validateMdxRefs();
@@ -320,9 +302,7 @@ if (process.argv.includes("--check")) {
     for (const f of failures) console.error(`[props-registry] ${f}`);
     process.exit(1);
   }
-  console.log(
-    `[props-registry] up to date (${Object.keys(registry).length} components)`,
-  );
+  console.log(`[props-registry] up to date (${Object.keys(registry).length} components)`);
 } else {
   mkdirSync(dirname(outFile), { recursive: true });
   writeFileSync(outFile, json);

@@ -15,20 +15,25 @@ description: The ConvexAdminDashboard surface — users, sessions, organizations
 
 <PropsTable of="ConvexAdminDashboard" rows="users,sessions,organizations,audits,defaultSection" />
 
-
 **User actions**
 
-<PropsTable of="ConvexAdminDashboard" rows="onViewUser,selectedUser,onCloseUserDetail,onBanUser,onUnbanUser,onRemoveUser,onImpersonateUser,onRevokeSession,usersSearch,onUsersSearchChange" />
-
+<PropsTable
+  of="ConvexAdminDashboard"
+  rows="onViewUser,selectedUser,onCloseUserDetail,onBanUser,onUnbanUser,onRemoveUser,onImpersonateUser,onRevokeSession,usersSearch,onUsersSearchChange"
+/>
 
 **Organization actions**
 
-<PropsTable of="ConvexAdminDashboard" rows="onViewOrganization,selectedOrganization,onCloseOrganizationDetail,organizationMembers,organizationRoles,onUpdateMemberRole,onRemoveMember" />
-
+<PropsTable
+  of="ConvexAdminDashboard"
+  rows="onViewOrganization,selectedOrganization,onCloseOrganizationDetail,organizationMembers,organizationRoles,onUpdateMemberRole,onRemoveMember"
+/>
 
 **Audit filters and pagination**
 
-<PropsTable of="ConvexAdminDashboard" rows="auditsFilters,onAuditsFiltersChange,usersPagination,sessionsPagination,organizationsPagination,auditsPagination,organizationMembersPagination" />
-
+<PropsTable
+  of="ConvexAdminDashboard"
+  rows="auditsFilters,onAuditsFiltersChange,usersPagination,sessionsPagination,organizationsPagination,auditsPagination,organizationMembersPagination"
+/>
 
 **Theming** — `classNames` targets `root`, `sidebar`, `content`, `navItem`, `card`, `row`, `loadMore`, `search`; `copy` overrides every label (titles, ban/unban/remove/impersonate/revoke actions, status labels).
