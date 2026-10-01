@@ -38,8 +38,8 @@ function render(props: ConvexUserProfileProps): string {
 
 const verifiedUser: ConvexUserProfileUser = {
   id: "u_1",
-  email: "shlomo@convex.nyc",
-  name: "Shlomo Kabareti",
+  email: "riley@convex.nyc",
+  name: "Vortex",
   emailVerified: true,
 };
 
@@ -60,12 +60,12 @@ describe("ConvexUserProfile — SSR smoke", () => {
 
   it("renders the user's email", () => {
     const html = render({ user: verifiedUser });
-    assert.match(html, /shlomo@convex\.nyc/);
+    assert.match(html, /riley@convex\.nyc/);
   });
 
   it("renders the user's name when set", () => {
     const html = render({ user: verifiedUser });
-    assert.match(html, /Shlomo Kabareti/);
+    assert.match(html, /Vortex/);
   });
 
   it("surfaces 'verified' copy when emailVerified is true", () => {

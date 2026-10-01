@@ -10,8 +10,8 @@ const modules = import.meta.glob("./**/*.*s");
 async function insertUser(t: ReturnType<typeof convexTest>) {
   return await t.run(async (ctx) =>
     ctx.db.insert("users", {
-      email: "shlomo@example.com",
-      name: "Shlomo",
+      email: "riley@example.com",
+      name: "Riley",
       emailVerified: false,
       isActive: true,
       createdAt: 0,
@@ -33,7 +33,7 @@ async function insertIdentity(
       issuer: "native",
       subject: "subject_1",
       tokenIdentifier: "subject_1",
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       emailVerified: false,
       sessionId: null,
       createdAt: 0,
@@ -348,7 +348,7 @@ describe("native sessions", () => {
     expect(result).toMatchObject({
       user: {
         _id: userId,
-        email: "shlomo@example.com",
+        email: "riley@example.com",
       },
       identityId: expect.any(String),
     });

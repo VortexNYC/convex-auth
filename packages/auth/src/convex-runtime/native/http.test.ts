@@ -53,7 +53,7 @@ function makeCtx(handlers: Record<string, unknown>) {
 
 const user = {
   _id: "user_1",
-  email: "shlomo@example.com",
+  email: "riley@example.com",
   emailVerified: true,
   createdAt: 0,
   updatedAt: 0,
@@ -169,7 +169,7 @@ describe("HTTP transport: /api/auth/sign-in session mint", () => {
     const request = new Request(`${SITE}/api/auth/sign-in`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "shlomo@example.com", password: "pw", rememberMe: true }),
+      body: JSON.stringify({ email: "riley@example.com", password: "pw", rememberMe: true }),
     });
     const res = await handler(makeCtx({}), request);
     expect(res.status).toBe(200);
@@ -202,7 +202,7 @@ describe("HTTP transport: /api/auth/sign-in session mint", () => {
     const request = new Request(`${SITE}/api/auth/sign-in`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: "shlomo@example.com", password: "pw" }),
+      body: JSON.stringify({ email: "riley@example.com", password: "pw" }),
     });
     const res = await handler(makeCtx({}), request);
     expect(res.status).toBe(200);
@@ -358,7 +358,7 @@ describe("HTTP transport: username routes", () => {
       makeCtx({}),
       post(
         "/api/auth/sign-up/username",
-        { username: "Shlomo_K", password: "pw", displayUsername: "Shlomo_K" },
+        { username: "Riley_K", password: "pw", displayUsername: "Riley_K" },
         { "x-captcha-response": "captcha-token" },
       ),
     );
@@ -366,9 +366,9 @@ describe("HTTP transport: username routes", () => {
     expect(signUpUsername).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        username: "Shlomo_K",
+        username: "Riley_K",
         password: "pw",
-        displayUsername: "Shlomo_K",
+        displayUsername: "Riley_K",
         captchaToken: "captcha-token",
       }),
     );
@@ -420,14 +420,14 @@ describe("HTTP transport: username routes", () => {
       makeCtx({}),
       post(
         "/api/auth/sign-in/username",
-        { username: "shlomo", password: "pw" },
+        { username: "riley", password: "pw" },
         { cookie: "convex-auth-trusted-device=device-token", origin: SITE },
       ),
     );
     expect(res.status).toBe(200);
     expect(signInUsername).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ username: "shlomo", trustedDeviceToken: "device-token" }),
+      expect.objectContaining({ username: "riley", trustedDeviceToken: "device-token" }),
     );
     expect(res.headers.getSetCookie().some((c) => c.startsWith("convex-auth-token="))).toBe(true);
   });
@@ -441,7 +441,7 @@ describe("HTTP transport: username routes", () => {
 
     const res = await handler(
       makeCtx({}),
-      post("/api/auth/sign-in/username", { username: "shlomo", password: "wrong" }),
+      post("/api/auth/sign-in/username", { username: "riley", password: "wrong" }),
     );
     expect(res.status).toBe(401);
     expect(await res.json()).toMatchObject({ code: "invalid_username_or_password" });

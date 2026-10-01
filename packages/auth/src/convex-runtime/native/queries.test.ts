@@ -117,8 +117,8 @@ describe("nativeAuthQueries", () => {
     const component = createMockComponent();
     const user = {
       _id: "user_1",
-      email: "shlomo@example.com",
-      name: "Shlomo",
+      email: "riley@example.com",
+      name: "Riley",
       emailVerified: true,
       createdAt: 0,
       updatedAt: 0,
@@ -142,8 +142,8 @@ describe("nativeAuthQueries", () => {
     };
     expect(result.user).toEqual({
       id: "user_1",
-      email: "shlomo@example.com",
-      name: "Shlomo",
+      email: "riley@example.com",
+      name: "Riley",
       emailVerified: true,
       twoFactorEnabled: false,
       isActive: true,
@@ -436,7 +436,7 @@ describe("addNativeAuthHttpRoutes", () => {
       {
         signIn: vi.fn(() => ({
           token: "token",
-          user: { id: "user_1", email: "shlomo@example.com", emailVerified: true },
+          user: { id: "user_1", email: "riley@example.com", emailVerified: true },
         })),
       } as unknown as NativeEmailAndPasswordFunctionReferences,
       { trustedOrigins: ["https://app.example.com"] },
@@ -449,7 +449,7 @@ describe("addNativeAuthHttpRoutes", () => {
       new Request("https://api.example.com/api/auth/sign-in", {
         method: "POST",
         headers: { origin: "https://api.example.com" },
-        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+        body: JSON.stringify({ email: "riley@example.com", password: "password" }),
       }),
     );
     expect(response.status).toBe(200);
@@ -476,7 +476,7 @@ describe("addNativeAuthHttpRoutes", () => {
       {
         signIn: vi.fn(() => ({
           token: "token",
-          user: { id: "user_1", email: "shlomo@example.com", emailVerified: true },
+          user: { id: "user_1", email: "riley@example.com", emailVerified: true },
         })),
       } as unknown as NativeEmailAndPasswordFunctionReferences,
       { trustedOrigins: ["https://app.example.com"] },
@@ -493,7 +493,7 @@ describe("addNativeAuthHttpRoutes", () => {
           "sec-fetch-mode": "navigate",
           "sec-fetch-dest": "document",
         },
-        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+        body: JSON.stringify({ email: "riley@example.com", password: "password" }),
       }),
     );
     expect(response.status).toBe(403);
@@ -520,7 +520,7 @@ describe("addNativeAuthHttpRoutes", () => {
       {
         signIn: vi.fn(() => ({
           token: "token",
-          user: { id: "user_1", email: "shlomo@example.com", emailVerified: true },
+          user: { id: "user_1", email: "riley@example.com", emailVerified: true },
         })),
       } as unknown as NativeEmailAndPasswordFunctionReferences,
       { trustedOrigins: ["https://app.example.com"] },
@@ -537,7 +537,7 @@ describe("addNativeAuthHttpRoutes", () => {
           origin: "https://evil.example.com",
           cookie: "convex-auth-token=x",
         },
-        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+        body: JSON.stringify({ email: "riley@example.com", password: "password" }),
       }),
     );
     expect(hostile.status).toBe(403);
@@ -550,7 +550,7 @@ describe("addNativeAuthHttpRoutes", () => {
           "sec-fetch-site": "same-site",
           origin: "https://app.example.com",
         },
-        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+        body: JSON.stringify({ email: "riley@example.com", password: "password" }),
       }),
     );
     expect(trusted.status).toBe(200);
@@ -560,7 +560,7 @@ describe("addNativeAuthHttpRoutes", () => {
       new Request("https://api.example.com/api/auth/sign-in", {
         method: "POST",
         headers: { "sec-fetch-site": "same-site" },
-        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+        body: JSON.stringify({ email: "riley@example.com", password: "password" }),
       }),
     );
     expect(noOrigin.status).toBe(403);
@@ -587,7 +587,7 @@ describe("addNativeAuthHttpRoutes", () => {
       {
         signIn: vi.fn(() => ({
           token: "token",
-          user: { id: "user_1", email: "shlomo@example.com", emailVerified: true },
+          user: { id: "user_1", email: "riley@example.com", emailVerified: true },
         })),
       } as unknown as NativeEmailAndPasswordFunctionReferences,
       { trustedOrigins: ["https://app.example.com"] },
@@ -602,7 +602,7 @@ describe("addNativeAuthHttpRoutes", () => {
           "sec-fetch-site": "same-origin",
           origin: "https://evil.example.com",
         },
-        body: JSON.stringify({ email: "shlomo@example.com", password: "password" }),
+        body: JSON.stringify({ email: "riley@example.com", password: "password" }),
       }),
     );
     expect(response.status).toBe(403);

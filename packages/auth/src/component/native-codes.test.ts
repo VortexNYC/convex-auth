@@ -13,8 +13,8 @@ describe("native verification codes", () => {
 
     const userId = await t.run(async (ctx) =>
       ctx.db.insert("users", {
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: false,
         isActive: true,
         createdAt: 0,
@@ -46,8 +46,8 @@ describe("native verification codes", () => {
 
     const userId = await t.run(async (ctx) =>
       ctx.db.insert("users", {
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: false,
         isActive: true,
         createdAt: 0,
@@ -81,8 +81,8 @@ describe("native verification codes", () => {
 
     const userId = await t.run(async (ctx) =>
       ctx.db.insert("users", {
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: false,
         isActive: true,
         createdAt: 0,
@@ -133,8 +133,8 @@ describe("native verification codes", () => {
 
     const userId = await t.run(async (ctx) =>
       ctx.db.insert("users", {
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: false,
         isActive: true,
         createdAt: 0,
@@ -168,8 +168,8 @@ describe("native verification codes", () => {
 
     const userId = await t.run(async (ctx) =>
       ctx.db.insert("users", {
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: false,
         isActive: true,
         createdAt: 0,
@@ -209,8 +209,8 @@ describe("native verification codes", () => {
 
     const userId = await t.run(async (ctx) =>
       ctx.db.insert("users", {
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: false,
         isActive: true,
         createdAt: 0,
@@ -243,8 +243,8 @@ describe("native verification codes", () => {
 
     const userId = await t.run(async (ctx) =>
       ctx.db.insert("users", {
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: false,
         isActive: true,
         createdAt: 0,
@@ -296,8 +296,8 @@ describe("native verification codes", () => {
 
     const userId = await t.run(async (ctx) =>
       ctx.db.insert("users", {
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: false,
         isActive: true,
         createdAt: 0,
@@ -366,8 +366,8 @@ describe("native verification codes", () => {
 
     const userId = await t.run(async (ctx) =>
       ctx.db.insert("users", {
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: false,
         isActive: true,
         createdAt: 0,
@@ -412,8 +412,8 @@ describe("native verification codes", () => {
 
     const userId = await t.run(async (ctx) =>
       ctx.db.insert("users", {
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: false,
         isActive: true,
         createdAt: 0,

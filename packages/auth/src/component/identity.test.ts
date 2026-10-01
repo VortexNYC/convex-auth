@@ -24,8 +24,8 @@ describe("identity verification and password reset", () => {
 
     const userId = await t.run(async (ctx) =>
       ctx.db.insert("users", {
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: false,
         isActive: true,
         createdAt: 0,
@@ -41,7 +41,7 @@ describe("identity verification and password reset", () => {
         issuer: "native",
         subject: "subject_1",
         tokenIdentifier: "subject_1",
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         emailVerified: false,
         createdAt: 0,
         updatedAt: 0,
@@ -83,8 +83,8 @@ describe("identity verification and password reset", () => {
 
     const userId = await t.run(async (ctx) =>
       ctx.db.insert("users", {
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: false,
         isActive: true,
         createdAt: 0,
@@ -100,7 +100,7 @@ describe("identity verification and password reset", () => {
         issuer: "native",
         subject: "subject_1",
         tokenIdentifier: "subject_1",
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         emailVerified: false,
         createdAt: 0,
         updatedAt: 0,
@@ -130,8 +130,8 @@ describe("identity verification and password reset", () => {
 
     const userId = await t.run(async (ctx) =>
       ctx.db.insert("users", {
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: true,
         isActive: true,
         createdAt: 0,
@@ -147,7 +147,7 @@ describe("identity verification and password reset", () => {
         issuer: "native",
         subject: "subject_1",
         tokenIdentifier: "subject_1",
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         emailVerified: true,
         createdAt: 0,
         updatedAt: 0,
@@ -235,10 +235,10 @@ describe("provisionFromIdentity", () => {
         issuer: "native",
         subject: "subject_signup",
         tokenIdentifier: "subject_signup",
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         emailVerified: false,
       },
-      user: { email: "shlomo@example.com", name: "Shlomo", emailVerified: false },
+      user: { email: "riley@example.com", name: "Riley", emailVerified: false },
       account: { credentialHash: "hash" },
       initialSession: {
         sessionId: "session-signup",

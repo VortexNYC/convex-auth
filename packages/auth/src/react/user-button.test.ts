@@ -55,9 +55,9 @@ describe("ConvexUserButton — SSR smoke", () => {
 
   it("derives initials from `name` (first + last)", () => {
     const html = renderUserButton({
-      user: { id: "u1", email: "shlomo@example.com", name: "Shlomo Kabareti" },
+      user: { id: "u1", email: "riley@example.com", name: "Riley Kim" },
     });
-    assert.match(html, /SK/);
+    assert.match(html, /RK/);
   });
 
   it("falls back to email-derived initials when `name` is absent", () => {

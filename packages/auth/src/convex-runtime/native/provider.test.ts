@@ -182,7 +182,7 @@ function makeUser(overrides: Partial<NativeUserDoc> = {}): NativeUserDoc {
   return {
     _id: "user_1",
     _creationTime: 0,
-    email: "shlomo@example.com",
+    email: "riley@example.com",
     emailVerified: false,
     isActive: true,
     createdAt: 0,
@@ -201,7 +201,7 @@ function makeIdentity(overrides: Partial<NativeIdentityDoc> = {}): NativeIdentit
     issuer: "native",
     subject: "subject_1",
     tokenIdentifier: "subject_1",
-    email: "shlomo@example.com",
+    email: "riley@example.com",
     emailVerified: false,
     sessionId: null,
     createdAt: 0,
@@ -273,9 +273,9 @@ describe("nativeEmailAndPassword", () => {
     const { signUp } = createActions(component);
     const { handler } = exec(signUp);
     const result = (await handler(createContext(), {
-      email: "Shlomo@example.com ",
+      email: "Riley@example.com ",
       password: DEFAULT_PASSWORD,
-      name: "Shlomo",
+      name: "Riley",
     })) as {
       token?: string;
       user: { id: string; email?: string };
@@ -297,10 +297,10 @@ describe("nativeEmailAndPassword", () => {
     });
 
     const provisionCall = component.identity.provisionFromIdentity.mock.calls[0]?.[0];
-    expect(provisionCall.identity.email).toBe("shlomo@example.com");
+    expect(provisionCall.identity.email).toBe("riley@example.com");
     expect(provisionCall.identity.provider).toBe("password");
     expect(provisionCall.identity.issuer).toBe("native");
-    expect(provisionCall.user.email).toBe("shlomo@example.com");
+    expect(provisionCall.user.email).toBe("riley@example.com");
     expect(provisionCall.allowLink).toBe(false);
 
     const account = provisionCall.account;
@@ -342,9 +342,9 @@ describe("nativeEmailAndPassword", () => {
     const { handler } = exec(signUp);
     const before = Date.now();
     const result = (await handler(createContext(), {
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       password: DEFAULT_PASSWORD,
-      name: "Shlomo",
+      name: "Riley",
       rememberMe: false,
     })) as {
       token?: string;
@@ -376,7 +376,7 @@ describe("nativeEmailAndPassword", () => {
       handler(createContext(), {
         email: "not-an-email",
         password: DEFAULT_PASSWORD,
-        name: "Shlomo",
+        name: "Riley",
       }),
     ).rejects.toThrow("Invalid email");
   });
@@ -386,7 +386,7 @@ describe("nativeEmailAndPassword", () => {
     const { signUp } = createActions(component);
     const { handler } = exec(signUp);
     await expect(
-      handler(createContext(), { email: "shlomo@example.com", password: "short", name: "Shlomo" }),
+      handler(createContext(), { email: "riley@example.com", password: "short", name: "Riley" }),
     ).rejects.toThrow("too short");
   });
 
@@ -396,9 +396,9 @@ describe("nativeEmailAndPassword", () => {
     const { handler } = exec(signUp);
     await expect(
       handler(createContext(), {
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         password: DEFAULT_PASSWORD,
-        name: "Shlomo",
+        name: "Riley",
       }),
     ).rejects.toThrow("disabled");
   });
@@ -409,9 +409,9 @@ describe("nativeEmailAndPassword", () => {
     const { handler } = exec(signUp);
     await expect(
       handler(createContext(), {
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         password: DEFAULT_PASSWORD,
-        name: "Shlomo",
+        name: "Riley",
       }),
     ).rejects.toThrow("Sign up is disabled");
   });
@@ -428,9 +428,9 @@ describe("nativeEmailAndPassword", () => {
     const { handler } = exec(signUp);
     await expect(
       handler(createContext(), {
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         password: DEFAULT_PASSWORD,
-        name: "Shlomo",
+        name: "Riley",
       }),
     ).rejects.toThrow("already exists");
   });
@@ -446,12 +446,12 @@ describe("nativeEmailAndPassword", () => {
     const { signUp } = createActions(component, { requireVerifiedEmail: true });
     const { handler } = exec(signUp);
     const result = (await handler(createContext(), {
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       password: DEFAULT_PASSWORD,
-      name: "Shlomo",
+      name: "Riley",
     })) as { token: string | null; user: { id: string; email?: string } };
     expect(result.token).toBeNull();
-    expect(result.user.email).toBe("shlomo@example.com");
+    expect(result.user.email).toBe("riley@example.com");
     expect(result.user.id).toEqual(expect.any(String));
     const provisionCall = component.identity.provisionFromIdentity.mock.calls[0]?.[0];
     expect(provisionCall.initialSession).toBeUndefined();
@@ -502,9 +502,9 @@ describe("nativeEmailAndPassword", () => {
 
       await expect(
         handler(createContext(), {
-          email: "shlomo@example.com",
+          email: "riley@example.com",
           password,
-          name: "Shlomo",
+          name: "Riley",
         }),
       ).rejects.toThrow("Password has been exposed in a data breach");
 
@@ -536,9 +536,9 @@ describe("nativeEmailAndPassword", () => {
       const { handler } = exec(signUp);
 
       const result = (await handler(createContext(), {
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         password,
-        name: "Shlomo",
+        name: "Riley",
       })) as { token: string; user: { id: string } };
 
       expect(result.token).toBe(defaultToken);
@@ -577,7 +577,7 @@ describe("nativeEmailAndPassword", () => {
     const { signIn } = createActions(component);
     const { handler } = exec(signIn);
     const result = (await handler(createContext(), {
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       password: DEFAULT_PASSWORD,
     })) as {
       token: string;
@@ -600,7 +600,7 @@ describe("nativeEmailAndPassword", () => {
     });
 
     expect(component.identity.getUserAndAccount).toHaveBeenCalledWith({
-      email: "shlomo@example.com",
+      email: "riley@example.com",
     });
 
     const payload = await verifyToken(result.token);
@@ -631,7 +631,7 @@ describe("nativeEmailAndPassword", () => {
     component.native.sessions.createSessionAndRefreshToken.mockResolvedValue("session_1");
 
     const result = (await exec(signIn).handler(createContext(), {
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       password: DEFAULT_PASSWORD,
       landingVerifier: "lv-cookie",
     })) as { landingVerifier?: string };
@@ -651,7 +651,7 @@ describe("nativeEmailAndPassword", () => {
     const { signIn } = createActions(component);
     const { handler } = exec(signIn);
     await handler(createContext(), {
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       password: DEFAULT_PASSWORD,
     });
 
@@ -675,7 +675,7 @@ describe("nativeEmailAndPassword", () => {
     const { signIn } = createActions(component);
     const { handler } = exec(signIn);
     await handler(createContext(), {
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       password: DEFAULT_PASSWORD,
     });
 
@@ -698,7 +698,7 @@ describe("nativeEmailAndPassword", () => {
     const { signIn } = createActions(component);
     const { handler } = exec(signIn);
     await handler(createContext(), {
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       password: DEFAULT_PASSWORD,
     });
 
@@ -720,7 +720,7 @@ describe("nativeEmailAndPassword", () => {
     const { handler } = exec(signIn);
     const before = Date.now();
     const result = (await handler(createContext(), {
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       password: DEFAULT_PASSWORD,
       rememberMe: false,
     })) as {
@@ -753,7 +753,7 @@ describe("nativeEmailAndPassword", () => {
     const { handler } = exec(signIn);
 
     await expect(
-      handler(createContext(), { email: "shlomo@example.com", password: DEFAULT_PASSWORD }),
+      handler(createContext(), { email: "riley@example.com", password: DEFAULT_PASSWORD }),
     ).rejects.toThrow("Email not verified");
 
     expect(component.native.sessions.createSessionAndRefreshToken).not.toHaveBeenCalled();
@@ -770,7 +770,7 @@ describe("nativeEmailAndPassword", () => {
     const { signIn } = createActions(component);
     const { handler } = exec(signIn);
     const result = (await handler(createContext(), {
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       password: DEFAULT_PASSWORD,
     })) as {
       token: string;
@@ -804,7 +804,7 @@ describe("nativeEmailAndPassword", () => {
     const { signIn } = createActions(component, { requireVerifiedEmail: true });
     const { handler } = exec(signIn);
     const result = (await handler(createContext(), {
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       password: DEFAULT_PASSWORD,
     })) as {
       token: string;
@@ -837,7 +837,7 @@ describe("nativeEmailAndPassword", () => {
 
     const { signIn, signOut } = createActions(component);
     const signInResult = (await exec(signIn).handler(createContext(), {
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       password: DEFAULT_PASSWORD,
     })) as {
       token: string;
@@ -868,7 +868,7 @@ describe("nativeEmailAndPassword", () => {
         email: { from: "test@example.com", appOrigin: "http://localhost", sendEmail },
       });
       const { handler } = exec(sendEmailVerification);
-      const result = (await handler(createContext(), { email: "Shlomo@example.com" })) as {
+      const result = (await handler(createContext(), { email: "Riley@example.com" })) as {
         status: string;
         emailId?: string;
       };
@@ -876,7 +876,7 @@ describe("nativeEmailAndPassword", () => {
       expect(result).toEqual({ status: "queued", emailId: "email_1" });
 
       expect(component.native.users.getUserByEmail).toHaveBeenCalledWith({
-        email: "shlomo@example.com",
+        email: "riley@example.com",
       });
 
       const createCall = component.native.codes.createVerificationCode.mock.calls[0]?.[0];
@@ -911,10 +911,10 @@ describe("nativeEmailAndPassword", () => {
       });
 
       const missingFromResult = await exec(missingFrom).handler(createContext(), {
-        email: "shlomo@example.com",
+        email: "riley@example.com",
       });
       const missingSendEmailResult = await exec(missingSendEmail).handler(createContext(), {
-        email: "shlomo@example.com",
+        email: "riley@example.com",
       });
 
       expect(missingFromResult).toEqual({
@@ -940,7 +940,7 @@ describe("nativeEmailAndPassword", () => {
         email: { from: "test@example.com", sendEmail },
       });
       const { handler } = exec(sendEmailVerification);
-      const result = await handler(createContext(), { email: "shlomo@example.com" });
+      const result = await handler(createContext(), { email: "riley@example.com" });
 
       expect(result).toEqual({ status: "not_configured", reason: "missing_verify_url" });
       expect(sendEmail).not.toHaveBeenCalled();
@@ -973,7 +973,7 @@ describe("nativeEmailAndPassword", () => {
         email: { from: "test@example.com", appOrigin: "http://localhost", sendEmail },
       });
       const result = await exec(sendEmailVerification).handler(createContext(), {
-        email: "shlomo@example.com",
+        email: "riley@example.com",
       });
 
       expect(result).toEqual({ status: "failed", reason: "boom" });
@@ -1057,7 +1057,7 @@ describe("nativeEmailAndPassword", () => {
         email: { from: "test@example.com", appOrigin: "http://localhost", sendEmail },
       });
       const { handler } = exec(sendPasswordReset);
-      const result = (await handler(createContext(), { email: "Shlomo@example.com" })) as {
+      const result = (await handler(createContext(), { email: "Riley@example.com" })) as {
         status: string;
         emailId?: string;
       };
@@ -1095,10 +1095,10 @@ describe("nativeEmailAndPassword", () => {
       });
 
       const missingFromResult = await exec(missingFrom).handler(createContext(), {
-        email: "shlomo@example.com",
+        email: "riley@example.com",
       });
       const missingSendEmailResult = await exec(missingSendEmail).handler(createContext(), {
-        email: "shlomo@example.com",
+        email: "riley@example.com",
       });
 
       expect(missingFromResult).toEqual({
@@ -1121,7 +1121,7 @@ describe("nativeEmailAndPassword", () => {
         email: { from: "test@example.com", sendEmail },
       });
       const result = await exec(sendPasswordReset).handler(createContext(), {
-        email: "shlomo@example.com",
+        email: "riley@example.com",
       });
 
       expect(result).toEqual({ status: "not_configured", reason: "missing_reset_url" });
@@ -1155,7 +1155,7 @@ describe("nativeEmailAndPassword", () => {
         email: { from: "test@example.com", appOrigin: "http://localhost", sendEmail },
       });
       const result = await exec(sendPasswordReset).handler(createContext(), {
-        email: "shlomo@example.com",
+        email: "riley@example.com",
       });
 
       expect(result).toEqual({ status: "failed", reason: "boom" });

@@ -136,7 +136,7 @@ describe("nativeMagicLink", () => {
 
     const ctx = createContext();
     const result = await handler(ctx, {
-      email: "Shlomo@example.com ",
+      email: "Riley@example.com ",
       callbackURL: "/dashboard",
     });
 
@@ -150,11 +150,11 @@ describe("nativeMagicLink", () => {
     expect(typeof createCall.expiresAt).toBe("number");
 
     const metadata = JSON.parse(createCall.metadata);
-    expect(metadata.email).toBe("shlomo@example.com");
+    expect(metadata.email).toBe("riley@example.com");
 
     expect(sendMagicLink).toHaveBeenCalledWith(
       expect.objectContaining({
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         url: expect.stringMatching(
           /https:\/\/test\.convex\.site\/api\/auth\/magic-link\/verify\?token=[a-f0-9]+&callbackURL=%2Fdashboard$/,
         ),
@@ -187,7 +187,7 @@ describe("nativeMagicLink", () => {
     const { handler } = exec(signInMagicLink);
 
     const ctx = createContext();
-    await expect(handler(ctx, { email: "shlomo@example.com" })).rejects.toThrow(
+    await expect(handler(ctx, { email: "riley@example.com" })).rejects.toThrow(
       "Magic link authentication is disabled",
     );
   });
@@ -202,7 +202,7 @@ describe("nativeMagicLink", () => {
 
     const ctx = createContext();
     await exec(signInMagicLink).handler(ctx, {
-      email: "Shlomo@example.com ",
+      email: "Riley@example.com ",
       callbackURL: "/dashboard",
     });
 
@@ -212,7 +212,7 @@ describe("nativeMagicLink", () => {
       _id: "verifier_1",
       verifierId: token,
       type: "magic-link",
-      metadata: JSON.stringify({ email: "shlomo@example.com", name: "Shlomo" }),
+      metadata: JSON.stringify({ email: "riley@example.com", name: "Riley" }),
       expiresAt: Date.now() + 5 * 60 * 1000,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -227,8 +227,8 @@ describe("nativeMagicLink", () => {
       sessionId: "session_1",
       user: {
         _id: "user_1",
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: true,
         twoFactorEnabled: false,
         isActive: true,
@@ -245,7 +245,7 @@ describe("nativeMagicLink", () => {
       sessionId: "session_1",
       userId: "user_1",
       identityId: "identity_1",
-      user: { email: "shlomo@example.com" },
+      user: { email: "riley@example.com" },
     });
 
     const consumeCall = component.native.verifiers.consumeVerifier.mock.calls[0][0];
@@ -255,13 +255,13 @@ describe("nativeMagicLink", () => {
     expect(provisionCall.identity).toMatchObject({
       provider: "magicLink",
       issuer: "native",
-      subject: "shlomo@example.com",
-      email: "shlomo@example.com",
+      subject: "riley@example.com",
+      email: "riley@example.com",
       emailVerified: true,
     });
     expect(provisionCall.user).toMatchObject({
-      email: "shlomo@example.com",
-      name: "Shlomo",
+      email: "riley@example.com",
+      name: "Riley",
       emailVerified: true,
     });
     expect(provisionCall.allowLink).toBe(true);
@@ -277,7 +277,7 @@ describe("nativeMagicLink", () => {
 
     const ctx = createContext();
     await exec(signInMagicLink).handler(ctx, {
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       callbackURL: "/dashboard",
       landingVerifier: "lv-requester",
     });
@@ -291,7 +291,7 @@ describe("nativeMagicLink", () => {
       verifierId: "h",
       type: "magic-link",
       metadata: JSON.stringify({
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         landingVerifier: "lv-requester",
       }),
       expiresAt: Date.now() + 5 * 60 * 1000,
@@ -313,7 +313,7 @@ describe("nativeMagicLink", () => {
       sessionId: "session_1",
       user: {
         _id: "user_1",
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         emailVerified: true,
         twoFactorEnabled: false,
         isActive: true,
@@ -343,14 +343,14 @@ describe("nativeMagicLink", () => {
       _id: "verifier_1",
       verifierId: "h",
       type: "magic-link",
-      metadata: JSON.stringify({ email: "shlomo@example.com" }),
+      metadata: JSON.stringify({ email: "riley@example.com" }),
       expiresAt: Date.now() + 5 * 60 * 1000,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
     component.native.users.getUserByEmail = vi.fn().mockResolvedValue({
       _id: "user_1",
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       emailVerified: true,
       twoFactorEnabled: false,
       isActive: true,
@@ -366,7 +366,7 @@ describe("nativeMagicLink", () => {
       sessionId: "session_1",
       user: {
         _id: "user_1",
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         emailVerified: true,
         twoFactorEnabled: false,
         isActive: true,
@@ -405,7 +405,7 @@ describe("nativeMagicLink", () => {
       _id: "verifier_1",
       verifierId: "verifier_1",
       type: "magic-link",
-      metadata: JSON.stringify({ email: "shlomo@example.com" }),
+      metadata: JSON.stringify({ email: "riley@example.com" }),
       expiresAt: Date.now() + 5 * 60 * 1000,
       createdAt: Date.now(),
       updatedAt: Date.now(),
