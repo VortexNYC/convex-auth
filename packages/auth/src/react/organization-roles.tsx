@@ -311,6 +311,16 @@ export function ConvexOrganizationRoleCreateForm({
   );
 }
 
+export type ConvexOrganizationPermissionChecklistCopy = {
+  loadingMessage?: string;
+  permissionCatalogEmptyMessage?: string;
+};
+
+const defaultPermissionChecklistCopy = {
+  loadingMessage: "Loading roles...",
+  permissionCatalogEmptyMessage: "No permissions available.",
+} satisfies Required<ConvexOrganizationPermissionChecklistCopy>;
+
 export function ConvexOrganizationPermissionChecklist({
   classNames,
   copy,
@@ -320,16 +330,17 @@ export function ConvexOrganizationPermissionChecklist({
   selectedPermissions,
 }: {
   classNames?: ConvexOrganizationRoleManagerClassNames;
-  copy: Required<ConvexOrganizationRoleManagerCopy>;
+  copy?: ConvexOrganizationPermissionChecklistCopy;
   disabled?: boolean;
   onPermissionToggle: (permission: string) => void;
   permissions: readonly ConvexOrganizationPermissionListItem[] | undefined;
   selectedPermissions: readonly string[];
 }) {
+  const resolvedCopy = { ...defaultPermissionChecklistCopy, ...copy };
   if (permissions === undefined) {
     return (
       <p className={cn("text-foreground/50 text-sm", classNames?.stateText)}>
-        {copy.loadingMessage}
+        {resolvedCopy.loadingMessage}
       </p>
     );
   }
@@ -337,7 +348,7 @@ export function ConvexOrganizationPermissionChecklist({
   if (permissions.length === 0) {
     return (
       <p className={cn("text-foreground/50 text-sm", classNames?.stateText)}>
-        {copy.permissionCatalogEmptyMessage}
+        {resolvedCopy.permissionCatalogEmptyMessage}
       </p>
     );
   }

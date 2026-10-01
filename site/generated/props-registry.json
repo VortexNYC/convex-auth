@@ -2300,8 +2300,8 @@
     },
     {
       "name": "copy",
-      "type": "Required<ConvexOrganizationRoleManagerCopy>",
-      "required": true
+      "type": "ConvexOrganizationPermissionChecklistCopy",
+      "required": false
     },
     {
       "name": "disabled",

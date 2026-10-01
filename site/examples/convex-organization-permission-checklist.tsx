@@ -6,21 +6,7 @@ export default function OrganizationPermissionChecklistPreview() {
   const [selected, setSelected] = useState(["members:read", "members:write"]);
   return (
     <ConvexOrganizationPermissionChecklist
-      copy={{
-        actionErrorTitle: "Action failed",
-        createTitle: "Create role",
-        creatingLabel: "Creating…",
-        customRoleLabel: "Custom",
-        emptyMessage: "No roles yet.",
-        loadingMessage: "Loading roles…",
-        nameLabel: "Role name",
-        namePlaceholder: "e.g. Support",
-        permissionCatalogEmptyMessage: "No permissions available.",
-        permissionLabel: "Permissions",
-        roleListTitle: "Roles",
-        submitLabel: "Create role",
-        systemRoleLabel: "System",
-      }}
+      copy={{ permissionCatalogEmptyMessage: "No permissions available." }}
       permissions={MOCK_PERMISSIONS}
       selectedPermissions={selected}
       onPermissionToggle={(permission) =>
