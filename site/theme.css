@@ -28,6 +28,13 @@
   --blume-accent-foreground: oklch(0.1 0.005 250);
 }
 
+/* Nested sidebar groups (React, React Native under UI components) get a
+   24px gap that detaches them from the page rows above — halve it so the
+   group headers track the sidebar's tighter item rhythm. */
+aside li.mt-6 {
+  margin-top: 0.75rem;
+}
+
 /* Header action icons — Blume header links are text-only, so the npm and
    Convex marks are injected as masks (inherit the link's text color). */
 header a[href*="npmjs.com/package"]::after,
