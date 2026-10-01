@@ -1,0 +1,30 @@
+---
+title: Sign-in & onboarding
+description: Expo auth providers and full-screen sign-in, sign-up, post-sign-up, org chooser, and invite acceptance screens.
+---
+
+`@vortex-api/convex-auth/react-native` ships a parallel component set for Expo apps — same coverage as the React library, built for native. Native components render on-device, so these pages document the API surface rather than embedding web previews — see the [React Native guide](/react-native) for a working setup.
+
+### `ExpoConvexAuthProvider`
+
+Root provider — token storage (SecureStore), session restore, and runtime wiring.
+
+### `ExpoConvexAuthClientProvider`
+
+Drop-in client provider for the `useConvexAuthClient` API.
+
+### `ExpoAuthClientSignInScreen` / `ExpoAuthClientSignUpScreen`
+
+Full client-driven auth screens.
+
+### `ExpoAuthPostSignUpPage`
+
+Post-sign-up step (verification, profile completion).
+
+### `ExpoAuthOrganizationChooserPage`
+
+Org picker shown after sign-in when the user belongs to multiple orgs.
+
+### `ExpoAuthAcceptInvitePage`
+
+Deep-linked invitation acceptance screen.

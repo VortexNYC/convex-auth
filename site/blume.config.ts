@@ -86,6 +86,8 @@ export default defineConfig({
     { from: "/components/security", to: "/components/react/security" },
     { from: "/components/admin", to: "/components/react/admin" },
     { from: "/components/providers", to: "/components/react/providers" },
+    // React Native was a single page; it now has per-section subpages.
+    { from: "/components/react-native", to: "/components/react-native/sign-in" },
     // The v2 archive was removed; land its deep links on the closest v3 page.
     { from: "/v2", to: "/" },
     { from: "/v2/index", to: "/" },

@@ -1,0 +1,29 @@
+---
+// Wraps blume's <Component> and eagerly loads every preview iframe on the
+// page. Blume emits loading="lazy" — correct for a prose page with one
+// demo, wrong for a component catalog where previews ARE the content and
+// readers scroll straight through. The script flips each frame to eager and
+// re-navigates any that lazy-loading deferred; frames that already
+// reported their measured height are left alone.
+import Component from "blume/components/content/Component.astro";
+
+interface Props {
+  /** Example name under site/examples/, e.g. "convex-user-button". */
+  path: string;
+}
+
+const { path } = Astro.props;
+---
+
+<Component path={path} />
+
+<script>
+  for (const frame of document.querySelectorAll<HTMLIFrameElement>(
+    "iframe[data-blume-example-frame]",
+  )) {
+    frame.loading = "eager";
+    if (!frame.dataset.blumeReportedHeight) {
+      frame.src = frame.src;
+    }
+  }
+</script>
