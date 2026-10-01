@@ -301,10 +301,15 @@ export const mockAuthClient = new Proxy(baseClient, {
 }) as unknown as ConvexBetterAuthClient;
 
 /** Same stub but with zero sessions — drives empty-state previews. */
-export const mockAuthClientEmpty = {
-  ...baseClient,
-  listSessions: async () => ({ data: [], error: null }),
-} as unknown as ConvexBetterAuthClient;
+export const mockAuthClientEmpty = new Proxy(
+  { ...baseClient, listSessions: async () => ({ data: [], error: null }) },
+  {
+    get(target, prop) {
+      if (prop in target) return target[prop as keyof typeof target];
+      return ok;
+    },
+  },
+) as unknown as ConvexBetterAuthClient;
 
 /** Placeholder `FunctionReference` — enough for `useQuery`/`useMutation`/`useAction` to mount. */
 export const fnRef = (name: string) => name as never;

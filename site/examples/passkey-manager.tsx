@@ -35,18 +35,7 @@ export default function PasskeyManagerPreview() {
           onRename={async () => {}}
         />
       </PreviewVariant>
-      <PreviewVariant label="loading">
-        <PasskeyManager
-          rpName="Acme Corp"
-          loading
-          onRegister={notInPreview}
-          onVerifyRegistration={notInPreview}
-          onAuthenticate={notInPreview}
-          onVerifyAuthentication={notInPreview}
-          onRevoke={async () => {}}
-          onRename={async () => {}}
-        />
-      </PreviewVariant>
+
       <PreviewVariant label="empty">
         <PasskeyManager
           rpName="Acme Corp"

@@ -103,6 +103,15 @@ jobs:
       - name: Docs smoke check
         run: pnpm run docs:smoke
 
+      # The props tables render from a committed generated registry — this
+      # gate fails when packages/auth/src/react prop types drift from the
+      # committed site/generated/props-registry.json or when a docs page
+      # references a component/prop the registry doesn't know.
+      - name: Props registry check
+        if: steps.scope.outputs.sitechanged == 'true' && matrix.node-version == '22.x'
+        working-directory: site
+        run: pnpm run check:props
+
       # blume validate catches dead links/config drift that docs:smoke's
       # regex can't see; the build proves the site still compiles. 22.x
       # only — output is node-version-invariant. GITHUB_TOKEN feeds the

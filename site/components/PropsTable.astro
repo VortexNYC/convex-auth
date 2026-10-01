@@ -37,8 +37,10 @@ const wanted = Astro.props.rows
   ?.split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+// Emit in the author's comma-list order, not registry order — grouped
+// sections (e.g. admin "User actions") are intentionally sequenced.
 const source = wanted
-  ? (props ?? []).filter((p) => wanted.includes(p.name))
+  ? wanted.flatMap((name) => (props ?? []).filter((p) => p.name === name))
   : (props ?? []);
 if (wanted) {
   for (const name of wanted) {
