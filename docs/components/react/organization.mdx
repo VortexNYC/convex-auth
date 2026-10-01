@@ -66,7 +66,13 @@ The full [organizations](/organizations) UI stack — switcher, creation, member
 
 <Component path="convex-organization-invitation-link-notice" />
 
-No props.
+**Props**
+
+| Name         | Type                                  | Optional |
+| ------------ | ------------------------------------- | -------- |
+| `title`      | `string`                              | No       |
+| `value`      | `string`                              | No       |
+| `classNames` | `ConvexOrganizationMembersClassNames` | Yes      |
 
 ### `ConvexOrganizationInviteForm`
 
@@ -128,7 +134,13 @@ No props.
 
 <Component path="convex-organization-member-action-error-notice" />
 
-No props.
+**Props**
+
+| Name         | Type                                  | Optional |
+| ------------ | ------------------------------------- | -------- |
+| `title`      | `string`                              | No       |
+| `message`    | `string`                              | No       |
+| `classNames` | `ConvexOrganizationMembersClassNames` | Yes      |
 
 ### `ConvexOrganizationMemberList`
 
@@ -319,19 +331,46 @@ No props.
 
 <Component path="convex-organization-permission-checklist" />
 
-No props.
+**Props**
+
+| Name                  | Type                                             | Optional   |
+| --------------------- | ------------------------------------------------ | ---------- | --- |
+| `permissions`         | `readonly ConvexOrganizationPermissionListItem[] | undefined` | No  |
+| `selectedPermissions` | `readonly string[]`                              | No         |
+| `onPermissionToggle`  | `(permission: string) => void`                   | No         |
+| `copy`                | `Required<ConvexOrganizationRoleManagerCopy>`    | No         |
+| `disabled`            | `boolean`                                        | Yes        |
+| `classNames`          | `ConvexOrganizationRoleManagerClassNames`        | Yes        |
 
 ### `ConvexOrganizationRoleActionErrorNotice`
 
 <Component path="convex-organization-role-action-error-notice" />
 
-No props.
+**Props**
+
+| Name         | Type                                      | Optional |
+| ------------ | ----------------------------------------- | -------- |
+| `title`      | `string`                                  | No       |
+| `message`    | `string`                                  | No       |
+| `classNames` | `ConvexOrganizationRoleManagerClassNames` | Yes      |
 
 ### `ConvexOrganizationRoleCreateForm`
 
 <Component path="convex-organization-role-create-form" />
 
-No props.
+**Props**
+
+| Name                 | Type                                             | Optional   |
+| -------------------- | ------------------------------------------------ | ---------- | --- |
+| `creating`           | `boolean`                                        | No         |
+| `state`              | `ConvexOrganizationRoleFormState`                | No         |
+| `permissions`        | `readonly ConvexOrganizationPermissionListItem[] | undefined` | No  |
+| `onNameChange`       | `(name: string) => void`                         | No         |
+| `onPermissionToggle` | `(permission: string) => void`                   | No         |
+| `onSubmit`           | `() => void`                                     | No         |
+| `canCreateRoles`     | `boolean`                                        | Yes        |
+| `classNames`         | `ConvexOrganizationRoleManagerClassNames`        | Yes        |
+| `copy`               | `ConvexOrganizationRoleManagerCopy`              | Yes        |
 
 ### `ConvexOrganizationRoleList`
 
@@ -339,7 +378,13 @@ No props.
 
 **Generics:** `<RoleId>`
 
-No props.
+**Props**
+
+| Name         | Type                                       | Optional   |
+| ------------ | ------------------------------------------ | ---------- | --- |
+| `roles`      | `readonly ConvexOrganizationRoleListItem[] | undefined` | No  |
+| `classNames` | `ConvexOrganizationRoleManagerClassNames`  | Yes        |
+| `copy`       | `ConvexOrganizationRoleManagerCopy`        | Yes        |
 
 ### `ConvexOrganizationRoleManagerSurface`
 

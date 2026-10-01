@@ -11,7 +11,12 @@ The runtime providers, auth-state boundaries, shared form primitives, and the ap
 
 <Component path="auth-runtime-provider" />
 
-No props.
+**Props**
+
+| Name       | Type                | Optional |
+| ---------- | ------------------- | -------- |
+| `status`   | `AuthRuntimeStatus` | No       |
+| `children` | `ReactNode`         | Yes      |
 
 ## Boundaries
 
@@ -65,7 +70,11 @@ No props.
 
 <Component path="convex-auth-client-context-provider" />
 
-No props.
+**Props**
+
+| Name       | Type        | Optional |
+| ---------- | ----------- | -------- |
+| `children` | `ReactNode` | Yes      |
 
 ### `ConvexAuthClientProvider`
 
@@ -130,79 +139,147 @@ Lower-level provisioner — `ConvexAuthConvexIdentityProvisioner` wraps this wit
 
 <Component path="auth-alert" />
 
-No props.
+**Props**
+
+| Name        | Type        | Optional |
+| ----------- | ----------- | -------- | --------- | ---------- | --- |
+| `children`  | `ReactNode` | No       |
+| `tone`      | `"default"  | "error"  | "success" | "warning"` | Yes |
+| `title`     | `string`    | Yes      |
+| `className` | `string`    | Yes      |
 
 ### `AuthButton`
 
 <Component path="auth-button" />
 
-No props.
+**Props**
+
+| Name      | Type                                      | Optional    |
+| --------- | ----------------------------------------- | ----------- | -------- | --- |
+| `variant` | `"primary"                                | "secondary" | "ghost"` | Yes |
+| `(rest)`  | `ButtonHTMLAttributes<HTMLButtonElement>` | Yes         |
 
 ### `AuthCard`
 
 <Component path="auth-card" />
 
-No props.
+**Props**
+
+| Name        | Type        | Optional |
+| ----------- | ----------- | -------- |
+| `children`  | `ReactNode` | No       |
+| `className` | `string`    | Yes      |
 
 ### `AuthCardContent`
 
 <Component path="auth-card-content" />
 
-No props.
+**Props**
+
+| Name        | Type        | Optional |
+| ----------- | ----------- | -------- |
+| `children`  | `ReactNode` | No       |
+| `className` | `string`    | Yes      |
 
 ### `AuthCardHeader`
 
 <Component path="auth-card-header" />
 
-No props.
+**Props**
+
+| Name          | Type                       | Optional |
+| ------------- | -------------------------- | -------- |
+| `title`       | `string`                   | No       |
+| `description` | `string`                   | Yes      |
+| `children`    | `ReactNode`                | Yes      |
+| `classNames`  | `AuthCardHeaderClassNames` | Yes      |
 
 ### `AuthDivider`
 
 <Component path="auth-divider" />
 
-No props.
+**Props**
+
+| Name        | Type     | Optional |
+| ----------- | -------- | -------- |
+| `label`     | `string` | Yes      |
+| `className` | `string` | Yes      |
 
 ### `AuthField`
 
 <Component path="auth-field" />
 
-No props.
+**Props**
+
+| Name     | Type                             | Optional |
+| -------- | -------------------------------- | -------- |
+| `(rest)` | `HTMLAttributes<HTMLDivElement>` | Yes      |
 
 ### `AuthInput`
 
 <Component path="auth-input" />
 
-No props.
+**Props**
+
+| Name     | Type                                    | Optional |
+| -------- | --------------------------------------- | -------- |
+| `(rest)` | `InputHTMLAttributes<HTMLInputElement>` | Yes      |
 
 ### `AuthLabel`
 
 <Component path="auth-label" />
 
-No props.
+**Props**
+
+| Name     | Type                                    | Optional |
+| -------- | --------------------------------------- | -------- |
+| `(rest)` | `LabelHTMLAttributes<HTMLLabelElement>` | Yes      |
 
 ### `AuthProviderButton`
 
 <Component path="auth-provider-button" />
 
-No props.
+**Props**
+
+| Name            | Type                                      | Optional |
+| --------------- | ----------------------------------------- | -------- |
+| `providerLabel` | `string`                                  | No       |
+| `(rest)`        | `ButtonHTMLAttributes<HTMLButtonElement>` | Yes      |
 
 ### `AuthRuntimeStatusBadge`
 
 <Component path="auth-runtime-status-badge" />
 
-No props.
+**Props**
+
+| Name        | Type     | Optional |
+| ----------- | -------- | -------- |
+| `className` | `string` | Yes      |
 
 ### `AuthRuntimeSummary`
 
 <Component path="auth-runtime-summary" />
 
-No props.
+**Props**
+
+| Name        | Type     | Optional |
+| ----------- | -------- | -------- |
+| `className` | `string` | Yes      |
 
 ### `AuthScreen`
 
 <Component path="auth-screen" />
 
-No props.
+**Props**
+
+| Name          | Type                   | Optional |
+| ------------- | ---------------------- | -------- |
+| `title`       | `string`               | No       |
+| `description` | `string`               | Yes      |
+| `children`    | `ReactNode`            | No       |
+| `footer`      | `ReactNode`            | Yes      |
+| `className`   | `string`               | Yes      |
+| `classNames`  | `AuthScreenClassNames` | Yes      |
 
 ## Theming
 

@@ -6,6 +6,10 @@ export default function OrganizationMembersSurfacePreview() {
   // query stays pending and the component renders its loading branch.
   return (
     <ConvexPreviewShell>
+      <p style={{ color: "#888", fontSize: "0.8rem", marginBottom: "0.75rem" }}>
+        No deployment attached — the surface renders its loading state. Wired to a live backend it
+        fills in with your data.
+      </p>
       <ConvexOrganizationMembersSurface
         organizationId="o1"
         roleOptions={MOCK_ROLE_OPTIONS}

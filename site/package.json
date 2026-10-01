@@ -6,6 +6,7 @@
     "dev": "blume dev",
     "build": "blume build",
     "doctor": "blume doctor",
+    "typecheck:examples": "tsc -p tsconfig.examples.json",
     "deploy": "pnpm dlx @convex-dev/static-hosting deploy"
   },
   "dependencies": {

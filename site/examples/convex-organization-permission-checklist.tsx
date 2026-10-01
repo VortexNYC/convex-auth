@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { ConvexOrganizationPermissionChecklist } from "../../packages/auth/src/react/organization-roles";
 import { MOCK_PERMISSIONS } from "./_shared";
 
 export default function OrganizationPermissionChecklistPreview() {
+  const [selected, setSelected] = useState(["members:read", "members:write"]);
   return (
     <ConvexOrganizationPermissionChecklist
       copy={{
@@ -20,8 +22,14 @@ export default function OrganizationPermissionChecklistPreview() {
         systemRoleLabel: "System",
       }}
       permissions={MOCK_PERMISSIONS}
-      selectedPermissions={["members:read", "members:write"]}
-      onPermissionToggle={() => {}}
+      selectedPermissions={selected}
+      onPermissionToggle={(permission) =>
+        setSelected((current) =>
+          current.includes(permission)
+            ? current.filter((p) => p !== permission)
+            : [...current, permission],
+        )
+      }
     />
   );
 }

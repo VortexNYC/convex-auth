@@ -9,7 +9,9 @@ import type {
 } from "../../packages/auth/src/react/auth-client-types";
 import type { NativeAuthActions } from "../../packages/auth/src/react/ConvexAuthProvider";
 
-const now = Date.now();
+// Fixed epoch keeps rendered timestamps identical between SSR and
+// hydration (Date.now() would mismatch on `toLocaleString` output).
+const now = Date.UTC(2025, 0, 16, 12, 0, 0);
 const day = 86400000;
 
 export const MOCK_USER = {
@@ -271,7 +273,13 @@ const baseClient = {
   signInWithEmailOtp: ok,
   verifyEmailOtp: ok,
   twoFactor: {
-    enable: ok,
+    enable: async () => ({
+      data: {
+        totpURI: "otpauth://totp/Acme:ada@example.com?secret=JBSWY3DPEHPK3PXP&issuer=Acme",
+        backupCodes: ["ab12-cd34", "ef56-gh78"],
+      },
+      error: null,
+    }),
     verifyTotp: ok,
     verifyBackupCode: ok,
     disable: ok,

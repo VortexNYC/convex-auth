@@ -74,13 +74,25 @@ Ready-made auth surfaces: full pages, forms, social buttons, trigger buttons, an
 
 <Component path="convex-auth-action-button" />
 
-No props.
+**Props**
+
+| Name       | Type         | Optional     |
+| ---------- | ------------ | ------------ | --- |
+| `children` | `ReactNode`  | Yes          |
+| `variant`  | `"primary"   | "secondary"` | Yes |
+| `onClick`  | `() => void` | Yes          |
+| `type`     | `"button"    | "submit"`    | Yes |
 
 ### `ConvexAuthLoadingCard`
 
 <Component path="convex-auth-loading-card" />
 
-No props.
+**Props**
+
+| Name          | Type     | Optional |
+| ------------- | -------- | -------- |
+| `title`       | `string` | Yes      |
+| `description` | `string` | Yes      |
 
 ### `ConvexAuthOrganizationChooserPage`
 
@@ -183,7 +195,13 @@ No props.
 
 <Component path="convex-auth-unavailable-card" />
 
-No props.
+**Props**
+
+| Name          | Type        | Optional |
+| ------------- | ----------- | -------- |
+| `title`       | `string`    | Yes      |
+| `description` | `string`    | Yes      |
+| `actions`     | `ReactNode` | Yes      |
 
 ## Auth trigger buttons
 
