@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "esnext",
+    "target": "es2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": [],
+    "paths": {
+      "react": ["../packages/auth/node_modules/@types/react"],
+      "react/*": ["../packages/auth/node_modules/@types/react/*"]
+    }
+  },
+  "include": ["examples/**/*.ts", "examples/**/*.tsx"]
+}

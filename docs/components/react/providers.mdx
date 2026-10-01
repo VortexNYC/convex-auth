@@ -9,11 +9,15 @@ The runtime providers, auth-state boundaries, shared form primitives, and the ap
 
 ### `AuthRuntimeProvider`
 
+<Component path="auth-runtime-provider" />
+
 No props.
 
 ## Boundaries
 
 ### `AuthLoadedBoundaryView`
+
+<Component path="auth-loaded-boundary-view" />
 
 **Props**
 
@@ -24,6 +28,8 @@ No props.
 
 ### `AuthLoadingBoundaryView`
 
+<Component path="auth-loading-boundary-view" />
+
 **Props**
 
 | Name       | Type              | Optional | Description                                     |
@@ -33,6 +39,8 @@ No props.
 
 ### `AuthSignedInBoundary`
 
+<Component path="auth-signed-in-boundary" />
+
 **Props**
 
 | Name       | Type              | Optional | Description                                |
@@ -41,6 +49,8 @@ No props.
 | `children` | `ReactNode`       | No       | Rendered only when a session is signed in. |
 
 ### `AuthSignedOutBoundary`
+
+<Component path="auth-signed-out-boundary" />
 
 **Props**
 
@@ -53,9 +63,13 @@ No props.
 
 ### `ConvexAuthClientContextProvider`
 
+<Component path="convex-auth-client-context-provider" />
+
 No props.
 
 ### `ConvexAuthClientProvider`
+
+<Component path="convex-auth-client-provider" />
 
 **Props**
 
@@ -70,6 +84,8 @@ No props.
 
 ### `ConvexAuthConvexIdentityProvisioner`
 
+<Component path="convex-auth-convex-identity-provisioner" />
+
 **Props**
 
 | Name                   | Type                                                      | Optional |
@@ -79,6 +95,8 @@ No props.
 | `provisionCurrentUser` | `FunctionReference<mutation, public, EmptyArgs, unknown>` | No       |
 
 ### `ConvexAuthIdentityProvisioner`
+
+<Component path="convex-auth-identity-provisioner" />
 
 Lower-level provisioner — `ConvexAuthConvexIdentityProvisioner` wraps this with the Convex function references already bound.
 
@@ -92,6 +110,8 @@ Lower-level provisioner — `ConvexAuthConvexIdentityProvisioner` wraps this wit
 | `provisionCurrentUser` | `() => Promise<unknown>` | No       | Callback that provisions the user when invoked.          |
 
 ### `ConvexAuthProvider`
+
+<Component path="convex-auth-provider" />
 
 **Props**
 
@@ -108,59 +128,87 @@ Lower-level provisioner — `ConvexAuthConvexIdentityProvisioner` wraps this wit
 
 ### `AuthAlert`
 
+<Component path="auth-alert" />
+
 No props.
 
 ### `AuthButton`
+
+<Component path="auth-button" />
 
 No props.
 
 ### `AuthCard`
 
+<Component path="auth-card" />
+
 No props.
 
 ### `AuthCardContent`
+
+<Component path="auth-card-content" />
 
 No props.
 
 ### `AuthCardHeader`
 
+<Component path="auth-card-header" />
+
 No props.
 
 ### `AuthDivider`
+
+<Component path="auth-divider" />
 
 No props.
 
 ### `AuthField`
 
+<Component path="auth-field" />
+
 No props.
 
 ### `AuthInput`
+
+<Component path="auth-input" />
 
 No props.
 
 ### `AuthLabel`
 
+<Component path="auth-label" />
+
 No props.
 
 ### `AuthProviderButton`
+
+<Component path="auth-provider-button" />
 
 No props.
 
 ### `AuthRuntimeStatusBadge`
 
+<Component path="auth-runtime-status-badge" />
+
 No props.
 
 ### `AuthRuntimeSummary`
 
+<Component path="auth-runtime-summary" />
+
 No props.
 
 ### `AuthScreen`
+
+<Component path="auth-screen" />
 
 No props.
 
 ## Theming
 
 ### `ConvexAuthAppearanceProvider`
+
+<Component path="convex-auth-appearance-provider" />
 
 **Props**
 
@@ -174,6 +222,8 @@ No props.
 ## Email templates
 
 ### `AuthInvitationEmailTemplate`
+
+<Component path="auth-invitation-email-template" />
 
 **Props**
 

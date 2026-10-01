@@ -48,6 +48,8 @@ Audit log surfaces for the [security](/security) event trail.
 
 ### `ConvexSecurityAuditRow`
 
+<Component path="convex-security-audit-row" />
+
 **Props**
 
 | Name              | Type                                   | Optional |
@@ -73,3 +75,25 @@ Audit log surfaces for the [security](/security) event trail.
 | `secondaryBadge` | `string` |
 | `stateText`      | `string` |
 | `title`          | `string` |
+
+### `PasskeyManager`
+
+<Component path="passkey-manager" />
+
+Manages WebAuthn passkeys for the signed-in user: lists registered passkeys, registers a new one, and supports rename and revoke. Registration and authentication callbacks receive/return the WebAuthn JSON types, so wire them to your passkey endpoints.
+
+**Props**
+
+| Name                     | Type                                                                            | Optional |
+| ------------------------ | ------------------------------------------------------------------------------- | -------- |
+| `rpName`                 | `string`                                                                        | No       |
+| `passkeys`               | `PasskeyListItem[]`                                                             | Yes      |
+| `loading`                | `boolean`                                                                       | Yes      |
+| `onRegister`             | `(args: { name: string }) => Promise<PublicKeyCredentialCreationOptionsJSON>`   | No       |
+| `onVerifyRegistration`   | `(args: { name: string; response: RegistrationResponseJSON }) => Promise<void>` | No       |
+| `onAuthenticate`         | `() => Promise<PublicKeyCredentialRequestOptionsJSON>`                          | No       |
+| `onVerifyAuthentication` | `(args: { response: AuthenticationResponseJSON }) => Promise<void>`             | No       |
+| `onRevoke`               | `(args: { credentialId: string }) => Promise<void>`                             | No       |
+| `onRename`               | `(args: { credentialId: string; name: string }) => Promise<void>`               | Yes      |
+
+See [Passkeys](/passkeys) for the full feature walkthrough.
