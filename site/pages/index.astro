@@ -8,7 +8,6 @@ import BlumePage from "blume/components/BlumePage.astro";
 import Icon from "blume/components/Icon.astro";
 import RootLayout from "blume/components/layout/RootLayout.astro";
 import { withBase } from "blume/components/islands/base-path.ts";
-import Preview from "../components/Preview.astro";
 
 const { config } = data;
 const index = data.routes.find((r) => r.path === "/");
@@ -107,12 +106,6 @@ const features = [
         Browse components
       </a>
     </div>
-  </div>
-
-  {/* The real catalog widget — Preview/Code tabs over a live example,
-      same component every docs page uses. */}
-  <div class="not-prose mb-16">
-    <Preview path="convex-auth-sign-in-page" of="ConvexAuthSignInPage" />
   </div>
 
   {/* Feature grid — the differentiators, not a link list. */}
