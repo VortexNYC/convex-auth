@@ -130,6 +130,15 @@ export default defineConfig({
       light: "oklch(0.21 0.008 250)",
       dark: "oklch(0.97 0.004 250)",
     },
+    fonts: {
+      // Inter Tight shares Inter's metrics but bakes in display tracking —
+      // headings get real optical contrast over the Inter body without a
+      // family clash. Geist Mono is narrower than IBM Plex Mono, so inline
+      // code and wide tables carry more characters per line.
+      body: "inter",
+      display: "inter-tight",
+      mono: "geist-mono",
+    },
   },
   // Injected into every example preview frame after Blume's defaults — scans
   // `packages/auth/src` so component classes compile and declares the

@@ -31,6 +31,29 @@
   --blume-accent-foreground: oklch(0.1 0.005 250);
 }
 
+/* Typography — Blume renders every heading at weight 500, so h1/h2/h3 read
+   as the same voice. Two real levers: weight contrast on the big headings
+   (600 over the 400 body, backed by Inter Tight's display metrics), and a
+   proper lede — Blume emits the page description as p.text-lg right after
+   the h1, so size it up and tighten tracking to sit between heading and
+   body rather than reading as a grayed paragraph. */
+.prose :where(h1, h2) {
+  font-weight: 600;
+}
+
+.prose > h1 + p {
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  line-height: 1.55;
+}
+
+/* Inline code: the code-background pill sits on --blume-background at
+   1.02:1 — invisible on light mode. A hairline border ties it to the card
+   and chrome language and makes the pill actually read as a chip. */
+.prose :not(pre) > code:not(:where([class~="not-prose"] *)) {
+  border: 1px solid var(--blume-border);
+}
+
 /* Nested sidebar groups (React, React Native under UI components) get a
    24px gap that detaches them from the page rows above — halve it so the
    group headers track the sidebar's tighter item rhythm. */
