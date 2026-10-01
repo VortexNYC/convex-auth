@@ -19,8 +19,16 @@ import ts from "typescript";
 
 const siteDir = dirname(fileURLToPath(new URL(".", import.meta.url)));
 const repoRoot = join(siteDir, "..");
-const reactSrc = join(repoRoot, "packages/auth/src/react");
-const mdxDir = join(repoRoot, "docs/components/react");
+// React Native exports reuse React names (`ConvexSessionList` etc.) with
+// different props — RN entries are keyed `rn/Name` so both can be cited.
+const sources = [
+  { dir: join(repoRoot, "packages/auth/src/react"), prefix: "" },
+  { dir: join(repoRoot, "packages/auth/src/react-native"), prefix: "rn/" },
+];
+const mdxDirs = [
+  join(repoRoot, "docs/components/react"),
+  join(repoRoot, "docs/components/react-native"),
+];
 const outFile = join(siteDir, "generated/props-registry.json");
 
 function tsxFiles(dir) {
@@ -33,13 +41,16 @@ function tsxFiles(dir) {
   );
 }
 
-const files = tsxFiles(reactSrc);
+const files = sources.flatMap((s) => tsxFiles(s.dir).map((file) => ({ file, prefix: s.prefix })));
 
 const configPath = join(repoRoot, "packages/auth/tsconfig.json");
 const { config } = ts.readConfigFile(configPath, ts.sys.readFile);
 const { options } = ts.parseJsonConfigFileContent(config, ts.sys, dirname(configPath));
 
-const program = ts.createProgram(files, { ...options, noEmit: true });
+const program = ts.createProgram(
+  files.map((f) => f.file),
+  { ...options, noEmit: true },
+);
 const checker = program.getTypeChecker();
 
 const isExternalFile = (f) =>
@@ -251,7 +262,7 @@ function exportedName(node) {
 
 const registry = {};
 
-for (const file of files) {
+for (const { file, prefix } of files) {
   const sf = program.getSourceFile(file);
   if (!sf) continue;
   for (const stmt of sf.statements) {
@@ -268,9 +279,10 @@ for (const file of files) {
       }
     }
     if (!name || !fnLike) continue;
+    const key = prefix + name;
     const props = propsOfFunction(fnLike);
-    if (!registry[name] || props.length > registry[name].length) {
-      registry[name] = props;
+    if (!registry[key] || props.length > registry[key].length) {
+      registry[key] = props;
     }
   }
 }
@@ -283,30 +295,32 @@ const json = JSON.stringify(registry, null, 2) + "\n";
 function validateMdxRefs() {
   const failures = [];
   const refRe = /<(?:PropsTable|Preview)\s+([^>]*)\/?>/g;
-  for (const entry of readdirSync(mdxDir)) {
-    if (!entry.endsWith(".mdx")) continue;
-    const file = join(mdxDir, entry);
-    const text = readFileSync(file, "utf8");
-    let m;
-    while ((m = refRe.exec(text)) !== null) {
-      const tag = /<(\w+)/.exec(m[0])?.[1];
-      const of = /of="([^"]+)"/.exec(m[1])?.[1];
-      const rows = /rows="([^"]+)"/.exec(m[1])?.[1];
-      if (!of) {
-        // `of` is optional on <Preview> (no Props tab), required on PropsTable.
-        if (tag === "PropsTable") {
-          failures.push(`${entry}: <PropsTable> missing \`of\``);
+  for (const mdxDir of mdxDirs) {
+    for (const entry of readdirSync(mdxDir)) {
+      if (!entry.endsWith(".mdx")) continue;
+      const file = join(mdxDir, entry);
+      const text = readFileSync(file, "utf8");
+      let m;
+      while ((m = refRe.exec(text)) !== null) {
+        const tag = /<(\w+)/.exec(m[0])?.[1];
+        const of = /of="([^"]+)"/.exec(m[1])?.[1];
+        const rows = /rows="([^"]+)"/.exec(m[1])?.[1];
+        if (!of) {
+          // `of` is optional on <Preview> (no Props tab), required on PropsTable.
+          if (tag === "PropsTable") {
+            failures.push(`${entry}: <PropsTable> missing \`of\``);
+          }
+          continue;
         }
-        continue;
-      }
-      const props = registry[of];
-      if (!props) {
-        failures.push(`${entry}: no registry entry for "${of}"`);
-        continue;
-      }
-      for (const name of (rows ?? "").split(",").map((s) => s.trim())) {
-        if (name && !props.some((p) => p.name === name)) {
-          failures.push(`${entry}: ${of}.${name} is not a prop`);
+        const props = registry[of];
+        if (!props) {
+          failures.push(`${entry}: no registry entry for "${of}"`);
+          continue;
+        }
+        for (const name of (rows ?? "").split(",").map((s) => s.trim())) {
+          if (name && !props.some((p) => p.name === name)) {
+            failures.push(`${entry}: ${of}.${name} is not a prop`);
+          }
         }
       }
     }
