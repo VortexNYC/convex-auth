@@ -17,12 +17,6 @@ export default defineConfig({
   title: "Convex Auth",
   description: "Vortex-native, full-stack authentication for Convex.",
   logo: "/logo.svg",
-  banner: {
-    content: "v3.1.0 — Clerk/WorkOS migration, Hono adapter, Node 22 floor",
-    link: { href: "/changelog", text: "Changelog" },
-    dismissible: true,
-    id: "v3.1.0",
-  },
   github: {
     owner: "VortexNYC",
     repo: "convex-auth",

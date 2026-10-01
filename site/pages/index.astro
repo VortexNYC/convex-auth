@@ -74,33 +74,26 @@ const features = [
   {/* Hero — a dark card inside the content column, so it reads in both
       themes without fighting the page surface. */}
   <div
-    class="not-prose -mt-4 mb-12 rounded-blume bg-[oklch(0.13_0.006_250)] px-8 py-14 text-[oklch(0.95_0.004_250)] md:px-12"
+    class="not-prose -mt-4 mb-12 rounded-blume bg-[oklch(0.13_0.006_250)] px-8 py-16 text-center text-[oklch(0.95_0.004_250)] md:px-12"
   >
-    <a
-      class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-sm text-white/70 transition-colors hover:border-white/25 hover:text-white"
-      href={withBase("/changelog")}
-    >
-      v3.1.0 — Clerk/WorkOS migration, Hono adapter
-      <Icon name="arrow-right" size={13} />
-    </a>
     <h1
-      class="mt-6 max-w-2xl font-display font-semibold text-4xl tracking-tight text-balance md:text-5xl"
+      class="mx-auto max-w-2xl font-display font-semibold text-4xl tracking-tight text-balance md:text-5xl"
     >
       Convex-native auth for production apps
     </h1>
-    <p class="mt-4 max-w-xl text-pretty text-white/65">
+    <p class="mx-auto mt-4 max-w-xl text-pretty text-white/65">
       Users, sessions, organizations, API keys, webhooks, and MCP auth — all
       living in your Convex database. No external auth service required.
     </p>
-    <div class="mt-7 flex flex-wrap items-center gap-3">
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
       <a
-        class="rounded-blume bg-white px-5 py-2.5 font-medium text-[oklch(0.17_0.01_250)] text-sm transition-colors hover:bg-white/90"
+        class="rounded-blume border border-white/25 bg-white/10 px-5 py-2.5 font-medium text-sm text-white transition-colors hover:bg-white/15"
         href={withBase("/quickstart")}
       >
         Get started
       </a>
       <a
-        class="rounded-blume border border-white/20 px-5 py-2.5 font-medium text-sm text-white/85 transition-colors hover:border-white/35 hover:text-white"
+        class="rounded-blume px-5 py-2.5 font-medium text-sm text-white/70 transition-colors hover:text-white"
         href={withBase("/components/react/sign-in")}
       >
         Browse components
