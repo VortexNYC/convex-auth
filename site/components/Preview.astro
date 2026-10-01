@@ -27,7 +27,9 @@ const { path } = Astro.props;
       if (frame.dataset.blumeEager) continue;
       frame.dataset.blumeEager = "1";
       frame.loading = "eager";
-      frame.src = frame.src;
+      // Reassigning src restarts the fetch for frames lazy-loading deferred.
+      const src = frame.src;
+      frame.src = src;
     }
   }
   document.addEventListener("astro:page-load", eagerFrames);
