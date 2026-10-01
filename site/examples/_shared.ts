@@ -11,7 +11,8 @@ import type { NativeAuthActions } from "../../packages/auth/src/react/ConvexAuth
 
 // Fixed epoch keeps rendered timestamps identical between SSR and
 // hydration (Date.now() would mismatch on `toLocaleString` output).
-const now = Date.UTC(2025, 0, 16, 12, 0, 0);
+export const PREVIEW_NOW = Date.UTC(2025, 0, 16, 12, 0, 0);
+const now = PREVIEW_NOW;
 const day = 86400000;
 
 export const MOCK_USER = {
@@ -322,11 +323,22 @@ export const mockAuthActions = {
 } as unknown as NativeAuthActions;
 
 /**
- * Dummy Convex client — never connects, so `useQuery` hooks return
- * `undefined` and wired surfaces render their documented loading branch.
+ * WebSocket stub that never opens — Convex queries stay pending forever,
+ * so wired surfaces render their documented loading branch without a
+ * socket, reconnect loop, or network traffic after hydration.
  */
+class PreviewWebSocket {
+  readonly readyState = 0;
+  send() {}
+  close() {}
+  addEventListener() {}
+  removeEventListener() {}
+}
+
 export const mockConvexClient = new ConvexReactClient("https://preview.convex.cloud", {
   unsavedChangesWarning: false,
+  logger: false,
+  webSocketConstructor: PreviewWebSocket as unknown as typeof WebSocket,
 });
 
 /** Wraps children in a Convex context so `useQuery`-based components mount. */

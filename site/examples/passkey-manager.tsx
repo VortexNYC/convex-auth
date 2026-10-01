@@ -1,6 +1,7 @@
 import { PasskeyManager } from "../../packages/auth/src/react/passkey-manager";
 
 const notInPreview = () => Promise.reject(new Error("preview only"));
+import { PREVIEW_NOW } from "./_shared";
 
 export default function PasskeyManagerPreview() {
   return (
@@ -10,15 +11,15 @@ export default function PasskeyManagerPreview() {
         {
           credentialId: "cred_1",
           name: "MacBook Pro Touch ID",
-          createdAt: Date.now() - 86400000 * 30,
-          lastUsedAt: Date.now() - 3600000,
+          createdAt: PREVIEW_NOW - 86400000 * 30,
+          lastUsedAt: PREVIEW_NOW - 3600000,
           transports: ["internal"],
         },
         {
           credentialId: "cred_2",
           name: "YubiKey 5C",
-          createdAt: Date.now() - 86400000 * 90,
-          lastUsedAt: Date.now() - 86400000 * 7,
+          createdAt: PREVIEW_NOW - 86400000 * 90,
+          lastUsedAt: PREVIEW_NOW - 86400000 * 7,
           transports: ["usb", "nfc"],
         },
       ]}

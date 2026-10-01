@@ -10,7 +10,7 @@ export default function SecurityAuditRowPreview() {
         userEmail: "ada@example.com",
         userName: "Ada Lovelace",
         ipAddress: "203.0.113.10",
-        createdAt: Date.now() - 3600000,
+        createdAt: Date.UTC(2025, 0, 16, 11, 0, 0),
       }}
     />
   );

@@ -1,6 +1,7 @@
 // Docs builds run before package builds, so previews import the component
 // source rather than the @vortex-api/convex-auth dist exports.
 import { ConvexAdminDashboard } from "../../packages/auth/src/react/admin-dashboard";
+import { PREVIEW_NOW } from "./_shared";
 
 export default function AdminDashboardPreview() {
   return (
@@ -13,7 +14,7 @@ export default function AdminDashboardPreview() {
           isActive: true,
           isSuperAdmin: true,
           roles: ["admin"],
-          createdAt: Date.now() - 86400000 * 120,
+          createdAt: PREVIEW_NOW - 86400000 * 120,
         },
         {
           _id: "u2",
@@ -21,16 +22,16 @@ export default function AdminDashboardPreview() {
           name: "Grace Hopper",
           isActive: true,
           roles: ["member"],
-          createdAt: Date.now() - 86400000 * 30,
+          createdAt: PREVIEW_NOW - 86400000 * 30,
         },
         {
           _id: "u3",
           email: "banned@example.com",
           name: "Banned User",
           isActive: false,
-          bannedUntil: Date.now() + 86400000,
+          bannedUntil: PREVIEW_NOW + 86400000,
           banReason: "Spam",
-          createdAt: Date.now() - 86400000 * 7,
+          createdAt: PREVIEW_NOW - 86400000 * 7,
         },
       ]}
       sessions={[
@@ -40,8 +41,8 @@ export default function AdminDashboardPreview() {
           userId: "u1",
           ipAddress: "203.0.113.10",
           userAgent: "Safari",
-          createdAt: Date.now() - 3600000,
-          expiresAt: Date.now() + 86400000 * 7,
+          createdAt: PREVIEW_NOW - 3600000,
+          expiresAt: PREVIEW_NOW + 86400000 * 7,
         },
       ]}
       organizations={[
@@ -56,7 +57,7 @@ export default function AdminDashboardPreview() {
           targetType: "user",
           targetId: "u3",
           result: "success",
-          createdAt: Date.now() - 7200000,
+          createdAt: PREVIEW_NOW - 7200000,
         },
       ]}
       onBanUser={() => {}}

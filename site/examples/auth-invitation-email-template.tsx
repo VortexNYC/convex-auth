@@ -7,7 +7,7 @@ export default function InvitationEmailTemplatePreview() {
       roleName="Admin"
       inviterLabel="Ada Lovelace"
       acceptUrl="https://app.example.com/invite/acme-t3k9x"
-      expiresAt={new Date(Date.now() + 3 * 86400000)}
+      expiresAt={new Date(Date.UTC(2025, 0, 19))}
     />
   );
 }
