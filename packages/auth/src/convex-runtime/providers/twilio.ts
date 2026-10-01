@@ -5,6 +5,7 @@
  * `fetch`, so they work in Convex `action` handlers without any Node SDK. API
  * credentials should live in Convex environment variables, not source code.
  */
+import type { GenericActionCtx, GenericDataModel } from "convex/server";
 
 export type TwilioSmsDraft = {
   /** Recipient phone number in E.164 format. */
@@ -17,11 +18,26 @@ export type TwilioSmsDraft = {
 
 export type SmsSender = (draft: TwilioSmsDraft) => Promise<string>;
 
-export type PhoneOtpSender = (data: {
-  phone: string;
-  otp: string;
-  type: string;
-}) => Promise<string>;
+/**
+ * The action context surface OTP senders may use — the same
+ * `Pick<GenericActionCtx<GenericDataModel>, ...>` convention the official
+ * `@convex-dev/twilio` client uses for its `ctx` parameters. Any concrete
+ * action ctx is assignable to it; narrower members like `db`/`auth` are
+ * intentionally excluded since cross-component ctx isn't fully assignable.
+ */
+export type PhoneOtpActionCtx = Pick<
+  GenericActionCtx<GenericDataModel>,
+  "runQuery" | "runMutation" | "runAction"
+>;
+
+export type PhoneOtpSender = (
+  data: {
+    phone: string;
+    otp: string;
+    type: string;
+  },
+  ctx: PhoneOtpActionCtx,
+) => Promise<string>;
 
 export type TwilioSmsSenderOptions = {
   /** Twilio Account SID. */
@@ -145,5 +161,74 @@ export function createTwilioSmsOtpSender(options: TwilioSmsOtpSenderOptions): Ph
       to: phone,
       body: buildMessage(otp, type),
     });
+  };
+}
+
+/**
+ * Minimal surface of the `@convex-dev/twilio` component's `Twilio` client —
+ * the object returned by `new Twilio(components.twilio, {...})`. Duck-typed
+ * so consumers get the adapter without the package becoming a hard dep.
+ * Matches the real client when `defaultFrom` was configured (its `sendMessage`
+ * takes `from?`); clients without `defaultFrom` need `TwilioComponentClientRequiringFrom`.
+ */
+export type TwilioComponentClient = {
+  sendMessage: (
+    ctx: PhoneOtpActionCtx,
+    args: { to: string; body: string; from?: string },
+  ) => Promise<{ sid: string }>;
+};
+
+/** A component client constructed without `defaultFrom` — `sendMessage` requires `from` per call. */
+export type TwilioComponentClientRequiringFrom = {
+  sendMessage: (
+    ctx: PhoneOtpActionCtx,
+    args: { to: string; body: string; from: string },
+  ) => Promise<{ sid: string }>;
+};
+
+export type ConvexTwilioOtpSenderOptions = {
+  /** Override the component client's `defaultFrom`. */
+  from?: string;
+  /** Optional message builder. Defaults to a type-specific plain-text message. */
+  buildMessage?: (otp: string, type: string) => string;
+};
+
+/**
+ * OTP sender backed by the official `@convex-dev/twilio` component — each
+ * send is a single `sendMessage` request that the component records in its
+ * own tables; delivery status is tracked there when the component's Twilio
+ * webhook is registered. Throws if the send fails; the OTP verifier expires
+ * on its normal TTL and a new code can be requested.
+ *
+ * Requires `app.use(twilio)` in `convex/convex.config.ts` and
+ * `new Twilio(components.twilio, { defaultFrom })` — see the phone docs.
+ *
+ * Overloads mirror the real client's typing: when the client was built
+ * without `defaultFrom`, `from` must be supplied here via options.
+ */
+export function createConvexTwilioOtpSender(
+  twilio: TwilioComponentClient,
+  options?: ConvexTwilioOtpSenderOptions,
+): PhoneOtpSender;
+export function createConvexTwilioOtpSender(
+  twilio: TwilioComponentClientRequiringFrom,
+  options: ConvexTwilioOtpSenderOptions & { from: string },
+): PhoneOtpSender;
+export function createConvexTwilioOtpSender(
+  twilio: TwilioComponentClient | TwilioComponentClientRequiringFrom,
+  options?: ConvexTwilioOtpSenderOptions,
+): PhoneOtpSender {
+  const buildMessage = options?.buildMessage ?? defaultSmsOtpMessage;
+  // Overload 2 already forces `options.from` for clients whose sendMessage
+  // requires it, so the optional-from view is safe inside the impl.
+  const client = twilio as TwilioComponentClient;
+
+  return async ({ phone, otp, type }, ctx) => {
+    const message = await client.sendMessage(ctx, {
+      to: phone,
+      body: buildMessage(otp, type),
+      ...(options?.from ? { from: options.from } : {}),
+    });
+    return message.sid;
   };
 }
