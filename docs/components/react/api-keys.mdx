@@ -11,22 +11,8 @@ Forms and lists for the [API keys](/api-keys) feature — issue, rotate, and rev
 
 **Generics:** `<Scope>`
 
-**Props**
+<PropsTable of="ConvexApiKeyCreateForm" />
 
-| Name                    | Type                                      | Optional |
-| ----------------------- | ----------------------------------------- | -------- |
-| `apiEnabled`            | `boolean`                                 | No       |
-| `classNames`            | `ConvexApiKeyClassNames`                  | Yes      |
-| `copy`                  | `ConvexApiKeyCreateFormCopy`              | Yes      |
-| `creating`              | `boolean`                                 | No       |
-| `expirationOptions`     | `readonly ConvexApiKeyExpirationOption[]` | Yes      |
-| `onExpiresInDaysChange` | `(value: string) => void`                 | No       |
-| `onIpAllowlistChange`   | `(value: string) => void`                 | No       |
-| `onNameChange`          | `(value: string) => void`                 | No       |
-| `onScopesChange`        | `(value: Scope[]) => void`                | No       |
-| `onSubmit`              | `() => void`                              | No       |
-| `scopeOptions`          | `readonly Scope[]`                        | No       |
-| `state`                 | `ConvexApiKeyCreateFormState<Scope>`      | No       |
 
 **classNames keys**
 
@@ -78,17 +64,8 @@ Forms and lists for the [API keys](/api-keys) feature — issue, rotate, and rev
 
 **Generics:** `<Scope, ApiKeyId>`
 
-**Props**
+<PropsTable of="ConvexApiKeyList" />
 
-| Name              | Type                                                            | Optional | Description |
-| ----------------- | --------------------------------------------------------------- | -------- | ----------- |
-| `apiKeys`         | `readonly ConvexApiKeyListItem<Scope, ApiKeyId>[] \| undefined` | No       |             |
-| `classNames`      | `ConvexApiKeyClassNames`                                        | Yes      |             |
-| `copy`            | `ConvexApiKeyListCopy`                                          | No       |             |
-| `formatTimestamp` | `(timestamp: number) => string`                                 | Yes      |             |
-| `onRevoke`        | `(apiKeyId: ApiKeyId) => void`                                  | No       |             |
-| `onRotate`        | `(apiKeyId: ApiKeyId) => void`                                  | No       |             |
-| `renderTag`       | `(label: string) => ReactNode`                                  | Yes      |             |
 
 **classNames keys**
 
@@ -142,10 +119,5 @@ Forms and lists for the [API keys](/api-keys) feature — issue, rotate, and rev
 
 One-time secret reveal shown immediately after a key is created — the only time the raw key is ever visible.
 
-**Props**
+<PropsTable of="ConvexApiKeyCreated" />
 
-| Name         | Type                                            | Optional | Description                          |
-| ------------ | ----------------------------------------------- | -------- | ------------------------------------ |
-| `apiKey`     | `string`                                        | No       | The newly created key value.         |
-| `classNames` | `{ card, content, title, token, hint, button }` | Yes      | Per-element class overrides.         |
-| `onClose`    | `() => void`                                    | Yes      | Called when the reveal is dismissed. |

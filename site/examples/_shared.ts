@@ -300,6 +300,12 @@ export const mockAuthClient = new Proxy(baseClient, {
   },
 }) as unknown as ConvexBetterAuthClient;
 
+/** Same stub but with zero sessions — drives empty-state previews. */
+export const mockAuthClientEmpty = {
+  ...baseClient,
+  listSessions: async () => ({ data: [], error: null }),
+} as unknown as ConvexBetterAuthClient;
+
 /** Placeholder `FunctionReference` — enough for `useQuery`/`useMutation`/`useAction` to mount. */
 export const fnRef = (name: string) => name as never;
 
@@ -385,4 +391,22 @@ export const mockConvexClient = (() => {
 /** Wraps children in a Convex context so `useQuery`-based components mount. */
 export function ConvexPreviewShell(props: { children?: ReactNode }) {
   return createElement(ConvexProvider, { client: mockConvexClient }, props.children);
+}
+
+/**
+ * Labeled wrapper for showing several states of one component in a single
+ * preview — the Kumo pattern of rendering Basic/Loading/Variants stacked.
+ */
+export function PreviewVariant(props: { label: string; children?: ReactNode }) {
+  return createElement(
+    "section",
+    { className: "mb-6 last:mb-0" },
+    createElement("p", { className: "text-muted-foreground mb-2 font-mono text-xs" }, props.label),
+    props.children,
+  );
+}
+
+/** Italic caption for variants that render nothing (e.g. signed-out boundary). */
+export function PreviewNote(props: { children?: ReactNode }) {
+  return createElement("p", { className: "text-muted-foreground text-sm italic" }, props.children);
 }

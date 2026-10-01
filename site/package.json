@@ -3,11 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "blume dev",
-    "build": "blume build",
+    "dev": "node scripts/generate-props-registry.mjs && blume dev",
+    "build": "node scripts/generate-props-registry.mjs && blume build",
     "doctor": "blume doctor",
     "typecheck:examples": "tsc -p tsconfig.examples.json",
-    "deploy": "pnpm dlx @convex-dev/static-hosting deploy"
+    "deploy": "pnpm dlx @convex-dev/static-hosting deploy",
+    "codegen:props": "node scripts/generate-props-registry.mjs",
+    "check:props": "node scripts/generate-props-registry.mjs --check"
   },
   "dependencies": {
     "@convex-dev/static-hosting": "^0.2.0",
@@ -15,5 +17,8 @@
     "convex": "^1.46.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.7.3"
   }
 }

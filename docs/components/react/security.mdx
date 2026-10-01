@@ -9,15 +9,8 @@ Audit log surfaces for the [security](/security) event trail.
 
 <Component path="security-audit-list" />
 
-**Props**
+<PropsTable of="ConvexSecurityAuditList" />
 
-| Name              | Type                                                  | Optional | Description |
-| ----------------- | ----------------------------------------------------- | -------- | ----------- |
-| `classNames`      | `ConvexSecurityAuditListClassNames`                   | Yes      |             |
-| `copy`            | `ConvexSecurityAuditListCopy`                         | No       |             |
-| `formatCreatedAt` | `(createdAt: number) => string`                       | Yes      |             |
-| `logs`            | `readonly ConvexSecurityAuditListItem[] \| undefined` | No       |             |
-| `renderBadge`     | `(args: __type) => ReactNode`                         | Yes      |             |
 
 **classNames keys**
 
@@ -50,15 +43,8 @@ Audit log surfaces for the [security](/security) event trail.
 
 <Component path="convex-security-audit-row" />
 
-**Props**
+<PropsTable of="ConvexSecurityAuditRow" />
 
-| Name              | Type                                   | Optional |
-| ----------------- | -------------------------------------- | -------- |
-| `classNames`      | `ConvexSecurityAuditListClassNames`    | Yes      |
-| `copy`            | `Partial<ConvexSecurityAuditListCopy>` | Yes      |
-| `formatCreatedAt` | `(createdAt: number) => string`        | Yes      |
-| `log`             | `ConvexSecurityAuditListItem`          | No       |
-| `renderBadge`     | `(args: __type) => ReactNode`          | Yes      |
 
 **classNames keys**
 
@@ -82,18 +68,7 @@ Audit log surfaces for the [security](/security) event trail.
 
 Manages WebAuthn passkeys for the signed-in user: lists registered passkeys, registers a new one, and supports rename and revoke. Registration and authentication callbacks receive/return the WebAuthn JSON types, so wire them to your passkey endpoints.
 
-**Props**
+<PropsTable of="PasskeyManager" />
 
-| Name                     | Type                                                                            | Optional |
-| ------------------------ | ------------------------------------------------------------------------------- | -------- |
-| `rpName`                 | `string`                                                                        | No       |
-| `passkeys`               | `PasskeyListItem[]`                                                             | Yes      |
-| `loading`                | `boolean`                                                                       | Yes      |
-| `onRegister`             | `(args: { name: string }) => Promise<PublicKeyCredentialCreationOptionsJSON>`   | No       |
-| `onVerifyRegistration`   | `(args: { name: string; response: RegistrationResponseJSON }) => Promise<void>` | No       |
-| `onAuthenticate`         | `() => Promise<PublicKeyCredentialRequestOptionsJSON>`                          | No       |
-| `onVerifyAuthentication` | `(args: { response: AuthenticationResponseJSON }) => Promise<void>`             | No       |
-| `onRevoke`               | `(args: { credentialId: string }) => Promise<void>`                             | No       |
-| `onRename`               | `(args: { credentialId: string; name: string }) => Promise<void>`               | Yes      |
 
 See [Passkeys](/passkeys) for the full feature walkthrough.

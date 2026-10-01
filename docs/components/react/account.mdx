@@ -9,17 +9,8 @@ Signed-in account management: profile editing, image upload, email change, passw
 
 <Component path="convex-change-email-form" />
 
-**Props**
+<PropsTable of="ConvexChangeEmailForm" />
 
-| Name                | Type                              | Optional | Description                                                              |
-| ------------------- | --------------------------------- | -------- | ------------------------------------------------------------------------ |
-| `authClient`        | `ConvexAuthClient \| None`        | Yes      |                                                                          |
-| `classNames`        | `ConvexChangeEmailFormClassNames` | Yes      |                                                                          |
-| `copy`              | `ConvexChangeEmailFormCopy`       | Yes      |                                                                          |
-| `currentEmail`      | `string \| None`                  | Yes      | The user's current email, displayed read-only above the new-email field. |
-| `onRequested`       | `(newEmail: string) => void`      | Yes      |                                                                          |
-| `verifyCallbackUrl` | `string`                          | Yes      | Absolute URL of the verify-email page on this app. The app               |
-| appends             |
 
 **classNames keys**
 
@@ -53,16 +44,8 @@ Signed-in account management: profile editing, image upload, email change, passw
 
 <Component path="convex-enable-two-factor-form" />
 
-**Props**
+<PropsTable of="ConvexEnableTwoFactorForm" />
 
-| Name         | Type                                  | Optional | Description                                                       |
-| ------------ | ------------------------------------- | -------- | ----------------------------------------------------------------- |
-| `authClient` | `ConvexAuthClient \| None`            | Yes      |                                                                   |
-| `classNames` | `ConvexEnableTwoFactorFormClassNames` | Yes      |                                                                   |
-| `copy`       | `ConvexEnableTwoFactorFormCopy`       | Yes      |                                                                   |
-| `issuer`     | `string`                              | Yes      | Authenticator label shown alongside the account (e.g. "Pile").    |
-| `onEnrolled` | `() => void`                          | Yes      | Fired once enrollment is fully confirmed (after the backup step). |
-| `renderQR`   | `(totpURI: string) => ReactNode`      | Yes      | Optional QR renderer. Receives the                                |
 
 **classNames keys**
 
@@ -106,16 +89,8 @@ Signed-in account management: profile editing, image upload, email change, passw
 
 <Component path="convex-forgot-password-form" />
 
-**Props**
+<PropsTable of="ConvexForgotPasswordForm" />
 
-| Name               | Type                                 | Optional | Description                                                  |
-| ------------------ | ------------------------------------ | -------- | ------------------------------------------------------------ |
-| `authClient`       | `ConvexAuthClient \| None`           | Yes      |                                                              |
-| `classNames`       | `ConvexForgotPasswordFormClassNames` | Yes      |                                                              |
-| `copy`             | `ConvexForgotPasswordFormCopy`       | Yes      |                                                              |
-| `onRequested`      | `(email: string) => void`            | Yes      |                                                              |
-| `resetPasswordUrl` | `string`                             | No       | Absolute URL of the reset-password page on this app. The app |
-| appends            |
 
 **classNames keys**
 
@@ -147,18 +122,8 @@ Signed-in account management: profile editing, image upload, email change, passw
 
 <Component path="convex-profile-edit-form" />
 
-**Props**
+<PropsTable of="ConvexProfileEditForm" />
 
-| Name                                                   | Type                              | Optional | Description                                                   |
-| ------------------------------------------------------ | --------------------------------- | -------- | ------------------------------------------------------------- |
-| `authClient`                                           | `ConvexAuthClient \| None`        | Yes      |                                                               |
-| `classNames`                                           | `ConvexProfileEditFormClassNames` | Yes      |                                                               |
-| `copy`                                                 | `ConvexProfileEditFormCopy`       | Yes      |                                                               |
-| `initialImage`                                         | `string`                          | Yes      |                                                               |
-| `initialName`                                          | `string`                          | Yes      |                                                               |
-| `onUpdated`                                            | `(next: __type) => void`          | Yes      |                                                               |
-| `showImageField`                                       | `boolean`                         | Yes      | Whether to show the image URL field. Defaults to true. Set to |
-| false for consumers that don't surface avatar editing. |
 
 **classNames keys**
 
@@ -190,18 +155,8 @@ Signed-in account management: profile editing, image upload, email change, passw
 
 <Component path="convex-profile-image-uploader" />
 
-**Props**
+<PropsTable of="ConvexProfileImageUploader" />
 
-| Name           | Type                                        | Optional | Description                                                    |
-| -------------- | ------------------------------------------- | -------- | -------------------------------------------------------------- |
-| `accept`       | `string`                                    | Yes      | File-input                                                     |
-| `authClient`   | `ConvexAuthClient \| None`                  | Yes      |                                                                |
-| `classNames`   | `ConvexProfileImageUploaderClassNames`      | Yes      |                                                                |
-| `copy`         | `ConvexProfileImageUploaderCopy`            | Yes      |                                                                |
-| `initialImage` | `string \| None`                            | Yes      |                                                                |
-| `onUploaded`   | `(url: string) => void`                     | Yes      |                                                                |
-| `uploadFile`   | `(file: Blob \| string) => Promise<string>` | No       | Consumer-provided upload strategy. Receives the picked file (a |
-| browser        |
 
 **classNames keys**
 
@@ -230,17 +185,8 @@ Signed-in account management: profile editing, image upload, email change, passw
 
 <Component path="convex-reset-password-form" />
 
-**Props**
+<PropsTable of="ConvexResetPasswordForm" />
 
-| Name                                  | Type                                | Optional | Description                                                     |
-| ------------------------------------- | ----------------------------------- | -------- | --------------------------------------------------------------- |
-| `authClient`                          | `ConvexAuthClient \| None`          | Yes      |                                                                 |
-| `classNames`                          | `ConvexResetPasswordFormClassNames` | Yes      |                                                                 |
-| `copy`                                | `ConvexResetPasswordFormCopy`       | Yes      |                                                                 |
-| `minPasswordLength`                   | `number`                            | Yes      | Minimum new-password length to enforce client-side. Defaults to |
-| 12 (matches the package's server-side |
-| `onReset`                             | `() => void`                        | Yes      |                                                                 |
-| `token`                               | `string`                            | No       | Reset token from the recovery email (typically                  |
 
 **classNames keys**
 
@@ -275,16 +221,8 @@ Signed-in account management: profile editing, image upload, email change, passw
 
 <Component path="convex-session-list" />
 
-**Props**
+<PropsTable of="ConvexSessionList" />
 
-| Name                                                  | Type                                | Optional | Description                                                    |
-| ----------------------------------------------------- | ----------------------------------- | -------- | -------------------------------------------------------------- |
-| `authClient`                                          | `ConvexAuthClient \| None`          | Yes      |                                                                |
-| `classNames`                                          | `ConvexSessionListClassNames`       | Yes      |                                                                |
-| `copy`                                                | `ConvexSessionListCopy`             | Yes      |                                                                |
-| `formatTimestamp`                                     | `(value: string \| Date) => string` | Yes      |                                                                |
-| `showRevokeOthersAction`                              | `boolean`                           | Yes      | Render a "Revoke all other sessions" button next to the title. |
-| Defaults to true. Hides when no other sessions exist. |
 
 **classNames keys**
 
@@ -320,22 +258,8 @@ Signed-in account management: profile editing, image upload, email change, passw
 
 <Component path="user-button" />
 
-**Props**
+<PropsTable of="ConvexUserButton" />
 
-| Name                     | Type                                                | Optional | Description |
-| ------------------------ | --------------------------------------------------- | -------- | ----------- |
-| `classNames`             | `ConvexUserButtonClassNames`                        | Yes      |             |
-| `copy`                   | `ConvexUserButtonCopy`                              | Yes      |             |
-| `currentOrganizationId`  | `string \| None`                                    | Yes      |             |
-| `onCreateOrganization`   | `() => void \| Promise<void>`                       | Yes      |             |
-| `onManageAccount`        | `() => void \| Promise<void>`                       | Yes      |             |
-| `onManageOrganization`   | `() => void \| Promise<void>`                       | Yes      |             |
-| `onSelectOrganization`   | `(organizationId: string) => void \| Promise<void>` | Yes      |             |
-| `onSignOut`              | `() => void \| Promise<void>`                       | Yes      |             |
-| `organizations`          | `readonly ConvexUserButtonOrganizationItem[]`       | Yes      |             |
-| `renderCustomTrigger`    | `(args: __type) => ReactNode`                       | Yes      |             |
-| `showManageOrganization` | `boolean`                                           | Yes      |             |
-| `user`                   | `ConvexUserButtonUser \| None \| undefined`         | No       |             |
 
 **classNames keys**
 
@@ -371,21 +295,8 @@ Signed-in account management: profile editing, image upload, email change, passw
 
 <Component path="convex-user-profile" />
 
-**Props**
+<PropsTable of="ConvexUserProfile" />
 
-| Name                  | Type                                         | Optional | Description |
-| --------------------- | -------------------------------------------- | -------- | ----------- |
-| `classNames`          | `ConvexUserProfileClassNames`                | Yes      |             |
-| `copy`                | `ConvexUserProfileCopy`                      | Yes      |             |
-| `errorMessage`        | `string \| None`                             | Yes      |             |
-| `isAdmin`             | `boolean`                                    | Yes      |             |
-| `isLoading`           | `boolean`                                    | Yes      |             |
-| `onChangePassword`    | `() => void \| Promise<void>`                | Yes      |             |
-| `onDeleteAccount`     | `() => void \| Promise<void>`                | Yes      |             |
-| `onManageTwoFactor`   | `() => void \| Promise<void>`                | Yes      |             |
-| `onUpdateProfile`     | `(input: __type) => void \| Promise<void>`   | Yes      |             |
-| `renderDeleteConfirm` | `(args: __type) => ReactNode`                | Yes      |             |
-| `user`                | `ConvexUserProfileUser \| None \| undefined` | No       |             |
 
 **classNames keys**
 
@@ -442,18 +353,8 @@ Signed-in account management: profile editing, image upload, email change, passw
 
 <Component path="convex-verify-email-screen" />
 
-**Props**
+<PropsTable of="ConvexVerifyEmailScreen" />
 
-| Name                | Type                                | Optional | Description                                                           |
-| ------------------- | ----------------------------------- | -------- | --------------------------------------------------------------------- |
-| `authClient`        | `ConvexAuthClient \| None`          | Yes      |                                                                       |
-| `classNames`        | `ConvexVerifyEmailScreenClassNames` | Yes      |                                                                       |
-| `copy`              | `ConvexVerifyEmailScreenCopy`       | Yes      |                                                                       |
-| `onVerified`        | `() => void`                        | Yes      | Called on successful verification (after the verify call returns ok). |
-| `resendCallbackUrl` | `string`                            | Yes      | Absolute URL of this verify-email page on this app. The app           |
-| appends a fresh     |
-| `token`             | `string`                            | No       | Token from the verification email's                                   |
-| `userEmail`         | `string \| None`                    | Yes      | The current user's email, if signed in. Required to enable the        |
 
 resend-verification button. If absent, the resend button is
 hidden (no way to know which email to resend to). |
@@ -488,16 +389,8 @@ hidden (no way to know which email to resend to). |
 
 <Component path="convex-verify-two-factor-form" />
 
-**Props**
+<PropsTable of="ConvexVerifyTwoFactorForm" />
 
-| Name                                          | Type                                  | Optional | Description                                                         |
-| --------------------------------------------- | ------------------------------------- | -------- | ------------------------------------------------------------------- |
-| `authClient`                                  | `ConvexAuthClient \| None`            | Yes      |                                                                     |
-| `classNames`                                  | `ConvexVerifyTwoFactorFormClassNames` | Yes      |                                                                     |
-| `copy`                                        | `ConvexVerifyTwoFactorFormCopy`       | Yes      |                                                                     |
-| `onVerified`                                  | `() => void`                          | Yes      | Fired once the second factor is satisfied and the session is live.  |
-| `showTrustDevice`                             | `boolean`                             | Yes      | Show the "trust this device" checkbox (skips 2FA on this device for |
-| the server's trust window). Defaults to true. |
 
 **classNames keys**
 

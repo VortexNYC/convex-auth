@@ -1,9 +1,20 @@
 import { AuthLoadingBoundaryView } from "../../packages/auth/src/react/auth-client-boundaries";
+import { PreviewVariant, PreviewNote } from "./_shared";
 
-export default function LoadingBoundaryViewPreview() {
+export default function LoadingBoundaryPreview() {
   return (
-    <AuthLoadingBoundaryView auth={{ isLoaded: false, isSignedIn: false }}>
-      <p>Loading auth state…</p>
-    </AuthLoadingBoundaryView>
+    <>
+      <PreviewVariant label="loading">
+        <AuthLoadingBoundaryView auth={{ isLoaded: false, isSignedIn: false }}>
+          <p className="text-sm">Shown while auth state resolves.</p>
+        </AuthLoadingBoundaryView>
+      </PreviewVariant>
+      <PreviewVariant label="loaded">
+        <AuthLoadingBoundaryView auth={{ isLoaded: true, isSignedIn: true }}>
+          <p className="text-sm">Hidden content.</p>
+        </AuthLoadingBoundaryView>
+        <PreviewNote>renders nothing once auth has resolved</PreviewNote>
+      </PreviewVariant>
+    </>
   );
 }

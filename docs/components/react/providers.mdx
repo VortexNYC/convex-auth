@@ -11,12 +11,8 @@ The runtime providers, auth-state boundaries, shared form primitives, and the ap
 
 <Component path="auth-runtime-provider" />
 
-**Props**
+<PropsTable of="AuthRuntimeProvider" />
 
-| Name       | Type                | Optional |
-| ---------- | ------------------- | -------- |
-| `status`   | `AuthRuntimeStatus` | No       |
-| `children` | `ReactNode`         | Yes      |
 
 ## Boundaries
 
@@ -24,45 +20,29 @@ The runtime providers, auth-state boundaries, shared form primitives, and the ap
 
 <Component path="auth-loaded-boundary-view" />
 
-**Props**
+<PropsTable of="AuthLoadedBoundaryView" />
 
-| Name       | Type              | Optional | Description                         |
-| ---------- | ----------------- | -------- | ----------------------------------- |
-| `auth`     | `ConvexAuthState` | No       | Auth state to inspect.              |
-| `children` | `ReactNode`       | No       | Rendered once the auth state loads. |
 
 ### `AuthLoadingBoundaryView`
 
 <Component path="auth-loading-boundary-view" />
 
-**Props**
+<PropsTable of="AuthLoadingBoundaryView" />
 
-| Name       | Type              | Optional | Description                                     |
-| ---------- | ----------------- | -------- | ----------------------------------------------- |
-| `auth`     | `ConvexAuthState` | No       | Auth state to inspect.                          |
-| `children` | `ReactNode`       | No       | Rendered while the auth state is still loading. |
 
 ### `AuthSignedInBoundary`
 
 <Component path="auth-signed-in-boundary" />
 
-**Props**
+<PropsTable of="AuthSignedInBoundary" />
 
-| Name       | Type              | Optional | Description                                |
-| ---------- | ----------------- | -------- | ------------------------------------------ |
-| `auth`     | `ConvexAuthState` | No       | Auth state to inspect.                     |
-| `children` | `ReactNode`       | No       | Rendered only when a session is signed in. |
 
 ### `AuthSignedOutBoundary`
 
 <Component path="auth-signed-out-boundary" />
 
-**Props**
+<PropsTable of="AuthSignedOutBoundary" />
 
-| Name       | Type              | Optional | Description                                 |
-| ---------- | ----------------- | -------- | ------------------------------------------- |
-| `auth`     | `ConvexAuthState` | No       | Auth state to inspect.                      |
-| `children` | `ReactNode`       | No       | Rendered only when no session is signed in. |
 
 ## Providers & runtime
 
@@ -70,38 +50,22 @@ The runtime providers, auth-state boundaries, shared form primitives, and the ap
 
 <Component path="convex-auth-client-context-provider" />
 
-**Props**
+<PropsTable of="ConvexAuthClientContextProvider" />
 
-| Name       | Type        | Optional |
-| ---------- | ----------- | -------- |
-| `children` | `ReactNode` | Yes      |
 
 ### `ConvexAuthClientProvider`
 
 <Component path="convex-auth-client-provider" />
 
-**Props**
+<PropsTable of="ConvexAuthClientProvider" />
 
-| Name                  | Type                               | Optional | Description |
-| --------------------- | ---------------------------------- | -------- | ----------- |
-| `actions`             | `NativeAuthActions`                | No       |             |
-| `children`            | `ReactNode`                        | No       |             |
-| `initialRefreshToken` | `string \| None`                   | Yes      |             |
-| `initialSessionId`    | `string \| None`                   | Yes      |             |
-| `initialToken`        | `string \| None`                   | Yes      |             |
-| `storage`             | `local \| session \| TokenStorage` | Yes      |             |
 
 ### `ConvexAuthConvexIdentityProvisioner`
 
 <Component path="convex-auth-convex-identity-provisioner" />
 
-**Props**
+<PropsTable of="ConvexAuthConvexIdentityProvisioner" />
 
-| Name                   | Type                                                      | Optional |
-| ---------------------- | --------------------------------------------------------- | -------- |
-| `auth`                 | `ConvexAuthState`                                         | No       |
-| `getCurrentUser`       | `FunctionReference<query, public, EmptyArgs, unknown>`    | No       |
-| `provisionCurrentUser` | `FunctionReference<mutation, public, EmptyArgs, unknown>` | No       |
 
 ### `ConvexAuthIdentityProvisioner`
 
@@ -109,29 +73,15 @@ The runtime providers, auth-state boundaries, shared form primitives, and the ap
 
 Lower-level provisioner — `ConvexAuthConvexIdentityProvisioner` wraps this with the Convex function references already bound.
 
-**Props**
+<PropsTable of="ConvexAuthIdentityProvisioner" />
 
-| Name                   | Type                     | Optional | Description                                              |
-| ---------------------- | ------------------------ | -------- | -------------------------------------------------------- |
-| `auth`                 | `ConvexAuthState`        | No       | Current auth state to provision against.                 |
-| `currentUser`          | `unknown`                | No       | The resolved user — `null` until provisioning completes. |
-| `sessionSubject`       | `string \| null`         | No       | Session subject being provisioned.                       |
-| `provisionCurrentUser` | `() => Promise<unknown>` | No       | Callback that provisions the user when invoked.          |
 
 ### `ConvexAuthProvider`
 
 <Component path="convex-auth-provider" />
 
-**Props**
+<PropsTable of="ConvexAuthProvider" />
 
-| Name                  | Type                               | Optional | Description |
-| --------------------- | ---------------------------------- | -------- | ----------- |
-| `actions`             | `NativeAuthActions`                | No       |             |
-| `children`            | `ReactNode`                        | No       |             |
-| `initialRefreshToken` | `string \| None`                   | Yes      |             |
-| `initialSessionId`    | `string \| None`                   | Yes      |             |
-| `initialToken`        | `string \| None`                   | Yes      |             |
-| `storage`             | `local \| session \| TokenStorage` | Yes      |             |
 
 ## Shared UI primitives
 
@@ -139,147 +89,92 @@ Lower-level provisioner — `ConvexAuthConvexIdentityProvisioner` wraps this wit
 
 <Component path="auth-alert" />
 
-**Props**
+<PropsTable of="AuthAlert" />
 
-| Name        | Type        | Optional |
-| ----------- | ----------- | -------- | --------- | ---------- | --- |
-| `children`  | `ReactNode` | No       |
-| `tone`      | `"default"  | "error"  | "success" | "warning"` | Yes |
-| `title`     | `string`    | Yes      |
-| `className` | `string`    | Yes      |
 
 ### `AuthButton`
 
 <Component path="auth-button" />
 
-**Props**
+<PropsTable of="AuthButton" />
 
-| Name      | Type                                      | Optional    |
-| --------- | ----------------------------------------- | ----------- | -------- | --- |
-| `variant` | `"primary"                                | "secondary" | "ghost"` | Yes |
-| `(rest)`  | `ButtonHTMLAttributes<HTMLButtonElement>` | Yes         |
 
 ### `AuthCard`
 
 <Component path="auth-card" />
 
-**Props**
+<PropsTable of="AuthCard" />
 
-| Name        | Type        | Optional |
-| ----------- | ----------- | -------- |
-| `children`  | `ReactNode` | No       |
-| `className` | `string`    | Yes      |
 
 ### `AuthCardContent`
 
 <Component path="auth-card-content" />
 
-**Props**
+<PropsTable of="AuthCardContent" />
 
-| Name        | Type        | Optional |
-| ----------- | ----------- | -------- |
-| `children`  | `ReactNode` | No       |
-| `className` | `string`    | Yes      |
 
 ### `AuthCardHeader`
 
 <Component path="auth-card-header" />
 
-**Props**
+<PropsTable of="AuthCardHeader" />
 
-| Name          | Type                       | Optional |
-| ------------- | -------------------------- | -------- |
-| `title`       | `string`                   | No       |
-| `description` | `string`                   | Yes      |
-| `children`    | `ReactNode`                | Yes      |
-| `classNames`  | `AuthCardHeaderClassNames` | Yes      |
 
 ### `AuthDivider`
 
 <Component path="auth-divider" />
 
-**Props**
+<PropsTable of="AuthDivider" />
 
-| Name        | Type     | Optional |
-| ----------- | -------- | -------- |
-| `label`     | `string` | Yes      |
-| `className` | `string` | Yes      |
 
 ### `AuthField`
 
 <Component path="auth-field" />
 
-**Props**
+<PropsTable of="AuthField" />
 
-| Name     | Type                             | Optional |
-| -------- | -------------------------------- | -------- |
-| `(rest)` | `HTMLAttributes<HTMLDivElement>` | Yes      |
 
 ### `AuthInput`
 
 <Component path="auth-input" />
 
-**Props**
+<PropsTable of="AuthInput" />
 
-| Name     | Type                                    | Optional |
-| -------- | --------------------------------------- | -------- |
-| `(rest)` | `InputHTMLAttributes<HTMLInputElement>` | Yes      |
 
 ### `AuthLabel`
 
 <Component path="auth-label" />
 
-**Props**
+<PropsTable of="AuthLabel" />
 
-| Name     | Type                                    | Optional |
-| -------- | --------------------------------------- | -------- |
-| `(rest)` | `LabelHTMLAttributes<HTMLLabelElement>` | Yes      |
 
 ### `AuthProviderButton`
 
 <Component path="auth-provider-button" />
 
-**Props**
+<PropsTable of="AuthProviderButton" />
 
-| Name            | Type                                      | Optional |
-| --------------- | ----------------------------------------- | -------- |
-| `providerLabel` | `string`                                  | No       |
-| `(rest)`        | `ButtonHTMLAttributes<HTMLButtonElement>` | Yes      |
 
 ### `AuthRuntimeStatusBadge`
 
 <Component path="auth-runtime-status-badge" />
 
-**Props**
+<PropsTable of="AuthRuntimeStatusBadge" />
 
-| Name        | Type     | Optional |
-| ----------- | -------- | -------- |
-| `className` | `string` | Yes      |
 
 ### `AuthRuntimeSummary`
 
 <Component path="auth-runtime-summary" />
 
-**Props**
+<PropsTable of="AuthRuntimeSummary" />
 
-| Name        | Type     | Optional |
-| ----------- | -------- | -------- |
-| `className` | `string` | Yes      |
 
 ### `AuthScreen`
 
 <Component path="auth-screen" />
 
-**Props**
+<PropsTable of="AuthScreen" />
 
-| Name          | Type                   | Optional |
-| ------------- | ---------------------- | -------- |
-| `title`       | `string`               | No       |
-| `description` | `string`               | Yes      |
-| `children`    | `ReactNode`            | No       |
-| `footer`      | `ReactNode`            | Yes      |
-| `className`   | `string`               | Yes      |
-| `classNames`  | `AuthScreenClassNames` | Yes      |
 
 ## Theming
 
@@ -287,14 +182,8 @@ Lower-level provisioner — `ConvexAuthConvexIdentityProvisioner` wraps this wit
 
 <Component path="convex-auth-appearance-provider" />
 
-**Props**
+<PropsTable of="ConvexAuthAppearanceProvider" />
 
-| Name           | Type              | Optional |
-| -------------- | ----------------- | -------- |
-| `children`     | `ReactNode`       | No       |
-| `defaultTheme` | `ConvexAuthTheme` | Yes      |
-| `enableSystem` | `boolean`         | Yes      |
-| `storageKey`   | `string`          | Yes      |
 
 ## Email templates
 
@@ -302,12 +191,5 @@ Lower-level provisioner — `ConvexAuthConvexIdentityProvisioner` wraps this wit
 
 <Component path="auth-invitation-email-template" />
 
-**Props**
+<PropsTable of="AuthInvitationEmailTemplate" />
 
-| Name               | Type     | Optional |
-| ------------------ | -------- | -------- |
-| `acceptUrl`        | `string` | No       |
-| `expiresAt`        | `Date`   | No       |
-| `inviterLabel`     | `string` | No       |
-| `organizationName` | `string` | No       |
-| `roleName`         | `string` | No       |

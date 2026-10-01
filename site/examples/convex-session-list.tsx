@@ -1,6 +1,15 @@
 import { ConvexSessionList } from "../../packages/auth/src/react/convex-session-list";
-import { mockAuthClient } from "./_shared";
+import { PreviewVariant, mockAuthClient, mockAuthClientEmpty } from "./_shared";
 
 export default function SessionListPreview() {
-  return <ConvexSessionList authClient={mockAuthClient} />;
+  return (
+    <>
+      <PreviewVariant label="populated">
+        <ConvexSessionList authClient={mockAuthClient} />
+      </PreviewVariant>
+      <PreviewVariant label="empty">
+        <ConvexSessionList authClient={mockAuthClientEmpty} />
+      </PreviewVariant>
+    </>
+  );
 }

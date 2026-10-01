@@ -11,7 +11,7 @@ Management surfaces for the [webhooks](/webhooks) feature — endpoint list, cre
 
 **Generics:** `<EventType, EndpointId, DeliveryId, OrganizationId>`
 
-**Props**
+<PropsTable of="ConvexExhaustedWebhookDeliveryList" />
 
 ### `ConvexWebhookCreateForm`
 
@@ -19,20 +19,8 @@ Management surfaces for the [webhooks](/webhooks) feature — endpoint list, cre
 
 **Generics:** `<EventType>`
 
-**Props**
+<PropsTable of="ConvexWebhookCreateForm" />
 
-| Name                  | Type                                      | Optional |
-| --------------------- | ----------------------------------------- | -------- |
-| `classNames`          | `ConvexWebhookClassNames`                 | Yes      |
-| `copy`                | `ConvexWebhookCreateFormCopy`             | Yes      |
-| `creating`            | `boolean`                                 | No       |
-| `enabled`             | `boolean`                                 | No       |
-| `eventOptions`        | `readonly EventType[]`                    | No       |
-| `onDescriptionChange` | `(value: string) => void`                 | No       |
-| `onEventsChange`      | `(value: EventType[]) => void`            | No       |
-| `onSubmit`            | `() => void`                              | No       |
-| `onUrlChange`         | `(value: string) => void`                 | No       |
-| `state`               | `ConvexWebhookCreateFormState<EventType>` | No       |
 
 **classNames keys**
 
@@ -86,20 +74,8 @@ Management surfaces for the [webhooks](/webhooks) feature — endpoint list, cre
 
 **Generics:** `<EventType, EndpointId>`
 
-**Props**
+<PropsTable of="ConvexWebhookDeliveryFilters" />
 
-| Name                 | Type                                                                           | Optional | Description |
-| -------------------- | ------------------------------------------------------------------------------ | -------- | ----------- |
-| `classNames`         | `ConvexWebhookClassNames`                                                      | Yes      |             |
-| `copy`               | `Partial<ConvexWebhookDeliveryCopy>`                                           | Yes      |             |
-| `endpointId`         | `EndpointId \| all`                                                            | No       |             |
-| `endpoints`          | `readonly ConvexWebhookEndpointListItem<EventType, EndpointId>[] \| undefined` | No       |             |
-| `eventOptions`       | `readonly EventType[]`                                                         | No       |             |
-| `eventType`          | `EventType \| all`                                                             | No       |             |
-| `onEndpointIdChange` | `(value: EndpointId \| all) => void`                                           | No       |             |
-| `onEventTypeChange`  | `(value: EventType \| all) => void`                                            | No       |             |
-| `onStatusChange`     | `(value: ConvexWebhookDeliveryStatus \| all) => void`                          | No       |             |
-| `status`             | `ConvexWebhookDeliveryStatus \| all`                                           | No       |             |
 
 **classNames keys**
 
@@ -142,16 +118,8 @@ Management surfaces for the [webhooks](/webhooks) feature — endpoint list, cre
 
 **Generics:** `<EventType, EndpointId, DeliveryId, OrganizationId>`
 
-**Props**
+<PropsTable of="ConvexWebhookDeliveryList" />
 
-| Name                 | Type                                                                                                       | Optional | Description |
-| -------------------- | ---------------------------------------------------------------------------------------------------------- | -------- | ----------- |
-| `classNames`         | `ConvexWebhookClassNames`                                                                                  | Yes      |             |
-| `copy`               | `ConvexWebhookDeliveryCopy`                                                                                | No       |             |
-| `deliveries`         | `readonly ConvexWebhookDeliveryListItem<EventType, EndpointId, DeliveryId, OrganizationId>[] \| undefined` | No       |             |
-| `formatTimestamp`    | `(timestamp: number) => string`                                                                            | Yes      |             |
-| `renderFailureBadge` | `(failureKind: ConvexWebhookDeliveryFailureKind) => ReactNode`                                             | Yes      |             |
-| `renderTag`          | `(label: string) => ReactNode`                                                                             | Yes      |             |
 
 **classNames keys**
 
@@ -225,15 +193,8 @@ Management surfaces for the [webhooks](/webhooks) feature — endpoint list, cre
 
 **Generics:** `<EventType, EndpointId, DeliveryId, OrganizationId>`
 
-**Props**
+<PropsTable of="ConvexWebhookDeliveryPagination" />
 
-| Name         | Type                                                                                        | Optional | Description |
-| ------------ | ------------------------------------------------------------------------------------------- | -------- | ----------- |
-| `classNames` | `ConvexWebhookClassNames`                                                                   | Yes      |             |
-| `copy`       | `Partial<ConvexWebhookDeliveryCopy>`                                                        | Yes      |             |
-| `onNext`     | `() => void`                                                                                | No       |             |
-| `onPrevious` | `() => void`                                                                                | No       |             |
-| `page`       | `ConvexWebhookDeliveryPage<EventType, EndpointId, DeliveryId, OrganizationId> \| undefined` | No       |             |
 
 **classNames keys**
 
@@ -276,22 +237,8 @@ Management surfaces for the [webhooks](/webhooks) feature — endpoint list, cre
 
 **Generics:** `<EventType, EndpointId>`
 
-**Props**
+<PropsTable of="ConvexWebhookEndpointList" />
 
-| Name                    | Type                                                                           | Optional | Description |
-| ----------------------- | ------------------------------------------------------------------------------ | -------- | ----------- |
-| `classNames`            | `ConvexWebhookClassNames`                                                      | Yes      |             |
-| `copy`                  | `ConvexWebhookEndpointListCopy`                                                | No       |             |
-| `endpoints`             | `readonly ConvexWebhookEndpointListItem<EventType, EndpointId>[] \| undefined` | No       |             |
-| `eventOptions`          | `readonly EventType[]`                                                         | No       |             |
-| `onArchive`             | `(endpointId: EndpointId) => void`                                             | No       |             |
-| `onDelete`              | `(endpointId: EndpointId) => void`                                             | No       |             |
-| `onDisable`             | `(endpointId: EndpointId) => void`                                             | No       |             |
-| `onRotateSecret`        | `(endpointId: EndpointId) => void`                                             | No       |             |
-| `onSave`                | `(endpointId: EndpointId, values: __type) => void`                             | No       |             |
-| `onSendTest`            | `(endpointId: EndpointId) => void`                                             | No       |             |
-| `renderTag`             | `(label: string) => ReactNode`                                                 | Yes      |             |
-| `sendingTestEndpointId` | `EndpointId \| None`                                                           | No       |             |
 
 **classNames keys**
 
@@ -352,28 +299,8 @@ Management surfaces for the [webhooks](/webhooks) feature — endpoint list, cre
 
 **Generics:** `<EventType, EndpointId, DeliveryId, OrganizationId>`
 
-**Props**
+<PropsTable of="ConvexWebhookSettingsSurface" />
 
-| Name                       | Type                                                                                         | Optional | Description |
-| -------------------------- | -------------------------------------------------------------------------------------------- | -------- | ----------- |
-| `captureEvent`             | `(name: string, properties: Record<string, unknown>) => void`                                | Yes      |             |
-| `classNames`               | `ConvexWebhookClassNames`                                                                    | Yes      |             |
-| `confirmDeleteEndpoint`    | `(args: __type) => boolean \| Promise<boolean>`                                              | Yes      |             |
-| `copy`                     | `ConvexWebhookSettingsSurfaceCopy`                                                           | Yes      |             |
-| `createRequestId`          | `(prefix: string) => string`                                                                 | No       |             |
-| `deliveryLimit`            | `number`                                                                                     | Yes      |             |
-| `enabled`                  | `boolean`                                                                                    | No       |             |
-| `eventOptions`             | `readonly EventType[]`                                                                       | No       |             |
-| `exhaustedDeliveryLimit`   | `number`                                                                                     | Yes      |             |
-| `formatTimestamp`          | `(timestamp: number) => string`                                                              | Yes      |             |
-| `getErrorMessage`          | `(error: unknown, fallback: string) => string`                                               | Yes      |             |
-| `organizationId`           | `string`                                                                                     | Yes      |             |
-| `refs`                     | `ConvexWebhookSettingsFunctionReferences<EventType, EndpointId, DeliveryId, OrganizationId>` | No       |             |
-| `renderActionError`        | `(message: string) => ReactNode`                                                             | Yes      |             |
-| `renderFailureBadge`       | `(failureKind: ConvexWebhookDeliveryFailureKind) => ReactNode`                               | Yes      |             |
-| `renderProcessQueueButton` | `(args: __type) => ReactNode`                                                                | Yes      |             |
-| `renderSecret`             | `(args: __type) => ReactNode`                                                                | Yes      |             |
-| `renderTag`                | `(label: string) => ReactNode`                                                               | Yes      |             |
 
 **classNames keys**
 

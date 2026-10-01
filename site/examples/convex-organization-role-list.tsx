@@ -1,6 +1,15 @@
 import { ConvexOrganizationRoleList } from "../../packages/auth/src/react/organization-roles";
-import { MOCK_ROLES } from "./_shared";
+import { MOCK_ROLES, PreviewVariant } from "./_shared";
 
 export default function OrganizationRoleListPreview() {
-  return <ConvexOrganizationRoleList roles={MOCK_ROLES} />;
+  return (
+    <>
+      <PreviewVariant label="populated">
+        <ConvexOrganizationRoleList roles={MOCK_ROLES} />
+      </PreviewVariant>
+      <PreviewVariant label="empty">
+        <ConvexOrganizationRoleList roles={[]} />
+      </PreviewVariant>
+    </>
+  );
 }

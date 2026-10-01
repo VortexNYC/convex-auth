@@ -13,51 +13,22 @@ description: The ConvexAdminDashboard surface — users, sessions, organizations
 
 **Data props**
 
-| Name             | Type                                 | Optional | Description         |
-| ---------------- | ------------------------------------ | -------- | ------------------- |
-| `users`          | `ConvexAdminDashboardUser[]`         | Yes      | User rows.          |
-| `sessions`       | `ConvexAdminDashboardSession[]`      | Yes      | Session rows.       |
-| `organizations`  | `ConvexAdminDashboardOrganization[]` | Yes      | Organization rows.  |
-| `audits`         | `ConvexAdminDashboardAudit[]`        | Yes      | Audit-log rows.     |
-| `defaultSection` | `AdminSection`                       | Yes      | `users` by default. |
+<PropsTable of="ConvexAdminDashboard" rows="users,sessions,organizations,audits,defaultSection" />
+
 
 **User actions**
 
-| Name                  | Type                               | Optional | Description                   |
-| --------------------- | ---------------------------------- | -------- | ----------------------------- |
-| `onViewUser`          | `(userId) => void`                 | Yes      | Open the user detail pane.    |
-| `selectedUser`        | `ConvexAdminDashboardUser \| null` | Yes      | The user shown in the pane.   |
-| `onCloseUserDetail`   | `() => void`                       | Yes      | Close the detail pane.        |
-| `onBanUser`           | `(userId, reason, until) => void`  | Yes      | Ban a user until a timestamp. |
-| `onUnbanUser`         | `(userId) => void`                 | Yes      | Lift a ban.                   |
-| `onRemoveUser`        | `(userId) => void`                 | Yes      | Remove the user.              |
-| `onImpersonateUser`   | `(userId) => void`                 | Yes      | Start an impersonation.       |
-| `onRevokeSession`     | `(sessionId) => void`              | Yes      | Revoke a session row.         |
-| `usersSearch`         | `string`                           | Yes      | Controlled search value.      |
-| `onUsersSearchChange` | `(value) => void`                  | Yes      | Search change handler.        |
+<PropsTable of="ConvexAdminDashboard" rows="onViewUser,selectedUser,onCloseUserDetail,onBanUser,onUnbanUser,onRemoveUser,onImpersonateUser,onRevokeSession,usersSearch,onUsersSearchChange" />
+
 
 **Organization actions**
 
-| Name                        | Type                                       | Optional | Description                   |
-| --------------------------- | ------------------------------------------ | -------- | ----------------------------- |
-| `onViewOrganization`        | `(organizationId) => void`                 | Yes      | Open the org detail pane.     |
-| `selectedOrganization`      | `ConvexAdminDashboardOrganization \| null` | Yes      | The org shown in the pane.    |
-| `onCloseOrganizationDetail` | `() => void`                               | Yes      | Close the detail pane.        |
-| `organizationMembers`       | `ConvexAdminDashboardMember[]`             | Yes      | Members of the selected org.  |
-| `organizationRoles`         | `ConvexAdminDashboardRole[]`               | Yes      | Roles available in the org.   |
-| `onUpdateMemberRole`        | `(memberId, roleId) => void`               | Yes      | Reassign a member's role.     |
-| `onRemoveMember`            | `(memberId) => void`                       | Yes      | Remove a member from the org. |
+<PropsTable of="ConvexAdminDashboard" rows="onViewOrganization,selectedOrganization,onCloseOrganizationDetail,organizationMembers,organizationRoles,onUpdateMemberRole,onRemoveMember" />
+
 
 **Audit filters and pagination**
 
-| Name                            | Type                                | Optional | Description                             |
-| ------------------------------- | ----------------------------------- | -------- | --------------------------------------- |
-| `auditsFilters`                 | `ConvexAdminDashboardAuditsFilters` | Yes      | Controlled audit filter state.          |
-| `onAuditsFiltersChange`         | `(filters) => void`                 | Yes      | Audit filter change handler.            |
-| `usersPagination`               | `ConvexAdminDashboardPagination`    | Yes      | `canLoadMore`, `isLoading`, `loadMore`. |
-| `sessionsPagination`            | `ConvexAdminDashboardPagination`    | Yes      | Same, for sessions.                     |
-| `organizationsPagination`       | `ConvexAdminDashboardPagination`    | Yes      | Same, for organizations.                |
-| `auditsPagination`              | `ConvexAdminDashboardPagination`    | Yes      | Same, for audits.                       |
-| `organizationMembersPagination` | `ConvexAdminDashboardPagination`    | Yes      | Same, for org members.                  |
+<PropsTable of="ConvexAdminDashboard" rows="auditsFilters,onAuditsFiltersChange,usersPagination,sessionsPagination,organizationsPagination,auditsPagination,organizationMembersPagination" />
+
 
 **Theming** — `classNames` targets `root`, `sidebar`, `content`, `navItem`, `card`, `row`, `loadMore`, `search`; `copy` overrides every label (titles, ban/unban/remove/impersonate/revoke actions, status labels).

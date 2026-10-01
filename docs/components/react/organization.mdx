@@ -9,20 +9,8 @@ The full [organizations](/organizations) UI stack — switcher, creation, member
 
 <Component path="convex-create-organization" />
 
-**Props**
+<PropsTable of="ConvexCreateOrganization" />
 
-| Name              | Type                                                              | Optional | Description |
-| ----------------- | ----------------------------------------------------------------- | -------- | ----------- |
-| `classNames`      | `ConvexCreateOrganizationClassNames`                              | Yes      |             |
-| `copy`            | `ConvexCreateOrganizationCopy`                                    | Yes      |             |
-| `defaultImageUrl` | `string \| None`                                                  | Yes      |             |
-| `defaultName`     | `string`                                                          | Yes      |             |
-| `defaultSlug`     | `string`                                                          | Yes      |             |
-| `errorMessage`    | `string \| None`                                                  | Yes      |             |
-| `isLoading`       | `boolean`                                                         | Yes      |             |
-| `onCancel`        | `() => void`                                                      | Yes      |             |
-| `onCreate`        | `(input: ConvexCreateOrganizationInput) => void \| Promise<void>` | Yes      |             |
-| `renderHeader`    | `(args: __type) => ReactNode`                                     | Yes      |             |
 
 **classNames keys**
 
@@ -66,13 +54,8 @@ The full [organizations](/organizations) UI stack — switcher, creation, member
 
 <Component path="convex-organization-invitation-link-notice" />
 
-**Props**
+<PropsTable of="ConvexOrganizationInvitationLinkNotice" />
 
-| Name         | Type                                  | Optional |
-| ------------ | ------------------------------------- | -------- |
-| `title`      | `string`                              | No       |
-| `value`      | `string`                              | No       |
-| `classNames` | `ConvexOrganizationMembersClassNames` | Yes      |
 
 ### `ConvexOrganizationInviteForm`
 
@@ -80,19 +63,8 @@ The full [organizations](/organizations) UI stack — switcher, creation, member
 
 **Generics:** `<Role>`
 
-**Props**
+<PropsTable of="ConvexOrganizationInviteForm" />
 
-| Name                   | Type                                      | Optional |
-| ---------------------- | ----------------------------------------- | -------- |
-| `classNames`           | `ConvexOrganizationMembersClassNames`     | Yes      |
-| `copy`                 | `ConvexOrganizationInviteFormCopy`        | Yes      |
-| `disabled`             | `boolean`                                 | Yes      |
-| `inviting`             | `boolean`                                 | No       |
-| `onEmailChange`        | `(value: string) => void`                 | No       |
-| `onRoleTemplateChange` | `(value: Role) => void`                   | No       |
-| `onSubmit`             | `() => void`                              | No       |
-| `roleOptions`          | `readonly Role[]`                         | No       |
-| `state`                | `ConvexOrganizationInviteFormState<Role>` | No       |
 
 **classNames keys**
 
@@ -134,13 +106,8 @@ The full [organizations](/organizations) UI stack — switcher, creation, member
 
 <Component path="convex-organization-member-action-error-notice" />
 
-**Props**
+<PropsTable of="ConvexOrganizationMemberActionErrorNotice" />
 
-| Name         | Type                                  | Optional |
-| ------------ | ------------------------------------- | -------- |
-| `title`      | `string`                              | No       |
-| `message`    | `string`                              | No       |
-| `classNames` | `ConvexOrganizationMembersClassNames` | Yes      |
 
 ### `ConvexOrganizationMemberList`
 
@@ -148,22 +115,8 @@ The full [organizations](/organizations) UI stack — switcher, creation, member
 
 **Generics:** `<Role, MemberId>`
 
-**Props**
+<PropsTable of="ConvexOrganizationMemberList" />
 
-| Name               | Type                                                                 | Optional | Description |
-| ------------------ | -------------------------------------------------------------------- | -------- | ----------- |
-| `canManageMembers` | `boolean`                                                            | Yes      |             |
-| `canManageRoles`   | `boolean`                                                            | Yes      |             |
-| `classNames`       | `ConvexOrganizationMembersClassNames`                                | Yes      |             |
-| `copy`             | `ConvexOrganizationMembersCopy`                                      | No       |             |
-| `formatTimestamp`  | `(timestamp: number) => string`                                      | Yes      |             |
-| `members`          | `readonly ConvexOrganizationMemberListItem<MemberId>[] \| undefined` | No       |             |
-| `mutatingMemberId` | `MemberId \| None`                                                   | Yes      |             |
-| `onReactivate`     | `(membershipId: MemberId) => void`                                   | Yes      |             |
-| `onRoleChange`     | `(membershipId: MemberId, roleTemplate: Role) => void`               | Yes      |             |
-| `onSuspend`        | `(membershipId: MemberId) => void`                                   | Yes      |             |
-| `renderStatus`     | `(status: ConvexOrganizationMemberStatus) => ReactNode`              | Yes      |             |
-| `roleOptions`      | `readonly Role[]`                                                    | No       |             |
 
 **classNames keys**
 
@@ -212,24 +165,8 @@ The full [organizations](/organizations) UI stack — switcher, creation, member
 
 **Generics:** `<Role, MemberId, OrganizationId, InvitationId>`
 
-**Props**
+<PropsTable of="ConvexOrganizationMembersSurface" />
 
-| Name                        | Type                                                                                       | Optional | Description |
-| --------------------------- | ------------------------------------------------------------------------------------------ | -------- | ----------- |
-| `canManageMembers`          | `boolean`                                                                                  | Yes      |             |
-| `canManageRoles`            | `boolean`                                                                                  | Yes      |             |
-| `captureEvent`              | `(name: string, properties: Record<string, unknown>) => void`                              | Yes      |             |
-| `classNames`                | `ConvexOrganizationMembersClassNames`                                                      | Yes      |             |
-| `confirmSuspendMember`      | `(args: __type) => boolean \| Promise<boolean>`                                            | Yes      |             |
-| `copy`                      | `ConvexOrganizationMembersSurfaceCopy`                                                     | Yes      |             |
-| `defaultInviteRoleTemplate` | `Role`                                                                                     | Yes      |             |
-| `getErrorMessage`           | `(error: unknown, fallback: string) => string`                                             | Yes      |             |
-| `organizationId`            | `OrganizationId`                                                                           | Yes      |             |
-| `refs`                      | `ConvexOrganizationMemberFunctionReferences<Role, MemberId, OrganizationId, InvitationId>` | No       |             |
-| `renderActionError`         | `(message: string) => ReactNode`                                                           | Yes      |             |
-| `renderInvitationLink`      | `(args: __type) => ReactNode`                                                              | Yes      |             |
-| `renderStatus`              | `(status: ConvexOrganizationMemberStatus) => ReactNode`                                    | Yes      |             |
-| `roleOptions`               | `readonly Role[]`                                                                          | No       |             |
 
 **classNames keys**
 
@@ -270,21 +207,8 @@ The full [organizations](/organizations) UI stack — switcher, creation, member
 
 <Component path="convex-organization-list" />
 
-**Props**
+<PropsTable of="ConvexOrganizationList" />
 
-| Name                    | Type                                                | Optional | Description |
-| ----------------------- | --------------------------------------------------- | -------- | ----------- |
-| `classNames`            | `ConvexOrgListClassNames`                           | Yes      |             |
-| `copy`                  | `ConvexOrgListCopy`                                 | Yes      |             |
-| `currentOrganizationId` | `string \| None`                                    | Yes      |             |
-| `invitations`           | `readonly ConvexOrgListInvitation[]`                | Yes      |             |
-| `isLoading`             | `boolean`                                           | Yes      |             |
-| `onAcceptInvitation`    | `(invitationId: string) => void \| Promise<void>`   | Yes      |             |
-| `onCreateOrganization`  | `() => void \| Promise<void>`                       | Yes      |             |
-| `onRejectInvitation`    | `(invitationId: string) => void \| Promise<void>`   | Yes      |             |
-| `onSelectOrganization`  | `(organizationId: string) => void \| Promise<void>` | No       |             |
-| `organizations`         | `readonly ConvexOrgListOrganization[]`              | No       |             |
-| `showInvitations`       | `boolean`                                           | Yes      |             |
 
 **classNames keys**
 
@@ -331,46 +255,22 @@ The full [organizations](/organizations) UI stack — switcher, creation, member
 
 <Component path="convex-organization-permission-checklist" />
 
-**Props**
+<PropsTable of="ConvexOrganizationPermissionChecklist" />
 
-| Name                  | Type                                             | Optional   |
-| --------------------- | ------------------------------------------------ | ---------- | --- |
-| `permissions`         | `readonly ConvexOrganizationPermissionListItem[] | undefined` | No  |
-| `selectedPermissions` | `readonly string[]`                              | No         |
-| `onPermissionToggle`  | `(permission: string) => void`                   | No         |
-| `copy`                | `Required<ConvexOrganizationRoleManagerCopy>`    | No         |
-| `disabled`            | `boolean`                                        | Yes        |
-| `classNames`          | `ConvexOrganizationRoleManagerClassNames`        | Yes        |
 
 ### `ConvexOrganizationRoleActionErrorNotice`
 
 <Component path="convex-organization-role-action-error-notice" />
 
-**Props**
+<PropsTable of="ConvexOrganizationRoleActionErrorNotice" />
 
-| Name         | Type                                      | Optional |
-| ------------ | ----------------------------------------- | -------- |
-| `title`      | `string`                                  | No       |
-| `message`    | `string`                                  | No       |
-| `classNames` | `ConvexOrganizationRoleManagerClassNames` | Yes      |
 
 ### `ConvexOrganizationRoleCreateForm`
 
 <Component path="convex-organization-role-create-form" />
 
-**Props**
+<PropsTable of="ConvexOrganizationRoleCreateForm" />
 
-| Name                 | Type                                             | Optional   |
-| -------------------- | ------------------------------------------------ | ---------- | --- |
-| `creating`           | `boolean`                                        | No         |
-| `state`              | `ConvexOrganizationRoleFormState`                | No         |
-| `permissions`        | `readonly ConvexOrganizationPermissionListItem[] | undefined` | No  |
-| `onNameChange`       | `(name: string) => void`                         | No         |
-| `onPermissionToggle` | `(permission: string) => void`                   | No         |
-| `onSubmit`           | `() => void`                                     | No         |
-| `canCreateRoles`     | `boolean`                                        | Yes        |
-| `classNames`         | `ConvexOrganizationRoleManagerClassNames`        | Yes        |
-| `copy`               | `ConvexOrganizationRoleManagerCopy`              | Yes        |
 
 ### `ConvexOrganizationRoleList`
 
@@ -378,13 +278,8 @@ The full [organizations](/organizations) UI stack — switcher, creation, member
 
 **Generics:** `<RoleId>`
 
-**Props**
+<PropsTable of="ConvexOrganizationRoleList" />
 
-| Name         | Type                                       | Optional   |
-| ------------ | ------------------------------------------ | ---------- | --- |
-| `roles`      | `readonly ConvexOrganizationRoleListItem[] | undefined` | No  |
-| `classNames` | `ConvexOrganizationRoleManagerClassNames`  | Yes        |
-| `copy`       | `ConvexOrganizationRoleManagerCopy`        | Yes        |
 
 ### `ConvexOrganizationRoleManagerSurface`
 
@@ -392,18 +287,8 @@ The full [organizations](/organizations) UI stack — switcher, creation, member
 
 **Generics:** `<RoleId>`
 
-**Props**
+<PropsTable of="ConvexOrganizationRoleManagerSurface" />
 
-| Name                  | Type                                                                           | Optional |
-| --------------------- | ------------------------------------------------------------------------------ | -------- |
-| `buildCreateRoleArgs` | `(state: ConvexOrganizationRoleFormState) => ConvexOrganizationCreateRoleArgs` | Yes      |
-| `canCreateRoles`      | `boolean`                                                                      | Yes      |
-| `captureEvent`        | `(name: string, properties: Record<string, unknown>) => void`                  | Yes      |
-| `classNames`          | `ConvexOrganizationRoleManagerClassNames`                                      | Yes      |
-| `copy`                | `ConvexOrganizationRoleManagerCopy`                                            | Yes      |
-| `getErrorMessage`     | `(error: unknown, fallback: string) => string`                                 | Yes      |
-| `refs`                | `ConvexOrganizationRoleManagerFunctionReferences<RoleId>`                      | No       |
-| `renderActionError`   | `(message: string) => ReactNode`                                               | Yes      |
 
 **classNames keys**
 
@@ -454,20 +339,8 @@ The full [organizations](/organizations) UI stack — switcher, creation, member
 
 <Component path="convex-organization-profile" />
 
-**Props**
+<PropsTable of="ConvexOrganizationProfile" />
 
-| Name                  | Type                                                            | Optional | Description                                            |
-| --------------------- | --------------------------------------------------------------- | -------- | ------------------------------------------------------ |
-| `classNames`          | `ConvexOrgProfileClassNames`                                    | Yes      |                                                        |
-| `copy`                | `ConvexOrgProfileCopy`                                          | Yes      |                                                        |
-| `isAdmin`             | `boolean`                                                       | Yes      |                                                        |
-| `isLoading`           | `boolean`                                                       | Yes      |                                                        |
-| `onDelete`            | `() => void \| Promise<void>`                                   | Yes      |                                                        |
-| `onUpdate`            | `(input: ConvexOrgProfileUpdateInput) => void \| Promise<void>` | Yes      |                                                        |
-| `organization`        | `ConvexOrgProfileOrganization \| None \| undefined`             | No       |                                                        |
-| `renderDeleteConfirm` | `(args: __type) => ReactNode`                                   | Yes      |                                                        |
-| `showBrandFields`     | `boolean`                                                       | Yes      | When false, brand fields are hidden (default true).    |
-| `showSecurityFields`  | `boolean`                                                       | Yes      | When false, security fields are hidden (default true). |
 
 **classNames keys**
 
@@ -524,23 +397,8 @@ The full [organizations](/organizations) UI stack — switcher, creation, member
 
 <Component path="org-switcher" />
 
-**Props**
+<PropsTable of="ConvexOrganizationSwitcher" />
 
-| Name                          | Type                                                | Optional | Description |
-| ----------------------------- | --------------------------------------------------- | -------- | ----------- |
-| `classNames`                  | `ConvexOrgSwitcherClassNames`                       | Yes      |             |
-| `copy`                        | `ConvexOrgSwitcherCopy`                             | Yes      |             |
-| `currentOrganization`         | `ConvexOrgSwitcherOrganization \| None`             | Yes      |             |
-| `currentOrganizationId`       | `string \| None`                                    | Yes      |             |
-| `enableSearch`                | `boolean`                                           | Yes      |             |
-| `onCreateOrganization`        | `() => void \| Promise<void>`                       | Yes      |             |
-| `onInPlaceCreateOrganization` | `(name: string) => void \| Promise<void>`           | Yes      |             |
-| `onSelectOrganization`        | `(organizationId: string) => void \| Promise<void>` | No       |             |
-| `onSelectPersonalAccount`     | `() => void \| Promise<void>`                       | Yes      |             |
-| `organizations`               | `readonly ConvexOrgSwitcherOrganization[]`          | No       |             |
-| `personalAccountLabel`        | `string`                                            | Yes      |             |
-| `renderCustomTrigger`         | `(args: __type) => ReactNode`                       | Yes      |             |
-| `showPersonalAccount`         | `boolean`                                           | Yes      |             |
 
 **classNames keys**
 
