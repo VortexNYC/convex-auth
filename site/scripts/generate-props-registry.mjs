@@ -277,21 +277,26 @@ for (const file of files) {
 
 const json = JSON.stringify(registry, null, 2) + "\n";
 
-// Every <PropsTable of="X" rows="a,b"> in the docs must resolve — typos
-// fail the build here rather than soft-warning at render time.
+// Every <PropsTable of="X" rows="a,b"> and <Preview of="X"> in the docs
+// must resolve — typos fail the build here rather than soft-warning at
+// render time.
 function validateMdxRefs() {
   const failures = [];
-  const refRe = /<PropsTable\s+([^>]*)\/?>/g;
+  const refRe = /<(?:PropsTable|Preview)\s+([^>]*)\/?>/g;
   for (const entry of readdirSync(mdxDir)) {
     if (!entry.endsWith(".mdx")) continue;
     const file = join(mdxDir, entry);
     const text = readFileSync(file, "utf8");
     let m;
     while ((m = refRe.exec(text)) !== null) {
+      const tag = /<(\w+)/.exec(m[0])?.[1];
       const of = /of="([^"]+)"/.exec(m[1])?.[1];
       const rows = /rows="([^"]+)"/.exec(m[1])?.[1];
       if (!of) {
-        failures.push(`${entry}: <PropsTable> missing \`of\``);
+        // `of` is optional on <Preview> (no Props tab), required on PropsTable.
+        if (tag === "PropsTable") {
+          failures.push(`${entry}: <PropsTable> missing \`of\``);
+        }
         continue;
       }
       const props = registry[of];
