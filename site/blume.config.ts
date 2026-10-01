@@ -127,8 +127,8 @@ export default defineConfig({
   },
   theme: {
     accent: {
-      light: "#000000",
-      dark: "#ffffff",
+      light: "oklch(0.21 0.008 250)",
+      dark: "oklch(0.97 0.004 250)",
     },
   },
   // Injected into every example preview frame after Blume's defaults — scans

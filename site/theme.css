@@ -1,3 +1,25 @@
+/* Surface tokens — layered cool neutrals instead of Blume's flat defaults.
+   Hierarchy runs page < code < muted < border in both modes, and neutrals
+   carry a slight blue cast (chroma ~0.01 @ hue 250) so surfaces feel layered
+   rather than stacked grays. Secondary text is lifted for AA contrast. */
+:root {
+  --blume-background: oklch(0.99 0.002 250);
+  --blume-foreground: oklch(0.17 0.01 250);
+  --blume-muted: oklch(0.962 0.005 250);
+  --blume-muted-foreground: oklch(0.47 0.012 250);
+  --blume-border: oklch(0.875 0.007 250 / 0.72);
+  --blume-code-background: oklch(0.97 0.004 250);
+}
+
+:root[data-theme="dark"] {
+  --blume-background: oklch(0.125 0.006 250);
+  --blume-foreground: oklch(0.93 0.005 250);
+  --blume-muted: oklch(0.185 0.008 250);
+  --blume-muted-foreground: oklch(0.73 0.012 250);
+  --blume-border: oklch(0.28 0.01 250 / 0.8);
+  --blume-code-background: oklch(0.155 0.007 250);
+}
+
 /* Header action icons — Blume header links are text-only, so the npm and
    Convex marks are injected as masks (inherit the link's text color). */
 header a[href*="npmjs.com/package"]::after,
