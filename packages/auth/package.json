@@ -274,7 +274,7 @@
     "convex-test": "0.0.60",
     "happy-dom": "^20.14.3",
     "hono": "^4.13.9",
-    "next": "^15.5.25",
+    "next": "^16.3.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native-passkeys": "0.4.2",
