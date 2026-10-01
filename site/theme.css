@@ -11,6 +11,9 @@
   /* Kept near-white: github-light syntax colors fall below AA on darker
      surfaces, and this preserves separation from --blume-muted. */
   --blume-code-background: oklch(0.985 0.003 250);
+  /* Blume's 42rem prose column cramps preview frames and props tables —
+     widen to 56rem. Prose stays ~90ch; beyond this it degrades. */
+  --blume-content-width: 56rem;
 }
 
 :root[data-theme="dark"] {
