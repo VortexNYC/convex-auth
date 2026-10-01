@@ -145,7 +145,10 @@ function externalBases(param) {
     if (ts.isTypeAliasDeclaration(decl) && ts.isTypeReferenceNode(decl.type)) {
       const t = checker.getTypeAtLocation(decl.type);
       const symDecls = t.symbol?.declarations ?? [];
-      if (symDecls.length > 0 && symDecls.every((d) => isExternalFile(d.getSourceFile().fileName))) {
+      if (
+        symDecls.length > 0 &&
+        symDecls.every((d) => isExternalFile(d.getSourceFile().fileName))
+      ) {
         addText(decl.type.getText());
       }
     }
