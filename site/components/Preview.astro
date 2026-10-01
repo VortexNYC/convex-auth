@@ -18,12 +18,18 @@ const { path } = Astro.props;
 <Component path={path} />
 
 <script>
-  for (const frame of document.querySelectorAll<HTMLIFrameElement>(
-    "iframe[data-blume-example-frame]",
-  )) {
-    frame.loading = "eager";
-    if (!frame.dataset.blumeReportedHeight) {
+  // astro:page-load fires on initial load AND after ClientRouter soft-nav;
+  // module scripts don't re-run on swap, so the listener is required.
+  function eagerFrames() {
+    for (const frame of document.querySelectorAll<HTMLIFrameElement>(
+      "iframe[data-blume-example-frame]",
+    )) {
+      if (frame.dataset.blumeEager) continue;
+      frame.dataset.blumeEager = "1";
+      frame.loading = "eager";
       frame.src = frame.src;
     }
   }
+  document.addEventListener("astro:page-load", eagerFrames);
+  eagerFrames();
 </script>

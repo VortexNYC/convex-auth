@@ -43,26 +43,22 @@
       "name": "initialUser",
       "type": "NativeAuthUser | null",
       "required": false,
-      "description": "Server-resolved user, so `isAuthenticated` is correct on first paint.",
-      "defaultValue": "null"
+      "description": "Server-resolved user, so `isAuthenticated` is correct on first paint."
     },
     {
       "name": "initialToken",
       "type": "string | null",
-      "required": false,
-      "defaultValue": "null"
+      "required": false
     },
     {
       "name": "initialRefreshToken",
       "type": "string | null",
-      "required": false,
-      "defaultValue": "null"
+      "required": false
     },
     {
       "name": "initialSessionId",
       "type": "string | null",
-      "required": false,
-      "defaultValue": "null"
+      "required": false
     },
     {
       "name": "serverState",
@@ -1582,8 +1578,7 @@
     {
       "name": "initialImage",
       "type": "string | null",
-      "required": false,
-      "defaultValue": "null"
+      "required": false
     },
     {
       "name": "accept",
@@ -1825,7 +1820,14 @@
       "required": true
     }
   ],
-  "Button": [],
+  "Button": [
+    {
+      "name": "(rest)",
+      "type": "AnchorHTMLAttributes<HTMLAnchorElement>",
+      "required": false,
+      "description": "Forwarded to the underlying element."
+    }
+  ],
   "EmailHeading": [
     {
       "name": "(rest)",

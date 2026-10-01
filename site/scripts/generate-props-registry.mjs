@@ -108,7 +108,8 @@ function bindingDefaults(param) {
 function coalesceDefaults(fnLike) {
   const defaults = new Map();
   const text = fnLike.getText();
-  const re = /[.$\w]+\s*\?\?\s*("[^"\n]*"|'[^'\n]*'|true|false|null|\d+(?:\.\d+)?)/g;
+  // `?? null`/`?? undefined` normalize absent props — not documented defaults.
+  const re = /[.$\w]+\s*\?\?\s*("[^"\n]*"|'[^'\n]*'|true|false|\d+(?:\.\d+)?)/g;
   let m;
   while ((m = re.exec(text)) !== null) {
     const key = m[0].split("??")[0].trim().split(".").pop();
@@ -134,6 +135,20 @@ function externalBases(param) {
   if (typeNode && ts.isTypeReferenceNode(typeNode) && isExternalType(type)) {
     addText(typeNode.getText());
     return bases;
+  }
+
+  // Aliased bare reference: `type P = AnchorHTMLAttributes<HTMLAnchorElement>`
+  // declared in-repo — the alias isn't external, but its target is. The
+  // resolved type still carries the in-repo aliasSymbol, so check the
+  // concrete symbol's declarations, not isExternalType().
+  for (const decl of type.aliasSymbol?.declarations ?? []) {
+    if (ts.isTypeAliasDeclaration(decl) && ts.isTypeReferenceNode(decl.type)) {
+      const t = checker.getTypeAtLocation(decl.type);
+      const symDecls = t.symbol?.declarations ?? [];
+      if (symDecls.length > 0 && symDecls.every((d) => isExternalFile(d.getSourceFile().fileName))) {
+        addText(decl.type.getText());
+      }
+    }
   }
 
   // Intersections, inline (`{a} & X`) or aliased (`type P = {a} & X`)
