@@ -1,0 +1,174 @@
+---
+// Landing page — a custom route wins over the generated "/" content page,
+// so docs/index.mdx renders below via <BlumePage>. The hero runs under a
+// transparent header (-mt-16 + pt compensation) and its preview iframe is a
+// normal blume example frame: it follows the site theme via data-theme.
+import data from "blume:data";
+import { examplesBase } from "blume:examples";
+import BlumePage from "blume/components/BlumePage.astro";
+import Icon from "blume/components/Icon.astro";
+import PageLayout from "blume/components/layout/PageLayout.astro";
+import { withBase } from "blume/components/islands/base-path.ts";
+import { getBlumeCollection } from "blume/runtime";
+
+const { config } = data;
+const index = data.routes.find((r) => r.path === "/");
+const previewSrc = `${withBase(examplesBase)}/convex-auth-sign-in-page`;
+
+const features = [
+  {
+    href: "/organizations",
+    icon: "building",
+    title: "Organizations",
+    text: "Multi-tenant workspaces with members, roles, and invitation flows built in.",
+  },
+  {
+    href: "/react-native",
+    icon: "smartphone",
+    title: "React Native & Expo",
+    text: "A parallel component set for native apps — SecureStore tokens, deep links, passkeys.",
+  },
+  {
+    href: "/api-keys",
+    icon: "key",
+    title: "API keys",
+    text: "Create, rotate, and revoke service keys with scopes and IP-range restrictions.",
+  },
+  {
+    href: "/webhooks",
+    icon: "webhook",
+    title: "Webhooks",
+    text: "Signed lifecycle and organization events delivered to your endpoints.",
+  },
+  {
+    href: "/oidc-provider",
+    icon: "scan",
+    title: "MCP OAuth",
+    text: "An OIDC provider on your deployment — the identity layer for agents and MCP clients.",
+  },
+  {
+    href: "/components/react/admin",
+    icon: "scroll-text",
+    title: "Audit log & impersonation",
+    text: "Admin visibility into every auth event, plus safe support impersonation.",
+  },
+];
+---
+
+<PageLayout
+  analytics={config.analytics}
+  appleIcon={config.appleIcon}
+  banner={config.banner}
+  favicon={config.favicon}
+  fontCssVars={data.fontCssVars}
+  logo={config.logo}
+  navigation={data.navigation}
+  ogEnabled={config.og.enabled}
+  page={{ title: `${config.title} — ${config.description}`, description: config.description }}
+  searchEnabled={config.search.enabled}
+  site={{ title: config.title, description: config.description }}
+  siteUrl={config.site}
+  structuredDataEnabled={config.structuredData}
+  themeMode={config.theme.mode}
+  transparentHeader
+>
+  {/* Dark hero under the transparent header */}
+  <section class="-mt-16 bg-[oklch(0.13_0.006_250)] pt-16 text-[oklch(0.95_0.004_250)]">
+    <div
+      class="mx-auto grid max-w-6xl items-center gap-12 px-6 py-20 lg:grid-cols-[1.05fr_1fr] lg:py-28"
+    >
+      <div>
+        <a
+          class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-sm text-white/70 transition-colors hover:border-white/25 hover:text-white"
+          href={withBase("/changelog")}
+        >
+          v3.1.0 — Clerk/WorkOS migration, Hono adapter
+          <Icon name="arrow-right" size={13} />
+        </a>
+        <h1
+          class="mt-6 font-display text-5xl font-semibold tracking-tight text-balance md:text-6xl"
+        >
+          Convex-native auth for production apps
+        </h1>
+        <p class="mt-5 max-w-xl text-lg text-pretty text-white/65">
+          Users, sessions, organizations, API keys, webhooks, and MCP auth —
+          all living in your Convex database. No external auth service
+          required.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center gap-3">
+          <a
+            class="rounded-blume bg-white px-5 py-2.5 font-medium text-[oklch(0.17_0.01_250)] text-sm transition-colors hover:bg-white/90"
+            href={withBase("/quickstart")}
+          >
+            Get started
+          </a>
+          <a
+            class="rounded-blume border border-white/20 px-5 py-2.5 font-medium text-sm text-white/85 transition-colors hover:border-white/35 hover:text-white"
+            href={withBase("/components/react/sign-in")}
+          >
+            Browse components
+          </a>
+        </div>
+      </div>
+
+      {/* Live preview frame — a real component example, theme-aware */}
+      <div
+        class="hidden overflow-hidden rounded-blume border border-white/15 bg-white/5 shadow-2xl lg:block"
+      >
+        <div
+          class="flex items-center gap-1.5 border-b border-white/10 px-4 py-2.5"
+        >
+          <span class="size-2.5 rounded-full bg-white/20"></span>
+          <span class="size-2.5 rounded-full bg-white/20"></span>
+          <span class="size-2.5 rounded-full bg-white/20"></span>
+        </div>
+        <iframe
+          class="block h-[520px] w-full"
+          data-blume-example-frame
+          loading="eager"
+          src={previewSrc}
+          title="Convex Auth sign-in page preview"></iframe>
+      </div>
+    </div>
+  </section>
+
+  {/* Feature grid */}
+  <section class="mx-auto max-w-6xl px-6 py-16 lg:py-20">
+    <h2 class="font-display text-3xl font-semibold tracking-tight">
+      Everything your auth layer actually needs
+    </h2>
+    <p class="mt-3 max-w-2xl text-muted-foreground">
+      The features production apps end up building on top of auth — already
+      included, already wired to Convex.
+    </p>
+    <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        features.map((f) => (
+          <a
+            class="group rounded-blume border border-border bg-muted/40 p-5 transition-colors hover:border-foreground/25 hover:bg-muted/70"
+            href={withBase(f.href)}
+          >
+            <div class="flex size-9 items-center justify-center rounded-blume border border-border bg-background text-muted-foreground transition-colors group-hover:text-foreground">
+              <Icon name={f.icon} size={16} />
+            </div>
+            <h3 class="mt-4 font-medium text-sm">{f.title}</h3>
+            <p class="mt-1.5 text-muted-foreground text-sm leading-relaxed">
+              {f.text}
+            </p>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+
+  {/* The existing introduction content — same copy, rendered in place */}
+  <section class="mx-auto max-w-content px-6 pb-20">
+    {
+      index && (
+        <div class="prose">
+          <BlumePage id={index.entryId} />
+        </div>
+      )
+    }
+  </section>
+</PageLayout>
