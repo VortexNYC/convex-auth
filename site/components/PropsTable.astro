@@ -62,7 +62,8 @@ const showDescription = rows.some((r) => r.description);
 
 {
   props && props.length > 0 ? (
-    <table>
+    <div class="overflow-x-auto">
+      <table>
       <thead>
         <tr>
           <th>Name</th>
@@ -91,7 +92,8 @@ const showDescription = rows.some((r) => r.description);
           </tr>
         ))}
       </tbody>
-    </table>
+      </table>
+    </div>
   ) : props ? (
     <p>
       <em>No props.</em>
