@@ -9,178 +9,162 @@ The runtime providers, auth-state boundaries, shared form primitives, and the ap
 
 ### `AuthRuntimeProvider`
 
-No props.
+<Preview path="auth-runtime-provider" />
+
+<PropsTable of="AuthRuntimeProvider" />
 
 ## Boundaries
 
 ### `AuthLoadedBoundaryView`
 
-**Props**
+<Preview path="auth-loaded-boundary-view" />
 
-| Name       | Type              | Optional | Description                         |
-| ---------- | ----------------- | -------- | ----------------------------------- |
-| `auth`     | `ConvexAuthState` | No       | Auth state to inspect.              |
-| `children` | `ReactNode`       | No       | Rendered once the auth state loads. |
+<PropsTable of="AuthLoadedBoundaryView" />
 
 ### `AuthLoadingBoundaryView`
 
-**Props**
+<Preview path="auth-loading-boundary-view" />
 
-| Name       | Type              | Optional | Description                                     |
-| ---------- | ----------------- | -------- | ----------------------------------------------- |
-| `auth`     | `ConvexAuthState` | No       | Auth state to inspect.                          |
-| `children` | `ReactNode`       | No       | Rendered while the auth state is still loading. |
+<PropsTable of="AuthLoadingBoundaryView" />
 
 ### `AuthSignedInBoundary`
 
-**Props**
+<Preview path="auth-signed-in-boundary" />
 
-| Name       | Type              | Optional | Description                                |
-| ---------- | ----------------- | -------- | ------------------------------------------ |
-| `auth`     | `ConvexAuthState` | No       | Auth state to inspect.                     |
-| `children` | `ReactNode`       | No       | Rendered only when a session is signed in. |
+<PropsTable of="AuthSignedInBoundary" />
 
 ### `AuthSignedOutBoundary`
 
-**Props**
+<Preview path="auth-signed-out-boundary" />
 
-| Name       | Type              | Optional | Description                                 |
-| ---------- | ----------------- | -------- | ------------------------------------------- |
-| `auth`     | `ConvexAuthState` | No       | Auth state to inspect.                      |
-| `children` | `ReactNode`       | No       | Rendered only when no session is signed in. |
+<PropsTable of="AuthSignedOutBoundary" />
 
 ## Providers & runtime
 
 ### `ConvexAuthClientContextProvider`
 
-No props.
+<Preview path="convex-auth-client-context-provider" />
+
+<PropsTable of="ConvexAuthClientContextProvider" />
 
 ### `ConvexAuthClientProvider`
 
-**Props**
+<Preview path="convex-auth-client-provider" />
 
-| Name                  | Type                               | Optional | Description |
-| --------------------- | ---------------------------------- | -------- | ----------- |
-| `actions`             | `NativeAuthActions`                | No       |             |
-| `children`            | `ReactNode`                        | No       |             |
-| `initialRefreshToken` | `string \| None`                   | Yes      |             |
-| `initialSessionId`    | `string \| None`                   | Yes      |             |
-| `initialToken`        | `string \| None`                   | Yes      |             |
-| `storage`             | `local \| session \| TokenStorage` | Yes      |             |
+<PropsTable of="ConvexAuthClientProvider" />
 
 ### `ConvexAuthConvexIdentityProvisioner`
 
-**Props**
+<Preview path="convex-auth-convex-identity-provisioner" />
 
-| Name                   | Type                                                      | Optional |
-| ---------------------- | --------------------------------------------------------- | -------- |
-| `auth`                 | `ConvexAuthState`                                         | No       |
-| `getCurrentUser`       | `FunctionReference<query, public, EmptyArgs, unknown>`    | No       |
-| `provisionCurrentUser` | `FunctionReference<mutation, public, EmptyArgs, unknown>` | No       |
+<PropsTable of="ConvexAuthConvexIdentityProvisioner" />
 
 ### `ConvexAuthIdentityProvisioner`
 
+<Preview path="convex-auth-identity-provisioner" />
+
 Lower-level provisioner — `ConvexAuthConvexIdentityProvisioner` wraps this with the Convex function references already bound.
 
-**Props**
-
-| Name                   | Type                     | Optional | Description                                              |
-| ---------------------- | ------------------------ | -------- | -------------------------------------------------------- |
-| `auth`                 | `ConvexAuthState`        | No       | Current auth state to provision against.                 |
-| `currentUser`          | `unknown`                | No       | The resolved user — `null` until provisioning completes. |
-| `sessionSubject`       | `string \| null`         | No       | Session subject being provisioned.                       |
-| `provisionCurrentUser` | `() => Promise<unknown>` | No       | Callback that provisions the user when invoked.          |
+<PropsTable of="ConvexAuthIdentityProvisioner" />
 
 ### `ConvexAuthProvider`
 
-**Props**
+<Preview path="convex-auth-provider" />
 
-| Name                  | Type                               | Optional | Description |
-| --------------------- | ---------------------------------- | -------- | ----------- |
-| `actions`             | `NativeAuthActions`                | No       |             |
-| `children`            | `ReactNode`                        | No       |             |
-| `initialRefreshToken` | `string \| None`                   | Yes      |             |
-| `initialSessionId`    | `string \| None`                   | Yes      |             |
-| `initialToken`        | `string \| None`                   | Yes      |             |
-| `storage`             | `local \| session \| TokenStorage` | Yes      |             |
+<PropsTable of="ConvexAuthProvider" />
 
 ## Shared UI primitives
 
 ### `AuthAlert`
 
-No props.
+<Preview path="auth-alert" />
+
+<PropsTable of="AuthAlert" />
 
 ### `AuthButton`
 
-No props.
+<Preview path="auth-button" />
+
+<PropsTable of="AuthButton" />
 
 ### `AuthCard`
 
-No props.
+<Preview path="auth-card" />
+
+<PropsTable of="AuthCard" />
 
 ### `AuthCardContent`
 
-No props.
+<Preview path="auth-card-content" />
+
+<PropsTable of="AuthCardContent" />
 
 ### `AuthCardHeader`
 
-No props.
+<Preview path="auth-card-header" />
+
+<PropsTable of="AuthCardHeader" />
 
 ### `AuthDivider`
 
-No props.
+<Preview path="auth-divider" />
+
+<PropsTable of="AuthDivider" />
 
 ### `AuthField`
 
-No props.
+<Preview path="auth-field" />
+
+<PropsTable of="AuthField" />
 
 ### `AuthInput`
 
-No props.
+<Preview path="auth-input" />
+
+<PropsTable of="AuthInput" />
 
 ### `AuthLabel`
 
-No props.
+<Preview path="auth-label" />
+
+<PropsTable of="AuthLabel" />
 
 ### `AuthProviderButton`
 
-No props.
+<Preview path="auth-provider-button" />
+
+<PropsTable of="AuthProviderButton" />
 
 ### `AuthRuntimeStatusBadge`
 
-No props.
+<Preview path="auth-runtime-status-badge" />
+
+<PropsTable of="AuthRuntimeStatusBadge" />
 
 ### `AuthRuntimeSummary`
 
-No props.
+<Preview path="auth-runtime-summary" />
+
+<PropsTable of="AuthRuntimeSummary" />
 
 ### `AuthScreen`
 
-No props.
+<Preview path="auth-screen" />
+
+<PropsTable of="AuthScreen" />
 
 ## Theming
 
 ### `ConvexAuthAppearanceProvider`
 
-**Props**
+<Preview path="convex-auth-appearance-provider" />
 
-| Name           | Type              | Optional |
-| -------------- | ----------------- | -------- |
-| `children`     | `ReactNode`       | No       |
-| `defaultTheme` | `ConvexAuthTheme` | Yes      |
-| `enableSystem` | `boolean`         | Yes      |
-| `storageKey`   | `string`          | Yes      |
+<PropsTable of="ConvexAuthAppearanceProvider" />
 
 ## Email templates
 
 ### `AuthInvitationEmailTemplate`
 
-**Props**
+<Preview path="auth-invitation-email-template" />
 
-| Name               | Type     | Optional |
-| ------------------ | -------- | -------- |
-| `acceptUrl`        | `string` | No       |
-| `expiresAt`        | `Date`   | No       |
-| `inviterLabel`     | `string` | No       |
-| `organizationName` | `string` | No       |
-| `roleName`         | `string` | No       |
+<PropsTable of="AuthInvitationEmailTemplate" />

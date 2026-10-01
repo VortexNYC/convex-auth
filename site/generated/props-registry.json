@@ -1,0 +1,3194 @@
+{
+  "AuthRuntimeProvider": [
+    {
+      "name": "status",
+      "type": "AuthRuntimeStatus",
+      "required": true
+    },
+    {
+      "name": "(rest)",
+      "type": "PropsWithChildren<AuthRuntimeContextValue>",
+      "required": false
+    }
+  ],
+  "ConvexAuthProvider": [
+    {
+      "name": "actions",
+      "type": "NativeAuthActions",
+      "required": true
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "storage",
+      "type": "\"local\" | \"session\" | TokenStorage",
+      "required": false
+    },
+    {
+      "name": "storageMode",
+      "type": "\"cookies\"",
+      "required": false,
+      "description": "`\"cookies\"` stores the session in HttpOnly cookies managed by an SSR\nadapter. The access token lives in memory only, the refresh token never\nreaches the browser, and session-minting writes go through the adapter's\nproxy endpoint (`apiRoute`). `storage` and URL token ingestion are\ndisabled in this mode."
+    },
+    {
+      "name": "apiRoute",
+      "type": "string",
+      "required": false,
+      "description": "Proxy endpoint for session-minting actions in cookie mode. Defaults to `/api/auth`."
+    },
+    {
+      "name": "initialUser",
+      "type": "NativeAuthUser | null",
+      "required": false,
+      "description": "Server-resolved user, so `isAuthenticated` is correct on first paint."
+    },
+    {
+      "name": "initialToken",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "initialRefreshToken",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "initialSessionId",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "serverState",
+      "type": "{\n    token: string | null;\n    user: NativeAuthUser | null;\n    sessionId: string | null;\n    _timeFetched: number;\n  }",
+      "required": false,
+      "description": "Fresh server-resolved state, re-delivered by the SSR adapter on each\nserver render. In cookie mode the provider re-seeds token/sessionId when\n`_timeFetched` advances, so a middleware-rotated session reaches the\nmounted client; a stale payload (framework cache) is ignored via the\nwatermark. Only meaningful with `storageMode: \"cookies\"`."
+    },
+    {
+      "name": "onAuthChange",
+      "type": "(authenticated: boolean) => unknown",
+      "required": false,
+      "description": "Called when the session transitions between authenticated and\nunauthenticated (not on mount). SSR adapters use it to invalidate\nframework caches — e.g. Next.js's Router Cache — after sign-in/sign-out."
+    },
+    {
+      "name": "requireLandingVerifier",
+      "type": "boolean",
+      "required": false,
+      "description": "Token mode only: require URL session-triple landings\n(`?token=&refreshToken=`) to carry a `landingVerifier` param matching\nthis browser's verifier cookie — binds OAuth/magic-link landings to the\nbrowser that initiated the flow. Defaults to `true`. Set `false` when\nflows are initiated outside the browser (e.g. a server calling\n`signInWithRedirect`) or when magic links must open in a different\nbrowser than the requesting one. Cookie mode enforces the same binding\nat the SSR boundary via the middleware's `requireLandingVerifier`."
+    }
+  ],
+  "ConvexAdminDashboard": [
+    {
+      "name": "users",
+      "type": "ConvexAdminDashboardUser[]",
+      "required": false,
+      "defaultValue": "[]"
+    },
+    {
+      "name": "sessions",
+      "type": "ConvexAdminDashboardSession[]",
+      "required": false,
+      "defaultValue": "[]"
+    },
+    {
+      "name": "organizations",
+      "type": "ConvexAdminDashboardOrganization[]",
+      "required": false,
+      "defaultValue": "[]"
+    },
+    {
+      "name": "audits",
+      "type": "ConvexAdminDashboardAudit[]",
+      "required": false,
+      "defaultValue": "[]"
+    },
+    {
+      "name": "defaultSection",
+      "type": "AdminSection",
+      "required": false,
+      "defaultValue": "\"users\""
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexAdminDashboardClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexAdminDashboardCopy",
+      "required": false
+    },
+    {
+      "name": "usersSearch",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"\""
+    },
+    {
+      "name": "onUsersSearchChange",
+      "type": "(value: string) => void",
+      "required": false
+    },
+    {
+      "name": "onViewUser",
+      "type": "(userId: string) => void",
+      "required": false
+    },
+    {
+      "name": "selectedUser",
+      "type": "ConvexAdminDashboardUser | null",
+      "required": false
+    },
+    {
+      "name": "onCloseUserDetail",
+      "type": "() => void",
+      "required": false
+    },
+    {
+      "name": "onBanUser",
+      "type": "(userId: string, reason: string, until: number) => void",
+      "required": false
+    },
+    {
+      "name": "onUnbanUser",
+      "type": "(userId: string) => void",
+      "required": false
+    },
+    {
+      "name": "onRemoveUser",
+      "type": "(userId: string) => void",
+      "required": false
+    },
+    {
+      "name": "onImpersonateUser",
+      "type": "(userId: string) => void",
+      "required": false
+    },
+    {
+      "name": "onRevokeSession",
+      "type": "(sessionId: string) => void",
+      "required": false
+    },
+    {
+      "name": "auditsFilters",
+      "type": "ConvexAdminDashboardAuditsFilters",
+      "required": false
+    },
+    {
+      "name": "onAuditsFiltersChange",
+      "type": "(filters: ConvexAdminDashboardAuditsFilters) => void",
+      "required": false
+    },
+    {
+      "name": "onViewOrganization",
+      "type": "(organizationId: string) => void",
+      "required": false
+    },
+    {
+      "name": "selectedOrganization",
+      "type": "ConvexAdminDashboardOrganization | null",
+      "required": false
+    },
+    {
+      "name": "onCloseOrganizationDetail",
+      "type": "() => void",
+      "required": false
+    },
+    {
+      "name": "organizationMembers",
+      "type": "ConvexAdminDashboardMember[]",
+      "required": false,
+      "defaultValue": "[]"
+    },
+    {
+      "name": "organizationRoles",
+      "type": "ConvexAdminDashboardRole[]",
+      "required": false,
+      "defaultValue": "[]"
+    },
+    {
+      "name": "onUpdateMemberRole",
+      "type": "(memberId: string, roleId: string) => void",
+      "required": false
+    },
+    {
+      "name": "onRemoveMember",
+      "type": "(memberId: string) => void",
+      "required": false
+    },
+    {
+      "name": "organizationMembersPagination",
+      "type": "ConvexAdminDashboardPagination",
+      "required": false
+    },
+    {
+      "name": "usersPagination",
+      "type": "ConvexAdminDashboardPagination",
+      "required": false
+    },
+    {
+      "name": "sessionsPagination",
+      "type": "ConvexAdminDashboardPagination",
+      "required": false
+    },
+    {
+      "name": "organizationsPagination",
+      "type": "ConvexAdminDashboardPagination",
+      "required": false
+    },
+    {
+      "name": "auditsPagination",
+      "type": "ConvexAdminDashboardPagination",
+      "required": false
+    }
+  ],
+  "ConvexApiKeyCreated": [
+    {
+      "name": "apiKey",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "classNames",
+      "type": "{\n    card?: string;\n    content?: string;\n    title?: string;\n    token?: string;\n    hint?: string;\n    button?: string;\n  }",
+      "required": false
+    },
+    {
+      "name": "onClose",
+      "type": "() => void",
+      "required": false
+    }
+  ],
+  "ConvexApiKeyCreateForm": [
+    {
+      "name": "apiEnabled",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexApiKeyClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexApiKeyCreateFormCopy",
+      "required": false
+    },
+    {
+      "name": "creating",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "name": "expirationOptions",
+      "type": "readonly ConvexApiKeyExpirationOption[]",
+      "required": false,
+      "defaultValue": "defaultConvexApiKeyExpirationOptions"
+    },
+    {
+      "name": "onExpiresInDaysChange",
+      "type": "(value: string) => void",
+      "required": true
+    },
+    {
+      "name": "onIpAllowlistChange",
+      "type": "(value: string) => void",
+      "required": true
+    },
+    {
+      "name": "onNameChange",
+      "type": "(value: string) => void",
+      "required": true
+    },
+    {
+      "name": "onScopesChange",
+      "type": "(value: Scope[]) => void",
+      "required": true
+    },
+    {
+      "name": "onSubmit",
+      "type": "() => void",
+      "required": true
+    },
+    {
+      "name": "scopeOptions",
+      "type": "readonly Scope[]",
+      "required": true
+    },
+    {
+      "name": "state",
+      "type": "ConvexApiKeyCreateFormState<Scope>",
+      "required": true
+    }
+  ],
+  "ConvexApiKeyList": [
+    {
+      "name": "apiKeys",
+      "type": "readonly ConvexApiKeyListItem<Scope, ApiKeyId>[]",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexApiKeyClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexApiKeyListCopy",
+      "required": true
+    },
+    {
+      "name": "formatTimestamp",
+      "type": "(timestamp: number) => string",
+      "required": false,
+      "defaultValue": "formatConvexApiKeyTimestamp"
+    },
+    {
+      "name": "onRevoke",
+      "type": "(apiKeyId: ApiKeyId) => void",
+      "required": true
+    },
+    {
+      "name": "onRotate",
+      "type": "(apiKeyId: ApiKeyId) => void",
+      "required": true
+    },
+    {
+      "name": "renderTag",
+      "type": "(label: string) => ReactNode",
+      "required": false
+    }
+  ],
+  "ConvexAuthAppearanceProvider": [
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "defaultTheme",
+      "type": "ConvexAuthTheme",
+      "required": false,
+      "defaultValue": "\"system\""
+    },
+    {
+      "name": "enableSystem",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "storageKey",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"convex-auth-theme\""
+    }
+  ],
+  "AuthSignedInBoundary": [
+    {
+      "name": "auth",
+      "type": "ConvexAuthState",
+      "required": true
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    }
+  ],
+  "AuthSignedOutBoundary": [
+    {
+      "name": "auth",
+      "type": "ConvexAuthState",
+      "required": true
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    }
+  ],
+  "AuthLoadingBoundaryView": [
+    {
+      "name": "auth",
+      "type": "ConvexAuthState",
+      "required": true
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    }
+  ],
+  "AuthLoadedBoundaryView": [
+    {
+      "name": "auth",
+      "type": "ConvexAuthState",
+      "required": true
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    }
+  ],
+  "ConvexAuthIdentityProvisioner": [
+    {
+      "name": "auth",
+      "type": "ConvexAuthState",
+      "required": true
+    },
+    {
+      "name": "currentUser",
+      "type": "unknown",
+      "required": true
+    },
+    {
+      "name": "sessionSubject",
+      "type": "string | null",
+      "required": true
+    },
+    {
+      "name": "provisionCurrentUser",
+      "type": "() => Promise<unknown>",
+      "required": true
+    }
+  ],
+  "AuthProviderButtons": [
+    {
+      "name": "providers",
+      "type": "readonly AuthProviderOption[]",
+      "required": true
+    },
+    {
+      "name": "onSelect",
+      "type": "(providerId: string) => void | Promise<void>",
+      "required": true
+    },
+    {
+      "name": "isSubmitting",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "className",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "providerButtonClassName",
+      "type": "string",
+      "required": false
+    }
+  ],
+  "AuthSignInForm": [
+    {
+      "name": "title",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "error",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "success",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "footer",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "providers",
+      "type": "readonly AuthProviderOption[]",
+      "required": false
+    },
+    {
+      "name": "onProviderSelect",
+      "type": "(providerId: string) => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "submitLabel",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "submittingLabel",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "isSubmitting",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "className",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "AuthFormClassNames",
+      "required": false
+    },
+    {
+      "name": "defaultValues",
+      "type": "Partial<AuthSignInFormValues>",
+      "required": false
+    },
+    {
+      "name": "onSubmit",
+      "type": "(values: AuthSignInFormValues) => void | Promise<void>",
+      "required": true
+    },
+    {
+      "name": "forgotPasswordHref",
+      "type": "string",
+      "required": false
+    }
+  ],
+  "AuthSignUpForm": [
+    {
+      "name": "title",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "error",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "success",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "footer",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "providers",
+      "type": "readonly AuthProviderOption[]",
+      "required": false
+    },
+    {
+      "name": "onProviderSelect",
+      "type": "(providerId: string) => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "submitLabel",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "submittingLabel",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "isSubmitting",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "className",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "AuthFormClassNames",
+      "required": false
+    },
+    {
+      "name": "defaultValues",
+      "type": "Partial<AuthSignUpFormValues>",
+      "required": false
+    },
+    {
+      "name": "onSubmit",
+      "type": "(values: AuthSignUpFormValues) => void | Promise<void>",
+      "required": true
+    },
+    {
+      "name": "termsNotice",
+      "type": "ReactNode",
+      "required": false
+    }
+  ],
+  "ConvexAuthSurface": [
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "eyebrow",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Workspace access\""
+    },
+    {
+      "name": "sidebarTitle",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Sign-in stays tied to the workspace you actually use.\""
+    },
+    {
+      "name": "sidebarBody",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Authentication, invites, and organization access stay in one path so users land in the right account on the first try.\""
+    },
+    {
+      "name": "features",
+      "type": "readonly ConvexAuthSurfaceFeature[]",
+      "required": false,
+      "defaultValue": "defaultFeatures"
+    },
+    {
+      "name": "footer",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "className",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexAuthSurfaceClassNames",
+      "required": false
+    }
+  ],
+  "ConvexAuthLoadingCard": [
+    {
+      "name": "title",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "ConvexAuthUnavailableCard": [
+    {
+      "name": "title",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "actions",
+      "type": "ReactNode",
+      "required": false
+    }
+  ],
+  "ConvexAuthActionButton": [
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "variant",
+      "type": "\"primary\" | \"secondary\"",
+      "required": false,
+      "defaultValue": "\"primary\""
+    },
+    {
+      "name": "onClick",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "type",
+      "type": "\"button\" | \"submit\" | \"reset\"",
+      "required": false,
+      "defaultValue": "\"button\""
+    }
+  ],
+  "ConvexAuthSignInPage": [
+    {
+      "name": "title",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Sign in\""
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Access your workspace with the shared authentication flow.\""
+    },
+    {
+      "name": "loadingTitle",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Loading sign-in\""
+    },
+    {
+      "name": "loadingDescription",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"We're preparing your authentication form.\""
+    },
+    {
+      "name": "unavailableTitle",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Sign-in is unavailable\""
+    },
+    {
+      "name": "unavailableDescription",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"This app could not load the Better Auth runtime for this page.\""
+    },
+    {
+      "name": "auth",
+      "type": "ConvexAuthState",
+      "required": true
+    },
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "signUpUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "forceRedirectUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "forgotPasswordHref",
+      "type": "string",
+      "required": false,
+      "description": "When set, AuthSignInForm renders a forgot-password link to this href."
+    },
+    {
+      "name": "onOpened",
+      "type": "() => void",
+      "required": false
+    },
+    {
+      "name": "onRuntimeUnavailable",
+      "type": "() => void",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexAuthPageClassNames",
+      "required": false
+    },
+    {
+      "name": "socialProviders",
+      "type": "readonly ConvexAuthSocialProvider[]",
+      "required": false
+    }
+  ],
+  "ConvexAuthSignUpPage": [
+    {
+      "name": "title",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Create account\""
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Create your account, then continue into setup.\""
+    },
+    {
+      "name": "loadingTitle",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Loading sign-up\""
+    },
+    {
+      "name": "loadingDescription",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"We're preparing your authentication form.\""
+    },
+    {
+      "name": "unavailableTitle",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Sign-up is unavailable\""
+    },
+    {
+      "name": "unavailableDescription",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"This app could not load the Better Auth runtime for this page.\""
+    },
+    {
+      "name": "auth",
+      "type": "ConvexAuthState",
+      "required": true
+    },
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "signInUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "forceRedirectUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "onOpened",
+      "type": "() => void",
+      "required": false
+    },
+    {
+      "name": "onRuntimeUnavailable",
+      "type": "() => void",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexAuthPageClassNames",
+      "required": false
+    },
+    {
+      "name": "socialProviders",
+      "type": "readonly ConvexAuthSocialProvider[]",
+      "required": false
+    }
+  ],
+  "ConvexAuthAcceptInvitePage": [
+    {
+      "name": "buildSignUpUrl",
+      "type": "() => string",
+      "required": true
+    },
+    {
+      "name": "redirectToSignIn",
+      "type": "(options?: { signInForceRedirectUrl?: string }) => void | Promise<void>",
+      "required": true
+    },
+    {
+      "name": "signInPath",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "signUpPath",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "postSignUpPath",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "getInvitationEmail",
+      "type": "(invitationToken: string, params: URLSearchParams) => Promise<string | null>",
+      "required": false
+    },
+    {
+      "name": "toSafeRedirectPath",
+      "type": "(url: string) => string | undefined",
+      "required": false
+    },
+    {
+      "name": "onOpened",
+      "type": "(event: ConvexAuthInviteOpenedEvent) => void",
+      "required": false
+    },
+    {
+      "name": "onRedirected",
+      "type": "(event: ConvexAuthInviteRedirectedEvent) => void",
+      "required": false
+    },
+    {
+      "name": "onFailed",
+      "type": "(event: ConvexAuthInviteFailureEvent) => void",
+      "required": false
+    },
+    {
+      "name": "onException",
+      "type": "(event: ConvexAuthInviteExceptionEvent) => void",
+      "required": false
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"You're invited\""
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"We're connecting you to the workspace that invited you.\""
+    },
+    {
+      "name": "eyebrow",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "loadingTitle",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Preparing your invitation\""
+    },
+    {
+      "name": "loadingDescription",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"We're opening the account setup tied to your invitation.\""
+    },
+    {
+      "name": "unavailableTitle",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Unable to start sign-up\""
+    },
+    {
+      "name": "inviteRecoveryError",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"This invite link is missing required access details or has expired. Ask your workspace administrator to resend the invitation.\""
+    },
+    {
+      "name": "inviteOpenFailureError",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "inviteRetryFailureError",
+      "type": "string",
+      "required": false
+    }
+  ],
+  "ConvexAuthPostSignUpPage": [
+    {
+      "name": "currentOrganization",
+      "type": "unknown",
+      "required": true
+    },
+    {
+      "name": "availableOrganizations",
+      "type": "readonly SelectableOrganization[] | null",
+      "required": false
+    },
+    {
+      "name": "invitationToken",
+      "type": "string | null",
+      "required": true
+    },
+    {
+      "name": "ensureActiveOrganization",
+      "type": "() => Promise<unknown>",
+      "required": true
+    },
+    {
+      "name": "redeemInvitation",
+      "type": "(token: string) => Promise<unknown>",
+      "required": true
+    },
+    {
+      "name": "onCurrentOrganizationReady",
+      "type": "() => void",
+      "required": true
+    },
+    {
+      "name": "onOpenOrganizationSetup",
+      "type": "() => void | Promise<void>",
+      "required": true
+    },
+    {
+      "name": "onRefresh",
+      "type": "() => void",
+      "required": false
+    },
+    {
+      "name": "timeoutMs",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Finalizing your workspace\""
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"We're finishing your organization access.\""
+    },
+    {
+      "name": "eyebrow",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "loadingTitle",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Finalizing your workspace\""
+    },
+    {
+      "name": "timedOutTitle",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Workspace setup is taking longer than expected\""
+    },
+    {
+      "name": "timedOutDescription",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Your account exists, but organization access is still syncing. Refresh or open organization setup.\""
+    },
+    {
+      "name": "refreshLabel",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Refresh\""
+    },
+    {
+      "name": "openOrganizationSetupLabel",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Open organization setup\""
+    }
+  ],
+  "ConvexAuthOrganizationChooserPage": [
+    {
+      "name": "currentOrganization",
+      "type": "ConvexAuthCurrentOrganization | null",
+      "required": false
+    },
+    {
+      "name": "organizations",
+      "type": "readonly ConvexAuthOrganizationChooserItem[]",
+      "required": false
+    },
+    {
+      "name": "onSelectOrganization",
+      "type": "(organization: ConvexAuthOrganizationChooserItem) => Promise<void>",
+      "required": true
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Choose organization\""
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "eyebrow",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "loadingTitle",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Loading organizations\""
+    },
+    {
+      "name": "loadingDescription",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"We're loading the workspaces attached to your account.\""
+    },
+    {
+      "name": "emptyTitle",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"No organizations available\""
+    },
+    {
+      "name": "emptyDescription",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Your account is authenticated but does not have a selectable organization yet.\""
+    },
+    {
+      "name": "currentLabel",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Current\""
+    },
+    {
+      "name": "pendingLabel",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Pending\""
+    },
+    {
+      "name": "selectErrorTitle",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Unable to switch organization\""
+    },
+    {
+      "name": "selectErrorDescription",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"We couldn't activate that organization. Try again or choose another workspace.\""
+    }
+  ],
+  "ConvexAuthSignInButton": [
+    {
+      "name": "redirectToSignIn",
+      "type": "() => void | Promise<void>",
+      "required": true
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false,
+      "defaultValue": "\"Sign in\""
+    },
+    {
+      "name": "variant",
+      "type": "\"primary\" | \"secondary\"",
+      "required": false,
+      "defaultValue": "\"primary\""
+    }
+  ],
+  "ConvexAuthSignUpButton": [
+    {
+      "name": "redirectToSignUp",
+      "type": "() => void | Promise<void>",
+      "required": true
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false,
+      "defaultValue": "\"Sign up\""
+    },
+    {
+      "name": "variant",
+      "type": "\"primary\" | \"secondary\"",
+      "required": false,
+      "defaultValue": "\"secondary\""
+    }
+  ],
+  "ConvexAuthSignOutButton": [
+    {
+      "name": "signOut",
+      "type": "() => void | Promise<void>",
+      "required": true
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false,
+      "defaultValue": "\"Sign out\""
+    },
+    {
+      "name": "variant",
+      "type": "\"primary\" | \"secondary\"",
+      "required": false,
+      "defaultValue": "\"secondary\""
+    }
+  ],
+  "ConvexAuthConvexIdentityProvisioner": [
+    {
+      "name": "auth",
+      "type": "ConvexAuthState",
+      "required": true
+    },
+    {
+      "name": "getCurrentUser",
+      "type": "FunctionReference<\"query\", \"public\", EmptyArgs, unknown>",
+      "required": true
+    },
+    {
+      "name": "provisionCurrentUser",
+      "type": "FunctionReference<\"mutation\", \"public\", EmptyArgs, unknown>",
+      "required": true
+    }
+  ],
+  "ConvexAuthClientContextProvider": [
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    }
+  ],
+  "ConvexAuthClientProvider": [
+    {
+      "name": "actions",
+      "type": "NativeAuthActions",
+      "required": true
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "storage",
+      "type": "\"local\" | \"session\" | TokenStorage",
+      "required": false
+    },
+    {
+      "name": "storageMode",
+      "type": "\"cookies\"",
+      "required": false,
+      "description": "`\"cookies\"` stores the session in HttpOnly cookies managed by an SSR\nadapter. The access token lives in memory only, the refresh token never\nreaches the browser, and session-minting writes go through the adapter's\nproxy endpoint (`apiRoute`). `storage` and URL token ingestion are\ndisabled in this mode."
+    },
+    {
+      "name": "apiRoute",
+      "type": "string",
+      "required": false,
+      "description": "Proxy endpoint for session-minting actions in cookie mode. Defaults to `/api/auth`."
+    },
+    {
+      "name": "initialUser",
+      "type": "NativeAuthUser | null",
+      "required": false,
+      "description": "Server-resolved user, so `isAuthenticated` is correct on first paint."
+    },
+    {
+      "name": "initialToken",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "initialRefreshToken",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "initialSessionId",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "serverState",
+      "type": "{\n    token: string | null;\n    user: NativeAuthUser | null;\n    sessionId: string | null;\n    _timeFetched: number;\n  }",
+      "required": false,
+      "description": "Fresh server-resolved state, re-delivered by the SSR adapter on each\nserver render. In cookie mode the provider re-seeds token/sessionId when\n`_timeFetched` advances, so a middleware-rotated session reaches the\nmounted client; a stale payload (framework cache) is ignored via the\nwatermark. Only meaningful with `storageMode: \"cookies\"`."
+    },
+    {
+      "name": "onAuthChange",
+      "type": "(authenticated: boolean) => unknown",
+      "required": false,
+      "description": "Called when the session transitions between authenticated and\nunauthenticated (not on mount). SSR adapters use it to invalidate\nframework caches — e.g. Next.js's Router Cache — after sign-in/sign-out."
+    },
+    {
+      "name": "requireLandingVerifier",
+      "type": "boolean",
+      "required": false,
+      "description": "Token mode only: require URL session-triple landings\n(`?token=&refreshToken=`) to carry a `landingVerifier` param matching\nthis browser's verifier cookie — binds OAuth/magic-link landings to the\nbrowser that initiated the flow. Defaults to `true`. Set `false` when\nflows are initiated outside the browser (e.g. a server calling\n`signInWithRedirect`) or when magic links must open in a different\nbrowser than the requesting one. Cookie mode enforces the same binding\nat the SSR boundary via the middleware's `requireLandingVerifier`."
+    }
+  ],
+  "ConvexAuthClientSignInScreen": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "signUpUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "forceRedirectUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "forgotPasswordHref",
+      "type": "string",
+      "required": false,
+      "description": "When set, AuthSignInForm renders a forgot-password link to this href."
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Access your workspace with the shared authentication flow.\""
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Sign in\""
+    },
+    {
+      "name": "classNames",
+      "type": "AuthFormClassNames",
+      "required": false
+    },
+    {
+      "name": "socialProviders",
+      "type": "readonly ConvexAuthSocialProvider[]",
+      "required": false
+    }
+  ],
+  "ConvexAuthClientSignUpScreen": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "signInUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "forceRedirectUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Create your account, then continue into setup.\""
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Create account\""
+    },
+    {
+      "name": "classNames",
+      "type": "AuthFormClassNames",
+      "required": false
+    },
+    {
+      "name": "socialProviders",
+      "type": "readonly ConvexAuthSocialProvider[]",
+      "required": false
+    }
+  ],
+  "ConvexChangeEmailForm": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "currentEmail",
+      "type": "string | null",
+      "required": false,
+      "description": "The user's current email, displayed read-only above the new-email field."
+    },
+    {
+      "name": "verifyCallbackUrl",
+      "type": "string",
+      "required": false,
+      "description": "Absolute URL of the verify-email page on this app. Better-Auth\nappends `?token=…` to it for the change-confirmation email."
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexChangeEmailFormClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexChangeEmailFormCopy",
+      "required": false
+    },
+    {
+      "name": "onRequested",
+      "type": "(newEmail: string) => void",
+      "required": false
+    }
+  ],
+  "ConvexEnableTwoFactorForm": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "issuer",
+      "type": "string",
+      "required": false,
+      "description": "Authenticator label shown alongside the account (e.g. \"Pile\")."
+    },
+    {
+      "name": "renderQR",
+      "type": "(totpURI: string) => ReactNode",
+      "required": false,
+      "description": "Optional QR renderer. Receives the `otpauth://` URI. When omitted,\nonly the manually-enterable secret is shown — still a complete\nenrollment path. Keeps the package free of a QR dependency."
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexEnableTwoFactorFormClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexEnableTwoFactorFormCopy",
+      "required": false
+    },
+    {
+      "name": "onEnrolled",
+      "type": "() => void",
+      "required": false,
+      "description": "Fired once enrollment is fully confirmed (after the backup step)."
+    }
+  ],
+  "ConvexForgotPasswordForm": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "resetPasswordUrl",
+      "type": "string",
+      "required": true,
+      "description": "Absolute URL of the reset-password page on this app. Better-Auth\nappends `?token=…` to it before sending the email."
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexForgotPasswordFormClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexForgotPasswordFormCopy",
+      "required": false
+    },
+    {
+      "name": "onRequested",
+      "type": "(email: string) => void",
+      "required": false
+    }
+  ],
+  "ConvexProfileEditForm": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "initialName",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"\""
+    },
+    {
+      "name": "initialImage",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"\""
+    },
+    {
+      "name": "showImageField",
+      "type": "boolean",
+      "required": false,
+      "description": "Whether to show the image URL field. Defaults to true. Set to\nfalse for consumers that don't surface avatar editing.",
+      "defaultValue": "true"
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexProfileEditFormClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexProfileEditFormCopy",
+      "required": false
+    },
+    {
+      "name": "onUpdated",
+      "type": "(next: { name?: string; image?: string }) => void",
+      "required": false
+    }
+  ],
+  "ConvexProfileImageUploader": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "uploadFile",
+      "type": "(file: Blob | string) => Promise<string>",
+      "required": true,
+      "description": "Consumer-provided upload strategy. Receives the picked file (a\nbrowser `File`/`Blob` on web, a `Blob` or a base64/URI string on\nReact Native) and MUST return the canonical URL of the uploaded\nimage (the URL that will be stored on the user). The package\nnever sees the storage backend."
+    },
+    {
+      "name": "initialImage",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "accept",
+      "type": "string",
+      "required": false,
+      "description": "File-input `accept` attribute (defaults to image/*).",
+      "defaultValue": "\"image/*\""
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexProfileImageUploaderClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexProfileImageUploaderCopy",
+      "required": false
+    },
+    {
+      "name": "onUploaded",
+      "type": "(url: string) => void",
+      "required": false
+    }
+  ],
+  "ConvexResetPasswordForm": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "token",
+      "type": "string",
+      "required": true,
+      "description": "Reset token from the recovery email (typically `?token=…`)."
+    },
+    {
+      "name": "minPasswordLength",
+      "type": "number",
+      "required": false,
+      "description": "Minimum new-password length to enforce client-side. Defaults to\n12 (matches the package's server-side `minPasswordLength` default).\nThe server is authoritative either way.",
+      "defaultValue": "12"
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexResetPasswordFormClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexResetPasswordFormCopy",
+      "required": false
+    },
+    {
+      "name": "onReset",
+      "type": "() => void",
+      "required": false
+    }
+  ],
+  "ConvexSessionList": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "showRevokeOthersAction",
+      "type": "boolean",
+      "required": false,
+      "description": "Render a \"Revoke all other sessions\" button next to the title.\nDefaults to true. Hides when no other sessions exist.",
+      "defaultValue": "true"
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexSessionListClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexSessionListCopy",
+      "required": false
+    },
+    {
+      "name": "formatTimestamp",
+      "type": "(value: string | Date) => string",
+      "required": false
+    }
+  ],
+  "ConvexVerifyEmailScreen": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "token",
+      "type": "string",
+      "required": true,
+      "description": "Token from the verification email's `?token=…` param."
+    },
+    {
+      "name": "userEmail",
+      "type": "string | null",
+      "required": false,
+      "description": "The current user's email, if signed in. Required to enable the\nresend-verification button. If absent, the resend button is\nhidden (no way to know which email to resend to)."
+    },
+    {
+      "name": "resendCallbackUrl",
+      "type": "string",
+      "required": false,
+      "description": "Absolute URL of this verify-email page on this app. Better-Auth\nappends a fresh `?token=…` to it for the resent email."
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexVerifyEmailScreenClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexVerifyEmailScreenCopy",
+      "required": false
+    },
+    {
+      "name": "onVerified",
+      "type": "() => void",
+      "required": false,
+      "description": "Called on successful verification (after the verify call returns ok)."
+    }
+  ],
+  "ConvexVerifyTwoFactorForm": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "showTrustDevice",
+      "type": "boolean",
+      "required": false,
+      "description": "Show the \"trust this device\" checkbox (skips 2FA on this device for\nthe server's trust window). Defaults to true.",
+      "defaultValue": "true"
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexVerifyTwoFactorFormClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexVerifyTwoFactorFormCopy",
+      "required": false
+    },
+    {
+      "name": "onVerified",
+      "type": "() => void",
+      "required": false,
+      "description": "Fired once the second factor is satisfied and the session is live."
+    }
+  ],
+  "ConvexCreateOrganization": [
+    {
+      "name": "classNames",
+      "type": "ConvexCreateOrganizationClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexCreateOrganizationCopy",
+      "required": false
+    },
+    {
+      "name": "isLoading",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "errorMessage",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "defaultName",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"\""
+    },
+    {
+      "name": "defaultSlug",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"\""
+    },
+    {
+      "name": "defaultImageUrl",
+      "type": "string | null",
+      "required": false,
+      "defaultValue": "\"\""
+    },
+    {
+      "name": "onCreate",
+      "type": "(input: ConvexCreateOrganizationInput) => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onCancel",
+      "type": "() => void",
+      "required": false
+    },
+    {
+      "name": "renderHeader",
+      "type": "(args: { title: ReactNode; description: ReactNode }) => ReactNode",
+      "required": false
+    }
+  ],
+  "AuthInvitationEmailTemplate": [
+    {
+      "name": "organizationName",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "roleName",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "inviterLabel",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "acceptUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "expiresAt",
+      "type": "Date",
+      "required": true
+    }
+  ],
+  "Button": [
+    {
+      "name": "(rest)",
+      "type": "AnchorHTMLAttributes<HTMLAnchorElement>",
+      "required": false,
+      "description": "Forwarded to the underlying element."
+    }
+  ],
+  "EmailHeading": [
+    {
+      "name": "(rest)",
+      "type": "HTMLAttributes<HTMLHeadingElement>",
+      "required": false,
+      "description": "Forwarded to the underlying element."
+    }
+  ],
+  "EmailLayout": [
+    {
+      "name": "preview",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    }
+  ],
+  "EmailStrong": [
+    {
+      "name": "(rest)",
+      "type": "HTMLAttributes<HTMLElement>",
+      "required": false,
+      "description": "Forwarded to the underlying element."
+    }
+  ],
+  "EmailText": [
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "muted",
+      "type": "boolean",
+      "required": false
+    }
+  ],
+  "ConvexOrganizationList": [
+    {
+      "name": "organizations",
+      "type": "readonly ConvexOrgListOrganization[]",
+      "required": true
+    },
+    {
+      "name": "invitations",
+      "type": "readonly ConvexOrgListInvitation[]",
+      "required": false
+    },
+    {
+      "name": "currentOrganizationId",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexOrgListClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexOrgListCopy",
+      "required": false
+    },
+    {
+      "name": "isLoading",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "onSelectOrganization",
+      "type": "(organizationId: string) => void | Promise<void>",
+      "required": true
+    },
+    {
+      "name": "onAcceptInvitation",
+      "type": "(invitationId: string) => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onRejectInvitation",
+      "type": "(invitationId: string) => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onCreateOrganization",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "showInvitations",
+      "type": "boolean",
+      "required": false
+    }
+  ],
+  "ConvexOrganizationInviteForm": [
+    {
+      "name": "classNames",
+      "type": "ConvexOrganizationMembersClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexOrganizationInviteFormCopy",
+      "required": false
+    },
+    {
+      "name": "disabled",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "inviting",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "name": "onEmailChange",
+      "type": "(value: string) => void",
+      "required": true
+    },
+    {
+      "name": "onRoleTemplateChange",
+      "type": "(value: Role) => void",
+      "required": true
+    },
+    {
+      "name": "onSubmit",
+      "type": "() => void",
+      "required": true
+    },
+    {
+      "name": "roleOptions",
+      "type": "readonly Role[]",
+      "required": true
+    },
+    {
+      "name": "state",
+      "type": "ConvexOrganizationInviteFormState<Role>",
+      "required": true
+    }
+  ],
+  "ConvexOrganizationMemberList": [
+    {
+      "name": "canManageMembers",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "canManageRoles",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexOrganizationMembersClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexOrganizationMembersCopy",
+      "required": true
+    },
+    {
+      "name": "formatTimestamp",
+      "type": "(timestamp: number) => string",
+      "required": false,
+      "defaultValue": "formatConvexOrganizationMemberTimestamp"
+    },
+    {
+      "name": "members",
+      "type": "readonly ConvexOrganizationMemberListItem<MemberId>[]",
+      "required": false
+    },
+    {
+      "name": "mutatingMemberId",
+      "type": "MemberId | null",
+      "required": false
+    },
+    {
+      "name": "onReactivate",
+      "type": "(membershipId: MemberId) => void",
+      "required": false
+    },
+    {
+      "name": "onRoleChange",
+      "type": "(membershipId: MemberId, roleTemplate: Role) => void",
+      "required": false
+    },
+    {
+      "name": "onSuspend",
+      "type": "(membershipId: MemberId) => void",
+      "required": false
+    },
+    {
+      "name": "renderStatus",
+      "type": "(status: ConvexOrganizationMemberStatus) => ReactNode",
+      "required": false
+    },
+    {
+      "name": "roleOptions",
+      "type": "readonly Role[]",
+      "required": true
+    }
+  ],
+  "ConvexOrganizationMembersSurface": [
+    {
+      "name": "canManageMembers",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "canManageRoles",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "captureEvent",
+      "type": "(name: string, properties: Record<string, unknown>) => void",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexOrganizationMembersClassNames",
+      "required": false
+    },
+    {
+      "name": "confirmSuspendMember",
+      "type": "(args: { membershipId: MemberId }) => boolean | Promise<boolean>",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexOrganizationMembersSurfaceCopy",
+      "required": false
+    },
+    {
+      "name": "defaultInviteRoleTemplate",
+      "type": "Role",
+      "required": false
+    },
+    {
+      "name": "getErrorMessage",
+      "type": "(error: unknown, fallback: string) => string",
+      "required": false,
+      "defaultValue": "getConvexOrganizationMemberMutationErrorMessage"
+    },
+    {
+      "name": "organizationId",
+      "type": "OrganizationId",
+      "required": false
+    },
+    {
+      "name": "refs",
+      "type": "ConvexOrganizationMemberFunctionReferences<Role, MemberId, OrganizationId, InvitationId>",
+      "required": true
+    },
+    {
+      "name": "renderActionError",
+      "type": "(message: string) => ReactNode",
+      "required": false
+    },
+    {
+      "name": "renderInvitationLink",
+      "type": "(args: { title: string; value: string }) => ReactNode",
+      "required": false
+    },
+    {
+      "name": "renderStatus",
+      "type": "(status: ConvexOrganizationMemberStatus) => ReactNode",
+      "required": false
+    },
+    {
+      "name": "roleOptions",
+      "type": "readonly Role[]",
+      "required": true
+    }
+  ],
+  "ConvexOrganizationInvitationLinkNotice": [
+    {
+      "name": "classNames",
+      "type": "ConvexOrganizationMembersClassNames",
+      "required": false
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "value",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "ConvexOrganizationMemberActionErrorNotice": [
+    {
+      "name": "classNames",
+      "type": "ConvexOrganizationMembersClassNames",
+      "required": false
+    },
+    {
+      "name": "message",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "ConvexOrganizationProfile": [
+    {
+      "name": "organization",
+      "type": "ConvexOrgProfileOrganization | null",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexOrgProfileClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexOrgProfileCopy",
+      "required": false
+    },
+    {
+      "name": "isAdmin",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "isLoading",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "showBrandFields",
+      "type": "boolean",
+      "required": false,
+      "description": "When false, brand fields are hidden (default true)."
+    },
+    {
+      "name": "showSecurityFields",
+      "type": "boolean",
+      "required": false,
+      "description": "When false, security fields are hidden (default true)."
+    },
+    {
+      "name": "onUpdate",
+      "type": "(input: ConvexOrgProfileUpdateInput) => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onDelete",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "renderDeleteConfirm",
+      "type": "(args: { onConfirm: () => void; onCancel: () => void }) => ReactNode",
+      "required": false
+    }
+  ],
+  "ConvexOrganizationRoleManagerSurface": [
+    {
+      "name": "buildCreateRoleArgs",
+      "type": "(\n    state: ConvexOrganizationRoleFormState,\n  ) => ConvexOrganizationCreateRoleArgs",
+      "required": false
+    },
+    {
+      "name": "canCreateRoles",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "captureEvent",
+      "type": "(name: string, properties: Record<string, unknown>) => void",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexOrganizationRoleManagerClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexOrganizationRoleManagerCopy",
+      "required": false
+    },
+    {
+      "name": "getErrorMessage",
+      "type": "(error: unknown, fallback: string) => string",
+      "required": false,
+      "defaultValue": "getConvexOrganizationRoleManagerErrorMessage"
+    },
+    {
+      "name": "refs",
+      "type": "ConvexOrganizationRoleManagerFunctionReferences<RoleId>",
+      "required": true
+    },
+    {
+      "name": "renderActionError",
+      "type": "(message: string) => ReactNode",
+      "required": false
+    }
+  ],
+  "ConvexOrganizationRoleCreateForm": [
+    {
+      "name": "canCreateRoles",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexOrganizationRoleManagerClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexOrganizationRoleManagerCopy",
+      "required": false
+    },
+    {
+      "name": "creating",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "name": "onNameChange",
+      "type": "(name: string) => void",
+      "required": true
+    },
+    {
+      "name": "onPermissionToggle",
+      "type": "(permission: string) => void",
+      "required": true
+    },
+    {
+      "name": "onSubmit",
+      "type": "() => void",
+      "required": true
+    },
+    {
+      "name": "permissions",
+      "type": "readonly ConvexOrganizationPermissionListItem[]",
+      "required": false
+    },
+    {
+      "name": "state",
+      "type": "ConvexOrganizationRoleFormState",
+      "required": true
+    }
+  ],
+  "ConvexOrganizationPermissionChecklist": [
+    {
+      "name": "classNames",
+      "type": "ConvexOrganizationRoleManagerClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexOrganizationPermissionChecklistCopy",
+      "required": false
+    },
+    {
+      "name": "disabled",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "onPermissionToggle",
+      "type": "(permission: string) => void",
+      "required": true
+    },
+    {
+      "name": "permissions",
+      "type": "readonly ConvexOrganizationPermissionListItem[]",
+      "required": false
+    },
+    {
+      "name": "selectedPermissions",
+      "type": "readonly string[]",
+      "required": true
+    }
+  ],
+  "ConvexOrganizationRoleList": [
+    {
+      "name": "classNames",
+      "type": "ConvexOrganizationRoleManagerClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexOrganizationRoleManagerCopy",
+      "required": false
+    },
+    {
+      "name": "roles",
+      "type": "readonly ConvexOrganizationRoleListItem<RoleId>[]",
+      "required": false
+    }
+  ],
+  "ConvexOrganizationRoleActionErrorNotice": [
+    {
+      "name": "classNames",
+      "type": "ConvexOrganizationRoleManagerClassNames",
+      "required": false
+    },
+    {
+      "name": "message",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "ConvexOrganizationSwitcher": [
+    {
+      "name": "organizations",
+      "type": "readonly ConvexOrgSwitcherOrganization[]",
+      "required": true
+    },
+    {
+      "name": "currentOrganizationId",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexOrgSwitcherClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexOrgSwitcherCopy",
+      "required": false
+    },
+    {
+      "name": "onSelectOrganization",
+      "type": "(organizationId: string) => void | Promise<void>",
+      "required": true
+    },
+    {
+      "name": "onSelectPersonalAccount",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onCreateOrganization",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onInPlaceCreateOrganization",
+      "type": "(name: string) => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "showPersonalAccount",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "enableSearch",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "currentOrganization",
+      "type": "ConvexOrgSwitcherOrganization | null",
+      "required": false
+    },
+    {
+      "name": "personalAccountLabel",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "renderCustomTrigger",
+      "type": "(args: {\n    organization: ConvexOrgSwitcherOrganization | null;\n    onClick: () => void;\n  }) => ReactNode",
+      "required": false
+    }
+  ],
+  "PasskeyManager": [
+    {
+      "name": "rpName",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "passkeys",
+      "type": "PasskeyListItem[]",
+      "required": false,
+      "defaultValue": "[]"
+    },
+    {
+      "name": "loading",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "false"
+    },
+    {
+      "name": "onRegister",
+      "type": "(args: { name: string }) => Promise<PublicKeyCredentialCreationOptionsJSON>",
+      "required": true
+    },
+    {
+      "name": "onVerifyRegistration",
+      "type": "(args: {\n    name: string;\n    response: RegistrationResponseJSON;\n  }) => Promise<void>",
+      "required": true
+    },
+    {
+      "name": "onAuthenticate",
+      "type": "() => Promise<PublicKeyCredentialRequestOptionsJSON>",
+      "required": true
+    },
+    {
+      "name": "onVerifyAuthentication",
+      "type": "(args: { response: AuthenticationResponseJSON }) => Promise<void>",
+      "required": true
+    },
+    {
+      "name": "onRevoke",
+      "type": "(args: { credentialId: string }) => Promise<void>",
+      "required": true
+    },
+    {
+      "name": "onRename",
+      "type": "(args: { credentialId: string; name: string }) => Promise<void>",
+      "required": false
+    }
+  ],
+  "ConvexSecurityAuditList": [
+    {
+      "name": "logs",
+      "type": "readonly ConvexSecurityAuditListItem[]",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexSecurityAuditListCopy",
+      "required": true
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexSecurityAuditListClassNames",
+      "required": false
+    },
+    {
+      "name": "formatCreatedAt",
+      "type": "(createdAt: number) => string",
+      "required": false,
+      "defaultValue": "formatConvexSecurityAuditCreatedAt"
+    },
+    {
+      "name": "renderBadge",
+      "type": "(args: { label: string; tone: \"default\" | \"secondary\" }) => ReactNode",
+      "required": false
+    }
+  ],
+  "ConvexSecurityAuditRow": [
+    {
+      "name": "log",
+      "type": "ConvexSecurityAuditListItem",
+      "required": true
+    },
+    {
+      "name": "copy",
+      "type": "Partial<ConvexSecurityAuditListCopy>",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexSecurityAuditListClassNames",
+      "required": false
+    },
+    {
+      "name": "formatCreatedAt",
+      "type": "(createdAt: number) => string",
+      "required": false,
+      "defaultValue": "formatConvexSecurityAuditCreatedAt"
+    },
+    {
+      "name": "renderBadge",
+      "type": "(args: { label: string; tone: \"default\" | \"secondary\" }) => ReactNode",
+      "required": false
+    }
+  ],
+  "AuthScreen": [
+    {
+      "name": "title",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "footer",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "className",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "AuthScreenClassNames",
+      "required": false
+    }
+  ],
+  "AuthCard": [
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "className",
+      "type": "string",
+      "required": false
+    }
+  ],
+  "AuthCardHeader": [
+    {
+      "name": "title",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "AuthCardHeaderClassNames",
+      "required": false
+    }
+  ],
+  "AuthCardContent": [
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "className",
+      "type": "string",
+      "required": false
+    }
+  ],
+  "AuthField": [
+    {
+      "name": "(rest)",
+      "type": "HTMLAttributes<HTMLDivElement>",
+      "required": false,
+      "description": "Forwarded to the underlying element."
+    }
+  ],
+  "AuthLabel": [
+    {
+      "name": "(rest)",
+      "type": "LabelHTMLAttributes<HTMLLabelElement>",
+      "required": false,
+      "description": "Forwarded to the underlying element."
+    }
+  ],
+  "AuthInput": [
+    {
+      "name": "(rest)",
+      "type": "InputHTMLAttributes<HTMLInputElement>",
+      "required": false,
+      "description": "Forwarded to the underlying element."
+    }
+  ],
+  "AuthButton": [
+    {
+      "name": "variant",
+      "type": "\"primary\" | \"secondary\" | \"ghost\"",
+      "required": false,
+      "defaultValue": "\"primary\""
+    },
+    {
+      "name": "(rest)",
+      "type": "ButtonHTMLAttributes<HTMLButtonElement>",
+      "required": false,
+      "description": "Forwarded to the underlying element."
+    }
+  ],
+  "AuthAlert": [
+    {
+      "name": "tone",
+      "type": "\"default\" | \"error\" | \"success\" | \"warning\"",
+      "required": false,
+      "defaultValue": "\"default\""
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "className",
+      "type": "string",
+      "required": false
+    }
+  ],
+  "AuthDivider": [
+    {
+      "name": "label",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "className",
+      "type": "string",
+      "required": false
+    }
+  ],
+  "AuthProviderButton": [
+    {
+      "name": "providerLabel",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "(rest)",
+      "type": "ButtonHTMLAttributes<HTMLButtonElement>",
+      "required": false,
+      "description": "Forwarded to the underlying element."
+    }
+  ],
+  "AuthRuntimeStatusBadge": [
+    {
+      "name": "className",
+      "type": "string",
+      "required": false
+    }
+  ],
+  "AuthRuntimeSummary": [
+    {
+      "name": "className",
+      "type": "string",
+      "required": false
+    }
+  ],
+  "ConvexUserButton": [
+    {
+      "name": "user",
+      "type": "ConvexUserButtonUser | null",
+      "required": false
+    },
+    {
+      "name": "currentOrganizationId",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "organizations",
+      "type": "readonly ConvexUserButtonOrganizationItem[]",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexUserButtonClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexUserButtonCopy",
+      "required": false
+    },
+    {
+      "name": "onSignOut",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onManageAccount",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onManageOrganization",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onSelectOrganization",
+      "type": "(organizationId: string) => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onCreateOrganization",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "showManageOrganization",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "renderCustomTrigger",
+      "type": "(args: {\n    user: ConvexUserButtonUser | null | undefined;\n    onClick: () => void;\n  }) => ReactNode",
+      "required": false
+    }
+  ],
+  "ConvexUserProfile": [
+    {
+      "name": "user",
+      "type": "ConvexUserProfileUser | null",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexUserProfileClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexUserProfileCopy",
+      "required": false
+    },
+    {
+      "name": "isLoading",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "errorMessage",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "isAdmin",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "onUpdateProfile",
+      "type": "(input: { name: string; imageUrl?: string | null }) => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onDeleteAccount",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onChangePassword",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onManageTwoFactor",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "renderDeleteConfirm",
+      "type": "(args: { onConfirm: () => void; onCancel: () => void }) => ReactNode",
+      "required": false
+    }
+  ],
+  "ConvexWebhookSettingsSurface": [
+    {
+      "name": "captureEvent",
+      "type": "(name: string, properties: Record<string, unknown>) => void",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ConvexWebhookClassNames",
+      "required": false
+    },
+    {
+      "name": "confirmDeleteEndpoint",
+      "type": "(args: { endpointId: EndpointId }) => boolean | Promise<boolean>",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexWebhookSettingsSurfaceCopy",
+      "required": false
+    },
+    {
+      "name": "createRequestId",
+      "type": "(prefix: string) => string",
+      "required": true
+    },
+    {
+      "name": "deliveryLimit",
+      "type": "number",
+      "required": false,
+      "defaultValue": "10"
+    },
+    {
+      "name": "enabled",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "name": "eventOptions",
+      "type": "readonly EventType[]",
+      "required": true
+    },
+    {
+      "name": "exhaustedDeliveryLimit",
+      "type": "number",
+      "required": false,
+      "defaultValue": "5"
+    },
+    {
+      "name": "formatTimestamp",
+      "type": "(timestamp: number) => string",
+      "required": false
+    },
+    {
+      "name": "getErrorMessage",
+      "type": "(error: unknown, fallback: string) => string",
+      "required": false,
+      "defaultValue": "getConvexWebhookMutationErrorMessage"
+    },
+    {
+      "name": "organizationId",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "refs",
+      "type": "ConvexWebhookSettingsFunctionReferences<EventType, EndpointId, DeliveryId, OrganizationId>",
+      "required": true
+    },
+    {
+      "name": "renderActionError",
+      "type": "(message: string) => ReactNode",
+      "required": false
+    },
+    {
+      "name": "renderFailureBadge",
+      "type": "(failureKind: ConvexWebhookDeliveryFailureKind) => ReactNode",
+      "required": false
+    },
+    {
+      "name": "renderProcessQueueButton",
+      "type": "(args: { label: string; onClick: () => void }) => ReactNode",
+      "required": false
+    },
+    {
+      "name": "renderSecret",
+      "type": "(args: { secret: string; title: string }) => ReactNode",
+      "required": false
+    },
+    {
+      "name": "renderTag",
+      "type": "(label: string) => ReactNode",
+      "required": false
+    }
+  ],
+  "ConvexWebhookCreateForm": [
+    {
+      "name": "classNames",
+      "type": "ConvexWebhookClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexWebhookCreateFormCopy",
+      "required": false
+    },
+    {
+      "name": "creating",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "name": "enabled",
+      "type": "boolean",
+      "required": true
+    },
+    {
+      "name": "eventOptions",
+      "type": "readonly EventType[]",
+      "required": true
+    },
+    {
+      "name": "onDescriptionChange",
+      "type": "(value: string) => void",
+      "required": true
+    },
+    {
+      "name": "onEventsChange",
+      "type": "(value: EventType[]) => void",
+      "required": true
+    },
+    {
+      "name": "onSubmit",
+      "type": "() => void",
+      "required": true
+    },
+    {
+      "name": "onUrlChange",
+      "type": "(value: string) => void",
+      "required": true
+    },
+    {
+      "name": "state",
+      "type": "ConvexWebhookCreateFormState<EventType>",
+      "required": true
+    }
+  ],
+  "ConvexWebhookEndpointList": [
+    {
+      "name": "classNames",
+      "type": "ConvexWebhookClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexWebhookEndpointListCopy",
+      "required": true
+    },
+    {
+      "name": "endpoints",
+      "type": "readonly ConvexWebhookEndpointListItem<EventType, EndpointId>[]",
+      "required": false
+    },
+    {
+      "name": "eventOptions",
+      "type": "readonly EventType[]",
+      "required": true
+    },
+    {
+      "name": "onArchive",
+      "type": "(endpointId: EndpointId) => void",
+      "required": true
+    },
+    {
+      "name": "onDelete",
+      "type": "(endpointId: EndpointId) => void",
+      "required": true
+    },
+    {
+      "name": "onDisable",
+      "type": "(endpointId: EndpointId) => void",
+      "required": true
+    },
+    {
+      "name": "onRotateSecret",
+      "type": "(endpointId: EndpointId) => void",
+      "required": true
+    },
+    {
+      "name": "onSave",
+      "type": "(\n    endpointId: EndpointId,\n    values: { url: string; description?: string; events: EventType[] },\n  ) => void",
+      "required": true
+    },
+    {
+      "name": "onSendTest",
+      "type": "(endpointId: EndpointId) => void",
+      "required": true
+    },
+    {
+      "name": "renderTag",
+      "type": "(label: string) => ReactNode",
+      "required": false
+    },
+    {
+      "name": "sendingTestEndpointId",
+      "type": "EndpointId | null",
+      "required": true
+    }
+  ],
+  "ConvexWebhookDeliveryFilters": [
+    {
+      "name": "classNames",
+      "type": "ConvexWebhookClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "Partial<ConvexWebhookDeliveryCopy>",
+      "required": false
+    },
+    {
+      "name": "endpointId",
+      "type": "EndpointId | \"all\"",
+      "required": true
+    },
+    {
+      "name": "endpoints",
+      "type": "readonly ConvexWebhookEndpointListItem<EventType, EndpointId>[]",
+      "required": false
+    },
+    {
+      "name": "eventOptions",
+      "type": "readonly EventType[]",
+      "required": true
+    },
+    {
+      "name": "eventType",
+      "type": "EventType | \"all\"",
+      "required": true
+    },
+    {
+      "name": "onEndpointIdChange",
+      "type": "(value: EndpointId | \"all\") => void",
+      "required": true
+    },
+    {
+      "name": "onEventTypeChange",
+      "type": "(value: EventType | \"all\") => void",
+      "required": true
+    },
+    {
+      "name": "onStatusChange",
+      "type": "(value: ConvexWebhookDeliveryStatus | \"all\") => void",
+      "required": true
+    },
+    {
+      "name": "status",
+      "type": "ConvexWebhookDeliveryStatus | \"all\"",
+      "required": true
+    }
+  ],
+  "ConvexWebhookDeliveryPagination": [
+    {
+      "name": "classNames",
+      "type": "ConvexWebhookClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "Partial<ConvexWebhookDeliveryCopy>",
+      "required": false
+    },
+    {
+      "name": "onNext",
+      "type": "() => void",
+      "required": true
+    },
+    {
+      "name": "onPrevious",
+      "type": "() => void",
+      "required": true
+    },
+    {
+      "name": "page",
+      "type": "ConvexWebhookDeliveryPage<EventType, EndpointId, DeliveryId, OrganizationId>",
+      "required": false
+    }
+  ],
+  "ConvexWebhookDeliveryList": [
+    {
+      "name": "classNames",
+      "type": "ConvexWebhookClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexWebhookDeliveryCopy",
+      "required": true
+    },
+    {
+      "name": "deliveries",
+      "type": "| readonly ConvexWebhookDeliveryListItem<EventType, EndpointId, DeliveryId, OrganizationId>[]",
+      "required": false
+    },
+    {
+      "name": "formatTimestamp",
+      "type": "(timestamp: number) => string",
+      "required": false,
+      "defaultValue": "formatConvexWebhookTimestamp"
+    },
+    {
+      "name": "renderFailureBadge",
+      "type": "(failureKind: ConvexWebhookDeliveryFailureKind) => ReactNode",
+      "required": false
+    },
+    {
+      "name": "renderTag",
+      "type": "(label: string) => ReactNode",
+      "required": false
+    }
+  ],
+  "ConvexExhaustedWebhookDeliveryList": [
+    {
+      "name": "classNames",
+      "type": "ConvexWebhookClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ConvexWebhookDeliveryCopy",
+      "required": true
+    },
+    {
+      "name": "deliveries",
+      "type": "| readonly ConvexWebhookDeliveryListItem<EventType, EndpointId, DeliveryId, OrganizationId>[]",
+      "required": false
+    },
+    {
+      "name": "formatTimestamp",
+      "type": "(timestamp: number) => string",
+      "required": false,
+      "defaultValue": "formatConvexWebhookTimestamp"
+    },
+    {
+      "name": "renderFailureBadge",
+      "type": "(failureKind: ConvexWebhookDeliveryFailureKind) => ReactNode",
+      "required": false
+    },
+    {
+      "name": "renderTag",
+      "type": "(label: string) => ReactNode",
+      "required": false
+    },
+    {
+      "name": "onRetry",
+      "type": "(deliveryId: DeliveryId) => void",
+      "required": true
+    },
+    {
+      "name": "retryingDeliveryId",
+      "type": "DeliveryId | null",
+      "required": true
+    }
+  ]
+}

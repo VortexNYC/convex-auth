@@ -7,17 +7,9 @@ Audit log surfaces for the [security](/security) event trail.
 
 ### `ConvexSecurityAuditList`
 
-<Component path="security-audit-list" />
+<Preview path="security-audit-list" />
 
-**Props**
-
-| Name              | Type                                                  | Optional | Description |
-| ----------------- | ----------------------------------------------------- | -------- | ----------- |
-| `classNames`      | `ConvexSecurityAuditListClassNames`                   | Yes      |             |
-| `copy`            | `ConvexSecurityAuditListCopy`                         | No       |             |
-| `formatCreatedAt` | `(createdAt: number) => string`                       | Yes      |             |
-| `logs`            | `readonly ConvexSecurityAuditListItem[] \| undefined` | No       |             |
-| `renderBadge`     | `(args: __type) => ReactNode`                         | Yes      |             |
+<PropsTable of="ConvexSecurityAuditList" />
 
 **classNames keys**
 
@@ -48,15 +40,9 @@ Audit log surfaces for the [security](/security) event trail.
 
 ### `ConvexSecurityAuditRow`
 
-**Props**
+<Preview path="convex-security-audit-row" />
 
-| Name              | Type                                   | Optional |
-| ----------------- | -------------------------------------- | -------- |
-| `classNames`      | `ConvexSecurityAuditListClassNames`    | Yes      |
-| `copy`            | `Partial<ConvexSecurityAuditListCopy>` | Yes      |
-| `formatCreatedAt` | `(createdAt: number) => string`        | Yes      |
-| `log`             | `ConvexSecurityAuditListItem`          | No       |
-| `renderBadge`     | `(args: __type) => ReactNode`          | Yes      |
+<PropsTable of="ConvexSecurityAuditRow" />
 
 **classNames keys**
 
@@ -73,3 +59,13 @@ Audit log surfaces for the [security](/security) event trail.
 | `secondaryBadge` | `string` |
 | `stateText`      | `string` |
 | `title`          | `string` |
+
+### `PasskeyManager`
+
+<Preview path="passkey-manager" />
+
+Manages WebAuthn passkeys for the signed-in user: lists registered passkeys, registers a new one, and supports rename and revoke. Registration and authentication callbacks receive/return the WebAuthn JSON types, so wire them to your passkey endpoints.
+
+<PropsTable of="PasskeyManager" />
+
+See [Passkeys](/passkeys) for the full feature walkthrough.

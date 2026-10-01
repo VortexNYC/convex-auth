@@ -1,0 +1,108 @@
+---
+// Renders a component's props table from the generated registry
+// (scripts/generate-props-registry.mjs — props come from the actual types,
+// so the table cannot drift). Descriptions merge in from
+// props-descriptions.json, keyed "Component.prop".
+//
+//   <PropsTable of="ConvexApiKeyList" />
+import registry from "../generated/props-registry.json";
+import descriptions from "../props-descriptions.json";
+
+interface Props {
+  /** Component export name, e.g. "ConvexApiKeyList". */
+  of: string;
+  /** Comma-separated prop names to show — for grouped tables under one
+      component (e.g. "Data props" / "User actions" on the admin page). */
+  rows?: string;
+}
+
+interface PropRow {
+  name: string;
+  type: string;
+  required: boolean;
+  description?: string;
+  defaultValue?: string;
+}
+
+const { of } = Astro.props;
+const props = (registry as Record<string, PropRow[]>)[of];
+
+if (!props) {
+  console.warn(
+    `[PropsTable] no registry entry for "${of}" — run codegen:props or check the name`,
+  );
+}
+
+const wanted = Astro.props.rows
+  ?.split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+// Emit in the author's comma-list order, not registry order — grouped
+// sections (e.g. admin "User actions") are intentionally sequenced.
+const source = wanted
+  ? wanted.flatMap((name) => (props ?? []).filter((p) => p.name === name))
+  : (props ?? []);
+if (wanted) {
+  for (const name of wanted) {
+    if (!(props ?? []).some((p) => p.name === name)) {
+      console.warn(`[PropsTable] ${of}.${name} is not a prop — fix the rows list`);
+    }
+  }
+}
+
+const rows = source.map((p) => ({
+  ...p,
+  description:
+    p.description ??
+    (descriptions as Record<string, string>)[`${of}.${p.name}`] ??
+    "",
+}));
+const showDescription = rows.some((r) => r.description);
+---
+
+{
+  props && props.length > 0 ? (
+    <div class="overflow-x-auto">
+      <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Optional</th>
+          {showDescription && <th>Description</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((p) => (
+          <tr>
+            <td>
+              <code>{p.name}</code>
+            </td>
+            <td>
+              <code>{p.type}</code>
+              {p.defaultValue ? (
+                <span>
+                  {" "}
+                  (default <code>{p.defaultValue}</code>)
+                </span>
+              ) : null}
+            </td>
+            <td>{p.required ? "No" : "Yes"}</td>
+            {showDescription && <td>{p.description}</td>}
+          </tr>
+        ))}
+      </tbody>
+      </table>
+    </div>
+  ) : props ? (
+    <p>
+      <em>No props.</em>
+    </p>
+  ) : (
+    <p>
+      <em>
+        Unknown component <code>{of}</code> — see build warnings.
+      </em>
+    </p>
+  )
+}

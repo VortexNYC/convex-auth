@@ -74,7 +74,10 @@ export default defineConfig({
   redirects: [
     { from: "/examples", to: "/" },
     { from: "/client", to: "/react" },
-    { from: "/migrating-from-full-component", to: "/migrating-to-feature-gated-components" },
+    {
+      from: "/migrating-from-full-component",
+      to: "/migrating-to-feature-gated-components",
+    },
     { from: "/components/sign-in", to: "/components/react/sign-in" },
     { from: "/components/organization", to: "/components/react/organization" },
     { from: "/components/account", to: "/components/react/account" },
@@ -83,6 +86,8 @@ export default defineConfig({
     { from: "/components/security", to: "/components/react/security" },
     { from: "/components/admin", to: "/components/react/admin" },
     { from: "/components/providers", to: "/components/react/providers" },
+    // React Native was a single page; it now has per-section subpages.
+    { from: "/components/react-native", to: "/components/react-native/sign-in" },
     // The v2 archive was removed; land its deep links on the closest v3 page.
     { from: "/v2", to: "/" },
     { from: "/v2/index", to: "/" },
@@ -93,7 +98,10 @@ export default defineConfig({
       from: "/v2/migrating-from-full-component",
       to: "/migrating-to-feature-gated-components",
     },
-    { from: "/v2/migrating-from-better-auth", to: "/migrating-from-better-auth" },
+    {
+      from: "/v2/migrating-from-better-auth",
+      to: "/migrating-from-better-auth",
+    },
   ],
   seo: {
     organization: {
@@ -123,4 +131,8 @@ export default defineConfig({
       dark: "#ffffff",
     },
   },
+  // Injected into every example preview frame after Blume's defaults — scans
+  // `packages/auth/src` so component classes compile and declares the
+  // semantic design tokens the components reference.
+  examples: { css: "examples/theme.css" },
 });

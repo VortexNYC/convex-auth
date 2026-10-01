@@ -9,136 +9,77 @@ Ready-made auth surfaces: full pages, forms, social buttons, trigger buttons, an
 
 `AuthSignInForm` and `AuthSignUpForm` render standalone — they take values and callbacks as props, so they work in any React tree:
 
-<Component path="sign-in-form" />
+<Preview path="sign-in-form" />
 
-<Component path="sign-up-form" />
+<Preview path="sign-up-form" />
 
 ### `AuthProviderButtons`
 
-**Props**
+<Preview path="auth-provider-buttons" />
 
-| Name                      | Type                                            | Optional | Description |
-| ------------------------- | ----------------------------------------------- | -------- | ----------- |
-| `className`               | `string`                                        | Yes      |             |
-| `isSubmitting`            | `boolean`                                       | Yes      |             |
-| `onSelect`                | `(providerId: string) => void \| Promise<void>` | No       |             |
-| `providerButtonClassName` | `string`                                        | Yes      |             |
-| `providers`               | `readonly AuthProviderOption[]`                 | No       |             |
+<PropsTable of="AuthProviderButtons" />
 
 ### `AuthSignInForm`
 
-**Props**
+<Preview path="sign-in-form" />
+
+<PropsTable of="AuthSignInForm" />
 
 ### `AuthSignUpForm`
 
-**Props**
+<Preview path="sign-up-form" />
+
+<PropsTable of="AuthSignUpForm" />
 
 ## Auth pages
 
 ### `ConvexAuthAcceptInvitePage`
 
-**Props**
+<Preview path="convex-auth-accept-invite-page" />
 
-| Name                      | Type                                                                            | Optional | Description |
-| ------------------------- | ------------------------------------------------------------------------------- | -------- | ----------- |
-| `buildSignUpUrl`          | `() => string`                                                                  | No       |             |
-| `description`             | `string`                                                                        | Yes      |             |
-| `eyebrow`                 | `string`                                                                        | Yes      |             |
-| `getInvitationEmail`      | `(invitationToken: string, params: URLSearchParams) => Promise<string \| None>` | Yes      |             |
-| `inviteOpenFailureError`  | `string`                                                                        | Yes      |             |
-| `inviteRecoveryError`     | `string`                                                                        | Yes      |             |
-| `inviteRetryFailureError` | `string`                                                                        | Yes      |             |
-| `loadingDescription`      | `string`                                                                        | Yes      |             |
-| `loadingTitle`            | `string`                                                                        | Yes      |             |
-| `onException`             | `(event: ConvexAuthInviteExceptionEvent) => void`                               | Yes      |             |
-| `onFailed`                | `(event: ConvexAuthInviteFailureEvent) => void`                                 | Yes      |             |
-| `onOpened`                | `(event: ConvexAuthInviteOpenedEvent) => void`                                  | Yes      |             |
-| `onRedirected`            | `(event: ConvexAuthInviteRedirectedEvent) => void`                              | Yes      |             |
-| `postSignUpPath`          | `string`                                                                        | No       |             |
-| `redirectToSignIn`        | `(options: __type) => void \| Promise<void>`                                    | No       |             |
-| `signInPath`              | `string`                                                                        | No       |             |
-| `signUpPath`              | `string`                                                                        | No       |             |
-| `title`                   | `string`                                                                        | Yes      |             |
-| `toSafeRedirectPath`      | `(url: string) => string \| undefined`                                          | Yes      |             |
-| `unavailableTitle`        | `string`                                                                        | Yes      |             |
+<PropsTable of="ConvexAuthAcceptInvitePage" />
 
 ### `ConvexAuthActionButton`
 
-No props.
+<Preview path="convex-auth-action-button" />
+
+<PropsTable of="ConvexAuthActionButton" />
 
 ### `ConvexAuthLoadingCard`
 
-No props.
+<Preview path="convex-auth-loading-card" />
+
+<PropsTable of="ConvexAuthLoadingCard" />
 
 ### `ConvexAuthOrganizationChooserPage`
 
-**Props**
+<Preview path="convex-auth-organization-chooser-page" />
 
-| Name                     | Type                                                                 | Optional | Description |
-| ------------------------ | -------------------------------------------------------------------- | -------- | ----------- |
-| `currentLabel`           | `string`                                                             | Yes      |             |
-| `currentOrganization`    | `ConvexAuthCurrentOrganization \| None`                              | Yes      |             |
-| `description`            | `string`                                                             | Yes      |             |
-| `emptyDescription`       | `string`                                                             | Yes      |             |
-| `emptyTitle`             | `string`                                                             | Yes      |             |
-| `eyebrow`                | `string`                                                             | Yes      |             |
-| `loadingDescription`     | `string`                                                             | Yes      |             |
-| `loadingTitle`           | `string`                                                             | Yes      |             |
-| `onSelectOrganization`   | `(organization: ConvexAuthOrganizationChooserItem) => Promise<void>` | No       |             |
-| `organizations`          | `readonly ConvexAuthOrganizationChooserItem[] \| undefined`          | No       |             |
-| `pendingLabel`           | `string`                                                             | Yes      |             |
-| `selectErrorDescription` | `string`                                                             | Yes      |             |
-| `selectErrorTitle`       | `string`                                                             | Yes      |             |
-| `title`                  | `string`                                                             | Yes      |             |
+<PropsTable of="ConvexAuthOrganizationChooserPage" />
 
 ### `ConvexAuthPostSignUpPage`
 
-**Props**
+<Preview path="convex-auth-post-sign-up-page" />
 
-| Name                         | Type                                                     | Optional | Description |
-| ---------------------------- | -------------------------------------------------------- | -------- | ----------- |
-| `availableOrganizations`     | `readonly SelectableOrganization[] \| None \| undefined` | No       |             |
-| `currentOrganization`        | `unknown`                                                | No       |             |
-| `description`                | `string`                                                 | Yes      |             |
-| `ensureActiveOrganization`   | `() => Promise<unknown>`                                 | No       |             |
-| `eyebrow`                    | `string`                                                 | Yes      |             |
-| `invitationToken`            | `string \| None`                                         | No       |             |
-| `loadingTitle`               | `string`                                                 | Yes      |             |
-| `onCurrentOrganizationReady` | `() => void`                                             | No       |             |
-| `onOpenOrganizationSetup`    | `() => void \| Promise<void>`                            | No       |             |
-| `onRefresh`                  | `() => void`                                             | Yes      |             |
-| `openOrganizationSetupLabel` | `string`                                                 | Yes      |             |
-| `redeemInvitation`           | `(token: string) => Promise<unknown>`                    | No       |             |
-| `refreshLabel`               | `string`                                                 | Yes      |             |
-| `timedOutDescription`        | `string`                                                 | Yes      |             |
-| `timedOutTitle`              | `string`                                                 | Yes      |             |
-| `timeoutMs`                  | `number`                                                 | Yes      |             |
-| `title`                      | `string`                                                 | Yes      |             |
+<PropsTable of="ConvexAuthPostSignUpPage" />
 
 ### `ConvexAuthSignInPage`
 
-**Props**
+<Preview path="convex-auth-sign-in-page" />
+
+<PropsTable of="ConvexAuthSignInPage" />
 
 ### `ConvexAuthSignUpPage`
 
-**Props**
+<Preview path="convex-auth-sign-up-page" />
+
+<PropsTable of="ConvexAuthSignUpPage" />
 
 ### `ConvexAuthSurface`
 
-**Props**
+<Preview path="convex-auth-surface" />
 
-| Name           | Type                                  | Optional |
-| -------------- | ------------------------------------- | -------- |
-| `children`     | `ReactNode`                           | No       |
-| `className`    | `string`                              | Yes      |
-| `classNames`   | `ConvexAuthSurfaceClassNames`         | Yes      |
-| `description`  | `string`                              | No       |
-| `eyebrow`      | `string`                              | Yes      |
-| `features`     | `readonly ConvexAuthSurfaceFeature[]` | Yes      |
-| `footer`       | `ReactNode`                           | Yes      |
-| `sidebarBody`  | `string`                              | Yes      |
-| `sidebarTitle` | `string`                              | Yes      |
-| `title`        | `string`                              | No       |
+<PropsTable of="ConvexAuthSurface" />
 
 **classNames keys**
 
@@ -159,56 +100,37 @@ No props.
 
 ### `ConvexAuthUnavailableCard`
 
-No props.
+<Preview path="convex-auth-unavailable-card" />
+
+<PropsTable of="ConvexAuthUnavailableCard" />
 
 ## Auth trigger buttons
 
 ### `ConvexAuthSignInButton`
 
-**Props**
+<Preview path="convex-auth-sign-in-button" />
 
-| Name               | Type                          | Optional | Description |
-| ------------------ | ----------------------------- | -------- | ----------- |
-| `children`         | `ReactNode`                   | Yes      |             |
-| `redirectToSignIn` | `() => void \| Promise<void>` | No       |             |
-| `variant`          | `primary \| secondary`        | Yes      |             |
+<PropsTable of="ConvexAuthSignInButton" />
 
 ### `ConvexAuthSignOutButton`
 
-**Props**
+<Preview path="convex-auth-sign-out-button" />
 
-| Name       | Type                          | Optional | Description |
-| ---------- | ----------------------------- | -------- | ----------- |
-| `children` | `ReactNode`                   | Yes      |             |
-| `signOut`  | `() => void \| Promise<void>` | No       |             |
-| `variant`  | `primary \| secondary`        | Yes      |             |
+<PropsTable of="ConvexAuthSignOutButton" />
 
 ### `ConvexAuthSignUpButton`
 
-**Props**
+<Preview path="convex-auth-sign-up-button" />
 
-| Name               | Type                          | Optional | Description |
-| ------------------ | ----------------------------- | -------- | ----------- |
-| `children`         | `ReactNode`                   | Yes      |             |
-| `redirectToSignUp` | `() => void \| Promise<void>` | No       |             |
-| `variant`          | `primary \| secondary`        | Yes      |             |
+<PropsTable of="ConvexAuthSignUpButton" />
 
 ## Client screens
 
 ### `ConvexAuthClientSignInScreen`
 
-**Props**
+<Preview path="convex-auth-client-sign-in-screen" />
 
-| Name                 | Type                                  | Optional | Description                                                           |
-| -------------------- | ------------------------------------- | -------- | --------------------------------------------------------------------- |
-| `authClient`         | `ConvexAuthClient \| None`            | Yes      |                                                                       |
-| `classNames`         | `AuthFormClassNames`                  | Yes      |                                                                       |
-| `description`        | `string`                              | Yes      |                                                                       |
-| `forceRedirectUrl`   | `string`                              | No       |                                                                       |
-| `forgotPasswordHref` | `string`                              | Yes      | When set, AuthSignInForm renders a forgot-password link to this href. |
-| `signUpUrl`          | `string`                              | No       |                                                                       |
-| `socialProviders`    | `readonly ConvexAuthSocialProvider[]` | Yes      |                                                                       |
-| `title`              | `string`                              | Yes      |                                                                       |
+<PropsTable of="ConvexAuthClientSignInScreen" />
 
 **classNames keys**
 
@@ -233,17 +155,9 @@ No props.
 
 ### `ConvexAuthClientSignUpScreen`
 
-**Props**
+<Preview path="convex-auth-client-sign-up-screen" />
 
-| Name               | Type                                  | Optional | Description |
-| ------------------ | ------------------------------------- | -------- | ----------- |
-| `authClient`       | `ConvexAuthClient \| None`            | Yes      |             |
-| `classNames`       | `AuthFormClassNames`                  | Yes      |             |
-| `description`      | `string`                              | Yes      |             |
-| `forceRedirectUrl` | `string`                              | No       |             |
-| `signInUrl`        | `string`                              | No       |             |
-| `socialProviders`  | `readonly ConvexAuthSocialProvider[]` | Yes      |             |
-| `title`            | `string`                              | Yes      |             |
+<PropsTable of="ConvexAuthClientSignUpScreen" />
 
 **classNames keys**
 

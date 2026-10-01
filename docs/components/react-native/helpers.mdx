@@ -1,0 +1,26 @@
+---
+title: Runtime helpers
+description: Functions that build the Expo auth runtime and derive auth config from app config.
+---
+
+### `createExpoConvexAuthRuntime`
+
+Builds the runtime object the Expo providers expect — SecureStore token storage, deep-link helpers.
+
+### `resolveExpoAuthConfig`
+
+Derives the auth configuration from your Expo app config.
+
+### `deriveExpoConvexSiteUrl`
+
+Computes the site URL the Convex deployment should advertise for this app.
+
+### `resolveExpoScheme`
+
+Resolves the deep-link scheme used for OAuth and invite callbacks.
+
+### `buildExpoTrustedOrigins`
+
+Builds the trusted-origins list from the app's scheme and bundle identifiers.
+
+See the [React Native guide](/react-native) for the full setup walkthrough.
