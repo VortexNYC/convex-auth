@@ -3,7 +3,10 @@ import { ConvexOrganizationRoleCreateForm } from "../../packages/auth/src/react/
 import { MOCK_PERMISSIONS } from "./_shared";
 
 export default function OrganizationRoleCreateFormPreview() {
-  const [state, setState] = useState({ name: "", permissions: ["members:read"] });
+  const [state, setState] = useState({
+    name: "",
+    permissions: ["members:read"],
+  });
   return (
     <ConvexOrganizationRoleCreateForm
       creating={false}

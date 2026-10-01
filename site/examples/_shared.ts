@@ -3,6 +3,7 @@
 // never becomes a page itself.
 import { createElement, type ReactNode } from "react";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { getFunctionName } from "convex/server";
 import type {
   ConvexBetterAuthClient,
   ConvexAuthSessionListItem,
@@ -323,9 +324,28 @@ export const mockAuthActions = {
 } as unknown as NativeAuthActions;
 
 /**
- * WebSocket stub that never opens — Convex queries stay pending forever,
- * so wired surfaces render their documented loading branch without a
- * socket, reconnect loop, or network traffic after hydration.
+ * Query responses keyed by the `fnRef` names previews pass to surfaces.
+ * `localQueryResult` returns these synchronously, so `useQuery` resolves
+ * to fixture data on the first render — fully populated previews with no
+ * backend.
+ */
+const PREVIEW_QUERY_DATA: Record<string, unknown> = {
+  "organizations:listMembers": MOCK_MEMBERS,
+  "organizations:listPermissions": MOCK_PERMISSIONS,
+  "organizations:listRoles": MOCK_ROLES,
+  "webhooks:listEndpoints": MOCK_WEBHOOK_ENDPOINTS,
+  "webhooks:listExhaustedDeliveries": MOCK_EXHAUSTED_WEBHOOK_DELIVERIES,
+  "webhooks:listRecentDeliveries": {
+    items: MOCK_WEBHOOK_DELIVERIES,
+    offset: 0,
+    total: MOCK_WEBHOOK_DELIVERIES.length,
+    hasMore: false,
+  },
+};
+
+/**
+ * WebSocket stub that never opens — the client can never actually reach a
+ * deployment, so nothing on this page produces network traffic.
  */
 class PreviewWebSocket {
   readonly readyState = 0;
@@ -335,11 +355,32 @@ class PreviewWebSocket {
   removeEventListener() {}
 }
 
-export const mockConvexClient = new ConvexReactClient("https://preview.convex.cloud", {
-  unsavedChangesWarning: false,
-  logger: false,
-  webSocketConstructor: PreviewWebSocket as unknown as typeof WebSocket,
-});
+/**
+ * Offline Convex client for previews. `watchQuery` serves fixture data from
+ * `PREVIEW_QUERY_DATA` (or `undefined` → loading branch for anything not
+ * mapped); mutations/actions resolve as no-ops so interactive previews can
+ * be clicked without errors. The methods are assigned post-construction
+ * because `watchQuery`'s generic signature can't be overridden inline.
+ */
+export const mockConvexClient = (() => {
+  const client = new ConvexReactClient("https://preview.convex.cloud", {
+    unsavedChangesWarning: false,
+    logger: false,
+    webSocketConstructor: PreviewWebSocket as unknown as typeof WebSocket,
+  });
+  client.watchQuery = ((...args: unknown[]) => {
+    const name = getFunctionName(args[0] as never);
+    const data = PREVIEW_QUERY_DATA[name];
+    return {
+      localQueryResult: () => data,
+      onUpdate: () => () => {},
+      journal: () => undefined,
+    };
+  }) as ConvexReactClient["watchQuery"];
+  client.mutation = (() => Promise.resolve(undefined)) as ConvexReactClient["mutation"];
+  client.action = (() => Promise.resolve(undefined)) as ConvexReactClient["action"];
+  return client;
+})();
 
 /** Wraps children in a Convex context so `useQuery`-based components mount. */
 export function ConvexPreviewShell(props: { children?: ReactNode }) {
