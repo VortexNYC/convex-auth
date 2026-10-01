@@ -136,16 +136,16 @@ describe("nativeAnonymous", () => {
     const ctx = createContext({ subject: "user_1" });
 
     const result = await handler(ctx, {
-      email: "shlomo@example.com",
+      email: "riley@example.com",
       password: "hunter2!",
-      name: "Shlomo",
+      name: "Riley",
     });
 
     expect(component.native.anonymous.linkAnonymousUser).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "user_1",
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
       }),
     );
     expect(component.native.accounts.createAccount).toHaveBeenCalledOnce();

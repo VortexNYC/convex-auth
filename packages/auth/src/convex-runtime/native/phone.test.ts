@@ -233,7 +233,7 @@ describe("nativePhone", () => {
       _id: "verifier_1",
       verifierId: "x",
       type: "phone-otp",
-      metadata: JSON.stringify({ phone: PHONE, name: "Shlomo" }),
+      metadata: JSON.stringify({ phone: PHONE, name: "Riley" }),
       expiresAt: Date.now() + 5 * 60 * 1000,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -250,7 +250,7 @@ describe("nativePhone", () => {
         _id: "user_1",
         phoneNumber: PHONE,
         phoneNumberVerified: true,
-        name: "Shlomo",
+        name: "Riley",
         emailVerified: false,
         isActive: true,
         createdAt: Date.now(),
@@ -278,7 +278,7 @@ describe("nativePhone", () => {
     expect(provisionCall.user).toMatchObject({
       phoneNumber: PHONE,
       phoneNumberVerified: true,
-      name: "Shlomo",
+      name: "Riley",
     });
     expect(provisionCall.allowLink).toBe(true);
     expect(provisionCall.initialSession).toBeDefined();

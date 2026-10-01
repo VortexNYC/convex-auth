@@ -25,7 +25,7 @@ const baseArgs = {
   to: "invitee@example.com",
   organizationName: "Acme Pizza",
   roleName: "admin",
-  inviterLabel: "Shlomo (shlomo@example.com)",
+  inviterLabel: "Riley (riley@example.com)",
   acceptUrl: "https://app.example.com/invite/accept?token=abc123",
   expiresAt: Date.UTC(2026, 5, 30, 12, 0, 0) /* 2026-06-30 12:00 UTC */,
 };
@@ -40,7 +40,7 @@ describe("renderAuthInvitationEmail", () => {
     const { html } = await renderAuthInvitationEmail(baseArgs);
     assert.ok(html.includes("Acme Pizza"), "missing organizationName");
     assert.ok(html.includes("admin"), "missing roleName");
-    assert.ok(html.includes("Shlomo (shlomo@example.com)"), "missing inviterLabel");
+    assert.ok(html.includes("Riley (riley@example.com)"), "missing inviterLabel");
   });
 
   it("HTML renders the accept URL", async () => {

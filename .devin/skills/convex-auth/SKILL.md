@@ -3,7 +3,7 @@ name: convex-auth
 displayName: Convex Auth
 description: Guidelines for building with the convex-auth native runtime and migrating from Better Auth in the convex-auth repo.
 version: 1.0.0
-author: Shlomo Kabareti
+author: Vortex
 tags: [convex, auth, better-auth, migration, components]
 ---
 

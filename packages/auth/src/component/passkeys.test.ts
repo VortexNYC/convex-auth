@@ -43,8 +43,8 @@ beforeEach(() => {
 async function insertUser(t: ReturnType<typeof convexTest>) {
   return await t.run(async (ctx) =>
     ctx.db.insert("users", {
-      email: "shlomo@example.com",
-      name: "Shlomo",
+      email: "riley@example.com",
+      name: "Riley",
       emailVerified: false,
       isActive: true,
       createdAt: 0,
@@ -61,7 +61,7 @@ describe("passkeys", () => {
     await expect(
       t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
         userId,
-        identifier: "shlomo@example.com",
+        identifier: "riley@example.com",
         rpName: RP_NAME,
         rpID: RP_ID,
         origin: [],
@@ -82,8 +82,8 @@ describe("passkeys", () => {
 
     const options = (await t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
       userId,
-      identifier: "shlomo@example.com",
-      displayName: "Shlomo",
+      identifier: "riley@example.com",
+      displayName: "Riley",
       rpName: RP_NAME,
       rpID: RP_ID,
       origin: ORIGIN,
@@ -100,7 +100,7 @@ describe("passkeys", () => {
     );
     expect(challenges).toHaveLength(1);
     expect(challenges[0]!.type).toBe("registration");
-    expect(challenges[0]!.identifier).toBe("shlomo@example.com");
+    expect(challenges[0]!.identifier).toBe("riley@example.com");
   });
 
   it("binds the challenge identifier to the server-side user record", async () => {
@@ -121,7 +121,7 @@ describe("passkeys", () => {
         .withIndex("by_challenge", (q) => q.eq("challenge", options.challenge))
         .first(),
     );
-    expect(challenge?.identifier).toBe("shlomo@example.com");
+    expect(challenge?.identifier).toBe("riley@example.com");
   });
 
   it("lists and revokes passkeys for a user", async () => {
@@ -167,7 +167,7 @@ describe("passkeys", () => {
 
     const options = (await t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
       userId,
-      identifier: "shlomo@example.com",
+      identifier: "riley@example.com",
       rpName: RP_NAME,
       rpID: RP_ID,
       origin: ORIGIN,
@@ -176,7 +176,7 @@ describe("passkeys", () => {
     await expect(
       t.mutation(api.passkeys.verifyPasskeyRegistration, {
         userId,
-        identifier: "shlomo@example.com",
+        identifier: "riley@example.com",
         challenge: options.challenge,
         response: {
           id: "fake-credential",
@@ -452,7 +452,7 @@ describe("passkeys", () => {
     await expect(
       t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
         userId,
-        identifier: "shlomo@example.com",
+        identifier: "riley@example.com",
         rpName: RP_NAME,
         rpID: RP_ID,
         origin: ORIGIN,
@@ -471,7 +471,7 @@ describe("passkeys", () => {
 
     const options = await t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
       userId,
-      identifier: "shlomo@example.com",
+      identifier: "riley@example.com",
       rpName: RP_NAME,
       rpID: RP_ID,
       origin: ORIGIN,
@@ -594,7 +594,7 @@ describe("passkeys", () => {
 
     const options = (await t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
       userId,
-      identifier: "shlomo@example.com",
+      identifier: "riley@example.com",
       rpName: RP_NAME,
       rpID: RP_ID,
       origin: ORIGIN,
@@ -747,7 +747,7 @@ describe("passkeys", () => {
         issuer: "test.example.com",
         subject: "cred-pending",
         tokenIdentifier: "cred-pending",
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         emailVerified: false,
         sessionId: null,
         createdAt: 0,
@@ -879,7 +879,7 @@ describe("passkeys", () => {
     await expect(
       t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
         userId,
-        identifier: "shlomo@example.com",
+        identifier: "riley@example.com",
         rpName: RP_NAME,
         rpID: RP_ID,
         origin: ORIGIN,
@@ -944,7 +944,7 @@ describe("passkeys", () => {
 
     const options = (await t.mutation(api.passkeys.generatePasskeyRegistrationOptions, {
       userId,
-      identifier: "shlomo@example.com",
+      identifier: "riley@example.com",
       rpName: RP_NAME,
       rpID: RP_ID,
       origin: ORIGIN,
@@ -966,7 +966,7 @@ describe("passkeys", () => {
     await expect(
       t.mutation(api.passkeys.verifyPasskeyRegistration, {
         userId,
-        identifier: "shlomo@example.com",
+        identifier: "riley@example.com",
         challenge: options.challenge,
         response: {
           id: "new-credential",

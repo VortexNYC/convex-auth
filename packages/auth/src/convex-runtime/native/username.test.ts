@@ -128,8 +128,8 @@ function makeUser(overrides: Partial<NativeUserDoc> = {}): NativeUserDoc {
   return {
     _id: "user_1",
     _creationTime: 0,
-    username: "shlomo",
-    displayUsername: "Shlomo",
+    username: "riley",
+    displayUsername: "Riley",
     emailVerified: false,
     isActive: true,
     createdAt: 0,
@@ -192,13 +192,13 @@ describe("nativeUsername", () => {
         identityId: "identity_1",
         createdUser: true,
         linkedExistingIdentity: false,
-        user: makeUser({ username: "shlomo", displayUsername: "Shlomo" }),
+        user: makeUser({ username: "riley", displayUsername: "Riley" }),
         sessionId: "session_1",
         token: "tok",
       });
 
       const result = (await exec(actions.signUpUsername).handler(ctx, {
-        username: "  Shlomo ",
+        username: "  Riley ",
         password: DEFAULT_PASSWORD,
       })) as { token: string; refreshToken: string; user: NativeUserDoc };
 
@@ -208,8 +208,8 @@ describe("nativeUsername", () => {
         expect.objectContaining({
           identity: expect.objectContaining({ provider: "username", issuer: "native" }),
           user: expect.objectContaining({
-            username: "shlomo",
-            displayUsername: "Shlomo",
+            username: "riley",
+            displayUsername: "Riley",
             emailVerified: false,
           }),
           allowLink: false,
@@ -230,7 +230,7 @@ describe("nativeUsername", () => {
       });
 
       const result = (await exec(actions.signUpUsername).handler(ctx, {
-        username: "shlomo",
+        username: "riley",
         password: DEFAULT_PASSWORD,
       })) as { token: string | null };
 
@@ -256,7 +256,7 @@ describe("nativeUsername", () => {
 
       await expect(
         exec(actions.signUpUsername).handler(ctx, {
-          username: "Shlomo",
+          username: "Riley",
           password: DEFAULT_PASSWORD,
         }),
       ).rejects.toThrow("Username is already taken");
@@ -323,7 +323,7 @@ describe("nativeUsername", () => {
         const ctx = createContext();
         await expect(
           exec(actions.signUpUsername).handler(ctx, {
-            username: "shlomo",
+            username: "riley",
             password: DEFAULT_PASSWORD,
           }),
         ).rejects.toThrow(/disabled/);
@@ -336,7 +336,7 @@ describe("nativeUsername", () => {
       const ctx = createContext();
       await expect(
         exec(actions.signUpUsername).handler(ctx, {
-          username: "shlomo",
+          username: "riley",
           email: "not-an-email",
           password: DEFAULT_PASSWORD,
         }),
@@ -364,12 +364,12 @@ describe("nativeUsername", () => {
       component.native.sessions.createSessionAndRefreshToken.mockResolvedValue(undefined);
 
       const result = (await exec(actions.signInUsername).handler(ctx, {
-        username: "  Shlomo ",
+        username: "  Riley ",
         password: DEFAULT_PASSWORD,
       })) as { token: string; refreshToken: string; sessionId: string };
 
       expect(component.identity.getUserAndAccountByUsername).toHaveBeenCalledWith({
-        username: "shlomo",
+        username: "riley",
       });
       expect(result.token).toBeTypeOf("string");
       expect(result.refreshToken).toBeTypeOf("string");
@@ -401,7 +401,7 @@ describe("nativeUsername", () => {
       component.native.sessions.createSessionAndRefreshToken.mockResolvedValue(undefined);
 
       const result = (await exec(actions.signInUsername).handler(ctx, {
-        username: "shlomo",
+        username: "riley",
         password: DEFAULT_PASSWORD,
         landingVerifier: "lv-cookie",
       })) as { landingVerifier?: string };
@@ -421,7 +421,7 @@ describe("nativeUsername", () => {
 
       await expect(
         exec(actions.signInUsername).handler(ctx, {
-          username: "shlomo",
+          username: "riley",
           password: "wrong-password-123",
         }),
       ).rejects.toThrow("Invalid username or password");
@@ -449,12 +449,12 @@ describe("nativeUsername", () => {
 
       await expect(
         exec(actions.signInUsername).handler(ctx, {
-          username: "shlomo",
+          username: "riley",
           password: DEFAULT_PASSWORD,
         }),
       ).rejects.toThrow("Too many requests");
       expect(component.native.rateLimits.recordAttempt).toHaveBeenCalledWith(
-        expect.objectContaining({ identifier: "sign-in:username:shlomo" }),
+        expect.objectContaining({ identifier: "sign-in:username:riley" }),
       );
     });
 
@@ -472,7 +472,7 @@ describe("nativeUsername", () => {
       component.native.sessions.createSessionAndRefreshToken.mockResolvedValue(undefined);
 
       await exec(actions.signInUsername).handler(ctx, {
-        username: "shlomo",
+        username: "riley",
         password: "hunter2!",
       });
 
@@ -500,7 +500,7 @@ describe("nativeUsername", () => {
       });
 
       const result = (await exec(actions.signInUsername).handler(ctx, {
-        username: "shlomo",
+        username: "riley",
         password: DEFAULT_PASSWORD,
       })) as { token: string | null; twoFactorChallengeToken?: string };
 
@@ -531,7 +531,7 @@ describe("nativeUsername", () => {
       component.native.sessions.createSessionAndRefreshToken.mockResolvedValue(undefined);
 
       const result = (await exec(actions.signInUsername).handler(ctx, {
-        username: "shlomo",
+        username: "riley",
         password: DEFAULT_PASSWORD,
         trustedDeviceToken,
       })) as { token: string | null; twoFactorChallengeToken?: string };
@@ -553,7 +553,7 @@ describe("nativeUsername", () => {
 
       await expect(
         exec(actions.signInUsername).handler(ctx, {
-          username: "shlomo",
+          username: "riley",
           password: DEFAULT_PASSWORD,
         }),
       ).rejects.toThrow("Email not verified");
@@ -566,7 +566,7 @@ describe("nativeUsername", () => {
       component.native.sessions.createSessionAndRefreshToken.mockResolvedValue(undefined);
 
       const result = (await exec(actions.signInUsername).handler(ctx, {
-        username: "shlomo",
+        username: "riley",
         password: DEFAULT_PASSWORD,
       })) as { token: string | null };
       expect(result.token).toBeTypeOf("string");

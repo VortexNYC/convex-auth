@@ -6,7 +6,7 @@
 
 **Auth that lives in your Convex database.** Sessions, users, organizations, API keys, webhooks, and MCP OAuth — implemented natively inside the Convex isolate, not adapted from a Node server.
 
-Built by **[Vortex](https://vortex.nyc)** — Shlomo Kabareti.
+Built by **[Vortex](https://vortex.nyc)**.
 
 > **Disclaimer:** This is an independent, community-driven project. It is not affiliated with or endorsed by Convex Inc.
 

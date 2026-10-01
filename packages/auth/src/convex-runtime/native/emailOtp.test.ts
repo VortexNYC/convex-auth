@@ -136,7 +136,7 @@ describe("nativeEmailOtp", () => {
 
     const ctx = createContext();
     const result = await handler(ctx, {
-      email: "Shlomo@example.com ",
+      email: "Riley@example.com ",
       type: "sign-in",
     });
 
@@ -150,11 +150,11 @@ describe("nativeEmailOtp", () => {
     expect(typeof createCall.expiresAt).toBe("number");
 
     const metadata = JSON.parse(createCall.metadata);
-    expect(metadata.email).toBe("shlomo@example.com");
+    expect(metadata.email).toBe("riley@example.com");
 
     expect(sendVerificationOTP).toHaveBeenCalledWith(
       expect.objectContaining({
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         type: "sign-in",
       }),
     );
@@ -183,7 +183,7 @@ describe("nativeEmailOtp", () => {
     const { handler } = exec(sendVerificationOtp);
 
     const ctx = createContext();
-    await expect(handler(ctx, { email: "shlomo@example.com" })).rejects.toThrow(
+    await expect(handler(ctx, { email: "riley@example.com" })).rejects.toThrow(
       "Email OTP authentication is disabled",
     );
   });
@@ -197,7 +197,7 @@ describe("nativeEmailOtp", () => {
     );
 
     const ctx = createContext();
-    await exec(sendVerificationOtp).handler(ctx, { email: "Shlomo@example.com ", type: "sign-in" });
+    await exec(sendVerificationOtp).handler(ctx, { email: "Riley@example.com ", type: "sign-in" });
 
     const otp = sendVerificationOTP.mock.calls[0][0].otp;
 
@@ -205,7 +205,7 @@ describe("nativeEmailOtp", () => {
       _id: "verifier_1",
       verifierId: expect.any(String),
       type: "email-otp",
-      metadata: JSON.stringify({ email: "shlomo@example.com", name: "Shlomo" }),
+      metadata: JSON.stringify({ email: "riley@example.com", name: "Riley" }),
       expiresAt: Date.now() + 5 * 60 * 1000,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -220,8 +220,8 @@ describe("nativeEmailOtp", () => {
       sessionId: "session_1",
       user: {
         _id: "user_1",
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: true,
         twoFactorEnabled: false,
         isActive: true,
@@ -230,7 +230,7 @@ describe("nativeEmailOtp", () => {
       },
     });
 
-    const result = await exec(verifyEmailOtp).handler(ctx, { email: "Shlomo@example.com ", otp });
+    const result = await exec(verifyEmailOtp).handler(ctx, { email: "Riley@example.com ", otp });
 
     expect(result).toMatchObject({
       token: "jwt_1",
@@ -238,20 +238,20 @@ describe("nativeEmailOtp", () => {
       sessionId: "session_1",
       userId: "user_1",
       identityId: "identity_1",
-      user: { email: "shlomo@example.com" },
+      user: { email: "riley@example.com" },
     });
 
     const provisionCall = component.identity.provisionFromIdentity.mock.calls[0][0];
     expect(provisionCall.identity).toMatchObject({
       provider: "emailOtp",
       issuer: "native",
-      subject: "shlomo@example.com",
-      email: "shlomo@example.com",
+      subject: "riley@example.com",
+      email: "riley@example.com",
       emailVerified: true,
     });
     expect(provisionCall.user).toMatchObject({
-      email: "shlomo@example.com",
-      name: "Shlomo",
+      email: "riley@example.com",
+      name: "Riley",
       emailVerified: true,
     });
     expect(provisionCall.allowLink).toBe(true);
@@ -267,7 +267,7 @@ describe("nativeEmailOtp", () => {
 
     const ctx = createContext();
     await expect(
-      exec(verifyEmailOtp).handler(ctx, { email: "shlomo@example.com", otp: "000000" }),
+      exec(verifyEmailOtp).handler(ctx, { email: "riley@example.com", otp: "000000" }),
     ).rejects.toThrow("INVALID_OTP");
   });
 
@@ -281,7 +281,7 @@ describe("nativeEmailOtp", () => {
       _id: "verifier_1",
       verifierId: "verifier_1",
       type: "email-otp",
-      metadata: JSON.stringify({ email: "shlomo@example.com" }),
+      metadata: JSON.stringify({ email: "riley@example.com" }),
       expiresAt: Date.now() + 5 * 60 * 1000,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -290,7 +290,7 @@ describe("nativeEmailOtp", () => {
 
     const ctx = createContext();
     await expect(
-      exec(verifyEmailOtp).handler(ctx, { email: "shlomo@example.com", otp: "000000" }),
+      exec(verifyEmailOtp).handler(ctx, { email: "riley@example.com", otp: "000000" }),
     ).rejects.toThrow("SIGN_UP_DISABLED");
     expect(component.identity.provisionFromIdentity).not.toHaveBeenCalled();
   });
@@ -306,12 +306,12 @@ describe("nativeEmailOtp", () => {
 
     component.native.users.getUserByEmail = vi.fn().mockResolvedValue({
       _id: "user_1",
-      email: "shlomo@example.com",
+      email: "riley@example.com",
     });
 
     const ctx = createContext();
     const result = await handler(ctx, {
-      email: "Shlomo@example.com ",
+      email: "Riley@example.com ",
       type: "email-verification",
     });
 
@@ -327,7 +327,7 @@ describe("nativeEmailOtp", () => {
 
     expect(sendVerificationOTP).toHaveBeenCalledWith(
       expect.objectContaining({
-        email: "shlomo@example.com",
+        email: "riley@example.com",
         type: "email-verification",
       }),
     );
@@ -366,20 +366,20 @@ describe("nativeEmailOtp", () => {
 
     component.native.users.getUserByEmail = vi.fn().mockResolvedValue({
       _id: "user_1",
-      email: "shlomo@example.com",
+      email: "riley@example.com",
     });
     component.identity.verifyEmail = vi.fn().mockResolvedValue({ success: true });
 
     const ctx = createContext();
     await exec(sendVerificationOtp).handler(ctx, {
-      email: "Shlomo@example.com ",
+      email: "Riley@example.com ",
       type: "email-verification",
     });
 
     const otp = sendVerificationOTP.mock.calls[0][0].otp;
 
     const result = await exec(verifyEmailOtp).handler(ctx, {
-      email: "Shlomo@example.com ",
+      email: "Riley@example.com ",
       otp,
       type: "email-verification",
     });
@@ -402,20 +402,20 @@ describe("nativeEmailOtp", () => {
 
     component.native.users.getUserByEmail = vi.fn().mockResolvedValue({
       _id: "user_1",
-      email: "shlomo@example.com",
+      email: "riley@example.com",
     });
     component.identity.resetPassword = vi.fn().mockResolvedValue({ status: true });
 
     const ctx = createContext();
     await exec(sendVerificationOtp).handler(ctx, {
-      email: "Shlomo@example.com ",
+      email: "Riley@example.com ",
       type: "forget-password",
     });
 
     const otp = sendVerificationOTP.mock.calls[0][0].otp;
 
     const result = await exec(verifyEmailOtp).handler(ctx, {
-      email: "Shlomo@example.com ",
+      email: "Riley@example.com ",
       otp,
       type: "forget-password",
       newPassword: "new-password-123",
@@ -441,7 +441,7 @@ describe("nativeEmailOtp", () => {
 
     component.native.users.getUserByEmail = vi.fn().mockResolvedValue({
       _id: "user_1",
-      email: "shlomo@example.com",
+      email: "riley@example.com",
     });
     component.identity.resetPassword = vi
       .fn()
@@ -449,7 +449,7 @@ describe("nativeEmailOtp", () => {
 
     const ctx = createContext();
     await exec(sendVerificationOtp).handler(ctx, {
-      email: "Shlomo@example.com ",
+      email: "Riley@example.com ",
       type: "forget-password",
     });
 
@@ -471,8 +471,8 @@ describe("nativeEmailOtp", () => {
     });
     component.native.users.getUserById = vi.fn().mockResolvedValue({
       _id: "user_1",
-      email: "shlomo@example.com",
-      name: "Shlomo",
+      email: "riley@example.com",
+      name: "Riley",
       emailVerified: true,
     });
     component.native.identities.getNativeIdentityByUser = vi.fn().mockResolvedValue(null);
@@ -481,8 +481,8 @@ describe("nativeEmailOtp", () => {
       identityId: "identity_1",
       user: {
         _id: "user_1",
-        email: "shlomo@example.com",
-        name: "Shlomo",
+        email: "riley@example.com",
+        name: "Riley",
         emailVerified: true,
         isActive: true,
         createdAt: Date.now(),
@@ -500,7 +500,7 @@ describe("nativeEmailOtp", () => {
     });
 
     const result = await exec(verifyEmailOtp).handler(ctx, {
-      email: "Shlomo@example.com ",
+      email: "Riley@example.com ",
       otp,
       type: "forget-password",
       newPassword: "new-password-123",
@@ -520,7 +520,7 @@ describe("nativeEmailOtp", () => {
 
     component.native.users.getUserByEmail = vi.fn().mockResolvedValue({
       _id: "user_1",
-      email: "shlomo@example.com",
+      email: "riley@example.com",
     });
     component.identity.resetPassword = vi
       .fn()
@@ -528,7 +528,7 @@ describe("nativeEmailOtp", () => {
 
     const ctx = createContext();
     await exec(sendVerificationOtp).handler(ctx, {
-      email: "Shlomo@example.com ",
+      email: "Riley@example.com ",
       type: "forget-password",
     });
     const otp = sendVerificationOTP.mock.calls[0][0].otp;
@@ -545,8 +545,8 @@ describe("nativeEmailOtp", () => {
     });
     component.native.users.getUserById = vi.fn().mockResolvedValue({
       _id: "user_1",
-      email: "shlomo@example.com",
-      username: "shlomo",
+      email: "riley@example.com",
+      username: "riley",
       emailVerified: true,
     });
     component.native.identities.getNativeIdentityByUser = vi
@@ -561,7 +561,7 @@ describe("nativeEmailOtp", () => {
     component.native.codes.consumeVerificationCode = vi.fn().mockResolvedValue({});
 
     const result = await exec(verifyEmailOtp).handler(ctx, {
-      email: "Shlomo@example.com ",
+      email: "Riley@example.com ",
       otp,
       type: "forget-password",
       newPassword: "new-password-123",
