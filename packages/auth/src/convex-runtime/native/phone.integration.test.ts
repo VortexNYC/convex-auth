@@ -48,18 +48,23 @@ describe("sendPhoneOtp through the real component with a Twilio component sender
     const sendPhoneOtp = createConvexTwilioOtpSender({ sendMessage });
     const { sendPhoneOtp: sendPhoneOtpAction } = nativePhone(component, { sendPhoneOtp });
 
+    let actionCtx: unknown;
     const result = (await t.action(
-      async (ctx) =>
-        await exec(sendPhoneOtpAction).handler(ctx, { phone: "+1 555-123-4567 ", type: "sign-in" }),
+      async (ctx) => (
+        (actionCtx = ctx),
+        await exec(sendPhoneOtpAction).handler(ctx, { phone: "+1 555-123-4567 ", type: "sign-in" })
+      ),
     )) as { status: string; messageId: string };
 
     expect(result).toMatchObject({ status: "queued", messageId: "SM_test_1" });
 
-    // The sender received the real action ctx — runAction must be callable.
+    // The sender received the real action ctx — reference-equal, with a
+    // callable runAction.
     const [ctxArg, argsArg] = sendMessage.mock.calls[0] as [
       { runAction: unknown },
       { to: string; body: string },
     ];
+    expect(ctxArg).toBe(actionCtx);
     expect(typeof ctxArg.runAction).toBe("function");
     expect(argsArg.to).toBe(PHONE);
     expect(argsArg.body).toMatch(/\d{6}/);
@@ -81,6 +86,9 @@ describe("sendPhoneOtp through the real component with a Twilio component sender
       }),
     );
     // TwilioComponentClientRequiringFrom — options.from is mandatory.
+    // @ts-expect-error — a client whose sendMessage requires `from` can't be
+    // wrapped without supplying options.from.
+    createConvexTwilioOtpSender({ sendMessage });
     const sendPhoneOtp = createConvexTwilioOtpSender({ sendMessage }, { from: "+15559990000" });
     const t = makeConvex();
     const { sendPhoneOtp: sendPhoneOtpAction } = nativePhone(component, { sendPhoneOtp });
