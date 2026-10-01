@@ -25,9 +25,12 @@ const sources = [
   { dir: join(repoRoot, "packages/auth/src/react"), prefix: "" },
   { dir: join(repoRoot, "packages/auth/src/react-native"), prefix: "rn/" },
 ];
+// Each dir validates against its own namespace: react-native pages must cite
+// `rn/Name` (shared names resolve to the React entry otherwise), and react
+// pages must not carry the prefix.
 const mdxDirs = [
-  join(repoRoot, "docs/components/react"),
-  join(repoRoot, "docs/components/react-native"),
+  { dir: join(repoRoot, "docs/components/react"), rn: false },
+  { dir: join(repoRoot, "docs/components/react-native"), rn: true },
 ];
 const outFile = join(siteDir, "generated/props-registry.json");
 
@@ -295,7 +298,7 @@ const json = JSON.stringify(registry, null, 2) + "\n";
 function validateMdxRefs() {
   const failures = [];
   const refRe = /<(?:PropsTable|Preview)\s+([^>]*)\/?>/g;
-  for (const mdxDir of mdxDirs) {
+  for (const { dir: mdxDir, rn } of mdxDirs) {
     for (const entry of readdirSync(mdxDir)) {
       if (!entry.endsWith(".mdx")) continue;
       const file = join(mdxDir, entry);
@@ -306,10 +309,21 @@ function validateMdxRefs() {
         const of = /of="([^"]+)"/.exec(m[1])?.[1];
         const rows = /rows="([^"]+)"/.exec(m[1])?.[1];
         if (!of) {
-          // `of` is optional on <Preview> (no Props tab), required on PropsTable.
+          // `of` is optional on <Preview> (no Props tab), required on
+          // PropsTable. `rows` without `of` would silently do nothing.
           if (tag === "PropsTable") {
             failures.push(`${entry}: <PropsTable> missing \`of\``);
+          } else if (rows) {
+            failures.push(`${entry}: <Preview rows> without \`of\``);
           }
+          continue;
+        }
+        if (rn && !of.startsWith("rn/")) {
+          failures.push(`${entry}: "${of}" needs the rn/ prefix`);
+          continue;
+        }
+        if (!rn && of.startsWith("rn/")) {
+          failures.push(`${entry}: "${of}" is a react-native entry`);
           continue;
         }
         const props = registry[of];

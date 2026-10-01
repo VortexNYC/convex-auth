@@ -56,8 +56,9 @@
 
 /* Nested sidebar groups (React, React Native under UI components) get a
    24px gap that detaches them from the page rows above — halve it so the
-   group headers track the sidebar's tighter item rhythm. */
-aside li.mt-6 {
+   group headers track the sidebar's tighter item rhythm. Scoped to li>…>li
+   so a future top-level group carrying mt-6 keeps its section spacing. */
+aside li li.mt-6 {
   margin-top: 0.75rem;
 }
 

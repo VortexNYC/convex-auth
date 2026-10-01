@@ -86,11 +86,11 @@ const paneClass =
       </Tab>
       {of && (
         <Tab
-          class={`overflow-hidden ${paneClass}`}
+          class={`overflow-hidden p-0! ${paneClass}`}
           style={paneStyle}
           title="Props"
         >
-          <div class="h-full overflow-auto px-4 py-3">
+          <div class="h-full overflow-auto px-4 py-3" tabindex="0">
             <PropsTable of={of} rows={rows} />
           </div>
         </Tab>
