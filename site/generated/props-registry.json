@@ -3190,5 +3190,986 @@
       "type": "DeliveryId | null",
       "required": true
     }
+  ],
+  "rn/ExpoConvexAuthProvider": [
+    {
+      "name": "actions",
+      "type": "NativeAuthActions",
+      "required": true
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": false
+    },
+    {
+      "name": "storage",
+      "type": "ExpoConvexAuthStorage",
+      "required": true
+    },
+    {
+      "name": "storagePrefix",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "initialUrl",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "subscribeToUrl",
+      "type": "(handler: (url: string) => void) => () => void",
+      "required": false
+    }
+  ],
+  "rn/ExpoAuthPostSignUpPage": [
+    {
+      "name": "getDefaultOrganization",
+      "type": "FunctionReference<\n    \"query\",\n    \"public\",\n    Record<string, never>,\n    CurrentOrganization\n  >",
+      "required": true
+    },
+    {
+      "name": "getAvailableOrganizations",
+      "type": "FunctionReference<\n    \"query\",\n    \"public\",\n    Record<string, never>,\n    readonly OrganizationChooserItem[]\n  >",
+      "required": true
+    },
+    {
+      "name": "ensureActiveOrganization",
+      "type": "FunctionReference<\"mutation\", \"public\", Record<string, never>, unknown>",
+      "required": true
+    },
+    {
+      "name": "redeemInvitation",
+      "type": "FunctionReference<\"mutation\", \"public\", { token: string }, unknown>",
+      "required": false
+    },
+    {
+      "name": "navigate",
+      "type": "NavigateTo",
+      "required": true
+    },
+    {
+      "name": "postSignInPath",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "chooseOrganizationPath",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "invitationToken",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Finalizing your workspace\""
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"We're finishing your organization access.\""
+    },
+    {
+      "name": "loadingTitle",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "loadingDescription",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "styles",
+      "type": "ExpoAuthPostSignUpPageStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoAuthPostSignUpPageClassNames",
+      "required": false
+    }
+  ],
+  "rn/ExpoAuthAcceptInvitePage": [
+    {
+      "name": "getInvitationByToken",
+      "type": "FunctionReference<\"action\", \"public\", { token: string }, unknown>",
+      "required": true
+    },
+    {
+      "name": "navigate",
+      "type": "NavigateTo",
+      "required": true
+    },
+    {
+      "name": "signUpPath",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "invitationToken",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"You're invited\""
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"We're connecting you to the workspace that invited you.\""
+    },
+    {
+      "name": "loadingTitle",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "loadingDescription",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "errorTitle",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Invite unavailable\""
+    },
+    {
+      "name": "errorDescription",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"This invite link is missing required access details or has expired.\""
+    },
+    {
+      "name": "styles",
+      "type": "ExpoAuthAcceptInvitePageStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoAuthAcceptInvitePageClassNames",
+      "required": false
+    }
+  ],
+  "rn/ExpoAuthOrganizationChooserPage": [
+    {
+      "name": "getDefaultOrganization",
+      "type": "FunctionReference<\n    \"query\",\n    \"public\",\n    Record<string, never>,\n    CurrentOrganization\n  >",
+      "required": true
+    },
+    {
+      "name": "getAvailableOrganizations",
+      "type": "FunctionReference<\n    \"query\",\n    \"public\",\n    Record<string, never>,\n    readonly OrganizationChooserItem[]\n  >",
+      "required": true
+    },
+    {
+      "name": "setActiveOrganization",
+      "type": "FunctionReference<\n    \"mutation\",\n    \"public\",\n    { organizationId: string },\n    unknown\n  >",
+      "required": true
+    },
+    {
+      "name": "navigate",
+      "type": "NavigateTo",
+      "required": true
+    },
+    {
+      "name": "postChooseOrganizationPath",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Choose organization\""
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "eyebrow",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "loadingTitle",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "loadingDescription",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Loading workspaces...\""
+    },
+    {
+      "name": "emptyTitle",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "emptyDescription",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"No workspaces available.\""
+    },
+    {
+      "name": "styles",
+      "type": "ExpoAuthOrganizationChooserPageStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoAuthOrganizationChooserPageClassNames",
+      "required": false
+    }
+  ],
+  "rn/ExpoConvexAuthClientProvider": [
+    {
+      "name": "actions",
+      "type": "NativeAuthActions",
+      "required": true
+    },
+    {
+      "name": "storage",
+      "type": "ExpoConvexAuthStorage",
+      "required": true
+    },
+    {
+      "name": "storagePrefix",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "initialUrl",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "subscribeToUrl",
+      "type": "(handler: (url: string) => void) => () => void",
+      "required": false
+    }
+  ],
+  "rn/ExpoAuthClientSignInScreen": [
+    {
+      "name": "signUpUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "forceRedirectUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "navigate",
+      "type": "NavigateTo",
+      "required": false
+    },
+    {
+      "name": "forgotPasswordHref",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Sign in\""
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Access your workspace.\""
+    },
+    {
+      "name": "styles",
+      "type": "ExpoAuthClientScreenStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoAuthClientScreenClassNames",
+      "required": false
+    },
+    {
+      "name": "socialProviders",
+      "type": "readonly ConvexAuthSocialProvider[]",
+      "required": false
+    },
+    {
+      "name": "onOpened",
+      "type": "() => void",
+      "required": false
+    },
+    {
+      "name": "onRuntimeUnavailable",
+      "type": "() => void",
+      "required": false
+    }
+  ],
+  "rn/ExpoAuthClientSignUpScreen": [
+    {
+      "name": "signInUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "forceRedirectUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "navigate",
+      "type": "NavigateTo",
+      "required": false
+    },
+    {
+      "name": "title",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Sign up\""
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"Create an account.\""
+    },
+    {
+      "name": "styles",
+      "type": "ExpoAuthClientScreenStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoAuthClientScreenClassNames",
+      "required": false
+    },
+    {
+      "name": "socialProviders",
+      "type": "readonly ConvexAuthSocialProvider[]",
+      "required": false
+    },
+    {
+      "name": "onOpened",
+      "type": "() => void",
+      "required": false
+    },
+    {
+      "name": "onRuntimeUnavailable",
+      "type": "() => void",
+      "required": false
+    }
+  ],
+  "rn/ConvexChangeEmailForm": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "currentEmail",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "verifyCallbackUrl",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "styles",
+      "type": "ExpoChangeEmailFormStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoChangeEmailFormClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoChangeEmailFormCopy",
+      "required": false
+    },
+    {
+      "name": "onRequested",
+      "type": "(newEmail: string) => void",
+      "required": false
+    }
+  ],
+  "rn/ConvexEnableTwoFactorForm": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "issuer",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "renderQR",
+      "type": "(totpURI: string) => ReactNode",
+      "required": false
+    },
+    {
+      "name": "styles",
+      "type": "ExpoEnableTwoFactorFormStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoEnableTwoFactorFormClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoEnableTwoFactorFormCopy",
+      "required": false
+    },
+    {
+      "name": "onEnrolled",
+      "type": "() => void",
+      "required": false
+    }
+  ],
+  "rn/ConvexForgotPasswordForm": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "resetPasswordUrl",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "styles",
+      "type": "ExpoForgotPasswordFormStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoForgotPasswordFormClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoForgotPasswordFormCopy",
+      "required": false
+    },
+    {
+      "name": "onRequested",
+      "type": "(email: string) => void",
+      "required": false
+    }
+  ],
+  "rn/ConvexProfileEditForm": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "initialName",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"\""
+    },
+    {
+      "name": "initialImage",
+      "type": "string",
+      "required": false,
+      "defaultValue": "\"\""
+    },
+    {
+      "name": "showImageField",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "styles",
+      "type": "ExpoProfileEditFormStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoProfileEditFormClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoProfileEditFormCopy",
+      "required": false
+    },
+    {
+      "name": "onUpdated",
+      "type": "(next: { name?: string; image?: string }) => void",
+      "required": false
+    }
+  ],
+  "rn/ConvexProfileImageUploader": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "pickImage",
+      "type": "() => Promise<string | Blob | null>",
+      "required": true,
+      "description": "Consumer-provided picker. Returns a local file URI or null if cancelled."
+    },
+    {
+      "name": "uploadFile",
+      "type": "(file: Blob | string) => Promise<string>",
+      "required": true,
+      "description": "Consumer-provided uploader. Returns the canonical public URL."
+    },
+    {
+      "name": "initialImage",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "styles",
+      "type": "ExpoProfileImageUploaderStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoProfileImageUploaderClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoProfileImageUploaderCopy",
+      "required": false
+    },
+    {
+      "name": "onUploaded",
+      "type": "(url: string) => void",
+      "required": false
+    }
+  ],
+  "rn/ConvexResetPasswordForm": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "token",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "minPasswordLength",
+      "type": "number",
+      "required": false,
+      "defaultValue": "12"
+    },
+    {
+      "name": "styles",
+      "type": "ExpoResetPasswordFormStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoResetPasswordFormClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoResetPasswordFormCopy",
+      "required": false
+    },
+    {
+      "name": "onReset",
+      "type": "() => void",
+      "required": false
+    }
+  ],
+  "rn/ConvexSessionList": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "showRevokeOthersAction",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "styles",
+      "type": "ExpoSessionListStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoSessionListClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoSessionListCopy",
+      "required": false
+    },
+    {
+      "name": "formatTimestamp",
+      "type": "(value: string | Date) => string",
+      "required": false
+    },
+    {
+      "name": "header",
+      "type": "ReactElement | null",
+      "required": false
+    },
+    {
+      "name": "footer",
+      "type": "ReactElement | null",
+      "required": false
+    }
+  ],
+  "rn/ConvexVerifyEmailScreen": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "token",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "userEmail",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "resendCallbackUrl",
+      "type": "string",
+      "required": false
+    },
+    {
+      "name": "styles",
+      "type": "ExpoVerifyEmailScreenStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoVerifyEmailScreenClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoVerifyEmailScreenCopy",
+      "required": false
+    },
+    {
+      "name": "onVerified",
+      "type": "() => void",
+      "required": false
+    }
+  ],
+  "rn/ConvexVerifyTwoFactorForm": [
+    {
+      "name": "authClient",
+      "type": "ConvexBetterAuthClient | null",
+      "required": false
+    },
+    {
+      "name": "showTrustDevice",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "styles",
+      "type": "ExpoVerifyTwoFactorFormStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoVerifyTwoFactorFormClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoVerifyTwoFactorFormCopy",
+      "required": false
+    },
+    {
+      "name": "onVerified",
+      "type": "() => void",
+      "required": false
+    }
+  ],
+  "rn/ConvexCreateOrganization": [
+    {
+      "name": "styles",
+      "type": "ExpoCreateOrgStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoCreateOrgClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoCreateOrgCopy",
+      "required": false
+    },
+    {
+      "name": "showSlugField",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "false"
+    },
+    {
+      "name": "onCreate",
+      "type": "(args: {\n    name: string;\n    slug?: string;\n  }) => Promise<{ ok: boolean; error: string | null }>",
+      "required": true
+    },
+    {
+      "name": "onCreated",
+      "type": "(org: { name: string; slug?: string }) => void",
+      "required": false
+    }
+  ],
+  "rn/ConvexOrganizationList": [
+    {
+      "name": "organizations",
+      "type": "readonly ConvexOrgListOrganization[]",
+      "required": true
+    },
+    {
+      "name": "invitations",
+      "type": "readonly ConvexOrgListInvitation[]",
+      "required": false
+    },
+    {
+      "name": "currentOrganizationId",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "styles",
+      "type": "ExpoOrgListStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoOrgListClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoOrgListCopy",
+      "required": false
+    },
+    {
+      "name": "isLoading",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "showInvitations",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "onSelectOrganization",
+      "type": "(organizationId: string) => void | Promise<void>",
+      "required": true
+    },
+    {
+      "name": "onAcceptInvitation",
+      "type": "(invitationId: string) => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onRejectInvitation",
+      "type": "(invitationId: string) => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onCreateOrganization",
+      "type": "() => void | Promise<void>",
+      "required": false
+    }
+  ],
+  "rn/ConvexOrganizationMembers": [
+    {
+      "name": "members",
+      "type": "readonly ExpoOrgMember[]",
+      "required": true
+    },
+    {
+      "name": "invitations",
+      "type": "readonly ExpoOrgInvitation[]",
+      "required": false
+    },
+    {
+      "name": "roles",
+      "type": "readonly ExpoOrgRole[]",
+      "required": true
+    },
+    {
+      "name": "styles",
+      "type": "ExpoOrgMembersStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoOrgMembersClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoOrgMembersCopy",
+      "required": false
+    },
+    {
+      "name": "onInvite",
+      "type": "(args: {\n    email: string;\n    roleKey: string;\n  }) => Promise<{ ok: boolean; error: string | null }>",
+      "required": true
+    },
+    {
+      "name": "onRemoveMember",
+      "type": "(memberId: string) => Promise<{ ok: boolean; error: string | null }>",
+      "required": false
+    },
+    {
+      "name": "onCancelInvitation",
+      "type": "(invitationId: string) => Promise<{ ok: boolean; error: string | null }>",
+      "required": false
+    }
+  ],
+  "rn/ConvexOrganizationProfile": [
+    {
+      "name": "organization",
+      "type": "ExpoOrgProfileOrganization | null",
+      "required": true
+    },
+    {
+      "name": "styles",
+      "type": "ExpoOrgProfileStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoOrgProfileClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoOrgProfileCopy",
+      "required": false
+    },
+    {
+      "name": "showSlugField",
+      "type": "boolean",
+      "required": false,
+      "defaultValue": "true"
+    },
+    {
+      "name": "onUpdate",
+      "type": "(args: {\n    name?: string;\n    slug?: string;\n  }) => Promise<{ ok: boolean; error: string | null }>",
+      "required": true
+    },
+    {
+      "name": "onDelete",
+      "type": "() => Promise<{ ok: boolean; error: string | null }>",
+      "required": false
+    },
+    {
+      "name": "onUpdated",
+      "type": "() => void",
+      "required": false
+    }
+  ],
+  "rn/ConvexOrganizationSwitcher": [
+    {
+      "name": "organizations",
+      "type": "readonly ConvexOrgSwitcherOrganization[]",
+      "required": true
+    },
+    {
+      "name": "currentOrganizationId",
+      "type": "string | null",
+      "required": false
+    },
+    {
+      "name": "currentOrganization",
+      "type": "ConvexOrgSwitcherOrganization | null",
+      "required": false
+    },
+    {
+      "name": "showPersonalAccount",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "name": "styles",
+      "type": "ExpoOrgSwitcherStyles",
+      "required": false
+    },
+    {
+      "name": "classNames",
+      "type": "ExpoOrgSwitcherClassNames",
+      "required": false
+    },
+    {
+      "name": "copy",
+      "type": "ExpoOrgSwitcherCopy",
+      "required": false
+    },
+    {
+      "name": "onSelectOrganization",
+      "type": "(organizationId: string) => void | Promise<void>",
+      "required": true
+    },
+    {
+      "name": "onSelectPersonalAccount",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "onCreateOrganization",
+      "type": "() => void | Promise<void>",
+      "required": false
+    },
+    {
+      "name": "renderCustomTrigger",
+      "type": "(args: {\n    organization: ConvexOrgSwitcherOrganization | null;\n    onPress: () => void;\n  }) => ReactNode",
+      "required": false
+    }
   ]
 }

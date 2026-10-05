@@ -14,6 +14,9 @@ interface Props {
   /** Comma-separated prop names to show — for grouped tables under one
       component (e.g. "Data props" / "User actions" on the admin page). */
   rows?: string;
+  /** Skip the framed scroll wrapper — for embedding inside another frame
+      (the Preview component's Props tab). */
+  bare?: boolean;
 }
 
 interface PropRow {
@@ -62,7 +65,9 @@ const showDescription = rows.some((r) => r.description);
 
 {
   props && props.length > 0 ? (
-    <div class="overflow-x-auto">
+    // Same framed scroll viewport Blume gives markdown tables
+    // (.blume-table-scroll) — standalone props tables keep that chrome.
+    <div class={Astro.props.bare ? "overflow-x-auto" : "blume-table-scroll"}>
       <table>
       <thead>
         <tr>

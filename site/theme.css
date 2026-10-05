@@ -1,3 +1,74 @@
+/* Surface tokens — layered cool neutrals instead of Blume's flat defaults.
+   Hierarchy runs page < code < muted < border in both modes, and neutrals
+   carry a slight blue cast (chroma ~0.01 @ hue 250) so surfaces feel layered
+   rather than stacked grays. Secondary text is lifted for AA contrast. */
+:root {
+  --blume-background: oklch(0.99 0.002 250);
+  --blume-foreground: oklch(0.17 0.01 250);
+  --blume-muted: oklch(0.962 0.005 250);
+  --blume-muted-foreground: oklch(0.47 0.012 250);
+  --blume-border: oklch(0.875 0.007 250 / 0.72);
+  /* Kept near-white: github-light syntax colors fall below AA on darker
+     surfaces, and this preserves separation from --blume-muted. */
+  --blume-code-background: oklch(0.985 0.003 250);
+  /* Blume's 42rem prose column cramps preview frames and props tables —
+     widen to 56rem. Prose stays ~90ch; beyond this it degrades. */
+  --blume-content-width: 56rem;
+}
+
+:root[data-theme="dark"] {
+  --blume-background: oklch(0.125 0.006 250);
+  --blume-foreground: oklch(0.93 0.005 250);
+  --blume-muted: oklch(0.185 0.008 250);
+  --blume-muted-foreground: oklch(0.73 0.012 250);
+  --blume-border: oklch(0.28 0.01 250 / 0.8);
+  /* Sits between page and muted; lighter would push github-dark comment
+     contrast further under AA. */
+  --blume-code-background: oklch(0.14 0.008 250);
+  /* Blume pins dark accent-foreground to white regardless of the configured
+     accent — fine for colored accents, invisible on a near-white one. Pair
+     it with the page tone so accent-filled controls stay readable. */
+  --blume-accent-foreground: oklch(0.1 0.005 250);
+}
+
+/* Typography — Blume renders every heading at weight 500, so h1/h2/h3 read
+   as the same voice. Two real levers: weight contrast on the big headings
+   (600 over the 400 body, backed by Inter Tight's display metrics), and a
+   proper lede — Blume emits the page description as p.text-lg right after
+   the h1, so size it up and tighten tracking to sit between heading and
+   body rather than reading as a grayed paragraph. */
+.prose :where(h1, h2) {
+  font-weight: 600;
+}
+
+.prose > h1 + p {
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  line-height: 1.55;
+}
+
+/* Inline code: the code-background pill sits on --blume-background at
+   1.02:1 — invisible on light mode. A hairline border ties it to the card
+   and chrome language and makes the pill actually read as a chip. */
+.prose :not(pre) > code:not(:where([class~="not-prose"] *)) {
+  border: 1px solid var(--blume-border);
+}
+
+/* Table headers sit on the muted surface so framed tables read as
+   header/body instead of a flat grid — covers markdown tables (wrapped in
+   .blume-table-scroll) and PropsTable output alike. */
+table :where(thead) tr {
+  background: var(--blume-muted);
+}
+
+/* Nested sidebar groups (React, React Native under UI components) get a
+   24px gap that detaches them from the page rows above — halve it so the
+   group headers track the sidebar's tighter item rhythm. Scoped to li>…>li
+   so a future top-level group carrying mt-6 keeps its section spacing. */
+aside li li.mt-6 {
+  margin-top: 0.75rem;
+}
+
 /* Header action icons — Blume header links are text-only, so the npm and
    Convex marks are injected as masks (inherit the link's text color). */
 header a[href*="npmjs.com/package"]::after,
@@ -23,4 +94,17 @@ header a[href*="npmjs.com/package"]::after {
 header a[href*="convex.dev/components"]::after {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20role%3D%22img%22%20viewBox%3D%220%200%2024%2024%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Ctitle%3EConvex%3C%2Ftitle%3E%3Cpath%20d%3D%22M15.09%2018.916c3.488-.387%206.776-2.246%208.586-5.348-.857%207.673-9.247%2012.522-16.095%209.545a3.47%203.47%200%200%201-1.547-1.314c-1.539-2.417-2.044-5.492-1.318-8.282%202.077%203.584%206.3%205.78%2010.374%205.399m-10.501-7.65c-1.414%203.266-1.475%207.092.258%2010.24-6.1-4.59-6.033-14.41-.074-18.953a3.44%203.44%200%200%201%201.893-.707c2.825-.15%205.695.942%207.708%202.977-4.09.04-8.073%202.66-9.785%206.442m11.757-5.437C14.283%202.951%2011.053.992%207.515.933c6.84-3.105%2015.253%201.929%2016.17%209.37a3.6%203.6%200%200%201-.334%202.02c-1.278%202.594-3.647%204.607-6.416%205.352%202.029-3.763%201.778-8.36-.589-11.847%22%2F%3E%3C%2Fsvg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg%20role%3D%22img%22%20viewBox%3D%220%200%2024%2024%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Ctitle%3EConvex%3C%2Ftitle%3E%3Cpath%20d%3D%22M15.09%2018.916c3.488-.387%206.776-2.246%208.586-5.348-.857%207.673-9.247%2012.522-16.095%209.545a3.47%203.47%200%200%201-1.547-1.314c-1.539-2.417-2.044-5.492-1.318-8.282%202.077%203.584%206.3%205.78%2010.374%205.399m-10.501-7.65c-1.414%203.266-1.475%207.092.258%2010.24-6.1-4.59-6.033-14.41-.074-18.953a3.44%203.44%200%200%201%201.893-.707c2.825-.15%205.695.942%207.708%202.977-4.09.04-8.073%202.66-9.785%206.442m11.757-5.437C14.283%202.951%2011.053.992%207.515.933c6.84-3.105%2015.253%201.929%2016.17%209.37a3.6%203.6%200%200%201-.334%202.02c-1.278%202.594-3.647%204.607-6.416%205.352%202.029-3.763%201.778-8.36-.589-11.847%22%2F%3E%3C%2Fsvg%3E");
+}
+
+/* Landing page — the TOC column is empty chrome here (no headings, only page
+   actions), so collapse the third grid column and let the hero + feature grid
+   center over the full space right of the sidebar. Scoped by :has() so only
+   the landing page is affected. */
+[data-blume-doc-grid]:has(.landing-hero) {
+  @media (width >= 80rem) {
+    grid-template-columns: 17.5rem minmax(0, 1fr);
+  }
+}
+[data-blume-doc-grid]:has(.landing-hero) [data-blume-toc] {
+  display: none;
 }

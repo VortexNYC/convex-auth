@@ -1,0 +1,140 @@
+---
+// Landing page — a custom route wins over the generated "/" content page,
+// so docs/index.mdx renders below via <BlumePage>. RootLayout keeps the
+// full docs chrome (sidebar, header, search) — this is a docs landing,
+// not a separate marketing surface.
+import data from "blume:data";
+import BlumePage from "blume/components/BlumePage.astro";
+import Icon from "blume/components/Icon.astro";
+import RootLayout from "blume/components/layout/RootLayout.astro";
+import { withBase } from "blume/components/islands/base-path.ts";
+
+const { config } = data;
+const index = data.routes.find((r) => r.path === "/");
+
+const features = [
+  {
+    href: "/organizations",
+    icon: "building",
+    title: "Organizations",
+    text: "Multi-tenant workspaces with members, roles, and invitation flows built in.",
+  },
+  {
+    href: "/react-native",
+    icon: "smartphone",
+    title: "React Native & Expo",
+    text: "A parallel component set for native apps — SecureStore tokens, deep links, passkeys.",
+  },
+  {
+    href: "/api-keys",
+    icon: "key",
+    title: "API keys",
+    text: "Create, rotate, and revoke service keys with scopes and IP-range restrictions.",
+  },
+  {
+    href: "/webhooks",
+    icon: "webhook",
+    title: "Webhooks",
+    text: "Signed lifecycle and organization events delivered to your endpoints.",
+  },
+  {
+    href: "/oidc-provider",
+    icon: "scan",
+    title: "MCP OAuth",
+    text: "An OIDC provider on your deployment — the identity layer for agents and MCP clients.",
+  },
+  {
+    href: "/components/react/admin",
+    icon: "scroll-text",
+    title: "Audit log & impersonation",
+    text: "Admin visibility into every auth event, plus safe support impersonation.",
+  },
+];
+---
+
+<RootLayout
+  analytics={config.analytics}
+  appleIcon={config.appleIcon}
+  banner={config.banner}
+  favicon={config.favicon}
+  feedback={config.feedback}
+  fontCssVars={data.fontCssVars}
+  headings={[]}
+  indexable={true}
+  logo={config.logo}
+  navigation={data.navigation}
+  openInChat={config.openInChat}
+  page={{ title: config.title, description: config.description, route: "/" }}
+  searchEnabled={config.search.enabled}
+  site={{ title: config.title, description: config.description }}
+  siteUrl={config.site}
+  structuredDataEnabled={config.structuredData}
+  themeMode={config.theme.mode}
+>
+  {/* Hero — bare, centered over the full content area (theme.css collapses
+      the empty TOC column on this page so the hero centers over the whole
+      space right of the sidebar, not just the article column). */}
+  <div class="landing-hero not-prose -mt-4 mb-12 py-16 text-center">
+    <div class="mx-auto max-w-2xl">
+      <h1
+        class="font-display font-semibold text-4xl tracking-tight text-balance md:text-5xl"
+      >
+        The Convex auth framework you've been waiting for
+      </h1>
+    </div>
+    <p class="mx-auto mt-4 max-w-xl text-muted-foreground text-pretty">
+      Users, sessions, organizations, API keys, webhooks, and MCP auth — all
+      living in your Convex database. No external auth service required.
+    </p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a
+        class="rounded-blume border border-border bg-muted/50 px-5 py-2.5 font-medium text-foreground text-sm transition-colors hover:bg-muted"
+        href={withBase("/quickstart")}
+      >
+        Get started
+      </a>
+      <a
+        class="rounded-blume px-5 py-2.5 font-medium text-muted-foreground text-sm transition-colors hover:text-foreground"
+        href={withBase("/components/react/sign-in")}
+      >
+        Browse components
+      </a>
+    </div>
+  </div>
+
+  {/* Feature grid — the differentiators, not a link list. */}
+  <div class="not-prose mb-16">
+    <h2 class="font-display font-semibold text-2xl tracking-tight">
+      Everything your auth layer actually needs
+    </h2>
+    <p class="mt-2 text-muted-foreground">
+      The features production apps end up building on top of auth — already
+      included, already wired to Convex.
+    </p>
+    <div class="mt-8 grid gap-3 sm:grid-cols-2">
+      {
+        features.map((f) => (
+          <a
+            class="group rounded-blume border border-border bg-muted/40 p-4 transition-colors hover:border-foreground/25 hover:bg-muted/70"
+            href={withBase(f.href)}
+          >
+            <div class="flex items-center gap-2.5">
+              <Icon
+                class="text-muted-foreground transition-colors group-hover:text-foreground"
+                name={f.icon}
+                size={15}
+              />
+              <h3 class="font-medium text-sm">{f.title}</h3>
+            </div>
+            <p class="mt-2 text-muted-foreground text-sm leading-relaxed">
+              {f.text}
+            </p>
+          </a>
+        ))
+      }
+    </div>
+  </div>
+
+  {/* The existing introduction content — same copy, rendered in place. */}
+  {index && <BlumePage id={index.entryId} />}
+</RootLayout>
