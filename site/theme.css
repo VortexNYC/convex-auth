@@ -37,8 +37,23 @@
    proper lede — Blume emits the page description as p.text-lg right after
    the h1, so size it up and tighten tracking to sit between heading and
    body rather than reading as a grayed paragraph. */
-.prose :where(h1, h2) {
+/* The scale, tightened: Blume's default steps sit close together, so h1/h2
+   carry negative tracking at display weight and h3 keeps the body weight —
+   three visible voices instead of one flat heading voice. h1's letter spacing
+   matches Inter Tight's intended optical size at 36–40px. */
+.prose :where(h1) {
   font-weight: 600;
+  letter-spacing: -0.028em;
+}
+.prose :where(h2) {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-top: 3em;
+}
+.prose :where(h3) {
+  font-weight: 500;
+  letter-spacing: -0.008em;
+  margin-top: 2.25em;
 }
 
 .prose > h1 + p {
@@ -58,6 +73,22 @@
    header/body instead of a flat grid — covers markdown tables (wrapped in
    .blume-table-scroll) and PropsTable output alike. */
 table :where(thead) tr {
+  background: var(--blume-muted);
+}
+
+/* Code blocks: Blume's default pre sits on --blume-code-background with no
+   border — on light mode that's a near-white rectangle on a near-white page.
+   A hairline border + a hairline of radius ties the block to the card chrome
+   the rest of the page uses. */
+.prose pre {
+  border: 1px solid var(--blume-border);
+  border-radius: 8px;
+}
+
+/* Callouts: keep Blume's border + icon treatment but sit the pane on the
+   muted surface — a bordered note on the page background reads as a box
+   *around* content rather than content with weight. */
+.prose :where([data-callout-type], .blume-callout) {
   background: var(--blume-muted);
 }
 

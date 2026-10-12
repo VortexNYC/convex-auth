@@ -1,0 +1,11 @@
+/*
+ * Uniwind entry for RN example previews (VOR-694). The vite plugin compiles
+ * this into the stylesheet the react-native-web frames load at runtime —
+ * mirrors examples/react-native/src/global.css, scoped to the RN sources.
+ */
+@import "tailwindcss";
+@import "uniwind";
+@import "@vortex-api/convex-auth/ui/styles.css";
+
+@source "./rn";
+@source "../../packages/auth/src/react-native";
