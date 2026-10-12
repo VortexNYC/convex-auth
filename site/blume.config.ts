@@ -1,4 +1,6 @@
 import { defineConfig } from "blume";
+import type { AstroIntegration } from "astro";
+import { uniwind } from "uniwind/vite";
 import { openapi } from "blume/reference";
 import { filesystem, githubReleases } from "blume/sources";
 
@@ -138,4 +140,27 @@ export default defineConfig({
   // `packages/auth/src` so component classes compile and declares the
   // semantic design tokens the components reference.
   examples: { css: "examples/theme.css" },
+  // VOR-694 — RN component previews run on react-native-web inside the
+  // example iframes. A single appended integration aliases `react-native`
+  // → `react-native-web` at the vite layer so example sources import the
+  // real RN components unmodified. Only example frames resolve the alias —
+  // no docs page or island imports `react-native`.
+  integrations: [
+    {
+      name: "rnw-previews",
+      hooks: {
+        "astro:config:setup": ({ updateConfig }) => {
+          updateConfig({
+            vite: {
+              plugins: [uniwind({ cssEntryFile: "examples/uniwind.css" })],
+              define: {
+                // RN code paths check __DEV__; metro defines it, vite needs it.
+                __DEV__: "false",
+              },
+            },
+          });
+        },
+      },
+    } satisfies AstroIntegration,
+  ],
 });

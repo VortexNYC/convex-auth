@@ -19,6 +19,14 @@ onlyBuiltDependencies:
 patchedDependencies:
   uniwind: patches/uniwind.patch
 
+packageExtensions:
+  # uniwind's web layer deep-imports react-native-web internals (the
+  # createOrderedCSSStyleSheet patch) without declaring it — under pnpm's
+  # strict linker the import then fails to resolve from inside .pnpm.
+  uniwind:
+    peerDependencies:
+      react-native-web: ">=0.19"
+
 overrides:
   "@better-auth/utils": 0.5.0
   "@vitest/browser-preview": ^5.0.1
